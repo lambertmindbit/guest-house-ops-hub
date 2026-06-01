@@ -1,7 +1,14 @@
-// Prisma schema. Models are added in Slice 2.
-// NOTE: the no-double-booking exclusion constraint and the `stay`/`period`
-// DATERANGE columns cannot be expressed in Prisma — they live in a raw SQL
-// migration (see prisma/migrations). Do not try to model them here.
+// Prisma schema for the Guest House Ops Hub (Phase 1).
+//
+// IMPORTANT — the correctness core lives partly in raw SQL (see the init
+// migration), because Prisma cannot express it:
+//   * `stay` / `period` are real Postgres DATERANGE columns, GENERATED from
+//     check_in/check_out (resp. start/end) as half-open `[)` ranges. They are
+//     declared here as `Unsupported("daterange")?` so Prisma tracks the column
+//     but never tries to write it — Postgres always derives it.
+//   * The no-double-booking guarantee is a GiST EXCLUDE constraint on
+//     reservations.stay, added by hand in the init migration.
+// Do not try to "fix" these into normal Prisma fields.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,4 +17,93 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum ReservationStatus {
+  confirmed
+  cancelled
+  no_show
+}
+
+model RoomType {
+  id           String  @id @default(cuid())
+  name         String
+  baseRate     Decimal @map("base_rate") @db.Decimal(10, 2)
+  maxOccupancy Int     @map("max_occupancy")
+  rateFloor    Decimal @map("rate_floor") @db.Decimal(10, 2)
+  rateCeiling  Decimal @map("rate_ceiling") @db.Decimal(10, 2)
+  rooms        Room[]
+
+  @@map("room_types")
+}
+
+model Room {
+  id           String        @id @default(cuid())
+  roomTypeId   String        @map("room_type_id")
+  label        String
+  roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
+  reservations Reservation[]
+  blocks       Block[]
+
+  @@map("rooms")
+}
+
+model Channel {
+  id             String        @id @default(cuid())
+  name           String
+  commissionPct  Decimal       @map("commission_pct") @db.Decimal(5, 2)
+  collectsPayment Boolean      @map("collects_payment")
+  reservations   Reservation[]
+
+  @@map("channels")
+}
+
+model Guest {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String        @unique
+  email        String?
+  notes        String?
+  reservations Reservation[]
+
+  @@map("guests")
+}
+
+model Reservation {
+  id              String                   @id @default(cuid())
+  roomId          String                   @map("room_id")
+  guestId         String                   @map("guest_id")
+  channelId       String                   @map("channel_id")
+  otaRef          String?                  @map("ota_ref")
+  checkIn         DateTime                 @map("check_in") @db.Date
+  checkOut        DateTime                 @map("check_out") @db.Date
+  // Generated in the DB from check_in/check_out as a half-open [) daterange.
+  stay            Unsupported("daterange")? @map("stay")
+  status          ReservationStatus        @default(confirmed)
+  arrivalTime     String?                  @map("arrival_time")
+  specialRequests String?                  @map("special_requests")
+  grossAmount     Decimal?                 @map("gross_amount") @db.Decimal(10, 2)
+  createdAt       DateTime                 @default(now()) @map("created_at")
+
+  room    Room    @relation(fields: [roomId], references: [id])
+  guest   Guest   @relation(fields: [guestId], references: [id])
+  channel Channel @relation(fields: [channelId], references: [id])
+
+  @@index([roomId])
+  @@index([guestId])
+  @@map("reservations")
+}
+
+model Block {
+  id        String                   @id @default(cuid())
+  roomId    String                   @map("room_id")
+  startDate DateTime                 @map("start_date") @db.Date
+  endDate   DateTime                 @map("end_date") @db.Date
+  // Generated in the DB from start_date/end_date as a half-open [) daterange.
+  period    Unsupported("daterange")? @map("period")
+  reason    String?
+  room      Room                     @relation(fields: [roomId], references: [id])
+
+  @@index([roomId])
+  @@map("blocks")
 }
