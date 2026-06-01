@@ -1,11 +1,12 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { CopyButton } from "@/components/CopyButton";
+import { ImportFeeds } from "@/components/ImportFeeds";
 
 export const dynamic = "force-dynamic";
 
-// Owner-only (behind the auth middleware): lists each room's read-only iCal
-// export URL to paste into the OTA extranet's "import calendar" setting.
+// Owner-only (behind the auth middleware): export URLs to hand to OTAs, plus
+// the import feeds the owner pastes back in.
 export default async function FeedsPage() {
   const token = process.env.ICAL_FEED_TOKEN;
   const h = await headers();
@@ -13,14 +14,17 @@ export default async function FeedsPage() {
   const host = h.get("host") ?? "localhost:3100";
   const origin = `${proto}://${host}`;
 
-  const rooms = await prisma.room.findMany({
-    include: { roomType: true },
-    orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
-  });
+  const [rooms, importFeeds] = await Promise.all([
+    prisma.room.findMany({
+      include: { roomType: true },
+      orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
+    }),
+    prisma.icalFeed.findMany({ include: { room: true }, orderBy: { createdAt: "desc" } }),
+  ]);
 
   return (
     <main className="mx-auto max-w-2xl p-4">
-      <h1 className="mb-1 text-xl font-semibold">Calendar export feeds</h1>
+      <h1 className="mb-1 text-xl font-semibold">Export to OTAs</h1>
       <p className="mb-4 text-sm text-neutral-500">
         Paste a room&apos;s link into the OTA&apos;s &ldquo;import calendar / iCal sync&rdquo;
         setting so it can see when that room is booked. Links are read-only and contain a
@@ -51,6 +55,18 @@ export default async function FeedsPage() {
           })}
         </ul>
       )}
+
+      <ImportFeeds
+        rooms={rooms.map((r) => ({ id: r.id, label: r.label, roomTypeName: r.roomType.name }))}
+        feeds={importFeeds.map((f) => ({
+          id: f.id,
+          label: f.label,
+          roomLabel: f.room.label,
+          url: f.url,
+          lastSyncedAt: f.lastSyncedAt ? f.lastSyncedAt.toISOString() : null,
+          lastError: f.lastError,
+        }))}
+      />
     </main>
   );
 }

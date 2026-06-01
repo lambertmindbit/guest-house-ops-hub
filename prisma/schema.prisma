@@ -25,6 +25,13 @@ enum ReservationStatus {
   no_show
 }
 
+// How a block came to exist: created by the owner, or imported from an OTA's
+// iCal feed. Imported blocks are owned by the sync and replaced on each run.
+enum BlockSource {
+  manual
+  ical
+}
+
 model RoomType {
   id           String  @id @default(cuid())
   name         String
@@ -44,6 +51,7 @@ model Room {
   roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
   reservations Reservation[]
   blocks       Block[]
+  icalFeeds    IcalFeed[]
 
   @@map("rooms")
 }
@@ -102,8 +110,32 @@ model Block {
   // Generated in the DB from start_date/end_date as a half-open [) daterange.
   period    Unsupported("daterange")? @map("period")
   reason    String?
+  source    BlockSource              @default(manual)
+  // Set for imported blocks: which feed they came from and the source event UID.
+  feedId      String?                @map("feed_id")
+  externalUid String?                @map("external_uid")
   room      Room                     @relation(fields: [roomId], references: [id])
+  feed      IcalFeed?                @relation(fields: [feedId], references: [id], onDelete: Cascade)
 
   @@index([roomId])
+  @@index([feedId])
   @@map("blocks")
+}
+
+// An external iCal URL the owner pastes in (one per room per OTA). The sync
+// fetches each active feed and turns its busy events into `ical` blocks.
+model IcalFeed {
+  id           String    @id @default(cuid())
+  roomId       String    @map("room_id")
+  label        String
+  url          String
+  active       Boolean   @default(true)
+  lastSyncedAt DateTime? @map("last_synced_at")
+  lastError    String?   @map("last_error")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  room         Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  blocks       Block[]
+
+  @@index([roomId])
+  @@map("ical_feeds")
 }
