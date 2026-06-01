@@ -9,9 +9,10 @@ export default defineConfig({
   },
   test: {
     // Booking-conflict and availability tests hit a real Postgres, so run
-    // serially in the node environment with env loaded from .env.
+    // serially in the node environment with env loaded from .env. tests/setup.ts
+    // then guards against running against the production database by accident.
     environment: "node",
-    setupFiles: ["dotenv/config"],
+    setupFiles: ["dotenv/config", "./tests/setup.ts"],
     fileParallelism: false,
   },
 });

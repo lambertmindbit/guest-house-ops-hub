@@ -2,7 +2,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
-import { createReservation, OverlapError } from "@/lib/reservations";
+import { isOverlapError } from "@/lib/db-errors";
+
+// Thrown inside the create transaction when neither a guestId nor guest details
+// resolved to a guest — surfaced as a 422.
+class MissingGuestError extends Error {}
 
 const createSchema = z
   .object({
@@ -45,37 +49,47 @@ export async function POST(request: Request) {
   if (!parsed.success) return zodFail(parsed.error);
   const input = parsed.data;
 
-  // Resolve the guest: upsert by phone keeps repeat guests as a single record.
-  let guestId = input.guestId;
-  if (!guestId && input.guest) {
-    const guest = await prisma.guest.upsert({
-      where: { phone: input.guest.phone },
-      update: { name: input.guest.name, email: input.guest.email },
-      create: input.guest,
-    });
-    guestId = guest.id;
-  }
-  if (!guestId) return fail("provide guestId or guest details", 422);
-
+  // Guest upsert + reservation insert run in ONE transaction so an overlap
+  // rejection (or any failure) rolls the guest back — no orphan guest records
+  // left behind by a booking that never completed.
   try {
-    const reservation = await createReservation({
-      roomId: input.roomId,
-      guestId,
-      channelId: input.channelId,
-      checkIn: parseDateOnly(input.checkIn),
-      checkOut: parseDateOnly(input.checkOut),
-      otaRef: input.otaRef,
-      arrivalTime: input.arrivalTime,
-      specialRequests: input.specialRequests,
-      grossAmount: input.grossAmount,
+    const reservation = await prisma.$transaction(async (tx) => {
+      let guestId = input.guestId;
+      if (!guestId && input.guest) {
+        const guest = await tx.guest.upsert({
+          where: { phone: input.guest.phone },
+          update: { name: input.guest.name, email: input.guest.email },
+          create: input.guest,
+        });
+        guestId = guest.id;
+      }
+      if (!guestId) throw new MissingGuestError();
+
+      return tx.reservation.create({
+        data: {
+          roomId: input.roomId,
+          guestId,
+          channelId: input.channelId,
+          checkIn: parseDateOnly(input.checkIn),
+          checkOut: parseDateOnly(input.checkOut),
+          otaRef: input.otaRef,
+          arrivalTime: input.arrivalTime,
+          specialRequests: input.specialRequests,
+          grossAmount: input.grossAmount,
+        },
+      });
     });
+
     const full = await prisma.reservation.findUnique({
       where: { id: reservation.id },
       include: reservationInclude,
     });
     return ok(full, 201);
   } catch (error) {
-    if (error instanceof OverlapError) return fail(error.message, 409);
+    if (error instanceof MissingGuestError) return fail("provide guestId or guest details", 422);
+    if (isOverlapError(error)) {
+      return fail("Those dates are no longer available for this room.", 409);
+    }
     throw error;
   }
 }

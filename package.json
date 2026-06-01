@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:new": "node scripts/migrate.mjs",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio"
   },
