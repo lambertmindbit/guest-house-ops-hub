@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ChannelBadge } from "@/components/ChannelBadge";
+import { PaymentsPanel } from "@/components/PaymentsPanel";
 import { displayDate, displayMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,12 @@ export default async function ReservationDetailPage({
   const { id } = await params;
   const r = await prisma.reservation.findUnique({
     where: { id },
-    include: { guest: true, channel: true, room: { include: { roomType: true } } },
+    include: {
+      guest: true,
+      channel: true,
+      room: { include: { roomType: true } },
+      payments: { orderBy: { paidAt: "asc" } },
+    },
   });
   if (!r) notFound();
 
@@ -56,6 +62,18 @@ export default async function ReservationDetailPage({
         {r.otaRef && <Row label="OTA ref">{r.otaRef}</Row>}
         {r.specialRequests && <Row label="Special requests">{r.specialRequests}</Row>}
       </dl>
+
+      <PaymentsPanel
+        reservationId={r.id}
+        gross={r.grossAmount ? Number(r.grossAmount) : 0}
+        payments={r.payments.map((p) => ({
+          id: p.id,
+          amount: Number(p.amount),
+          mode: p.mode,
+          paidAt: p.paidAt.toISOString(),
+          note: p.note,
+        }))}
+      />
 
       <div className="mt-4">
         <Link

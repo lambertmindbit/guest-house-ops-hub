@@ -13,11 +13,23 @@ export function displayShortDate(date: Date): string {
   return format(local, "d MMM");
 }
 
-export function displayMoney(amount: Prisma.Decimal | null): string {
-  if (amount === null) return "—";
+export function displayINR(amount: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(Number(amount));
+  }).format(amount);
 }
+
+export function displayMoney(amount: Prisma.Decimal | null): string {
+  if (amount === null) return "—";
+  return displayINR(Number(amount));
+}
+
+export const PAYMENT_MODE_LABELS: Record<string, string> = {
+  cash: "Cash",
+  upi: "UPI",
+  card: "Card",
+  bank: "Bank transfer",
+  ota_collect: "OTA collected",
+};

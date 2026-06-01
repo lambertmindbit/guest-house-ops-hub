@@ -32,6 +32,14 @@ enum BlockSource {
   ical
 }
 
+enum PaymentMode {
+  cash
+  upi
+  card
+  bank
+  ota_collect
+}
+
 model RoomType {
   id           String  @id @default(cuid())
   name         String
@@ -96,13 +104,30 @@ model Reservation {
   grossAmount     Decimal?                 @map("gross_amount") @db.Decimal(10, 2)
   createdAt       DateTime                 @default(now()) @map("created_at")
 
-  room    Room    @relation(fields: [roomId], references: [id])
-  guest   Guest   @relation(fields: [guestId], references: [id])
-  channel Channel @relation(fields: [channelId], references: [id])
+  room     Room      @relation(fields: [roomId], references: [id])
+  guest    Guest     @relation(fields: [guestId], references: [id])
+  channel  Channel   @relation(fields: [channelId], references: [id])
+  payments Payment[]
 
   @@index([roomId])
   @@index([guestId])
   @@map("reservations")
+}
+
+// Money received against a reservation. A booking can have several (e.g. a
+// deposit then the balance). Sum of payments vs gross_amount gives the balance.
+model Payment {
+  id            String      @id @default(cuid())
+  reservationId String      @map("reservation_id")
+  amount        Decimal     @db.Decimal(10, 2)
+  mode          PaymentMode
+  paidAt        DateTime    @default(now()) @map("paid_at")
+  note          String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+  @@map("payments")
 }
 
 model Block {
