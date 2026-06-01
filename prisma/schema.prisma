@@ -1,0 +1,13 @@
+// Prisma schema. Models are added in Slice 2.
+// NOTE: the no-double-booking exclusion constraint and the `stay`/`period`
+// DATERANGE columns cannot be expressed in Prisma — they live in a raw SQL
+// migration (see prisma/migrations). Do not try to model them here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
