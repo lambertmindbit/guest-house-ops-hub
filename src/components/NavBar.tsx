@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/guests", label: "Guests" },
   { href: "/housekeeping", label: "Cleaning" },
   { href: "/finance", label: "Finance" },
+  { href: "/analytics", label: "Analytics" },
   { href: "/conflicts", label: "Conflicts" },
   { href: "/feeds", label: "Feeds" },
 ];
@@ -28,8 +29,9 @@ export function NavBar() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-        <span className="font-semibold">Ops Hub</span>
+      {/* Many tabs — scroll horizontally on small screens instead of wrapping/clipping. */}
+      <div className="mx-auto flex max-w-6xl items-center gap-2 overflow-x-auto whitespace-nowrap px-4 py-3">
+        <span className="shrink-0 font-semibold">Ops Hub</span>
         <nav className="flex gap-1 text-sm">
           {LINKS.map((link) => {
             const active =
@@ -38,7 +40,7 @@ export function NavBar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded px-3 py-1.5 ${
+                className={`shrink-0 rounded px-3 py-1.5 ${
                   active ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"
                 }`}
               >
@@ -49,13 +51,13 @@ export function NavBar() {
         </nav>
         <Link
           href="/reservations/new"
-          className="ml-auto rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white"
+          className="ml-auto shrink-0 rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white"
         >
           + New
         </Link>
         <button
           onClick={logout}
-          className="rounded-lg px-3 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100"
+          className="shrink-0 rounded-lg px-3 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100"
         >
           Logout
         </button>
