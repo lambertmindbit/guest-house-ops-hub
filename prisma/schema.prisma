@@ -48,6 +48,9 @@ model Room {
   id           String        @id @default(cuid())
   roomTypeId   String        @map("room_type_id")
   label        String
+  // Housekeeping: a room "needs cleaning" when a guest has checked out since
+  // this timestamp. Marking a room clean sets it to now.
+  lastCleanedAt DateTime?    @map("last_cleaned_at")
   roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
   reservations Reservation[]
   blocks       Block[]
