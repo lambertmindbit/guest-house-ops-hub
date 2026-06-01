@@ -4,13 +4,13 @@
 
 ## Tech Debt
 
-**Prisma migrations require a recurring manual hand-edit on every `migrate dev`:**
+**Prisma migrations require a recurring manual hand-edit on every `migrate dev`:** _(RESOLVED 2026-06-01, commit efb12d4 — automated by `scripts/migrate.mjs` / `npm run db:migrate:new`, which deterministically strips the spurious lines and verifies the exclusion constraint. History below kept for context.)_
 - Issue: The `stay` (reservations) and `period` (blocks) columns are real Postgres `GENERATED ALWAYS AS (...) STORED` daterange columns, declared in Prisma as `Unsupported("daterange")?`. On every new migration that touches those tables, Prisma's diff engine emits spurious `ALTER COLUMN "stay"/"period" DROP DEFAULT` statements that must be deleted by hand from the generated SQL before applying. Dropping a default on a `GENERATED ALWAYS` column is at best a no-op and at worst risks the column definition that the no-double-booking exclusion constraint depends on.
 - Files: `prisma/schema.prisma` (lines 99-100, 138-139), `prisma/migrations/20260601114302_init/migration.sql` (lines 58-59, 75-76 define the generated columns), `prisma/migrations/20260601163543_ical_feeds_and_block_source/migration.sql` (lines 4-7 document the manual removal), `prisma/migrations/20260601165448_room_last_cleaned/migration.sql` (line 2), `prisma/migrations/20260601170706_payments/migration.sql` (line 4)
 - Impact: Every schema change is a manual, error-prone step. A migration applied without the edit could alter the generated columns underpinning `no_overlapping_confirmed_stays` — the project's single most important correctness guarantee (per `CLAUDE.md`). The risk is silent: the spurious statement applies without error.
 - Fix approach: Document the edit as a required checklist step in the migration workflow (it is currently only captured as inline comments). Better: add a wrapper script that runs `prisma migrate dev --create-only`, strips any `DROP DEFAULT` line targeting `stay`/`period` via a deterministic post-process, then applies. Verify the exclusion constraint still exists after every migration (e.g. a smoke test querying `pg_constraint`).
 
-**Orphan guest record left behind when a reservation is rejected for overlap:**
+**Orphan guest record left behind when a reservation is rejected for overlap:** _(RESOLVED 2026-06-01, commit efb12d4 — guest upsert + reservation insert now run in a single `prisma.$transaction`, so an overlap rejection rolls the guest back. History below kept for context.)_
 - Issue: In the create-reservation handler, the guest is upserted by phone *before* the reservation insert is attempted. If the reservation then fails the overlap exclusion constraint (returned as a 409), the newly created guest row is not rolled back — the upsert and the insert are not in a shared transaction.
 - Files: `src/app/api/reservations/route.ts` (lines 50-57 upsert the guest, lines 60-78 attempt the insert and catch `OverlapError`), `src/lib/reservations.ts` (lines 14-21 `createReservation`)
 - Impact: A failed booking for a brand-new guest leaves a dangling guest record with no reservation. For repeat guests (matched by phone) the upsert is idempotent so only their name/email may be updated by a booking that never completed. Pollutes the guest CRM and the guests list/search.
@@ -94,7 +94,7 @@ These are deliberately deferred per `CLAUDE.md`'s roadmap, not accidental gaps. 
 
 ## Test Coverage Gaps
 
-**Tests run against the live/shared production database:**
+**Tests run against the live/shared production database:** _(PARTIALLY RESOLVED 2026-06-01, commit efb12d4 — `tests/setup.ts` now refuses to run unless `TEST_DATABASE_URL` is set or `ALLOW_PROD_DB_TESTS=1`. The root cause — a separate test database — is still owner-action: set `TEST_DATABASE_URL`. History below kept for context.)_
 - What's not tested safely: The two integration suites connect to the database from `.env`'s `DATABASE_URL`, which is the same shared Supabase instance used by production. They create and delete rooms, room types, guests, channels, and reservations.
 - Files: `tests/conflict.test.ts` (lines 16-49 create fixtures, lines 42-48 `deleteMany` cleanup), `tests/availability.test.ts` (lines 23-30 create fixtures), `vitest.config.ts` (lines 13-14 `setupFiles: ["dotenv/config"]` loads `.env`)
 - Risk: Running the suite against production data is a live-data-safety hazard. Cleanup is tag-scoped (`test-conflict-<timestamp>` / `test-avail-<timestamp>`) and runs in `afterAll`, so a crashed or interrupted run can leave orphan test rows in the real database. A bug in fixture teardown could also touch real records.
