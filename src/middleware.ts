@@ -16,6 +16,6 @@ export const config = {
   matcher: [
     // Everything except the login page, auth endpoints, Next internals, and
     // the PWA/static files (manifest + icons land in Slice 10).
-    "/((?!login|api/auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons|sw.js).*)",
+    "/((?!login|api/auth|api/ical|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons|sw.js).*)",
   ],
 };
