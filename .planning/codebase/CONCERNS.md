@@ -94,7 +94,7 @@ These are deliberately deferred per `CLAUDE.md`'s roadmap, not accidental gaps. 
 
 ## Test Coverage Gaps
 
-**Tests run against the live/shared production database:** _(PARTIALLY RESOLVED 2026-06-01, commit efb12d4 — `tests/setup.ts` now refuses to run unless `TEST_DATABASE_URL` is set or `ALLOW_PROD_DB_TESTS=1`. The root cause — a separate test database — is still owner-action: set `TEST_DATABASE_URL`. History below kept for context.)_
+**Tests run against the live/shared production database:** _(RESOLVED 2026-06-01, commit efb12d4 + setup — `tests/setup.ts` refuses to run unless `TEST_DATABASE_URL` is set, and `TEST_DATABASE_URL` now points at an isolated `test` schema in the same Supabase project (`...&schema=test`), with all migrations applied there. Verified: the suite runs in `test` and leaves the `public` data untouched. History below kept for context.)_
 - What's not tested safely: The two integration suites connect to the database from `.env`'s `DATABASE_URL`, which is the same shared Supabase instance used by production. They create and delete rooms, room types, guests, channels, and reservations.
 - Files: `tests/conflict.test.ts` (lines 16-49 create fixtures, lines 42-48 `deleteMany` cleanup), `tests/availability.test.ts` (lines 23-30 create fixtures), `vitest.config.ts` (lines 13-14 `setupFiles: ["dotenv/config"]` loads `.env`)
 - Risk: Running the suite against production data is a live-data-safety hazard. Cleanup is tag-scoped (`test-conflict-<timestamp>` / `test-avail-<timestamp>`) and runs in `afterAll`, so a crashed or interrupted run can leave orphan test rows in the real database. A bug in fixture teardown could also touch real records.
