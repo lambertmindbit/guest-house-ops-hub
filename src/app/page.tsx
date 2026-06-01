@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
+import { getConflicts } from "@/lib/conflicts";
 import { ChannelBadge } from "@/components/ChannelBadge";
 import { displayDate, displayShortDate } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
@@ -7,7 +9,7 @@ import { parseDateOnly } from "@/lib/dates";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const s = await getTodaySummary();
+  const [s, conflicts] = await Promise.all([getTodaySummary(), getConflicts()]);
   const heading = displayDate(parseDateOnly(s.date));
 
   return (
@@ -16,6 +18,19 @@ export default async function DashboardPage() {
         <h1 className="text-xl font-semibold">Today</h1>
         <p className="text-sm text-neutral-500">{heading}</p>
       </header>
+
+      {conflicts.length > 0 && (
+        <Link
+          href="/conflicts"
+          className="mb-4 flex items-center justify-between rounded-lg border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-800"
+        >
+          <span>
+            ⚠️ {conflicts.length} booking conflict{conflicts.length === 1 ? "" : "s"} need
+            attention
+          </span>
+          <span aria-hidden>→</span>
+        </Link>
+      )}
 
       <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Occupancy" value={`${s.occupancyPct}%`} hint={`${s.occupiedRooms}/${s.totalRooms} rooms`} />
