@@ -90,6 +90,11 @@ model Guest {
   phone        String        @unique
   email        String?
   notes        String?
+  // Government ID reference (text only — no document/photo upload, which would
+  // need object storage). Blacklist flag warns the owner at booking time.
+  idNumber     String?       @map("id_number")
+  blocked      Boolean       @default(false)
+  blockReason  String?       @map("block_reason")
   reservations Reservation[]
 
   @@map("guests")

@@ -51,18 +51,22 @@ export default async function GuestsPage({
             <EmptyState>No guests match your search.</EmptyState>
           ) : (
             guests.map((g) => (
-              <div key={g.id} className="card" style={{ padding: "13px 15px", display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--teal-50)", color: "var(--teal-700)", display: "grid", placeItems: "center", fontWeight: 700, flex: "none" }}>
+              <Link key={g.id} href={`/guests/${g.id}`} className="card" style={{ padding: "13px 15px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: g.blocked ? "var(--danger-50)" : "var(--teal-50)", color: g.blocked ? "var(--danger-700)" : "var(--teal-700)", display: "grid", placeItems: "center", fontWeight: 700, flex: "none" }}>
                   {initials(g.name)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 15.5 }}>{g.name}</div>
+                  <div className="row" style={{ gap: 7 }}>
+                    <span style={{ fontWeight: 600, fontSize: 15.5 }}>{g.name}</span>
+                    {g._count.reservations >= 2 && <span className="pill pill--teal">Repeat</span>}
+                    {g.blocked && <span className="pill pill--danger">Blocked</span>}
+                  </div>
                   <div style={{ fontSize: 12.5, color: "var(--subtle)" }}>
                     {g.phone}{g.email ? ` · ${g.email}` : ""}
                   </div>
                 </div>
                 <span className="pill pill--ink">{g._count.reservations} {g._count.reservations === 1 ? "stay" : "stays"}</span>
-              </div>
+              </Link>
             ))
           )}
         </div>

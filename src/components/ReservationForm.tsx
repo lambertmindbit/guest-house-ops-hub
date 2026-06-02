@@ -70,6 +70,33 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
     };
   }, [roomId, checkIn, checkOut]);
 
+  // Blacklist check: if the typed phone matches a blocked guest, warn the owner
+  // (advisory — booking is still allowed). Create mode only.
+  const [blockedWarn, setBlockedWarn] = useState<string | null>(null);
+  const phone = values.guestPhone.trim();
+  useEffect(() => {
+    if (mode !== "create" || phone.length < 4) {
+      setBlockedWarn(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/guests?q=${encodeURIComponent(phone)}`, { signal: ctrl.signal });
+        const json = await res.json();
+        if (!res.ok) return;
+        const match = (json.data as { phone: string; blocked: boolean; blockReason: string | null }[]).find((g) => g.phone === phone && g.blocked);
+        setBlockedWarn(match ? match.blockReason || "This guest is blacklisted." : null);
+      } catch {
+        /* aborted */
+      }
+    }, 300);
+    return () => {
+      ctrl.abort();
+      clearTimeout(t);
+    };
+  }, [mode, phone]);
+
   // Distinct applied-adjustment labels across the stay (for a compact summary).
   const adjustments = quote
     ? [...new Set(quote.nights.flatMap((n) => n.applied))].filter((a) => a !== "Clamped to floor/ceiling")
@@ -125,6 +152,12 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         <div className="banner banner--danger" style={{ cursor: "default", marginBottom: 14 }}>
           <span className="banner__icon"><Icon name="alert" size={18} /></span>
           <span style={{ flex: 1 }}>{error}</span>
+        </div>
+      )}
+      {blockedWarn && (
+        <div className="banner banner--warn" style={{ cursor: "default", marginBottom: 14 }}>
+          <span className="banner__icon"><Icon name="alert" size={18} /></span>
+          <span style={{ flex: 1 }}><b>Blacklisted guest:</b> {blockedWarn}</span>
         </div>
       )}
 
