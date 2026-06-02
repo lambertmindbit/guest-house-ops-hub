@@ -3,8 +3,13 @@
 type Cell = string | number | null | undefined;
 
 function escape(value: Cell): string {
-  const s = value == null ? "" : String(value);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  let s = value == null ? "" : String(value);
+  // Formula-injection guard: a free-text cell (e.g. a guest-controlled name)
+  // starting with = + - @ tab or CR is treated as a formula by Excel/Sheets.
+  // Prefix a tab so spreadsheets render it as plain text. Only string cells —
+  // numbers (incl. negative amounts) are emitted verbatim.
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(s)) s = `\t${s}`;
+  return /[",\n\r\t]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 export function toCsv(headers: string[], rows: Cell[][]): string {

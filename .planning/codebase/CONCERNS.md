@@ -16,17 +16,13 @@
 - Impact: If a contributor runs `prisma migrate dev` directly (the package.json `db:migrate` script does exactly this) instead of `node scripts/migrate.mjs` (`db:migrate:new`), the spurious `DROP DEFAULT` lines are NOT stripped. Applying them is "at best a no-op and at worst risks the columns the exclusion constraint depends on" (the script's own comment). The two `db:migrate*` scripts pointing at different tools is a footgun.
 - Fix approach: Make `db:migrate` an alias for the safe helper, or add a CI/check that fails if any migration SQL contains `ALTER COLUMN "(stay|period)" DROP DEFAULT`. The helper's post-apply constraint check (lines 82–90) only runs with `--apply`; consider a standalone "verify constraint exists" test in the suite.
 
-**Two `db:migrate` scripts with divergent behaviour:**
-- Issue: `db:migrate` → `prisma migrate dev` (unsafe for this schema); `db:migrate:new` → `node scripts/migrate.mjs` (safe). The naming does not signal which is correct.
-- Files: `package.json` scripts block.
-- Impact: Easy to pick the wrong one. See above.
-- Fix approach: Rename or collapse to a single safe entry point.
+**Two `db:migrate` scripts with divergent behaviour:** — ✅ RESOLVED 2026-06-02
+- Issue: `db:migrate` → `prisma migrate dev` (unsafe — generates migrations and emits the spurious `DROP DEFAULT`); `db:migrate:new` → `node scripts/migrate.mjs` (safe).
+- Resolution: `db:migrate` now runs `prisma migrate deploy` (apply-only; never generates SQL, so it can't emit the spurious statements). Creating migrations is exclusively the safe `db:migrate:new` helper. The footgun is gone; the underlying need to hand-maintain the generated-column/constraint SQL (above) remains.
 
-**`tsconfig.tsbuildinfo` tracked in git:**
-- Issue: The TypeScript incremental build cache is committed and is NOT in `.gitignore`.
-- Files: `tsconfig.tsbuildinfo` (git-tracked), `.gitignore` (no entry for it).
-- Impact: Build-artifact noise in every diff/commit touching TS; merge conflicts on a machine-specific cache file. Harmless to correctness, but pollutes history.
-- Fix approach: `git rm --cached tsconfig.tsbuildinfo` and add it to `.gitignore`.
+**`tsconfig.tsbuildinfo` tracked in git:** — ✅ RESOLVED 2026-06-02
+- Issue: The TypeScript incremental build cache was committed and not in `.gitignore`.
+- Resolution: `git rm --cached tsconfig.tsbuildinfo`; added `*.tsbuildinfo` to `.gitignore`.
 
 **Pricing engine re-fetches global config per room-type on the rate calendar (N+1-ish):**
 - Issue: `quoteRoomType()` independently fetches policy, all seasons, overrides, availability, and property settings for each room type. The `/pricing` rate calendar calls it once per room type via `Promise.all(roomTypes.map(...))`, so policy/seasons/property are queried `roomTypes.length` times for the same 14-day window.
@@ -72,11 +68,9 @@ core is enforced at the database level and covered by integration tests
 - Current mitigation: Both use constant-time / exact-match secret checks and fail closed when the env secret is unset (`!secret` → 401 for cron; empty `ICAL_FEED_TOKEN` → invalid for ical). The ical feed leaks only busy date ranges for a room, by design (OTAs must read it unauthenticated).
 - Recommendations: Acceptable. Just ensure `ICAL_FEED_TOKEN` and `CRON_SECRET` are long random values (the `.env.example` says so). The ical token is a single shared secret for all feeds — rotating it invalidates every OTA subscription at once.
 
-**CSV export — no formula-injection guard:**
-- Risk: The CSV builder quotes fields containing `,`/`"`/newlines but does NOT neutralize cells beginning with `=`, `+`, `-`, or `@`. A guest name like `=HYPERLINK(...)` or a malicious channel/note would be interpreted as a formula when the accountant opens the file in Excel/Sheets.
-- Files: `src/lib/csv.ts` `escape` (lines 5–8); consumed by `src/app/api/export/reservations.csv/route.ts` and `src/app/api/export/payments.csv/route.ts`. Free-text fields that reach CSV: guest name/phone, channel name, room label.
-- Current mitigation: None for formula injection. Export routes ARE behind the owner cookie (not in the middleware exclusion list), so only the authenticated owner can trigger an export — this limits but does not eliminate the risk (a guest controls their own name).
-- Recommendations: Prefix a single quote (or `'`/space) to any cell starting with `= + - @ \t \r`. Small, localized fix in `src/lib/csv.ts`.
+**CSV export — no formula-injection guard:** — ✅ RESOLVED 2026-06-02
+- Risk: The CSV builder quoted `,`/`"`/newlines but did NOT neutralize cells beginning with `=`, `+`, `-`, or `@`. A guest-controlled name like `=HYPERLINK(...)` would be interpreted as a formula in Excel/Sheets.
+- Resolution: `src/lib/csv.ts` `escape` now prefixes a tab to any **string** cell starting with `= + - @ \t \r` (and quotes it), so spreadsheets render it as inert text. The guard is type-aware: numeric cells (e.g. negative balances) are emitted verbatim. Verified: `=HYPERLINK(...)` is neutralized, `-500` (number) is untouched.
 
 ## Performance Bottlenecks
 
