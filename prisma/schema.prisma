@@ -167,6 +167,21 @@ model Block {
   @@map("blocks")
 }
 
+// A cost the property incurred. Attributed to Finance by `date`. Turns the
+// revenue-only view into true net profit (revenue − commission − expenses).
+model Expense {
+  id          String       @id @default(cuid())
+  date        DateTime     @db.Date
+  category    String
+  amount      Decimal      @db.Decimal(10, 2)
+  note        String?
+  paymentMode PaymentMode? @map("payment_mode")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@index([date])
+  @@map("expenses")
+}
+
 // Single configurable pricing policy (one row). The pricing engine starts from a
 // room type's base_rate and compounds the applicable adjustments below, then
 // clamps to [rate_floor, rate_ceiling]. All adjustments are advisory — they only
