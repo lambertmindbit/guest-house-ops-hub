@@ -58,25 +58,43 @@
   --fast: 140ms; --base: 240ms; --slow: 380ms;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --sys-bg-grouped: #000000;
-    --sys-bg-elev: #1c1c1e;
-    --sys-fill: #2c2c2e;
-    --sys-fill-2: #3a3a3c;
-    --sys-label: #f5f5f7;
-    --sys-label-2: rgba(235, 235, 245, 0.62);
-    --sys-label-3: rgba(235, 235, 245, 0.34);
-    --sys-sep: rgba(84, 84, 88, 0.55);
-    --sys-sep-strong: rgba(84, 84, 88, 0.72);
-    --sys-green: #30d158; --sys-green-text: #30d158; --sys-green-fill: rgba(48, 209, 88, 0.2);
-    --sys-orange: #ff9f0a; --sys-orange-text: #ff9f0a; --sys-orange-fill: rgba(255, 159, 10, 0.2);
-    --sys-red: #ff453a; --sys-red-text: #ff453a; --sys-red-fill: rgba(255, 69, 58, 0.2);
-    --mat-alpha: 0.58;
-    --tint: #30d158; --tint-600: #28b94c; --tint-text: #30d158;
-    --tint-fill: rgba(48, 209, 88, 0.22); --tint-fill-2: rgba(48, 209, 88, 0.32);
-  }
+/* Dark is attribute-driven so the in-app toggle works. The head script sets
+   data-appearance from the OS when the saved preference is "system". */
+[data-appearance="dark"] {
+  --sys-bg-grouped: #000000;
+  --sys-bg-elev: #1c1c1e;
+  --sys-fill: #2c2c2e;
+  --sys-fill-2: #3a3a3c;
+  --sys-label: #f5f5f7;
+  --sys-label-2: rgba(235, 235, 245, 0.62);
+  --sys-label-3: rgba(235, 235, 245, 0.34);
+  --sys-sep: rgba(84, 84, 88, 0.55);
+  --sys-sep-strong: rgba(84, 84, 88, 0.72);
+  --sys-green: #30d158; --sys-green-text: #30d158; --sys-green-fill: rgba(48, 209, 88, 0.2);
+  --sys-orange: #ff9f0a; --sys-orange-text: #ff9f0a; --sys-orange-fill: rgba(255, 159, 10, 0.2);
+  --sys-red: #ff453a; --sys-red-text: #ff453a; --sys-red-fill: rgba(255, 69, 58, 0.2);
+  --mat-alpha: 0.58;
+  --tint: #30d158; --tint-600: #28b94c; --tint-text: #30d158;
+  --tint-fill: rgba(48, 209, 88, 0.22); --tint-fill-2: rgba(48, 209, 88, 0.32);
 }
+
+/* Accent tints (light) */
+[data-tint="green"] { --tint: #34c759; --tint-600: #2bb14e; --tint-text: #248a3d; --tint-fill: rgba(52, 199, 89, 0.15); --tint-fill-2: rgba(52, 199, 89, 0.24); }
+[data-tint="blue"] { --tint: #007aff; --tint-600: #0066d6; --tint-text: #0062cc; --tint-fill: rgba(0, 122, 255, 0.12); --tint-fill-2: rgba(0, 122, 255, 0.2); }
+[data-tint="indigo"] { --tint: #5856d6; --tint-600: #4a48bd; --tint-text: #4a48bd; --tint-fill: rgba(88, 86, 214, 0.13); --tint-fill-2: rgba(88, 86, 214, 0.22); }
+[data-tint="warm"] { --tint: #0fa68e; --tint-600: #0c8c77; --tint-text: #0a7665; --tint-fill: rgba(15, 166, 142, 0.14); --tint-fill-2: rgba(15, 166, 142, 0.22); }
+/* Accent tints (dark — vivid) */
+[data-appearance="dark"][data-tint="green"] { --tint: #30d158; --tint-600: #28b94c; --tint-text: #30d158; --tint-fill: rgba(48, 209, 88, 0.22); --tint-fill-2: rgba(48, 209, 88, 0.32); }
+[data-appearance="dark"][data-tint="blue"] { --tint: #0a84ff; --tint-600: #0a72db; --tint-text: #0a84ff; --tint-fill: rgba(10, 132, 255, 0.2); --tint-fill-2: rgba(10, 132, 255, 0.3); }
+[data-appearance="dark"][data-tint="indigo"] { --tint: #5e5ce6; --tint-600: #504ecb; --tint-text: #5e5ce6; --tint-fill: rgba(94, 92, 230, 0.22); --tint-fill-2: rgba(94, 92, 230, 0.32); }
+[data-appearance="dark"][data-tint="warm"] { --tint: #2cd9bd; --tint-600: #23bda4; --tint-text: #2cd9bd; --tint-fill: rgba(44, 217, 189, 0.18); --tint-fill-2: rgba(44, 217, 189, 0.28); }
+
+/* Material: crisp = more opaque, less blur */
+[data-material="crisp"] { --mat-blur: 6px; --mat-sat: 120%; --mat-alpha: 0.94; }
+[data-appearance="dark"][data-material="crisp"] { --mat-alpha: 0.92; }
+
+/* Button shape */
+[data-btnshape="pill"] { --r-btn: 999px; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -127,6 +145,7 @@ input, select, textarea { font-family: inherit; }
 .btn--danger-outline:hover { filter: brightness(0.97); }
 .btn--sm { padding: 8px 13px; font-size: 13.5px; border-radius: calc(var(--r-btn) - 2px); }
 .btn--block { width: 100%; padding: 14px 18px; border-radius: var(--r-lg); font-size: 16px; }
+[data-btnshape="pill"] .btn--sm, [data-btnshape="pill"] .btn--block { border-radius: 999px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ============ Cards (iOS grouped cells) ============ */
@@ -142,10 +161,8 @@ a.card:active, button.card:active { background: var(--sys-fill); transform: scal
 .ch--booking { background: rgba(0, 122, 255, 0.12); color: #0062cc; }
 .ch--agoda { background: rgba(255, 45, 85, 0.13); color: #c0274a; }
 .ch--makemytrip { background: rgba(255, 149, 0, 0.16); color: var(--sys-orange-text); }
-@media (prefers-color-scheme: dark) {
-  .ch--booking { color: #4da3ff; }
-  .ch--agoda { color: #ff6b8b; }
-}
+[data-appearance="dark"] .ch--booking { color: #4da3ff; }
+[data-appearance="dark"] .ch--agoda { color: #ff6b8b; }
 
 /* ============ Status pills ============ */
 .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; line-height: 1; padding: 5px 11px; border-radius: var(--r-pill); white-space: nowrap; }
@@ -299,3 +316,35 @@ a.card:active, button.card:active { background: var(--sys-fill); transform: scal
 .mac-navitem.on { background: var(--tint); color: var(--tint-on); }
 .mac-navitem.on .mac-navitem__ic { color: var(--tint-on); }
 .mac-navitem__ic { color: var(--sys-label-2); display: grid; place-items: center; flex: none; }
+
+/* neutral round chrome icon button (toolbar appearance toggle / gear) */
+.chrome-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--sys-fill); color: var(--sys-label); display: grid; place-items: center; transition: background var(--fast) var(--ease); text-decoration: none; flex: none; }
+.chrome-btn:hover { background: var(--sys-fill-2); }
+
+/* =========================================================================
+   Preferences panel
+   ========================================================================= */
+.tweaks-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.32); display: grid; place-items: center; padding: 16px; animation: ax-fadein var(--base) var(--ease); }
+.tweaks { width: 100%; max-width: 340px; background: var(--sys-bg-elev); border-radius: 18px; box-shadow: var(--shadow-lg); overflow: hidden; animation: ax-sheetup var(--base) var(--ease-spring); }
+.tweaks__hd { display: flex; align-items: center; justify-content: space-between; padding: 15px 16px 15px 18px; border-bottom: 0.5px solid var(--line); }
+.tweaks__hd b { font-size: 17px; font-weight: 700; }
+.tweaks__body { padding: 8px 18px 20px; }
+.tweaks__group { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sys-label-3); margin: 16px 0 10px; }
+.tweaks__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.tweaks__row label { font-size: 15px; }
+
+/* iOS switch */
+.switch { width: 51px; height: 31px; border-radius: 999px; background: var(--sys-fill-2); border: 0; position: relative; transition: background var(--base) var(--ease); flex: none; }
+.switch.on { background: var(--sys-green); }
+.switch span { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); transition: transform var(--base) var(--ease-spring); }
+.switch.on span { transform: translateX(20px); }
+
+/* accent swatches */
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.swatch-btn { height: 46px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; display: grid; place-items: center; color: #fff; }
+.swatch-btn.on { border-color: var(--sys-label); }
+
+/* segmented control */
+.segmented { display: flex; width: 100%; background: var(--sys-fill); border-radius: 9px; padding: 2px; gap: 2px; }
+.segmented button { flex: 1; border: 0; background: transparent; color: var(--sys-label-2); font-weight: 600; font-size: 13.5px; padding: 8px 10px; border-radius: 7px; transition: all var(--base) var(--ease); }
+.segmented button.on { background: var(--sys-bg-elev); color: var(--sys-label); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14); }
