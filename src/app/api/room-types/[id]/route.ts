@@ -1,0 +1,51 @@
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { ok, fail, zodFail } from "@/lib/api";
+
+const updateSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    baseRate: z.number().nonnegative().optional(),
+    maxOccupancy: z.number().int().positive().optional(),
+    rateFloor: z.number().nonnegative().optional(),
+    rateCeiling: z.number().nonnegative().optional(),
+  })
+  .refine((d) => Object.values(d).some((v) => v !== undefined), {
+    message: "no fields to update",
+  });
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) return zodFail(parsed.error);
+
+  const existing = await prisma.roomType.findUnique({ where: { id } });
+  if (!existing) return fail("room type not found", 404);
+
+  // Guard the combined floor/ceiling using current values for any omitted field.
+  const floor = parsed.data.rateFloor ?? Number(existing.rateFloor);
+  const ceiling = parsed.data.rateCeiling ?? Number(existing.rateCeiling);
+  if (floor > ceiling) return fail("rateFloor: floor must be ≤ ceiling", 422);
+
+  const type = await prisma.roomType.update({ where: { id }, data: parsed.data });
+  return ok(type);
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const existing = await prisma.roomType.findUnique({ where: { id } });
+  if (!existing) return fail("room type not found", 404);
+
+  const rooms = await prisma.room.count({ where: { roomTypeId: id } });
+  if (rooms > 0) return fail("Room type still has rooms — reassign or remove them first.", 409);
+
+  await prisma.roomType.delete({ where: { id } });
+  return ok({ deleted: true });
+}

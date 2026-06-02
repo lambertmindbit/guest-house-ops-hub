@@ -93,6 +93,7 @@ export default async function CalendarPage({
             <Icon name="chevronR" size={16} />
           </Link>
           <Link href={`/calendar?view=${view}`} className="btn btn--ghost btn--sm">Today</Link>
+          <Link href="/settings" className="btn btn--ghost btn--sm" aria-label="Block a room"><Icon name="x" size={15} /> Block a room</Link>
           <form method="get" className="row" style={{ gap: 6, marginLeft: "auto" }}>
             <input type="hidden" name="view" value={view} />
             <input type="date" name="start" defaultValue={start} className="input" style={{ width: 152, padding: "8px 11px", fontSize: 14 }} />

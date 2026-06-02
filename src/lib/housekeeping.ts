@@ -26,6 +26,7 @@ export async function getHousekeeping(): Promise<Housekeeping> {
 
   const [rooms, departures, arrivalsToday, occupiedTonight] = await Promise.all([
     prisma.room.findMany({
+      where: { archivedAt: null },
       include: { roomType: true },
       orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
     }),

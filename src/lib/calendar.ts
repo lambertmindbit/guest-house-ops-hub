@@ -37,6 +37,7 @@ export async function getCalendar(start: string, days: number): Promise<Calendar
 
   const [rooms, reservations, blocks] = await Promise.all([
     prisma.room.findMany({
+      where: { archivedAt: null },
       include: { roomType: true },
       orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
     }),

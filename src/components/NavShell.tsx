@@ -16,6 +16,7 @@ const MORE = [
   { href: "/analytics", label: "Analytics", icon: "chart" },
   { href: "/conflicts", label: "Conflicts", icon: "alert" },
   { href: "/feeds", label: "Feeds", icon: "link" },
+  { href: "/settings", label: "Settings", icon: "settings" },
 ];
 const ALL = [...PRIMARY, ...MORE];
 

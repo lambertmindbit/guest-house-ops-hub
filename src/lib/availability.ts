@@ -22,7 +22,7 @@ export async function getAvailability(
     { night: Date; total: number; available: number }[]
   >`
     WITH type_rooms AS (
-      SELECT id FROM rooms WHERE room_type_id = ${roomTypeId}
+      SELECT id FROM rooms WHERE room_type_id = ${roomTypeId} AND archived_at IS NULL
     ),
     nights AS (
       SELECT generate_series(${from}::date, ${to}::date - 1, interval '1 day')::date AS night

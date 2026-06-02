@@ -12,7 +12,7 @@ export default async function NewReservationPage({
 }) {
   const { roomId, date } = await searchParams;
   const [rooms, channels] = await Promise.all([
-    prisma.room.findMany({ include: { roomType: true }, orderBy: { label: "asc" } }),
+    prisma.room.findMany({ where: { archivedAt: null }, include: { roomType: true }, orderBy: { label: "asc" } }),
     prisma.channel.findMany({ orderBy: { name: "asc" } }),
   ]);
 

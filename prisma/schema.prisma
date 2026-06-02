@@ -62,6 +62,10 @@ model Room {
   // Manual override: lets the owner flag a room dirty when there's no checkout
   // to derive from (dust, maintenance, own use). Cleared on "mark clean".
   needsCleaningFlag Boolean  @default(false) @map("needs_cleaning_flag")
+  // Retiring a room: archived rooms drop off the calendar, availability,
+  // housekeeping, and the new-booking picker, but their history is preserved
+  // (FKs are RESTRICT — a used room can never be hard-deleted, only archived).
+  archivedAt   DateTime?     @map("archived_at")
   roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
   reservations Reservation[]
   blocks       Block[]
@@ -151,6 +155,23 @@ model Block {
   @@index([roomId])
   @@index([feedId])
   @@map("blocks")
+}
+
+// Single-row table holding the owner's property profile. Read with findFirst;
+// the first save creates the row. Used by invoices/receipts and as defaults
+// (check-in/out times) elsewhere.
+model PropertySettings {
+  id           String   @id @default(cuid())
+  name         String   @default("My Guest House")
+  checkInTime  String   @default("14:00") @map("check_in_time")
+  checkOutTime String   @default("11:00") @map("check_out_time")
+  currency     String   @default("INR")
+  timezone     String   @default("Asia/Kolkata")
+  address      String?
+  gstNumber    String?  @map("gst_number")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("property_settings")
 }
 
 // An external iCal URL the owner pastes in (one per room per OTA). The sync
