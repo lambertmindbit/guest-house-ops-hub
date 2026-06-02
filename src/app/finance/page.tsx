@@ -26,6 +26,15 @@ export default async function FinancePage({
         <PageHead title="Finance" sub={`Bookings arriving ${from} – ${to} · ${t.bookings} booking${t.bookings === 1 ? "" : "s"}`} />
         <RangeForm from={from} to={to} />
 
+        <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+          <a href={`/api/export/reservations.csv?from=${from}&to=${to}`} className="btn btn--outline btn--sm" download>
+            <Icon name="arrowR" size={15} /> Bookings CSV
+          </a>
+          <a href={`/api/export/payments.csv?from=${from}&to=${to}`} className="btn btn--outline btn--sm" download>
+            <Icon name="arrowR" size={15} /> Payments CSV
+          </a>
+        </div>
+
         <div className="kpi-grid" style={{ marginTop: 14 }}>
           <KPI value={displayINR(t.gross)} label="Gross revenue" icon="wallet" />
           <KPI value={displayINR(t.commission)} label="OTA commission" icon="link" />

@@ -248,6 +248,15 @@ a.card:active, button.card:active { background: var(--sys-fill); transform: scal
   .ios-header, .ios-tabbar, .ios-sheet-backdrop { display: none !important; }
 }
 
+/* Print: drop the app chrome and any .no-print controls so an invoice prints
+   on its own, full width, on a white page. */
+@media print {
+  .ios-header, .ios-tabbar, .ios-sheet-backdrop, .mac-toolbar, .mac-sidebar, .no-print { display: none !important; }
+  .app-main { margin: 0 !important; max-width: none !important; padding: 0 !important; }
+  body { background: #fff !important; }
+  .invoice { border: 0 !important; box-shadow: none !important; }
+}
+
 .brand__mark { width: 30px; height: 30px; border-radius: 8px; background: var(--tint); color: var(--tint-on); display: grid; place-items: center; flex: none; }
 
 /* content area */

@@ -99,9 +99,14 @@ export default async function ReservationDetailPage({
         />
 
         <div style={{ height: 16 }} />
-        <Link href={`/reservations/${r.id}/edit`} className="btn btn--primary btn--block">
-          <Icon name="edit" size={17} /> Edit reservation
-        </Link>
+        <div className="row" style={{ gap: 10 }}>
+          <Link href={`/reservations/${r.id}/edit`} className="btn btn--primary" style={{ flex: 1 }}>
+            <Icon name="edit" size={17} /> Edit
+          </Link>
+          <Link href={`/reservations/${r.id}/invoice`} className="btn btn--outline" style={{ flex: 1 }}>
+            <Icon name="copy" size={16} /> Invoice
+          </Link>
+        </div>
       </div>
     </main>
   );
