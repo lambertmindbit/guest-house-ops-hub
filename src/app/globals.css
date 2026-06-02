@@ -238,11 +238,14 @@ a.card:active, button.card:active { background: var(--sys-fill); transform: scal
 /* =========================================================================
    App shell — iOS (mobile) + macOS sidebar/toolbar (desktop)
    ========================================================================= */
-.only-desktop { display: none; }
-.only-mobile { display: revert; }
+/* Responsive chrome visibility — hide each piece at the wrong breakpoint
+   directly, so when shown it keeps its own display (grid/flex/block). A generic
+   .only-* helper with `display: revert` would clobber those component displays. */
+@media (max-width: 899px) {
+  .mac-toolbar, .mac-sidebar { display: none !important; }
+}
 @media (min-width: 900px) {
-  .only-desktop { display: revert; }
-  .only-mobile { display: none; }
+  .ios-header, .ios-tabbar, .ios-sheet-backdrop { display: none !important; }
 }
 
 .brand__mark { width: 30px; height: 30px; border-radius: 8px; background: var(--tint); color: var(--tint-on); display: grid; place-items: center; flex: none; }
