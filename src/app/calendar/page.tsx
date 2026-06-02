@@ -7,9 +7,18 @@ import { PageHead, Icon } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-const DAYS = 14;
-const COLW = 86;
 const ROOMW = 96;
+const VIEWS = [
+  { key: "week", label: "Week" },
+  { key: "2wk", label: "2 Weeks" },
+  { key: "month", label: "Month" },
+] as const;
+type ViewKey = (typeof VIEWS)[number]["key"];
+
+// First day of month (y, m) as YYYY-MM-DD; Date.UTC normalises month over/underflow.
+function monthStart(y: number, m: number) {
+  return new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+}
 
 function headerParts(dateStr: string) {
   const d = parseDateOnly(dateStr);
@@ -20,14 +29,38 @@ function headerParts(dateStr: string) {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ start?: string }>;
+  searchParams: Promise<{ start?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const today = todayDateOnly();
-  const start = /^\d{4}-\d{2}-\d{2}$/.test(params.start ?? "") ? params.start! : today;
-  const cal = await getCalendar(start, DAYS);
-  const prev = addDays(start, -DAYS);
-  const next = addDays(start, DAYS);
+  const view: ViewKey = VIEWS.some((v) => v.key === params.view)
+    ? (params.view as ViewKey)
+    : "2wk";
+  const rawStart = /^\d{4}-\d{2}-\d{2}$/.test(params.start ?? "") ? params.start! : today;
+
+  // Each view fixes the window length and how prev/next page through time.
+  let start: string;
+  let days: number;
+  let prev: string;
+  let next: string;
+  if (view === "month") {
+    const base = parseDateOnly(rawStart);
+    const y = base.getUTCFullYear();
+    const m = base.getUTCMonth();
+    start = monthStart(y, m);
+    days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); // last day-of-month number
+    prev = monthStart(y, m - 1);
+    next = monthStart(y, m + 1);
+  } else {
+    days = view === "week" ? 7 : 14;
+    start = rawStart;
+    prev = addDays(start, -days);
+    next = addDays(start, days);
+  }
+
+  const cal = await getCalendar(start, days);
+  const compact = view === "month";
+  const COLW = view === "month" ? 44 : view === "week" ? 104 : 86;
 
   const sub = `${displayShortDate(parseDateOnly(cal.dates[0]))} – ${displayShortDate(
     parseDateOnly(cal.dates[cal.dates.length - 1]),
@@ -40,15 +73,28 @@ export default async function CalendarPage({
       <div className="shimmer">
         <PageHead title="Calendar" sub={sub} />
 
-        <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "12px 0 2px" }}>
-          <Link href={`/calendar?start=${prev}`} className="btn btn--outline btn--sm" aria-label="Previous 2 weeks">
+        <div className="row" style={{ gap: 6, margin: "12px 0 8px" }}>
+          {VIEWS.map((v) => (
+            <Link
+              key={v.key}
+              href={`/calendar?view=${v.key}&start=${start}`}
+              className={`btn btn--sm ${view === v.key ? "btn--dark" : "btn--outline"}`}
+            >
+              {v.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "0 0 2px" }}>
+          <Link href={`/calendar?view=${view}&start=${prev}`} className="btn btn--outline btn--sm" aria-label="Previous">
             <Icon name="chevronL" size={16} />
           </Link>
-          <Link href={`/calendar?start=${next}`} className="btn btn--outline btn--sm" aria-label="Next 2 weeks">
+          <Link href={`/calendar?view=${view}&start=${next}`} className="btn btn--outline btn--sm" aria-label="Next">
             <Icon name="chevronR" size={16} />
           </Link>
-          <Link href="/calendar" className="btn btn--ghost btn--sm">Today</Link>
+          <Link href={`/calendar?view=${view}`} className="btn btn--ghost btn--sm">Today</Link>
           <form method="get" className="row" style={{ gap: 6, marginLeft: "auto" }}>
+            <input type="hidden" name="view" value={view} />
             <input type="date" name="start" defaultValue={start} className="input" style={{ width: 152, padding: "8px 11px", fontSize: 14 }} />
             <button className="btn btn--dark btn--sm">Go</button>
           </form>
@@ -93,6 +139,7 @@ export default async function CalendarPage({
                     <CalCell
                       key={cell.date}
                       cell={cell}
+                      compact={compact}
                       lastCol={di === cal.dates.length - 1}
                       lastRow={ri === cal.rows.length - 1}
                     />
@@ -110,22 +157,24 @@ export default async function CalendarPage({
   );
 }
 
-function CalCell({ cell, lastCol, lastRow }: { cell: CalendarCell; lastCol: boolean; lastRow: boolean }) {
+function CalCell({ cell, compact, lastCol, lastRow }: { cell: CalendarCell; compact: boolean; lastCol: boolean; lastRow: boolean }) {
   const border = {
     borderRight: lastCol ? 0 : "1px solid var(--line)",
     borderBottom: lastRow ? 0 : "1px solid var(--line)",
   };
 
   if (cell.state === "occupied" || cell.state === "conflict") {
+    const title = cell.state === "conflict" ? "Conflict" : cell.reservation!.guestName;
     return (
       <Link
         href={`/reservations/${cell.reservation!.id}`}
+        title={compact ? title : undefined}
         className={`cal-cell ${cell.state === "conflict" ? "cal-cell--conflict" : "cal-cell--occ"}`}
         style={{ ...border }}
       >
         {cell.arriving && <span className="cal-edge-arr" />}
         {cell.departing && <span className="cal-edge-dep" />}
-        {cell.state === "conflict" ? (
+        {compact ? null : cell.state === "conflict" ? (
           <div className="cal-guest">Conflict</div>
         ) : (
           <>
@@ -138,9 +187,13 @@ function CalCell({ cell, lastCol, lastRow }: { cell: CalendarCell; lastCol: bool
   }
   if (cell.state === "blocked") {
     return (
-      <div className="cal-cell cal-cell--blocked" style={border}>
-        <div style={{ fontWeight: 600, fontSize: 11.5 }}>Blocked</div>
-        {cell.blockReason}
+      <div className="cal-cell cal-cell--blocked" title={compact ? cell.blockReason ?? "Blocked" : undefined} style={border}>
+        {compact ? null : (
+          <>
+            <div style={{ fontWeight: 600, fontSize: 11.5 }}>Blocked</div>
+            {cell.blockReason}
+          </>
+        )}
       </div>
     );
   }

@@ -9,7 +9,7 @@ const PRIMARY = [
   { href: "/", label: "Today", icon: "today" },
   { href: "/calendar", label: "Calendar", icon: "calendar" },
   { href: "/guests", label: "Guests", icon: "guests" },
-  { href: "/housekeeping", label: "Cleaning", icon: "clean" },
+  { href: "/housekeeping", label: "Housekeeping", icon: "clean" },
 ];
 const MORE = [
   { href: "/finance", label: "Finance", icon: "wallet" },
