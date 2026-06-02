@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getFinanceSummary, currentMonthRange } from "@/lib/finance";
 import { displayINR } from "@/lib/format";
+import { PageHead, SectionLabel, KPI, RangeForm, ChannelBadge, Icon } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -19,114 +20,75 @@ export default async function FinancePage({
   const t = summary.totals;
 
   return (
-    <main className="mx-auto max-w-3xl p-4">
-      <h1 className="mb-1 text-xl font-semibold">Finance</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        Bookings arriving between {from} and {to} (exclusive). {t.bookings} booking
-        {t.bookings === 1 ? "" : "s"}.
-      </p>
+    <main className="app-main">
+      <div className="shimmer">
+        <PageHead title="Finance" sub={`Bookings arriving ${from} – ${to} · ${t.bookings} booking${t.bookings === 1 ? "" : "s"}`} />
+        <RangeForm from={from} to={to} />
 
-      <form method="get" className="mb-5 flex flex-wrap items-end gap-2">
-        <label className="text-sm">
-          <span className="mb-1 block text-neutral-500">From</span>
-          <input type="date" name="from" defaultValue={from} className={inputClass} />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-neutral-500">To</span>
-          <input type="date" name="to" defaultValue={to} className={inputClass} />
-        </label>
-        <button className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white">
-          Apply
-        </button>
-      </form>
+        <div className="kpi-grid" style={{ marginTop: 14 }}>
+          <KPI value={displayINR(t.gross)} label="Gross revenue" icon="wallet" />
+          <KPI value={displayINR(t.commission)} label="OTA commission" icon="link" />
+          <KPI value={displayINR(t.net)} label="Net to you" tone="good" icon="checkCircle" />
+          <KPI value={displayINR(t.outstanding)} label="Outstanding" tone="warn" icon="clock" />
+        </div>
 
-      <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Gross revenue" value={displayINR(t.gross)} />
-        <Stat label="OTA commission" value={displayINR(t.commission)} />
-        <Stat label="Net to you" value={displayINR(t.net)} strong />
-        <Stat label="Outstanding" value={displayINR(t.outstanding)} amber={t.outstanding > 0} />
-      </section>
-
-      <h2 className="mb-2 text-sm font-semibold text-neutral-700">By channel</h2>
-      <div className="mb-6 overflow-x-auto rounded-lg border border-neutral-200">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 text-left text-xs text-neutral-500">
-            <tr>
-              <th className="p-2">Channel</th>
-              <th className="p-2 text-right">Bookings</th>
-              <th className="p-2 text-right">Gross</th>
-              <th className="p-2 text-right">Commission</th>
-              <th className="p-2 text-right">Net</th>
-            </tr>
-          </thead>
-          <tbody>
-            {summary.byChannel.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-3 text-center text-neutral-400">
-                  No bookings in this period.
-                </td>
-              </tr>
-            ) : (
-              summary.byChannel.map((c) => (
-                <tr key={c.channel} className="border-t border-neutral-100">
-                  <td className="p-2 font-medium">{c.channel}</td>
-                  <td className="p-2 text-right tabular-nums">{c.bookings}</td>
-                  <td className="p-2 text-right tabular-nums">{displayINR(c.gross)}</td>
-                  <td className="p-2 text-right tabular-nums">{displayINR(c.commission)}</td>
-                  <td className="p-2 text-right font-medium tabular-nums">{displayINR(c.net)}</td>
+        <SectionLabel>By channel</SectionLabel>
+        <div className="card" style={{ overflow: "hidden", padding: 0 }}>
+          <div style={{ overflowX: "auto" }}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Channel</th>
+                  <th className="ralign">Bookings</th>
+                  <th className="ralign">Gross</th>
+                  <th className="ralign">Commission</th>
+                  <th className="ralign">Net</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {summary.byChannel.length === 0 ? (
+                  <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--subtle)" }}>No bookings in this period.</td></tr>
+                ) : (
+                  summary.byChannel.map((c) => (
+                    <tr key={c.channel}>
+                      <td><ChannelBadge name={c.channel} /></td>
+                      <td className="ralign num">{c.bookings}</td>
+                      <td className="ralign num">{displayINR(c.gross)}</td>
+                      <td className="ralign num" style={{ color: c.commission ? "var(--clay-700)" : "var(--subtle)" }}>{displayINR(c.commission)}</td>
+                      <td className="ralign num" style={{ fontWeight: 700 }}>{displayINR(c.net)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-      {summary.outstanding.length > 0 && (
-        <>
-          <h2 className="mb-2 text-sm font-semibold text-neutral-700">Balances due</h2>
-          <ul className="space-y-2">
-            {summary.outstanding.map((o) => (
-              <li
-                key={o.reservationId}
-                className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"
-              >
-                <Link href={`/reservations/${o.reservationId}`} className="font-medium hover:underline">
-                  {o.guestName} · Room {o.roomLabel}
+        {summary.outstanding.length > 0 && (
+          <>
+            <SectionLabel>Balances due</SectionLabel>
+            <div className="col" style={{ gap: 12 }}>
+              {summary.outstanding.map((o) => (
+                <Link
+                  key={o.reservationId}
+                  href={`/reservations/${o.reservationId}`}
+                  className="card"
+                  style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--warn-50)", borderColor: "rgba(224,152,47,.3)" }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 15 }}>{o.guestName}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--subtle)" }}>Room {o.roomLabel}</div>
+                  </div>
+                  <div className="row" style={{ gap: 8 }}>
+                    <span className="num" style={{ fontWeight: 700, color: "var(--warn-700)" }}>{displayINR(o.balance)} due</span>
+                    <Icon name="chevronR" size={16} style={{ color: "var(--warn-700)" }} />
+                  </div>
                 </Link>
-                <span className="font-medium text-amber-800">{displayINR(o.balance)} due</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </main>
-  );
-}
-
-const inputClass =
-  "rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none";
-
-function Stat({
-  label,
-  value,
-  strong,
-  amber,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-  amber?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-3 ${
-        amber ? "border-amber-200 bg-amber-50" : "border-neutral-200 bg-white"
-      }`}
-    >
-      <div className={`text-lg font-semibold tabular-nums ${strong ? "text-green-700" : ""}`}>
-        {value}
+              ))}
+            </div>
+          </>
+        )}
       </div>
-      <div className="text-xs text-neutral-500">{label}</div>
-    </div>
+    </main>
   );
 }

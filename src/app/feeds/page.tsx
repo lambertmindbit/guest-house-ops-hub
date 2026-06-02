@@ -2,11 +2,10 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { CopyButton } from "@/components/CopyButton";
 import { ImportFeeds } from "@/components/ImportFeeds";
+import { PageHead } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-// Owner-only (behind the auth middleware): export URLs to hand to OTAs, plus
-// the import feeds the owner pastes back in.
 export default async function FeedsPage() {
   const token = process.env.ICAL_FEED_TOKEN;
   const h = await headers();
@@ -23,50 +22,47 @@ export default async function FeedsPage() {
   ]);
 
   return (
-    <main className="mx-auto max-w-2xl p-4">
-      <h1 className="mb-1 text-xl font-semibold">Export to OTAs</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        Paste a room&apos;s link into the OTA&apos;s &ldquo;import calendar / iCal sync&rdquo;
-        setting so it can see when that room is booked. Links are read-only and contain a
-        secret token — share them only with the OTA.
-      </p>
+    <main className="app-main">
+      <div className="shimmer">
+        <PageHead title="Export to OTAs" sub="Paste a room’s link into the OTA’s “import calendar / iCal sync” setting so it can see when that room is booked. Links are read-only and contain a secret token — share them only with the OTA." />
 
-      {!token ? (
-        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          ICAL_FEED_TOKEN is not set in the environment.
-        </p>
-      ) : (
-        <ul className="space-y-3">
-          {rooms.map((room) => {
-            const url = `${origin}/api/ical/${token}/${room.id}.ics`;
-            return (
-              <li key={room.id} className="rounded-lg border border-neutral-200 bg-white p-3">
-                <div className="mb-1 text-sm font-medium">
-                  Room {room.label} · {room.roomType.name}
+        {!token ? (
+          <div className="banner banner--danger" style={{ cursor: "default", marginTop: 16 }}>
+            <span style={{ flex: 1 }}>ICAL_FEED_TOKEN is not set in the environment.</span>
+          </div>
+        ) : (
+          <div className="col" style={{ gap: 12, marginTop: 16 }}>
+            {rooms.map((room) => {
+              const url = `${origin}/api/ical/${token}/${room.id}.ics`;
+              return (
+                <div key={room.id} className="card" style={{ padding: 14 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+                    Room {room.label} <span style={{ color: "var(--subtle)", fontWeight: 500 }}>· {room.roomType.name}</span>
+                  </div>
+                  <div className="row" style={{ gap: 8 }}>
+                    <code style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 10, padding: "9px 11px", fontSize: 12, color: "var(--deep-teal)", fontFamily: "var(--mono)" }}>
+                      {url}
+                    </code>
+                    <CopyButton value={url} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <code className="min-w-0 flex-1 truncate rounded bg-neutral-100 px-2 py-1.5 text-xs text-neutral-700">
-                    {url}
-                  </code>
-                  <CopyButton value={url} />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      <ImportFeeds
-        rooms={rooms.map((r) => ({ id: r.id, label: r.label, roomTypeName: r.roomType.name }))}
-        feeds={importFeeds.map((f) => ({
-          id: f.id,
-          label: f.label,
-          roomLabel: f.room.label,
-          url: f.url,
-          lastSyncedAt: f.lastSyncedAt ? f.lastSyncedAt.toISOString() : null,
-          lastError: f.lastError,
-        }))}
-      />
+        <ImportFeeds
+          rooms={rooms.map((r) => ({ id: r.id, label: r.label, roomTypeName: r.roomType.name }))}
+          feeds={importFeeds.map((f) => ({
+            id: f.id,
+            label: f.label,
+            roomLabel: f.room.label,
+            url: f.url,
+            lastSyncedAt: f.lastSyncedAt ? f.lastSyncedAt.toISOString() : null,
+            lastError: f.lastError,
+          }))}
+        />
+      </div>
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getConflicts } from "@/lib/conflicts";
+import { PageHead, EmptyState, Icon } from "@/components/ui";
 import { displayDate } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
@@ -9,47 +10,51 @@ export default async function ConflictsPage() {
   const conflicts = await getConflicts();
 
   return (
-    <main className="mx-auto max-w-2xl p-4">
-      <h1 className="mb-1 text-xl font-semibold">Conflicts</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        Rooms that are both booked and blocked on the same nights. Resolve each by editing the
-        reservation (move/cancel) or removing the block it clashes with.
-      </p>
+    <main className="app-main">
+      <div className="shimmer">
+        <PageHead
+          title="Conflicts"
+          sub="Rooms that are both booked and blocked on the same nights. Resolve each by editing the reservation or removing the block it clashes with."
+        />
 
-      {conflicts.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-neutral-200 p-4 text-sm text-neutral-400">
-          No conflicts — everything lines up. 🎉
-        </p>
-      ) : (
-        <ul className="space-y-3">
-          {conflicts.map((c) => (
-            <li
-              key={`${c.reservationId}-${c.overlapStart}`}
-              className="rounded-lg border border-red-200 bg-red-50 p-3"
-            >
-              <div className="text-sm font-semibold text-red-800">
-                Room {c.roomLabel} · overlap {displayDate(parseDateOnly(c.overlapStart))} →{" "}
-                {displayDate(parseDateOnly(c.overlapEnd))}
-              </div>
-              <div className="mt-1 text-sm text-neutral-700">
-                Booking: <span className="font-medium">{c.guestName}</span> (
-                {displayDate(parseDateOnly(c.reservationStart))} →{" "}
-                {displayDate(parseDateOnly(c.reservationEnd))})
-              </div>
-              <div className="text-sm text-neutral-700">
-                Block: {c.blockReason ?? "—"}{" "}
-                <span className="text-neutral-400">({c.blockSource})</span>
-              </div>
-              <Link
-                href={`/reservations/${c.reservationId}`}
-                className="mt-2 inline-block text-sm font-medium text-red-700 hover:underline"
+        {conflicts.length === 0 ? (
+          <div style={{ marginTop: 20 }}>
+            <EmptyState>No conflicts — everything lines up. ✦</EmptyState>
+          </div>
+        ) : (
+          <div className="col" style={{ gap: 12, marginTop: 16 }}>
+            {conflicts.map((c) => (
+              <div
+                key={`${c.reservationId}-${c.overlapStart}`}
+                className="card"
+                style={{ padding: 16, background: "var(--danger-50)", borderColor: "rgba(229,72,77,.3)" }}
               >
-                Open reservation →
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+                <div className="row" style={{ gap: 8, color: "var(--danger-700)", fontWeight: 700, fontSize: 15.5 }}>
+                  <Icon name="alert" size={18} /> Room {c.roomLabel} · overlap{" "}
+                  {displayDate(parseDateOnly(c.overlapStart))} → {displayDate(parseDateOnly(c.overlapEnd))}
+                </div>
+                <div style={{ fontSize: 14, marginTop: 10, lineHeight: 1.7 }}>
+                  <div>
+                    <span style={{ color: "var(--subtle)" }}>Booking:</span>{" "}
+                    <b style={{ fontWeight: 600 }}>{c.guestName}</b> (
+                    {displayDate(parseDateOnly(c.reservationStart))} → {displayDate(parseDateOnly(c.reservationEnd))})
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--subtle)" }}>Block:</span>{" "}
+                    <b style={{ fontWeight: 600 }}>{c.blockReason ?? "—"}</b>{" "}
+                    <span style={{ color: "var(--subtle)" }}>({c.blockSource})</span>
+                  </div>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <Link href={`/reservations/${c.reservationId}`} className="btn btn--dark btn--sm">
+                    Open reservation <Icon name="arrowR" size={15} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

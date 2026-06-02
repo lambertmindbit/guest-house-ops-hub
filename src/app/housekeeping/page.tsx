@@ -1,5 +1,6 @@
 import { getHousekeeping, type HousekeepingRoom } from "@/lib/housekeeping";
 import { CleaningButton } from "@/components/CleaningButton";
+import { PageHead, SectionLabel, StatusPill, EmptyState } from "@/components/ui";
 import { displayShortDate } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
@@ -13,75 +14,82 @@ export default async function HousekeepingPage() {
   const ready = rooms.filter((r) => !r.needsCleaning);
 
   return (
-    <main className="mx-auto max-w-2xl p-4">
-      <h1 className="mb-1 text-xl font-semibold">Housekeeping</h1>
-      <p className="mb-4 text-sm text-neutral-500">
-        {toCleanCount === 0
-          ? "All rooms are clean."
-          : `${toCleanCount} room${toCleanCount === 1 ? "" : "s"} to clean.`}
-      </p>
+    <main className="app-main">
+      <div className="shimmer">
+        <PageHead
+          title="Housekeeping"
+          sub={toCleanCount === 0 ? "All rooms are clean ✦" : `${toCleanCount} room${toCleanCount === 1 ? "" : "s"} to clean.`}
+        />
 
-      {toClean.length > 0 && (
-        <section className="mb-6">
-          <h2 className="mb-2 text-sm font-semibold text-neutral-700">To clean</h2>
-          <ul className="space-y-2">
-            {toClean.map((room) => (
-              <RoomRow key={room.id} room={room} action="clean" />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-neutral-700">
-          Ready <span className="text-neutral-400">({ready.length})</span>
-        </h2>
-        {ready.length === 0 ? (
-          <p className="text-sm text-neutral-400">No rooms are ready right now.</p>
+        <SectionLabel>To clean</SectionLabel>
+        {toClean.length === 0 ? (
+          <EmptyState>Nothing to clean — every room is ready.</EmptyState>
         ) : (
-          <ul className="space-y-2">
-            {ready.map((room) => (
-              <RoomRow key={room.id} room={room} action="dirty" />
+          <div className="col" style={{ gap: 12 }}>
+            {toClean.map((room) => (
+              <div
+                key={room.id}
+                className="card"
+                style={{
+                  padding: 17,
+                  borderColor: room.highPriority ? "rgba(229,72,77,.35)" : "var(--line)",
+                  background: room.highPriority ? "var(--danger-50)" : "var(--paper)",
+                }}
+              >
+                <div className="row" style={{ justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <RoomTitle room={room} />
+                    <div style={{ margin: "8px 0" }}><Tags room={room} /></div>
+                    {room.lastDeparture && (
+                      <div style={{ fontSize: 12.5, color: "var(--subtle)" }}>
+                        Checked out {displayShortDate(parseDateOnly(room.lastDeparture))}
+                      </div>
+                    )}
+                  </div>
+                  <CleaningButton roomId={room.id} markCleaned />
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-      </section>
+
+        <SectionLabel count={`(${ready.length})`}>Ready</SectionLabel>
+        {ready.length === 0 ? (
+          <p style={{ fontSize: 13.5, color: "var(--subtle)" }}>No rooms are ready right now.</p>
+        ) : (
+          <div className="col" style={{ gap: 12 }}>
+            {ready.map((room) => (
+              <div key={room.id} className="card" style={{ padding: 17 }}>
+                <div className="row" style={{ justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <RoomTitle room={room} />
+                    <div style={{ marginTop: 8 }}><Tags room={room} /></div>
+                  </div>
+                  <CleaningButton roomId={room.id} markCleaned={false} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }
 
-function RoomRow({ room, action }: { room: HousekeepingRoom; action: "clean" | "dirty" }) {
-  const dirty = action === "clean";
+function RoomTitle({ room }: { room: HousekeepingRoom }) {
   return (
-    <li
-      className={`flex items-center justify-between gap-3 rounded-lg border p-3 ${
-        room.highPriority ? "border-red-300 bg-red-50" : "border-neutral-200 bg-white"
-      }`}
-    >
-      <div className="min-w-0">
-        <div className="font-medium">
-          Room {room.label} <span className="text-neutral-400">· {room.roomTypeName}</span>
-        </div>
-        <div className="mt-0.5 flex flex-wrap gap-1 text-xs">
-          {room.highPriority && (
-            <span className="rounded bg-red-600 px-1.5 py-0.5 font-medium text-white">
-              Arriving today — clean first
-            </span>
-          )}
-          {!room.highPriority && room.arrivalToday && (
-            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">Arrival today</span>
-          )}
-          {room.occupiedTonight && (
-            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-800">Occupied tonight</span>
-          )}
-          {dirty && room.lastDeparture && (
-            <span className="text-neutral-400">
-              Checked out {displayShortDate(parseDateOnly(room.lastDeparture))}
-            </span>
-          )}
-        </div>
-      </div>
-      <CleaningButton roomId={room.id} markCleaned={dirty} />
-    </li>
+    <div style={{ fontWeight: 700, fontSize: 16 }}>
+      Room {room.label} <span style={{ color: "var(--subtle)", fontWeight: 500 }}>· {room.roomTypeName}</span>
+    </div>
+  );
+}
+
+function Tags({ room }: { room: HousekeepingRoom }) {
+  return (
+    <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+      {room.highPriority && <StatusPill kind="danger">Arriving today — clean first</StatusPill>}
+      {!room.highPriority && room.arrivalToday && <StatusPill kind="warn">Arrival today</StatusPill>}
+      {room.occupiedTonight && <StatusPill kind="teal">Occupied tonight</StatusPill>}
+    </div>
   );
 }

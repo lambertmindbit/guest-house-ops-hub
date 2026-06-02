@@ -1,11 +1,21 @@
 import Link from "next/link";
+import { format } from "date-fns";
 import { getCalendar, type CalendarCell } from "@/lib/calendar";
 import { todayDateOnly, parseDateOnly, addDays } from "@/lib/dates";
 import { displayShortDate } from "@/lib/format";
+import { PageHead, Icon } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 const DAYS = 14;
+const COLW = 86;
+const ROOMW = 96;
+
+function headerParts(dateStr: string) {
+  const d = parseDateOnly(dateStr);
+  const local = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return { dow: format(local, "EEE"), day: String(d.getUTCDate()) };
+}
 
 export default async function CalendarPage({
   searchParams,
@@ -16,135 +26,132 @@ export default async function CalendarPage({
   const today = todayDateOnly();
   const start = /^\d{4}-\d{2}-\d{2}$/.test(params.start ?? "") ? params.start! : today;
   const cal = await getCalendar(start, DAYS);
-
   const prev = addDays(start, -DAYS);
   const next = addDays(start, DAYS);
 
+  const sub = `${displayShortDate(parseDateOnly(cal.dates[0]))} – ${displayShortDate(
+    parseDateOnly(cal.dates[cal.dates.length - 1]),
+  )} · ${cal.rows.length} rooms`;
+
+  const cols = `${ROOMW}px repeat(${cal.dates.length}, ${COLW}px)`;
+
   return (
-    <main className="mx-auto max-w-6xl p-4">
-      <header className="mb-3 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Calendar</h1>
-        <nav className="flex items-center gap-1 text-sm">
-          <NavLink href={`/calendar?start=${prev}`} label="‹ Prev" />
-          <NavLink href="/calendar" label="Today" />
-          <NavLink href={`/calendar?start=${next}`} label="Next ›" />
-        </nav>
-      </header>
+    <main className="app-main">
+      <div className="shimmer">
+        <PageHead
+          title="Calendar"
+          sub={sub}
+          right={
+            <div className="row" style={{ gap: 8 }}>
+              <Link href={`/calendar?start=${prev}`} className="btn btn--outline btn--sm"><Icon name="chevronL" size={16} /></Link>
+              <Link href="/calendar" className="btn btn--outline btn--sm">Today</Link>
+              <Link href={`/calendar?start=${next}`} className="btn btn--outline btn--sm"><Icon name="chevronR" size={16} /></Link>
+            </div>
+          }
+        />
 
-      <Legend />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 14, margin: "14px 0 12px" }}>
+          <Legend swatch="var(--paper)" label="Vacant" />
+          <Legend swatch="var(--teal-50)" label="Occupied" />
+          <Legend swatch="#ece5da" label="Blocked" />
+          <Legend swatch="var(--danger-50)" label="Conflict" />
+          <Legend swatch="var(--good)" label="Arriving" edge />
+          <Legend swatch="var(--clay)" label="Departing" edge />
+        </div>
 
-      <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-200">
-        <table className="border-collapse text-xs">
-          <thead>
-            <tr>
-              <th className="sticky left-0 z-10 w-28 border-b border-r border-neutral-200 bg-neutral-50 p-2 text-left font-medium">
-                Room
-              </th>
-              {cal.dates.map((d) => (
-                <th
-                  key={d}
-                  className={`w-24 border-b border-neutral-200 p-2 font-medium ${
-                    d === today ? "bg-amber-50 text-amber-700" : "bg-neutral-50"
-                  }`}
-                >
-                  {displayShortDate(parseDateOnly(d))}
-                </th>
+        <div className="card" style={{ overflow: "hidden", padding: 0 }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div style={{ minWidth: ROOMW + COLW * cal.dates.length }}>
+              {/* header */}
+              <div style={{ display: "grid", gridTemplateColumns: cols, position: "sticky", top: 0 }}>
+                <div style={{ position: "sticky", left: 0, zIndex: 3, background: "var(--sand)", padding: "11px 12px", fontWeight: 700, fontSize: 12.5, borderBottom: "1px solid var(--line)", borderRight: "1px solid var(--line)" }}>
+                  Room
+                </div>
+                {cal.dates.map((d, i) => {
+                  const isToday = d === today;
+                  const { dow, day } = headerParts(d);
+                  return (
+                    <div key={d} style={{ padding: "9px 8px", textAlign: "center", borderBottom: "1px solid var(--line)", borderRight: i < cal.dates.length - 1 ? "1px solid var(--line)" : 0, background: isToday ? "var(--teal-50)" : "var(--sand)" }}>
+                      <div className="eyebrow" style={{ fontSize: 9.5, color: isToday ? "var(--teal-700)" : "var(--subtle)" }}>{dow}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: isToday ? "var(--teal-700)" : "var(--ink)" }}>{day}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* rows */}
+              {cal.rows.map((room, ri) => (
+                <div key={room.id} style={{ display: "grid", gridTemplateColumns: cols }}>
+                  <div style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--paper)", padding: "10px 12px", borderRight: "1px solid var(--line)", borderBottom: ri < cal.rows.length - 1 ? "1px solid var(--line)" : 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{room.label}</div>
+                    <div style={{ fontSize: 10.5, color: "var(--subtle)", lineHeight: 1.2 }}>{room.roomTypeName}</div>
+                  </div>
+                  {room.cells.map((cell, di) => (
+                    <CalCell
+                      key={cell.date}
+                      cell={cell}
+                      lastCol={di === cal.dates.length - 1}
+                      lastRow={ri === cal.rows.length - 1}
+                    />
+                  ))}
+                </div>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {cal.rows.map((row) => (
-              <tr key={row.id}>
-                <th className="sticky left-0 z-10 border-r border-t border-neutral-200 bg-white p-2 text-left font-medium">
-                  <div>{row.label}</div>
-                  <div className="font-normal text-neutral-400">{row.roomTypeName}</div>
-                </th>
-                {row.cells.map((cell) => (
-                  <Cell key={cell.date} cell={cell} />
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </div>
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: "var(--subtle)", marginTop: 10, textAlign: "center" }}>
+          Swipe across to see more dates · tap a booking to open it
+        </div>
       </div>
     </main>
   );
 }
 
-function Cell({ cell }: { cell: CalendarCell }) {
-  const base = "h-14 border-t border-neutral-100 p-1 align-top text-[11px] leading-tight";
-  const markers = `${cell.arriving ? "border-l-4 border-l-green-500" : ""} ${
-    cell.departing ? "border-r-4 border-r-amber-400" : ""
-  }`;
+function CalCell({ cell, lastCol, lastRow }: { cell: CalendarCell; lastCol: boolean; lastRow: boolean }) {
+  const border = {
+    borderRight: lastCol ? 0 : "1px solid var(--line)",
+    borderBottom: lastRow ? 0 : "1px solid var(--line)",
+  };
 
-  if (cell.state === "conflict") {
+  if (cell.state === "occupied" || cell.state === "conflict") {
     return (
-      <td className={`${base} ${markers} bg-red-500 font-semibold text-white`}>
-        <Link href={`/reservations/${cell.reservation!.id}`} className="block h-full">
-          Conflict
-        </Link>
-      </td>
+      <Link
+        href={`/reservations/${cell.reservation!.id}`}
+        className={`cal-cell ${cell.state === "conflict" ? "cal-cell--conflict" : "cal-cell--occ"}`}
+        style={{ ...border }}
+      >
+        {cell.arriving && <span className="cal-edge-arr" />}
+        {cell.departing && <span className="cal-edge-dep" />}
+        {cell.state === "conflict" ? (
+          <div className="cal-guest">Conflict</div>
+        ) : (
+          <>
+            <div className="cal-guest">{cell.reservation!.guestName.split(" ")[0]}</div>
+            <div className="cal-ch">{cell.reservation!.channelName}</div>
+          </>
+        )}
+      </Link>
     );
   }
-
-  if (cell.state === "occupied") {
-    return (
-      <td className={`${base} ${markers} bg-blue-100`}>
-        <Link href={`/reservations/${cell.reservation!.id}`} className="block h-full">
-          <div className="truncate font-medium text-blue-900">
-            {firstName(cell.reservation!.guestName)}
-          </div>
-          <div className="truncate text-blue-600">{cell.reservation!.channelName}</div>
-        </Link>
-      </td>
-    );
-  }
-
   if (cell.state === "blocked") {
     return (
-      <td className={`${base} ${markers} bg-neutral-200 text-neutral-600`}>
-        <span className="italic">Blocked</span>
-        {cell.blockReason && <div className="truncate text-neutral-500">{cell.blockReason}</div>}
-      </td>
+      <div className="cal-cell cal-cell--blocked" style={border}>
+        <div style={{ fontWeight: 600, fontSize: 11.5 }}>Blocked</div>
+        {cell.blockReason}
+      </div>
     );
   }
-
-  return <td className={`${base} ${markers} bg-white`} />;
+  return <div className="cal-cell" style={{ ...border, background: "var(--paper)" }} />;
 }
 
-function firstName(name: string): string {
-  return name.split(" ")[0];
-}
-
-function NavLink({ href, label }: { href: string; label: string }) {
+function Legend({ swatch, label, edge }: { swatch: string; label: string; edge?: boolean }) {
   return (
-    <Link href={href} className="rounded border border-neutral-200 px-2 py-1 hover:bg-neutral-50">
+    <div className="row" style={{ gap: 7, fontSize: 12.5, color: "var(--deep-teal)", fontWeight: 500 }}>
+      {edge ? (
+        <span style={{ width: 4, height: 16, borderRadius: 2, background: swatch, display: "inline-block" }} />
+      ) : (
+        <span style={{ width: 16, height: 16, borderRadius: 5, background: swatch, border: "1px solid var(--line-strong)", display: "inline-block" }} />
+      )}
       {label}
-    </Link>
-  );
-}
-
-function Legend() {
-  const items: { label: string; className: string }[] = [
-    { label: "Vacant", className: "bg-white border border-neutral-300" },
-    { label: "Occupied", className: "bg-blue-100" },
-    { label: "Blocked", className: "bg-neutral-200" },
-    { label: "Conflict", className: "bg-red-500" },
-  ];
-  return (
-    <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-600">
-      {items.map((i) => (
-        <span key={i.label} className="flex items-center gap-1">
-          <span className={`inline-block h-3 w-3 rounded ${i.className}`} />
-          {i.label}
-        </span>
-      ))}
-      <span className="flex items-center gap-1">
-        <span className="inline-block h-3 w-1.5 bg-green-500" /> Arriving
-      </span>
-      <span className="flex items-center gap-1">
-        <span className="inline-block h-3 w-1.5 bg-amber-400" /> Departing
-      </span>
     </div>
   );
 }

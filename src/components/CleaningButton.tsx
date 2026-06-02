@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/ui";
 
 export function CleaningButton({ roomId, markCleaned }: { roomId: string; markCleaned: boolean }) {
   const router = useRouter();
@@ -19,19 +20,11 @@ export function CleaningButton({ roomId, markCleaned }: { roomId: string; markCl
   }
 
   return markCleaned ? (
-    <button
-      onClick={update}
-      disabled={busy}
-      className="shrink-0 rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-    >
-      {busy ? "…" : "Mark clean"}
+    <button onClick={update} disabled={busy} className="btn btn--good" style={{ flex: "none" }}>
+      <Icon name="check" size={17} /> {busy ? "…" : "Mark clean"}
     </button>
   ) : (
-    <button
-      onClick={update}
-      disabled={busy}
-      className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
-    >
+    <button onClick={update} disabled={busy} className="btn btn--outline btn--sm" style={{ flex: "none" }}>
       {busy ? "…" : "Needs cleaning"}
     </button>
   );

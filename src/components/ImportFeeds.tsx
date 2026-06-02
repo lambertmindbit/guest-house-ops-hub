@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/ui";
 
 export type RoomOption = { id: string; label: string; roomTypeName: string };
 export type FeedRow = {
@@ -61,9 +62,7 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
       const results = json.data?.results ?? [];
       const total = results.reduce((n: number, r: { imported: number }) => n + r.imported, 0);
       const failed = results.filter((r: { error?: string }) => r.error).length;
-      setSyncMsg(
-        `Synced ${results.length} feed(s): ${total} dates imported${failed ? `, ${failed} failed` : ""}.`,
-      );
+      setSyncMsg(`Synced ${results.length} feed(s): ${total} dates imported${failed ? `, ${failed} failed` : ""}.`);
       router.refresh();
     } finally {
       setBusy(false);
@@ -71,109 +70,74 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
   }
 
   return (
-    <section className="mt-8">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Import from OTAs</h2>
-        <button
-          onClick={syncNow}
-          disabled={busy}
-          className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-        >
+    <section style={{ marginTop: 32 }}>
+      <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+        <span style={{ fontWeight: 700, fontSize: 17 }}>Import from OTAs</span>
+        <button onClick={syncNow} disabled={busy} className="btn btn--primary btn--sm">
           {busy ? "Working…" : "Sync now"}
         </button>
       </div>
-      <p className="mb-3 text-sm text-neutral-500">
-        Paste the iCal link each OTA gives you for a room. Imported dates show as blocks on the
-        calendar so they can&apos;t be double-booked.
+      <p style={{ fontSize: 13.5, color: "var(--subtle)", marginBottom: 14, lineHeight: 1.5 }}>
+        Paste the iCal link each OTA gives you for a room. Imported dates show as blocks on the calendar so they can&apos;t be double-booked.
       </p>
 
       {syncMsg && (
-        <p className="mb-3 rounded-lg border border-green-200 bg-green-50 p-2 text-sm text-green-700">
-          {syncMsg}
-        </p>
+        <div className="banner banner--good" style={{ cursor: "default", marginBottom: 12 }}>
+          <span className="banner__icon"><Icon name="check" size={18} /></span>
+          <span style={{ flex: 1 }}>{syncMsg}</span>
+        </div>
       )}
 
-      <form onSubmit={addFeed} className="mb-4 space-y-2 rounded-lg border border-neutral-200 bg-white p-3">
-        {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
-        <div className="grid gap-2 sm:grid-cols-2">
-          <select
-            required
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Room…</option>
-            {rooms.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label} · {r.roomTypeName}
-              </option>
-            ))}
-          </select>
-          <input
-            required
-            placeholder="Label (e.g. Booking.com)"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            className={inputClass}
-          />
+      <form onSubmit={addFeed} className="card" style={{ padding: 16, marginBottom: 16 }}>
+        {error && <p style={{ color: "var(--danger-700)", fontSize: 13.5, marginBottom: 10 }}>{error}</p>}
+        <div className="form-grid" style={{ marginBottom: 10 }}>
+          <div>
+            <label className="field-label">Room</label>
+            <select className="select" required value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+              <option value="">Room…</option>
+              {rooms.map((r) => <option key={r.id} value={r.id}>{r.label} · {r.roomTypeName}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Label</label>
+            <input className="input" required placeholder="e.g. Booking.com" value={label} onChange={(e) => setLabel(e.target.value)} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="field-label">iCal link</label>
+            <input className="input" required type="url" placeholder="https://… iCal link from the OTA" value={url} onChange={(e) => setUrl(e.target.value)} />
+          </div>
         </div>
-        <input
-          required
-          type="url"
-          placeholder="https://… iCal link from the OTA"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          className={inputClass}
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50"
-        >
-          Add feed
-        </button>
+        <button type="submit" disabled={busy} className="btn btn--outline btn--sm">Add feed</button>
       </form>
 
       {feeds.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-neutral-200 p-3 text-sm text-neutral-400">
-          No import feeds yet.
-        </p>
+        <div className="empty">No import feeds yet.</div>
       ) : (
-        <ul className="space-y-2">
+        <div className="col" style={{ gap: 12 }}>
           {feeds.map((f) => (
-            <li key={f.id} className="rounded-lg border border-neutral-200 bg-white p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium">
-                    {f.label} <span className="text-neutral-400">· Room {f.roomLabel}</span>
+            <div key={f.id} className="card" style={{ padding: 14 }}>
+              <div className="row" style={{ justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600 }}>
+                    {f.label} <span style={{ color: "var(--subtle)", fontWeight: 500 }}>· Room {f.roomLabel}</span>
                   </div>
-                  <div className="truncate text-xs text-neutral-500">{f.url}</div>
-                  <div className="mt-1 text-xs">
+                  <div style={{ fontSize: 12, color: "var(--subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.url}</div>
+                  <div style={{ marginTop: 4, fontSize: 12 }}>
                     {f.lastError ? (
-                      <span className="text-red-600">Error: {f.lastError}</span>
+                      <span style={{ color: "var(--danger-700)" }}>Error: {f.lastError}</span>
                     ) : f.lastSyncedAt ? (
-                      <span className="text-neutral-400">
-                        Last synced {new Date(f.lastSyncedAt).toLocaleString()}
-                      </span>
+                      <span style={{ color: "var(--subtle)" }}>Last synced {new Date(f.lastSyncedAt).toLocaleString()}</span>
                     ) : (
-                      <span className="text-neutral-400">Not synced yet</span>
+                      <span style={{ color: "var(--subtle)" }}>Not synced yet</span>
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => remove(f.id)}
-                  className="shrink-0 rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
-                >
-                  Remove
-                </button>
+                <button onClick={() => remove(f.id)} className="btn btn--danger-outline btn--sm" style={{ flex: "none" }}>Remove</button>
               </div>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
 }
-
-const inputClass =
-  "w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none";

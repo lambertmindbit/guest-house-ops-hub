@@ -1,17 +1,22 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { ChannelBadge } from "@/components/ChannelBadge";
+import { ChannelBadge, StatusPill, Icon } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
 import { displayDate, displayMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_STYLE: Record<string, string> = {
-  confirmed: "bg-green-100 text-green-800",
-  cancelled: "bg-neutral-200 text-neutral-600",
-  no_show: "bg-rose-100 text-rose-800",
+const STATUS: Record<string, { kind: "good" | "ink" | "danger"; label: string }> = {
+  confirmed: { kind: "good", label: "Confirmed" },
+  cancelled: { kind: "ink", label: "Cancelled" },
+  no_show: { kind: "danger", label: "No-show" },
 };
+
+function nightsBetween(a: Date, b: Date) {
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}
 
 export default async function ReservationDetailPage({
   params,
@@ -30,68 +35,74 @@ export default async function ReservationDetailPage({
   });
   if (!r) notFound();
 
+  const status = STATUS[r.status] ?? STATUS.confirmed;
+  const nights = nightsBetween(r.checkIn, r.checkOut);
+
   return (
-    <main className="mx-auto max-w-md p-4">
-      <Link href="/calendar" className="text-sm text-neutral-500 hover:underline">
-        ‹ Back to calendar
-      </Link>
+    <main className="app-main" style={{ maxWidth: 620 }}>
+      <div className="shimmer">
+        <Link href="/calendar" className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
+          <Icon name="chevronL" size={16} /> Back to calendar
+        </Link>
 
-      <header className="mt-2 mb-4 flex items-start justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold">{r.guest.name}</h1>
-          <p className="text-sm text-neutral-500">{r.guest.phone}</p>
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" }}>{r.guest.name}</h1>
+            <div className="row" style={{ gap: 6, color: "var(--subtle)", fontSize: 13.5, marginTop: 4 }}>
+              <Icon name="phone" size={14} /> {r.guest.phone}
+              {r.guest.email ? ` · ${r.guest.email}` : ""}
+            </div>
+          </div>
+          <StatusPill kind={status.kind}>
+            {status.kind === "good" && <span className="dot" />}
+            {status.label}
+          </StatusPill>
         </div>
-        <span
-          className={`rounded px-2 py-1 text-xs font-medium ${STATUS_STYLE[r.status] ?? ""}`}
-        >
-          {r.status}
-        </span>
-      </header>
 
-      <dl className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 text-sm">
-        <Row label="Room">
-          {r.room.label} · {r.room.roomType.name}
-        </Row>
-        <Row label="Channel">
-          <ChannelBadge name={r.channel.name} />
-        </Row>
-        <Row label="Check-in">{displayDate(r.checkIn)}</Row>
-        <Row label="Check-out">{displayDate(r.checkOut)}</Row>
-        {r.arrivalTime && <Row label="Arrival time">{r.arrivalTime}</Row>}
-        <Row label="Amount">{displayMoney(r.grossAmount)}</Row>
-        {r.otaRef && <Row label="OTA ref">{r.otaRef}</Row>}
-        {r.specialRequests && <Row label="Special requests">{r.specialRequests}</Row>}
-      </dl>
+        <div className="card" style={{ padding: "4px 16px", marginTop: 16 }}>
+          <Row label="Room">
+            <span className="row" style={{ gap: 7, justifyContent: "flex-end" }}>
+              <Icon name="door" size={15} /> {r.room.label} · {r.room.roomType.name}
+            </span>
+          </Row>
+          <Row label="Channel"><ChannelBadge name={r.channel.name} /></Row>
+          <Row label="Check-in">{displayDate(r.checkIn)}</Row>
+          <Row label="Check-out">{displayDate(r.checkOut)} · {nights} {nights === 1 ? "night" : "nights"}</Row>
+          {r.arrivalTime && <Row label="Arrival time">{r.arrivalTime}</Row>}
+          <Row label="Amount"><span className="num">{displayMoney(r.grossAmount)}</span></Row>
+          {r.otaRef && <Row label="OTA ref">{r.otaRef}</Row>}
+          <div style={{ padding: "13px 0" }}>
+            <div style={{ fontSize: 13.5, color: "var(--subtle)", marginBottom: 6 }}>Special requests</div>
+            <div style={{ fontSize: 14.5 }}>{r.specialRequests || <span style={{ color: "var(--subtle)" }}>None</span>}</div>
+          </div>
+        </div>
 
-      <PaymentsPanel
-        reservationId={r.id}
-        gross={r.grossAmount ? Number(r.grossAmount) : 0}
-        payments={r.payments.map((p) => ({
-          id: p.id,
-          amount: Number(p.amount),
-          mode: p.mode,
-          paidAt: p.paidAt.toISOString(),
-          note: p.note,
-        }))}
-      />
+        <PaymentsPanel
+          reservationId={r.id}
+          gross={r.grossAmount ? Number(r.grossAmount) : 0}
+          payments={r.payments.map((p) => ({
+            id: p.id,
+            amount: Number(p.amount),
+            mode: p.mode,
+            paidAt: p.paidAt.toISOString(),
+            note: p.note,
+          }))}
+        />
 
-      <div className="mt-4">
-        <Link
-          href={`/reservations/${r.id}/edit`}
-          className="inline-block rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
-        >
-          Edit reservation
+        <div style={{ height: 16 }} />
+        <Link href={`/reservations/${r.id}/edit`} className="btn btn--primary btn--block">
+          <Icon name="edit" size={17} /> Edit reservation
         </Link>
       </div>
     </main>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-neutral-500">{label}</dt>
-      <dd className="text-right font-medium">{children}</dd>
+    <div className="row" style={{ justifyContent: "space-between", gap: 12, padding: "13px 0", borderBottom: "1px solid var(--line)" }}>
+      <span style={{ fontSize: 13.5, color: "var(--subtle)" }}>{label}</span>
+      <span style={{ fontWeight: 600, fontSize: 14.5, textAlign: "right" }}>{children}</span>
     </div>
   );
 }

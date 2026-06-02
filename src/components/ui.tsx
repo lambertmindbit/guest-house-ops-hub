@@ -26,6 +26,9 @@ const PATHS: Record<string, ReactNode> = {
   edit: (<><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m14.5 5.5 4 4" /></>),
   door: (<><path d="M14 21V4a1 1 0 0 0-1.2-1L6 4.5A1 1 0 0 0 5 5.5V21M3 21h13M16 21h5M16 8v9" /><path d="M11 12v1" /></>),
   alertCircle: (<><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h0" /></>),
+  phone: (<><path d="M5 4h3l1.5 4.5L7.5 10a12 12 0 0 0 6 6l1.5-2L19.5 16V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" /></>),
+  checkCircle: (<><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5 4.5-5" /></>),
+  moon: (<><path d="M20 14.5A8 8 0 0 1 9.5 4 7 7 0 1 0 20 14.5Z" /></>),
 };
 
 export function Icon({ name, size = 22, stroke = 1.9, style }: { name: string; size?: number; stroke?: number; style?: CSSProperties }) {
@@ -111,6 +114,25 @@ export function AlertBanner({ tone, icon, href, children }: { tone: "danger" | "
 
 export function EmptyState({ children }: { children: ReactNode }) {
   return <div className="empty">{children}</div>;
+}
+
+/* ---------------- Date range form (GET) ---------------- */
+export function RangeForm({ from, to }: { from: string; to: string }) {
+  return (
+    <form method="get" className="card" style={{ padding: 14, marginTop: 16 }}>
+      <div className="row" style={{ gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <div style={{ flex: 1, minWidth: 130 }}>
+          <label className="field-label">From</label>
+          <input className="input" type="date" name="from" defaultValue={from} />
+        </div>
+        <div style={{ flex: 1, minWidth: 130 }}>
+          <label className="field-label">To</label>
+          <input className="input" type="date" name="to" defaultValue={to} />
+        </div>
+        <button className="btn btn--dark">Apply</button>
+      </div>
+    </form>
+  );
 }
 
 /* ---------------- Guest/booking list row ---------------- */

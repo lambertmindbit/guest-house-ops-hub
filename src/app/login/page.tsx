@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Icon } from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,49 +36,33 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
-      <h1 className="mb-1 text-2xl font-semibold">Ops Hub</h1>
-      <p className="mb-6 text-sm text-neutral-500">Sign in to continue.</p>
+    <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+      <div className="card shimmer" style={{ width: "100%", maxWidth: 380, padding: 28 }}>
+        <div className="row" style={{ gap: 10, marginBottom: 4 }}>
+          <span className="brand__mark"><Icon name="door" size={18} /></span>
+          <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-0.01em" }}>Ops Hub</span>
+        </div>
+        <p style={{ fontSize: 13.5, color: "var(--subtle)", margin: "0 0 22px" }}>Sign in to continue.</p>
 
-      <form onSubmit={onSubmit} className="space-y-4">
-        {error && (
-          <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </p>
-        )}
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-600">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="username"
-            className={inputClass}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-neutral-600">Password</span>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            className={inputClass}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded-lg bg-neutral-900 px-4 py-2.5 font-medium text-white disabled:opacity-50"
-        >
-          {busy ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
+        <form onSubmit={onSubmit} className="col" style={{ gap: 14 }}>
+          {error && (
+            <div className="banner banner--danger" style={{ cursor: "default" }}>
+              <span style={{ flex: 1 }}>{error}</span>
+            </div>
+          )}
+          <div>
+            <label className="field-label">Email</label>
+            <input className="input" type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label">Password</label>
+            <input className="input" type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <button type="submit" disabled={busy} className="btn btn--primary btn--block" style={{ marginTop: 4 }}>
+            {busy ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
-
-const inputClass =
-  "w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none";

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { displayINR, PAYMENT_MODE_LABELS } from "@/lib/format";
+import { Icon } from "@/components/ui";
 
 export type PaymentRow = {
   id: string;
@@ -31,6 +32,7 @@ export function PaymentsPanel({
 
   const collected = payments.reduce((s, p) => s + p.amount, 0);
   const balance = gross - collected;
+  const pct = gross > 0 ? Math.min(100, (collected / gross) * 100) : 0;
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -60,75 +62,53 @@ export function PaymentsPanel({
   }
 
   return (
-    <section className="mt-4 rounded-lg border border-neutral-200 bg-white p-4">
-      <h2 className="mb-2 text-sm font-semibold text-neutral-700">Payments</h2>
-
-      <div className="mb-3 flex justify-between text-sm">
-        <span className="text-neutral-500">Collected</span>
-        <span className="font-medium">
-          {displayINR(collected)} / {displayINR(gross)}
-        </span>
-      </div>
-      <div
-        className={`mb-3 flex justify-between rounded-md p-2 text-sm font-medium ${
-          balance > 0 ? "bg-amber-50 text-amber-800" : "bg-green-50 text-green-800"
-        }`}
-      >
-        <span>{balance > 0 ? "Balance due" : "Fully paid"}</span>
-        <span>{displayINR(Math.max(balance, 0))}</span>
+    <>
+      <div className="row" style={{ justifyContent: "space-between", margin: "28px 0 14px" }}>
+        <span style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>Payments</span>
       </div>
 
-      {payments.length > 0 && (
-        <ul className="mb-3 space-y-1">
+      <div className="card" style={{ padding: 16 }}>
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+          <span style={{ fontSize: 13.5, color: "var(--subtle)" }}>Collected</span>
+          <span className="num" style={{ fontWeight: 700, fontSize: 16 }}>
+            {displayINR(collected)} <span style={{ color: "var(--subtle)", fontWeight: 500 }}>/ {displayINR(gross)}</span>
+          </span>
+        </div>
+        <div style={{ height: 9, borderRadius: 99, background: "var(--sand)", overflow: "hidden", marginBottom: 10 }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: balance <= 0 ? "var(--good)" : "var(--clay)", borderRadius: 99, transition: "width .4s var(--ease)" }} />
+        </div>
+        {balance <= 0 ? (
+          <span className="pill pill--good"><Icon name="check" size={14} /> Fully paid</span>
+        ) : (
+          <span className="pill pill--warn">Balance due {displayINR(balance)}</span>
+        )}
+
+        <div className="col" style={{ gap: 8, margin: "14px 0" }}>
           {payments.map((p) => (
-            <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
-              <span>
-                {displayINR(p.amount)}{" "}
-                <span className="text-neutral-400">
-                  · {PAYMENT_MODE_LABELS[p.mode] ?? p.mode} · {p.paidAt.slice(0, 10)}
-                </span>
+            <div key={p.id} className="row" style={{ justifyContent: "space-between", padding: "10px 12px", background: "var(--cream)", borderRadius: 12 }}>
+              <span className="num" style={{ fontWeight: 600 }}>{displayINR(p.amount)}</span>
+              <span style={{ fontSize: 13, color: "var(--subtle)" }}>
+                {PAYMENT_MODE_LABELS[p.mode] ?? p.mode} · {p.paidAt.slice(0, 10)}
               </span>
-              <button
-                onClick={() => remove(p.id)}
-                className="text-xs text-red-600 hover:underline"
-              >
-                Remove
+              <button className="btn btn--ghost btn--sm" style={{ padding: 4 }} onClick={() => remove(p.id)} aria-label="Remove payment">
+                <Icon name="x" size={15} />
               </button>
-            </li>
+            </div>
           ))}
-        </ul>
-      )}
+          {payments.length === 0 && <div style={{ fontSize: 13.5, color: "var(--subtle)" }}>No payments recorded yet.</div>}
+        </div>
 
-      <form onSubmit={add} className="flex flex-wrap items-end gap-2">
-        {error && <p className="w-full text-sm text-red-700">{error}</p>}
-        <input
-          type="number"
-          min="1"
-          required
-          placeholder="Amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-28 rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
-        />
-        <select
-          value={mode}
-          onChange={(e) => setMode(e.target.value)}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
-        >
-          {MODES.map((m) => (
-            <option key={m} value={m}>
-              {PAYMENT_MODE_LABELS[m]}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {busy ? "…" : "Add payment"}
-        </button>
-      </form>
-    </section>
+        <form onSubmit={add} className="row" style={{ gap: 8, alignItems: "stretch" }}>
+          <input className="input" inputMode="numeric" min="1" required placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ flex: 1 }} />
+          <select className="select" value={mode} onChange={(e) => setMode(e.target.value)} style={{ width: 130 }}>
+            {MODES.map((m) => (
+              <option key={m} value={m}>{PAYMENT_MODE_LABELS[m]}</option>
+            ))}
+          </select>
+          <button type="submit" disabled={busy} className="btn btn--dark">{busy ? "…" : "Add"}</button>
+        </form>
+        {error && <p style={{ color: "var(--danger-700)", fontSize: 13, marginTop: 8 }}>{error}</p>}
+      </div>
+    </>
   );
 }

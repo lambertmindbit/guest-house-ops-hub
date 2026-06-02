@@ -23,11 +23,7 @@ export function CancelReservationButton({ id }: { id: string }) {
   }
 
   return (
-    <button
-      onClick={cancel}
-      disabled={busy}
-      className="w-full rounded-lg border border-red-300 px-4 py-2.5 font-medium text-red-700 disabled:opacity-50"
-    >
+    <button onClick={cancel} disabled={busy} className="btn btn--danger-outline btn--block">
       {busy ? "Cancelling…" : "Cancel reservation"}
     </button>
   );

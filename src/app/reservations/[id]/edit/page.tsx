@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ReservationForm, type ReservationFormValues } from "@/components/ReservationForm";
 import { CancelReservationButton } from "@/components/CancelReservationButton";
+import { PageHead, Icon } from "@/components/ui";
 import { formatDateOnly } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -34,22 +35,24 @@ export default async function EditReservationPage({
   };
 
   return (
-    <main className="mx-auto max-w-md p-4">
-      <Link href={`/reservations/${id}`} className="text-sm text-neutral-500 hover:underline">
-        ‹ Back
-      </Link>
-      <h1 className="mt-2 mb-4 text-xl font-semibold">Edit reservation</h1>
-      <ReservationForm
-        mode="edit"
-        initial={initial}
-        rooms={rooms.map((r) => ({ id: r.id, label: r.label, roomTypeName: r.roomType.name }))}
-        channels={channels.map((c) => ({ id: c.id, name: c.name }))}
-      />
-      {reservation.status === "confirmed" && (
-        <div className="mt-3">
-          <CancelReservationButton id={id} />
-        </div>
-      )}
+    <main className="app-main" style={{ maxWidth: 620 }}>
+      <div className="shimmer">
+        <Link href={`/reservations/${id}`} className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
+          <Icon name="chevronL" size={16} /> Back
+        </Link>
+        <PageHead title="Edit booking" sub={reservation.guest.name} />
+        <ReservationForm
+          mode="edit"
+          initial={initial}
+          rooms={rooms.map((r) => ({ id: r.id, label: r.label, roomTypeName: r.roomType.name }))}
+          channels={channels.map((c) => ({ id: c.id, name: c.name }))}
+        />
+        {reservation.status === "confirmed" && (
+          <div style={{ marginTop: 12 }}>
+            <CancelReservationButton id={id} />
+          </div>
+        )}
+      </div>
     </main>
   );
 }
