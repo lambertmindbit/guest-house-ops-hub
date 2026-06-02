@@ -15,6 +15,15 @@ export type ChannelTotals = {
   outstanding: number;
 };
 
+export type ExpenseRow = {
+  id: string;
+  date: string;
+  category: string;
+  amount: number;
+  note: string | null;
+  paymentMode: string | null;
+};
+
 export type FinanceSummary = {
   from: string;
   to: string;
@@ -28,6 +37,10 @@ export type FinanceSummary = {
     collected: number;
     balance: number;
   }[];
+  expenses: ExpenseRow[];
+  expensesTotal: number;
+  // True bottom line: net to you (gross − commission) minus running costs.
+  netProfit: number;
 };
 
 // First/last day of the current month, as YYYY-MM-DD.
@@ -44,14 +57,20 @@ export function currentMonthRange(): { from: string; to: string } {
 // Commission per booking = gross x channel.commission_pct; net = gross - commission.
 // Collected = sum of payments; outstanding = gross - collected.
 export async function getFinanceSummary(from: string, to: string): Promise<FinanceSummary> {
-  const reservations = await prisma.reservation.findMany({
-    where: {
-      status: "confirmed",
-      checkIn: { gte: parseDateOnly(from), lt: parseDateOnly(to) },
-    },
-    include: { channel: true, guest: true, room: true, payments: true },
-    orderBy: { checkIn: "asc" },
-  });
+  const [reservations, expenseRows] = await Promise.all([
+    prisma.reservation.findMany({
+      where: {
+        status: "confirmed",
+        checkIn: { gte: parseDateOnly(from), lt: parseDateOnly(to) },
+      },
+      include: { channel: true, guest: true, room: true, payments: true },
+      orderBy: { checkIn: "asc" },
+    }),
+    prisma.expense.findMany({
+      where: { date: { gte: parseDateOnly(from), lt: parseDateOnly(to) } },
+      orderBy: { date: "desc" },
+    }),
+  ]);
 
   const byChannelMap = new Map<string, ChannelTotals>();
   const totals = { bookings: 0, gross: 0, commission: 0, net: 0, collected: 0, outstanding: 0 };
@@ -100,11 +119,24 @@ export async function getFinanceSummary(from: string, to: string): Promise<Finan
     }
   }
 
+  const expenses: ExpenseRow[] = expenseRows.map((e) => ({
+    id: e.id,
+    date: e.date.toISOString().slice(0, 10),
+    category: e.category,
+    amount: num(e.amount),
+    note: e.note,
+    paymentMode: e.paymentMode,
+  }));
+  const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
+
   return {
     from,
     to,
     totals,
     byChannel: [...byChannelMap.values()].sort((a, b) => b.gross - a.gross),
     outstanding,
+    expenses,
+    expensesTotal,
+    netProfit: totals.net - expensesTotal,
   };
 }

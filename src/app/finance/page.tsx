@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getFinanceSummary, currentMonthRange } from "@/lib/finance";
 import { displayINR } from "@/lib/format";
 import { PageHead, SectionLabel, KPI, RangeForm, ChannelBadge, Icon } from "@/components/ui";
+import { ExpensesPanel } from "@/components/ExpensesPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,26 @@ export default async function FinancePage({
         <PageHead title="Finance" sub={`Bookings arriving ${from} – ${to} · ${t.bookings} booking${t.bookings === 1 ? "" : "s"}`} />
         <RangeForm from={from} to={to} />
 
+        <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+          <a href={`/api/export/reservations.csv?from=${from}&to=${to}`} className="btn btn--outline btn--sm" download>
+            <Icon name="arrowR" size={15} /> Bookings CSV
+          </a>
+          <a href={`/api/export/payments.csv?from=${from}&to=${to}`} className="btn btn--outline btn--sm" download>
+            <Icon name="arrowR" size={15} /> Payments CSV
+          </a>
+        </div>
+
         <div className="kpi-grid" style={{ marginTop: 14 }}>
           <KPI value={displayINR(t.gross)} label="Gross revenue" icon="wallet" />
           <KPI value={displayINR(t.commission)} label="OTA commission" icon="link" />
-          <KPI value={displayINR(t.net)} label="Net to you" tone="good" icon="checkCircle" />
-          <KPI value={displayINR(t.outstanding)} label="Outstanding" tone="warn" icon="clock" />
+          <KPI value={displayINR(summary.expensesTotal)} label="Expenses" tone="warn" icon="tag" />
+          <KPI value={displayINR(summary.netProfit)} label="Net profit" tone="good" icon="checkCircle" />
         </div>
+        <p style={{ fontSize: 12.5, color: "var(--subtle)", margin: "10px 2px 0", lineHeight: 1.5 }}>
+          Net to you after commission <b className="num" style={{ color: "var(--ink)" }}>{displayINR(t.net)}</b>
+          {" · "}less expenses <b className="num" style={{ color: "var(--ink)" }}>{displayINR(summary.expensesTotal)}</b>
+          {" · "}outstanding balances <b className="num" style={{ color: "var(--ink)" }}>{displayINR(t.outstanding)}</b>
+        </p>
 
         <SectionLabel>By channel</SectionLabel>
         <div className="card" style={{ overflow: "hidden", padding: 0 }}>
@@ -63,6 +78,8 @@ export default async function FinancePage({
             </table>
           </div>
         </div>
+
+        <ExpensesPanel expenses={summary.expenses} total={summary.expensesTotal} />
 
         {summary.outstanding.length > 0 && (
           <>

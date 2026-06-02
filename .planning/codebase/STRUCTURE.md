@@ -1,81 +1,149 @@
-<!-- refreshed: 2026-06-01 -->
-# Structure
+# Codebase Structure
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-02
 
 ## Directory Layout
 
-```text
+```
 OTA/
 ├── src/
-│   ├── app/                    # Next.js App Router: pages + API route handlers
-│   │   ├── api/                # Route handlers (server-only, { data } / { error })
-│   │   ├── <feature>/page.tsx  # Server-component pages (one dir per screen)
-│   │   ├── layout.tsx          # Root layout (NavBar, metadata, PWA manifest)
-│   │   ├── globals.css         # Tailwind v4 entry (@import "tailwindcss")
-│   │   └── page.tsx            # "/" Today dashboard
-│   ├── components/             # "use client" widgets (forms, buttons, panels)
-│   ├── lib/                    # Domain logic + shared helpers (framework-light)
-│   └── middleware.ts           # Auth gate (HMAC cookie) for all non-public routes
+│   ├── app/                # App Router: pages + API routes
+│   │   ├── api/            # Route handlers ({data}/{error} envelope)
+│   │   ├── layout.tsx      # Root layout (fonts, PWA meta, NavShell)
+│   │   ├── globals.css     # Tailwind + design-system tokens
+│   │   ├── page.tsx        # Today dashboard (home route)
+│   │   └── <feature>/      # calendar, guests, pricing, finance, etc.
+│   ├── components/         # Reusable + "use client" interactive UI
+│   ├── lib/                # Domain logic + utilities (Prisma-backed)
+│   └── middleware.ts       # Edge auth gate over all routes
 ├── prisma/
-│   ├── schema.prisma           # Models + enums (snake_case @map to SQL)
-│   ├── migrations/             # Hand-edited SQL migrations (raw GiST/daterange)
-│   └── seed.mjs                # Idempotent seed (rooms, room types, 5 channels)
-├── tests/                      # Vitest integration tests (hit real Postgres)
-├── public/                     # PWA manifest + generated icons
-│   ├── manifest.webmanifest
-│   └── icons/                  # icon-192/512, maskable, apple-touch (generated)
+│   ├── schema.prisma       # Models (daterange cols declared Unsupported)
+│   ├── migrations/         # SQL migrations (hand-edited GiST constraint)
+│   └── seed.mjs            # Sample rooms/types + 5 channels
+├── tests/                  # Vitest integration suite + safety setup
 ├── scripts/
-│   └── generate-icons.mjs      # Dependency-free PNG icon generator
-├── .planning/codebase/         # This codebase map
-├── CLAUDE.md                   # Project + Karpathy coding guidelines
-├── vercel.json                 # Daily Cron (/api/cron/sync at 02:00 UTC)
-├── docker-compose.yml          # Local Postgres parity (dev uses Supabase)
-├── next.config.mjs             # serverExternalPackages: ["node-ical"]
-├── vitest.config.ts            # node env, serial, @/ alias, dotenv/config
-└── .env.example                # Documented placeholders (.env is git-ignored)
+│   ├── migrate.mjs         # Safe migration helper (strips DROP DEFAULT)
+│   └── generate-icons.mjs  # PWA icon generation
+├── public/                 # Static assets (PWA icons, manifest)
+├── .github/workflows/      # CI (lint, migrate, build, test)
+├── docker-compose.yml      # Local Postgres
+├── prisma/schema.prisma    # (see above)
+├── package.json            # Scripts + deps
+└── vitest.config.ts        # Test runner config (loads dotenv)
 ```
 
-## Key Locations
+## Directory Purposes
 
-| Concern | Location |
-|---|---|
-| Page screens (RSC) | `src/app/<feature>/page.tsx` |
-| API endpoints | `src/app/api/**/route.ts` |
-| Client widgets | `src/components/*.tsx` |
-| Domain logic | `src/lib/*.ts` |
-| Prisma client singleton | `src/lib/prisma.ts` |
-| Availability (derived) | `src/lib/availability.ts` |
-| Reservation writes + overlap mapping | `src/lib/reservations.ts`, `src/lib/db-errors.ts` |
-| Calendar grid builder | `src/lib/calendar.ts` |
-| Dashboard / conflicts / housekeeping | `src/lib/dashboard.ts`, `conflicts.ts`, `housekeeping.ts` |
-| Finance / analytics | `src/lib/finance.ts`, `src/lib/analytics.ts` |
-| iCal export / import | `src/lib/ical.ts`, `src/lib/ical-import.ts` |
-| Auth (sign/verify cookie) | `src/lib/auth.ts` + `src/middleware.ts` |
-| Date + money + response helpers | `src/lib/dates.ts`, `src/lib/format.ts`, `src/lib/api.ts` |
-| DB schema + correctness core | `prisma/schema.prisma`, `prisma/migrations/*_init/migration.sql` |
+**`src/app/`:**
+- Purpose: Next.js App Router tree — both pages (`page.tsx`) and API routes (`api/**/route.ts`).
+- Contains: One folder per route; `[id]`/`[token]` dynamic segments; co-located Zod schemas inside route files.
+- Key files: `src/app/page.tsx` (Today), `src/app/layout.tsx`, `src/app/globals.css`.
 
-## Routes (App Router)
+**`src/app/api/`:**
+- Purpose: HTTP endpoints for client mutations, exports, and external feeds.
+- Contains: Resource folders (`reservations`, `guests`, `rooms`, `pricing`, `expenses`, `payments`, `feeds`, `seasons`, `channels`, `room-types`, `blocks`, `settings`), plus `auth`, `availability`, `dashboard`, `export`, `ical`, `cron`, `sync`.
+- Key files: `src/app/api/reservations/route.ts`, `src/app/api/auth/login/route.ts`, `src/app/api/export/reservations.csv/route.ts`.
 
-**Pages (server components):**
-`/` (dashboard) · `/calendar` · `/guests` · `/housekeeping` · `/finance` · `/analytics` · `/conflicts` · `/feeds` · `/login` · `/reservations/new` · `/reservations/[id]` · `/reservations/[id]/edit`
+**`src/components/`:**
+- Purpose: Reusable presentation + interactive client islands.
+- Contains: `ui.tsx` (shared primitives: PageHead, KPI, GuestRow, Icon, etc.) and `"use client"` components (forms, panels, action buttons).
+- Key files: `src/components/ui.tsx`, `src/components/NavShell.tsx`, `src/components/ReservationForm.tsx`, `src/components/RateCalendar.tsx`, `src/components/PaymentsPanel.tsx`.
 
-**API route handlers** (`src/app/api/`):
-- Reservations: `reservations/route.ts` (POST/GET), `reservations/[id]/route.ts` (GET/PATCH), `reservations/[id]/cancel/route.ts` (POST), `reservations/[id]/payments/route.ts` (POST)
-- Reads: `availability`, `rooms`, `rooms/[id]` (PATCH cleaning), `channels`, `guests`, `blocks`, `dashboard/today`
-- Payments: `payments/[id]/route.ts` (DELETE)
-- Feeds + sync: `feeds/route.ts`, `feeds/[id]/route.ts`, `sync/route.ts`, `ical/[token]/[room]/route.ts` (public, token-gated), `cron/sync/route.ts` (CRON_SECRET-gated)
-- Auth: `auth/login/route.ts`, `auth/logout/route.ts`
+**`src/lib/`:**
+- Purpose: All domain logic and shared utilities. Server-only; called by pages and routes.
+- Contains: feature modules (`availability`, `reservations`, `calendar`, `dashboard`, `conflicts`, `housekeeping`, `finance`, `analytics`, `pricing`, `ical`, `ical-import`) and cross-cutting utilities (`auth`, `api`, `prisma`, `dates`, `format`, `csv`, `db-errors`).
+- Key files: `src/lib/availability.ts`, `src/lib/api.ts`, `src/lib/prisma.ts`, `src/lib/db-errors.ts`, `src/lib/dates.ts`.
+
+**`prisma/`:**
+- Purpose: Schema, migrations, and seed.
+- Contains: `schema.prisma`, `migrations/<timestamp>_<name>/migration.sql`, `migration_lock.toml`, `seed.mjs`.
+- Key files: `prisma/migrations/20260601114302_init/migration.sql` (holds `btree_gist`, generated daterange columns, and the `no_overlapping_confirmed_stays` exclusion constraint).
+
+**`tests/`:**
+- Purpose: Vitest integration suite focused on the correctness core.
+- Contains: `availability.test.ts`, `conflict.test.ts`, `pricing.test.ts`, and `setup.ts` (refuses to run against a non-test DB).
+
+**`scripts/`:**
+- Purpose: Build/migration tooling.
+- Contains: `migrate.mjs` (create + strip spurious `DROP DEFAULT` + verify constraint), `generate-icons.mjs`.
+
+**`.github/workflows/`:**
+- Purpose: CI pipeline.
+- Key files: `ci.yml` — spins ephemeral `postgres:16`, runs lint → migrate deploy → build → test.
+
+## Key File Locations
+
+**Entry Points:**
+- `src/middleware.ts`: Edge auth gate across all routes.
+- `src/app/layout.tsx`: Root layout.
+- `src/app/page.tsx`: Today dashboard (home).
+
+**Configuration:**
+- `prisma/schema.prisma`: Data model.
+- `docker-compose.yml`: Local Postgres.
+- `next.config.mjs`, `tsconfig.json` (strict, `@/*` alias), `eslint.config.mjs`, `postcss.config.mjs`, `vitest.config.ts`, `vercel.json`.
+- `.env` (git-ignored) / `.env.example`: env placeholders (`DATABASE_URL`, `AUTH_SECRET`, `OWNER_EMAIL`, `OWNER_PASSWORD`, `TEST_DATABASE_URL`).
+
+**Core Logic:**
+- `src/lib/availability.ts`: Derived availability (raw SQL).
+- `src/lib/reservations.ts` + `src/lib/db-errors.ts`: Overlap-safe writes.
+- `src/lib/pricing.ts`: Advisory pricing engine.
+- `src/lib/api.ts`: Response envelope helpers.
+
+**Testing:**
+- `tests/*.test.ts`: Integration tests.
+- `tests/setup.ts`: Test-DB safety gate.
 
 ## Naming Conventions
 
-- **Files:** components `PascalCase.tsx`; lib modules `kebab-or-single-word.ts`; pages always `page.tsx`; route handlers always `route.ts`.
-- **Dynamic segments:** `[id]`, `[token]`, `[room]` (Next.js `params` is a `Promise`, awaited in handlers/pages).
-- **DB:** Prisma models PascalCase; tables/columns snake_case via `@@map` / `@map` to mirror the SQL blueprint (so raw migrations reference `room_id`, `stay`, `status`).
-- **Exports:** named exports preferred across `lib`/`components`; pages and layouts use `default` (Next.js requirement).
-- **Tests:** `tests/<topic>.test.ts`, matched by Vitest's default glob.
+**Files:**
+- Pages/routes: lowercase folder + `page.tsx` / `route.ts` (App Router requirement).
+- Components: PascalCase `.tsx` (`ReservationForm.tsx`); shared primitives in lowercase `ui.tsx`.
+- Domain/util modules: lowercase, hyphenated where multi-word (`ical-import.ts`, `db-errors.ts`).
+- Scripts/seed: `.mjs` (plain ESM Node, run outside the bundler).
+- Migrations: `<timestamp>_<snake_case_name>/migration.sql`.
 
-## Public vs Gated Surface
+**Directories:**
+- Route segments lowercase, plural for collections (`reservations`, `guests`); dynamic segments bracketed (`[id]`, `[token]`).
 
-- **Gated by `src/middleware.ts`** (owner cookie): all pages + most APIs.
-- **Public (excluded in middleware matcher):** `/login`, `/api/auth/*`, `/api/ical/*` (token-gated), `/api/cron/*` (CRON_SECRET-gated), static/PWA assets (`icons`, `manifest.webmanifest`).
+**Code identifiers:**
+- DB columns snake_case in Postgres, mapped to camelCase Prisma fields via `@map`; tables `@@map`ped to snake_case plural.
+- Named exports preferred; async/await over raw promises (per `CLAUDE.md`).
+
+## Where to Add New Code
+
+**New page (UI route):**
+- Primary code: `src/app/<feature>/page.tsx` (async server component; add `export const dynamic = "force-dynamic"` if it reads live data).
+- Interactive parts: `src/components/<Feature>Client.tsx` with `"use client"`.
+- Add nav entry: `src/components/NavShell.tsx` (`PRIMARY` or `MORE` array).
+
+**New API endpoint:**
+- Implementation: `src/app/api/<resource>/route.ts` (or `[id]/route.ts`).
+- Validate with a co-located Zod schema; return via `ok`/`fail`/`zodFail` from `src/lib/api.ts`.
+
+**New domain logic:**
+- Implementation: `src/lib/<feature>.ts`; import `prisma` from `src/lib/prisma.ts` and date helpers from `src/lib/dates.ts`.
+
+**New model / schema change:**
+- Edit `prisma/schema.prisma`, then run `node scripts/migrate.mjs <name>` (not raw `prisma migrate dev`) so the generated-column `DROP DEFAULT` lines are stripped and the exclusion constraint is verified.
+
+**Tests:**
+- Add `tests/<area>.test.ts`; ensure `TEST_DATABASE_URL` points at a disposable DB.
+
+## Special Directories
+
+**`prisma/migrations/`:**
+- Purpose: Ordered SQL migrations; the init migration hand-edits the GiST constraint.
+- Generated: Yes (then hand-edited). Committed: Yes.
+
+**`public/`:**
+- Purpose: PWA icons + manifest, served statically.
+- Generated: Icons via `scripts/generate-icons.mjs`. Committed: Yes.
+
+**`.next/`, `node_modules/`, `tsconfig.tsbuildinfo`:**
+- Purpose: Build output / deps / incremental TS cache.
+- Generated: Yes. Committed: No (git-ignored).
+
+---
+
+*Structure analysis: 2026-06-02*

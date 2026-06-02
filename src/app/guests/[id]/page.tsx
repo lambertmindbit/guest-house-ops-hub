@@ -1,0 +1,105 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { PageHead, SectionLabel, KPI, StatusPill, ChannelBadge, Icon, EmptyState } from "@/components/ui";
+import { GuestProfile } from "@/components/GuestProfile";
+import { displayMoney, displayINR, displayShortDate } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
+
+const STATUS: Record<string, { kind: "good" | "ink" | "danger"; label: string }> = {
+  confirmed: { kind: "good", label: "Confirmed" },
+  cancelled: { kind: "ink", label: "Cancelled" },
+  no_show: { kind: "danger", label: "No-show" },
+};
+
+export default async function GuestDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const guest = await prisma.guest.findUnique({
+    where: { id },
+    include: {
+      reservations: {
+        include: { room: { include: { roomType: true } }, channel: true },
+        orderBy: { checkIn: "desc" },
+      },
+    },
+  });
+  if (!guest) notFound();
+
+  const stays = guest.reservations;
+  const realised = stays.filter((r) => r.status !== "cancelled");
+  const lifetime = realised.reduce((sum, r) => sum + (r.grossAmount ? Number(r.grossAmount) : 0), 0);
+  const isRepeat = realised.length >= 2;
+
+  return (
+    <main className="app-main" style={{ maxWidth: 720 }}>
+      <div className="shimmer">
+        <Link href="/guests" className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
+          <Icon name="chevronL" size={16} /> All guests
+        </Link>
+
+        <div className="row" style={{ gap: 8, alignItems: "center" }}>
+          <PageHead title={guest.name} sub={`${guest.phone}${guest.email ? ` · ${guest.email}` : ""}`} />
+        </div>
+        <div className="row" style={{ gap: 6, marginTop: 4 }}>
+          {isRepeat && <StatusPill kind="teal">Repeat guest</StatusPill>}
+          {guest.blocked && <StatusPill kind="danger">Blacklisted</StatusPill>}
+        </div>
+
+        {guest.blocked && guest.blockReason && (
+          <div className="banner banner--danger" style={{ cursor: "default", marginTop: 12 }}>
+            <span className="banner__icon"><Icon name="alert" size={18} /></span>
+            <span style={{ flex: 1 }}>{guest.blockReason}</span>
+          </div>
+        )}
+
+        <div className="kpi-grid" style={{ marginTop: 16 }}>
+          <KPI value={realised.length} label="Stays" sub={isRepeat ? "Returning" : "First-timer"} icon="bed" tone="teal" />
+          <KPI value={displayINR(lifetime)} label="Lifetime value" icon="wallet" />
+        </div>
+
+        <GuestProfile
+          initial={{
+            id: guest.id,
+            name: guest.name,
+            email: guest.email ?? "",
+            idNumber: guest.idNumber ?? "",
+            notes: guest.notes ?? "",
+            blocked: guest.blocked,
+            blockReason: guest.blockReason ?? "",
+          }}
+        />
+
+        <SectionLabel count={`(${stays.length})`}>Stay history</SectionLabel>
+        {stays.length === 0 ? (
+          <EmptyState>No bookings yet.</EmptyState>
+        ) : (
+          <div className="col" style={{ gap: 12 }}>
+            {stays.map((r) => {
+              const st = STATUS[r.status] ?? STATUS.confirmed;
+              return (
+                <Link key={r.id} href={`/reservations/${r.id}`} className="card" style={{ padding: "13px 15px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14.5 }}>
+                      {displayShortDate(r.checkIn)} → {displayShortDate(r.checkOut)}
+                    </div>
+                    <div style={{ fontSize: 12.5, color: "var(--subtle)", marginTop: 3 }}>
+                      Room {r.room.label} · {r.room.roomType.name}
+                    </div>
+                  </div>
+                  <div className="col" style={{ alignItems: "flex-end", gap: 5 }}>
+                    <ChannelBadge name={r.channel.name} />
+                    <span style={{ fontSize: 12.5, color: "var(--subtle)", fontWeight: 600 }}>
+                      <span className="num">{displayMoney(r.grossAmount)}</span>
+                      {r.status !== "confirmed" && <> · <StatusPill kind={st.kind}>{st.label}</StatusPill></>}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}

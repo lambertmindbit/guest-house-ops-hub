@@ -1,91 +1,78 @@
 # Technology Stack
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-02
 
 ## Languages
 
 **Primary:**
-- TypeScript `^5.7.0` (installed 5.x, strict mode) - All application code under `src/`, config in `tsconfig.json`. `strict: true`, `target: ES2022`, `moduleResolution: bundler`, path alias `@/* → ./src/*`.
+- TypeScript ^5.7.0 (`strict: true`) - All application code under `src/`, config in `tsconfig.json`
+- TSX/React - UI components and App Router pages (`src/app/`, `src/components/`)
 
 **Secondary:**
-- SQL (PostgreSQL dialect) - Raw migrations in `prisma/migrations/`, notably the DATERANGE generated columns and GiST exclusion constraint in `prisma/migrations/20260601114302_init/migration.sql`.
-- JavaScript (ESM `.mjs`) - Build/seed/util scripts: `prisma/seed.mjs`, `scripts/generate-icons.mjs`, and config files (`next.config.mjs`, `postcss.config.mjs`, `eslint.config.mjs`).
+- JavaScript (ESM `.mjs`) - Build/ops scripts: `prisma/seed.mjs`, `scripts/migrate.mjs`, `scripts/generate-icons.mjs`, and all config files (`next.config.mjs`, `postcss.config.mjs`, `eslint.config.mjs`)
+- SQL - Raw migrations under `prisma/migrations/` (the GiST exclusion constraint and `daterange` GENERATED columns live here, not in Prisma)
+- CSS - `src/app/globals.css` (Tailwind v4 entry + design tokens)
 
 ## Runtime
 
 **Environment:**
-- Node.js - No version pinned (`.nvmrc` / `.node-version` absent, no `engines` field in `package.json`). Targets Vercel's default Node runtime in production; serverless functions for API routes.
+- Node.js 22 (pinned in CI: `.github/workflows/ci.yml` uses `node-version: 22`). No `.nvmrc` present.
+- Next.js server runtime (Node) for route handlers; Edge runtime for `src/middleware.ts` (auth uses Web Crypto so the same code runs in both).
 
 **Package Manager:**
 - npm
-- Lockfile: present (`package-lock.json`, ~278 KB)
+- Lockfile: present (`package-lock.json`, ~278 KB, committed)
 
 ## Frameworks
 
 **Core:**
-- Next.js `^15.2.0` (installed 15.5.18) - App Router, full-stack (UI + API routes in one codebase). Entry `src/app/layout.tsx`; config `next.config.mjs`. `serverExternalPackages: ["node-ical"]` keeps the CJS iCal parser out of the bundle.
-- React `^19.0.0` / React DOM `^19.0.0` (installed 19.2.6) - UI layer, server + client components under `src/app/` and `src/components/`.
+- Next.js ^15.2.0 (App Router) - Frontend + API routes in one codebase. Config: `next.config.mjs`
+- React ^19.0.0 / React DOM ^19.0.0 - UI layer
 
 **Testing:**
-- Vitest `^3.0.0` (installed 3.2.6) - Test runner. Config `vitest.config.ts`: node environment, `fileParallelism: false` (tests hit a real Postgres serially), `.env` loaded via `dotenv/config` setup file. Tests in `tests/conflict.test.ts` and `tests/availability.test.ts`.
+- Vitest ^3.0.0 - Test runner. Config: `vitest.config.ts`. Runs in `node` environment, serially (`fileParallelism: false`), against a real Postgres. Setup files: `dotenv/config` + `tests/setup.ts`.
 
 **Build/Dev:**
-- Tailwind CSS `^4.0.0` (installed 4.3.0) - Styling, mobile-first. Wired through PostCSS via `@tailwindcss/postcss` (`postcss.config.mjs`); imported in `src/app/globals.css`. No `tailwind.config.*` (v4 CSS-first config).
-- ESLint `^9.20.0` + `eslint-config-next` `^15.2.0` - Linting via flat config `eslint.config.mjs`.
-- Prisma CLI `^6.5.0` (installed 6.19.3) - Migrations, client generation (`postinstall` + `build` run `prisma generate`), seeding, studio.
+- Prisma ^6.5.0 (`prisma` CLI + `@prisma/client`) - ORM, migrations, client generation. `postinstall` and `build` both run `prisma generate`.
+- Tailwind CSS ^4.0.0 - Utility-first styling via `@tailwindcss/postcss`. Config: `postcss.config.mjs` (no `tailwind.config.*` file — Tailwind v4 is CSS-first; tokens live in `src/app/globals.css`).
+- PostCSS ^8.5.0 - CSS pipeline
+- ESLint ^9.20.0 (flat config) with `eslint-config-next` ^15.2.0 - Lint. Config: `eslint.config.mjs` extending `next/core-web-vitals` + `next/typescript`.
 
 ## Key Dependencies
 
 **Critical:**
-- `@prisma/client` `^6.5.0` (installed 6.19.3) - Typed DB access. Singleton client in `src/lib/prisma.ts` (reused across hot reloads). Schema `prisma/schema.prisma`.
-- `zod` `^3.24.0` (installed 3.25.76) - Input validation on all API routes; schemas co-located with routes. Helper `zodFail()` in `src/lib/api.ts` turns Zod errors into the `{ error }` envelope.
-- `node-ical` `^0.26.1` - Parses external OTA iCal feeds during import (`src/lib/ical-import.ts`). CJS package; marked external in `next.config.mjs`.
-- `date-fns` `^4.1.0` (installed 4.4.0) - Date math on client and server.
+- `@prisma/client` ^6.5.0 - Type-safe DB access. Singleton in `src/lib/prisma.ts` (reused across hot-reloads in dev).
+- `zod` ^3.24.0 - Runtime validation of all API inputs (co-located Zod schemas in route handlers under `src/app/api/`).
+- `date-fns` ^4.1.0 - Date math (half-open `[check-in, check-out)` stay logic, calendar grids). Property local time (`Asia/Kolkata`) is the reference.
+- `node-ical` ^0.26.1 - Parses external OTA iCal feeds on import. CJS package; marked `serverExternalPackages` in `next.config.mjs` so it loads at runtime instead of being bundled.
 
 **Infrastructure:**
-- `dotenv` `^16.4.0` (dev) - Loads `.env` for Vitest runs (`vitest.config.ts` setupFiles).
-- `@tailwindcss/postcss` `^4.0.0` (dev) - Tailwind v4 PostCSS plugin.
-- `@eslint/eslintrc` `^3.2.0` (dev) - Flat-config compatibility shim for ESLint 9.
+- `dotenv` ^16.4.0 (dev) - Loads `.env` into the Vitest suite before tests run.
+- `@eslint/eslintrc` ^3.2.0 (dev) - `FlatCompat` shim for the legacy `extends` config style.
 
 ## Configuration
 
 **Environment:**
 - Configured via `.env` (git-ignored). Documented placeholders in `.env.example`.
-- Required vars: `DATABASE_URL` (Supabase Postgres), `OWNER_EMAIL`, `OWNER_PASSWORD`, `AUTH_SECRET` (session cookie HMAC), `ICAL_FEED_TOKEN` (public feed URLs), `CRON_SECRET` (Vercel Cron auth).
-- `.env` is git-ignored (`.gitignore`); secrets never committed. `*.pem` also ignored.
+- Required vars: `DATABASE_URL`, `OWNER_EMAIL`, `OWNER_PASSWORD`, `AUTH_SECRET`, `ICAL_FEED_TOKEN`, `CRON_SECRET`. Optional: `TEST_DATABASE_URL`, `ALLOW_PROD_DB_TESTS`. See INTEGRATIONS.md for details.
+- `tsconfig.json` path alias: `@/*` → `./src/*` (mirrored in `vitest.config.ts`).
 
 **Build:**
-- `next.config.mjs` - Next config (external packages).
-- `tsconfig.json` - TypeScript compiler options.
-- `postcss.config.mjs` - Tailwind/PostCSS pipeline.
-- `eslint.config.mjs` - Lint rules.
-- `vercel.json` - Vercel Cron schedule.
-- `prisma/schema.prisma` - DB models + Prisma generator/datasource.
+- `next.config.mjs` - Only setting: `serverExternalPackages: ["node-ical"]`.
+- `tsconfig.json` - `target: ES2022`, `module: esnext`, `moduleResolution: bundler`, `strict`, `noEmit`, `jsx: preserve`, Next plugin.
+- `prisma/schema.prisma` - `prisma-client-js` generator, `postgresql` datasource (`env("DATABASE_URL")`). `daterange` columns declared `Unsupported("daterange")?`; exclusion constraint lives in raw SQL migrations.
+- `vercel.json` - One daily cron (see INTEGRATIONS.md).
 
 ## Platform Requirements
 
 **Development:**
-- Node.js + npm.
-- PostgreSQL 16: either Supabase (current `DATABASE_URL`) or local via `docker compose up -d db` (`docker-compose.yml`, `postgres:16`, includes the `btree_gist` extension the exclusion constraint needs).
-- Dev server on port 3100 (`npm run dev` → `next dev -p 3100`).
+- Node 22, npm, PostgreSQL 16 (ships `btree_gist`, required by the exclusion constraint).
+- Local Postgres available via `docker-compose.yml` (`postgres:16`, user/pass/db all `ota`, port 5432). Dev `DATABASE_URL` typically points at hosted Supabase instead.
+- Commands: `npm run dev` (port 3100), `npm run db:migrate`, `npm run db:seed`, `npm test`, `npm run lint`. Custom migration helper: `npm run db:migrate:new` → `node scripts/migrate.mjs`.
 
 **Production:**
-- Vercel (serverless functions + cron). Postgres hosted on Supabase, reached via the connection pooler.
-
-## Commands (from `package.json`)
-
-```bash
-npm run dev        # next dev -p 3100
-npm run build      # prisma generate && next build
-npm start          # next start -p 3100
-npm run lint       # next lint
-npm test           # vitest run --passWithNoTests
-npm run test:watch # vitest
-npm run db:migrate # prisma migrate dev
-npm run db:seed    # prisma db seed  → node prisma/seed.mjs
-npm run db:studio  # prisma studio
-```
+- Vercel (serverless) hosting. `npm run build` runs `prisma generate && next build`. PWA-installable (`public/manifest.webmanifest`, `display: standalone`).
 
 ---
 
-*Stack analysis: 2026-06-01*
+*Stack analysis: 2026-06-02*

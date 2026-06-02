@@ -1,6 +1,6 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-02
 
 ## Test Framework
 
@@ -9,117 +9,183 @@
 - Config: `vitest.config.ts`
 
 **Assertion Library:**
-- Vitest built-in `expect` (Jest-compatible API). Imported explicitly per file: `import { afterAll, beforeAll, describe, expect, it } from "vitest"`.
+- Vitest built-in `expect` (Chai-compatible). Async rejection assertions use `.rejects.toSatisfy(...)`.
 
 **Run Commands:**
 ```bash
-npm test            # vitest run --passWithNoTests  (single pass, CI-friendly)
+npm test          # vitest run --passWithNoTests  (single pass; used in CI)
 npm run test:watch  # vitest  (watch mode)
 ```
-No dedicated coverage script is defined (see Coverage below).
+There is no dedicated coverage script; coverage is not configured.
 
 ## Test File Organization
 
 **Location:**
 - Separate top-level `tests/` directory (NOT co-located with source).
 
+**Files:**
+- `tests/conflict.test.ts` — integration: the no-double-booking exclusion constraint.
+- `tests/availability.test.ts` — integration: derived availability from reservations + blocks.
+- `tests/pricing.test.ts` — pure unit tests for the rate calculator (no DB).
+- `tests/setup.ts` — global safety gate (not a test file; loaded as a setup file).
+
 **Naming:**
-- `<topic>.test.ts` — e.g. `tests/conflict.test.ts`, `tests/availability.test.ts`.
+- `*.test.ts`. Suites named after the behavior under test (`describe("no-double-booking exclusion constraint", ...)`, `describe("derived availability", ...)`).
 
-**Structure:**
-```
-tests/
-├── conflict.test.ts       # DB exclusion constraint (no double-booking)
-└── availability.test.ts   # derived availability from reservations + blocks
-```
+## vitest.config.ts
 
-## Test Strategy: Real Postgres, No Mocking
-
-These are **integration tests against the real Supabase Postgres**, not unit tests. There is no mocking layer — the whole point is to prove the database-level guarantees (the GiST exclusion constraint and derived-availability SQL) that cannot be verified in app code alone.
-
-- `vitest.config.ts` sets `environment: "node"`, loads env via `setupFiles: ["dotenv/config"]` (so `DATABASE_URL` from `.env` is available), and disables parallelism with `fileParallelism: false` because suites share one live database.
-- The `@/` alias is configured in `vitest.config.ts` (`resolve.alias`) so tests import the real `@/lib/prisma`, `@/lib/availability`, and `@/lib/db-errors`.
-
-## Test Structure
-
-**Suite Organization:** One `describe` per file, focused on a single correctness invariant, with each `it` asserting one behaviour.
 ```typescript
-describe("no-double-booking exclusion constraint", () => {
-  it("accepts the first confirmed reservation", async () => { ... });
-  it("rejects an overlapping confirmed reservation on the same room", async () => { ... });
-  it("allows same-day turnover (checkout == next check-in)", async () => { ... });
-  it("allows overlapping dates on a different room", async () => { ... });
-  it("frees the dates when the blocking reservation is cancelled", async () => { ... });
+test: {
+  environment: "node",
+  setupFiles: ["dotenv/config", "./tests/setup.ts"],
+  fileParallelism: false,
+}
+```
+- `environment: "node"` — these are server/DB tests, no DOM.
+- `setupFiles` run `dotenv/config` first (loads `.env`), then `tests/setup.ts` (the safety gate, which can override `DATABASE_URL` before any Prisma client is imported).
+- `fileParallelism: false` — integration tests share a real Postgres, so files run **serially** to avoid cross-test interference.
+- `@` alias resolves to `./src` (mirrors `tsconfig.json`), so tests import `@/lib/prisma`, `@/lib/availability`, etc.
+
+## The Safety Gate (`tests/setup.ts`)
+
+The integration suite creates and deletes real rows, so it refuses to run against a database it isn't sure is disposable. Resolution order:
+
+1. `TEST_DATABASE_URL` set → assign it to `DATABASE_URL` (point at a disposable/local Postgres). **Recommended.**
+2. `ALLOW_PROD_DB_TESTS=1` → explicit opt-in to use the existing `DATABASE_URL`.
+3. Otherwise → **throw** and refuse to run.
+
+```typescript
+const testUrl = process.env.TEST_DATABASE_URL;
+if (testUrl) {
+  process.env.DATABASE_URL = testUrl;
+} else if (process.env.ALLOW_PROD_DB_TESTS !== "1") {
+  throw new Error("Refusing to run the integration suite against DATABASE_URL — it may be production. ...");
+}
+```
+This runs after `dotenv/config` and before any test imports `@/lib/prisma`, so the `DATABASE_URL` override takes effect for the Prisma client.
+
+**Local test DB:** keep a *separate* database/schema from your dev/prod data and point `TEST_DATABASE_URL` at it. Keep its schema in sync by running `prisma migrate deploy` against `TEST_DATABASE_URL` whenever migrations change.
+
+## Test Structure (Integration)
+
+Suite lifecycle uses isolated, tagged fixtures created in `beforeAll` and torn down in `afterAll`. The tag includes `Date.now()` so parallel-ish runs don't collide on unique fields (e.g. `guest.phone`):
+
+```typescript
+const TAG = `test-conflict-${Date.now()}`;
+
+beforeAll(async () => {
+  const roomType = await prisma.roomType.create({ data: { name: `${TAG}-type`, baseRate: 1000, maxOccupancy: 2, rateFloor: 500, rateCeiling: 3000 } });
+  const [room, altRoom] = await Promise.all([
+    prisma.room.create({ data: { roomTypeId: roomType.id, label: `${TAG}-A` } }),
+    prisma.room.create({ data: { roomTypeId: roomType.id, label: `${TAG}-B` } }),
+  ]);
+  // ...guest, channel
+});
+
+afterAll(async () => {
+  await prisma.reservation.deleteMany({ where: { id: { in: reservationIds } } });
+  await prisma.guest.deleteMany({ where: { phone: TAG } });
+  // ...rooms, roomType, channel
+  await prisma.$disconnect();
 });
 ```
 
 **Patterns:**
-- **Setup** in `beforeAll`: create an isolated room type, rooms, guest, and channel; capture their IDs into module-level `let` variables.
-- **Teardown** in `afterAll`: `deleteMany` the created rows (filtered by the unique tag), then `await prisma.$disconnect()`.
-- **Assertions:** prefer behaviour over internals — `expect(r.id).toBeTruthy()`, `expect(a[date]).toBe(2)`, and `await expect(promise).rejects.toSatisfy(isOverlapError)`.
+- Created reservation IDs are tracked in a module-level `reservationIds` array and bulk-deleted in cleanup.
+- Cleanup deletes children before parents (reservations/blocks → guest/rooms → roomType/channel) to respect FKs.
+- Always `await prisma.$disconnect()` at the end of the suite.
+- A small local factory builds reservation payloads (`function reservation(roomTarget, checkIn, checkOut)`).
 
-## Fixture Isolation
+## Asserting the Correctness Core
 
-**Unique-tag pattern (mandatory for new DB tests):** Each suite generates a unique tag so fixtures never collide with seed data or other runs, and cleanup can target exactly its own rows:
+The double-booking constraint test asserts on the **real Postgres exclusion violation**, recognized via `isOverlapError`:
+
 ```typescript
-const TAG = `test-conflict-${Date.now()}`;
-// ...names derived from it: `${TAG}-type`, `${TAG}-A`, phone: TAG
+import { isOverlapError } from "@/lib/db-errors";
+
+it("rejects an overlapping confirmed reservation on the same room", async () => {
+  await expect(
+    prisma.reservation.create({ data: reservation(roomId, "2026-07-12", "2026-07-15") }),
+  ).rejects.toSatisfy(isOverlapError);
+});
 ```
-Cleanup keys off that tag (e.g. `where: { phone: TAG }`, `where: { name: \`${TAG}-type\` }`) or off the captured IDs (`where: { id: { in: reservationIds } }`).
 
-**Local fixture factory:** Suites define a small helper to build repetitive input — e.g. `reservation(roomTarget, checkIn, checkOut)` in `tests/conflict.test.ts`, and the `avail()` helper that wraps `getAvailability(...)` into a `{ date: available }` map in `tests/availability.test.ts`.
+Key scenarios covered (`tests/conflict.test.ts`):
+- First confirmed reservation accepted.
+- Overlapping confirmed reservation on the same room rejected (`23P01`).
+- Same-day turnover allowed (checkout == next check-in — half-open `[)` range).
+- Overlapping dates allowed on a *different* room.
+- Cancelling the blocking reservation frees the dates (drops out of the `WHERE status = 'confirmed'` predicate).
 
-**Created-IDs tracking:** Rows created inside `it` blocks are pushed to an array (`reservationIds`) so `afterAll` can delete them; this avoids leaking rows when a test creates data dynamically.
+## Asserting Derived Availability
+
+`tests/availability.test.ts` exercises `getAvailability(roomTypeId, from, to)` against real data and asserts per-night counts:
+
+```typescript
+async function avail(): Promise<Record<string, number>> {
+  const nights = await getAvailability(roomTypeId, FROM, TO);
+  return Object.fromEntries(nights.map((n) => [n.date, n.available]));
+}
+```
+
+Scenarios: full availability when empty; a reservation reduces only its nights (checkout night stays open); a block reduces availability; a room both reserved and blocked counts once (DISTINCT occupied rooms); cancelling frees the nights.
+
+## Pure Unit Tests (No DB)
+
+`tests/pricing.test.ts` tests `computeNightRate` / `weekdayOf` from `@/lib/pricing` with no database and no lifecycle hooks. A `base(overrides)` helper spreads `DEFAULT_POLICY`, and a `rate(opts)` helper fills default args so each case overrides only what it asserts:
+
+```typescript
+const base = (over: Partial<Policy> = {}): Policy => ({ ...DEFAULT_POLICY, ...over });
+function rate(opts: Partial<Parameters<typeof computeNightRate>[0]> & { date: string }) {
+  return computeNightRate({ rates, policy: base(), seasons: [], leadDays: 10, occupancyPct: 0, override: null, ...opts });
+}
+```
+
+Covers weekday UTC-stability, weekend/season/lead-time/occupancy adjustments, floor/ceiling clamps (with `applied` flags), override precedence, and compounding multipliers. Fixed reference dates are derived from the project's "today" (`2026-06-02`) so weekday math is deterministic.
 
 ## Mocking
 
-**Framework:** None. No `vi.mock`, no spies, no fakes anywhere in `tests/`.
+- **No mocking framework or stubs.** Integration tests run against a real Postgres; unit tests use real pure functions. There are no `vi.mock` / fake clients in the suite.
+- What to "mock": nothing — instead, point at a disposable database via `TEST_DATABASE_URL`.
 
-**What NOT to Mock:**
-- The database. Conflict and availability correctness depend on Postgres behaviour (the `EXCLUDE USING gist` constraint, half-open `daterange` semantics, `generate_series`), which a mock would not reproduce. Always test against the real DB.
+## Fixtures and Factories
 
-**What to Mock:**
-- Nothing currently. If a future test needs an external service (e.g. an OTA iCal fetch), prefer injecting a local fixture/feed file over a network mock, consistent with the existing real-dependency philosophy.
+- No fixture files. Test data is created inline via Prisma in `beforeAll`, namespaced by a timestamped `TAG`.
+- Small inline factory functions build repeated payloads (`reservation(...)`, `rate(...)`, `base(...)`).
 
 ## Coverage
 
-**Requirements:** None enforced. No coverage thresholds and no coverage provider (`@vitest/coverage-*`) installed.
+- No coverage thresholds enforced; no coverage reporter configured. Priority is correctness around booking-conflict, derived availability, and pricing — not line coverage.
 
-**Current focus:** Tests deliberately concentrate on the correctness core mandated by `CLAUDE.md` — (a) overlapping confirmed reservations on the same room are rejected, and (b) availability is derived correctly around reservations and blocks (including same-day turnover and reserved+blocked-counts-once edge cases). UI, API route handlers, auth, and the lib helpers outside conflict/availability are not yet covered.
+## CI
 
-**View Coverage:**
-```bash
-# Not configured. Would require adding @vitest/coverage-v8 and a coverage script.
-```
+`.github/workflows/ci.yml` runs on every push and pull request:
+1. Spins up an **ephemeral `postgres:16` service** (ships `btree_gist`, required by the exclusion constraint) with DB `ota_test`.
+2. Sets both `DATABASE_URL` and `TEST_DATABASE_URL` to that ephemeral DB — fully isolated, no secrets, no production data.
+3. `npm ci` → `npm run lint` → `npx prisma migrate deploy` (applies migrations to the fresh DB) → `npm run build` → `npm test`.
 
-## Test Types
-
-**Unit Tests:** None in the pure sense — all current tests touch Postgres.
-
-**Integration Tests:** The two existing suites. Scope: DB constraints and derived SQL queries through the real Prisma client.
-
-**E2E Tests:** Not used. No Playwright/Cypress.
+Locally, mirror this: run `prisma migrate deploy` against `TEST_DATABASE_URL` to sync the test DB schema, then `npm test`.
 
 ## Common Patterns
 
-**Async Testing:** Every `it` is `async`; all DB calls are `await`ed. Independent fixture creation is parallelized with `Promise.all` (e.g. creating room A and room B together in `beforeAll`).
-
-**Error / rejection Testing:** Overlap violations are asserted with `rejects.toSatisfy` against the shared predicate, reusing the same `isOverlapError` the production code uses (so the test verifies the exact detection path the API relies on):
+**Async DB assertion (rejection):**
 ```typescript
-await expect(
-  prisma.reservation.create({
-    data: reservation(roomId, "2026-07-12", "2026-07-15"),
-  }),
-).rejects.toSatisfy(isOverlapError);
+await expect(prisma.reservation.create({ data: ... })).rejects.toSatisfy(isOverlapError);
 ```
 
-**Half-open daterange assertions:** Tests pin down the `[check-in, check-out)` semantics explicitly — a checkout day is free for a same-day arrival, and a stay only consumes its occupied nights:
+**Async DB assertion (success):**
 ```typescript
-expect(a["2026-09-13"]).toBe(2); // same-day turnover: checkout night is open
+const r = await prisma.reservation.create({ data: ... });
+reservationIds.push(r.id);
+expect(r.id).toBeTruthy();
 ```
 
-**State-transition checks:** Cancelling a reservation must free its dates (drops out of the `WHERE status = 'confirmed'` constraint predicate and out of derived availability) — verified in both suites.
+**Per-night availability:**
+```typescript
+const a = await avail();
+expect(a["2026-09-13"]).toBe(2); // checkout night is open (half-open range)
+```
 
 ---
 
-*Testing analysis: 2026-06-01*
+*Testing analysis: 2026-06-02*

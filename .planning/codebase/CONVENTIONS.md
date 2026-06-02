@@ -1,123 +1,180 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-02
 
 ## Naming Patterns
 
 **Files:**
-- React components: `PascalCase.tsx` in `src/components/` (e.g. `ReservationForm.tsx`, `ChannelBadge.tsx`).
-- Library/helper modules: `kebab-case.ts` or single-word lowercase in `src/lib/` (e.g. `db-errors.ts`, `ical-import.ts`, `reservations.ts`, `availability.ts`).
-- Next.js App Router pages: `page.tsx`; API routes: `route.ts`; dynamic segments use bracket dirs (`src/app/reservations/[id]/edit/page.tsx`, `src/app/api/reservations/[id]/route.ts`).
-- Tests: `<topic>.test.ts` in the top-level `tests/` directory (e.g. `tests/conflict.test.ts`, `tests/availability.test.ts`).
+- React route/page files: lowercase `page.tsx` / `route.ts` inside App Router folders (`src/app/reservations/[id]/page.tsx`, `src/app/api/reservations/route.ts`).
+- Dynamic segments use bracket folders: `src/app/api/reservations/[id]/cancel/route.ts`.
+- Components: PascalCase `.tsx` files in `src/components/` (e.g. `ReservationForm.tsx`, `PaymentsPanel.tsx`). The shared primitives file is the lowercase exception `src/components/ui.tsx`.
+- Library modules: lowercase, often hyphenated, in `src/lib/` (e.g. `db-errors.ts`, `ical-import.ts`, `api.ts`, `dates.ts`).
+- Scripts: lowercase `.mjs` in `scripts/` and `prisma/` (e.g. `scripts/migrate.mjs`, `prisma/seed.mjs`).
 
 **Functions:**
-- `camelCase` verbs for behaviour: `createReservation`, `getAvailability`, `verifySessionToken`, `parseDateOnly`, `todayDateOnly`.
-- API route handlers are uppercase HTTP verbs as required by Next.js: `GET`, `POST`, `PATCH` (see `src/app/api/reservations/route.ts`).
-- Local inline React subcomponents are `PascalCase` function declarations at the bottom of the file (e.g. `Field`, `Stat`, `Section` in `src/app/page.tsx` and `src/components/ReservationForm.tsx`).
+- `camelCase` for all functions: `getAvailability`, `parseDateOnly`, `verifySessionToken`, `computeNightRate`.
+- API route handlers are UPPERCASE HTTP verbs exported by name: `export async function POST(...)`, `export async function GET(...)` (see `src/app/api/reservations/route.ts`).
+- Envelope helpers are short verbs: `ok`, `fail`, `zodFail` (`src/lib/api.ts`).
 
 **Variables:**
-- `camelCase` throughout. Short, contextual names inside small functions (`r` for a reservation row, `s` for the today summary, `q` for a query string).
-- Module-level constants are `SCREAMING_SNAKE_CASE`: `SESSION_COOKIE`, `MAX_AGE_MS`, `CONSTRAINT_NAME` (`src/lib/db-errors.ts`, `src/lib/auth.ts`).
+- `camelCase` for locals and params.
+- `SCREAMING_SNAKE_CASE` for module-level constants: `SESSION_COOKIE`, `MAX_AGE_MS`, `CONSTRAINT_NAME`, `PAYMENT_MODE_LABELS`, `DEFAULT_POLICY`, `TAG` (in tests).
 
 **Types:**
-- `PascalCase` for exported `type`/`class`: `NightAvailability`, `RoomOption`, `ChannelOption`, `ReservationFormValues`, `OverlapError`.
-- DB column names are `snake_case` in raw SQL/migrations; Prisma maps them to `camelCase` fields (`commission_pct` → `commissionPct`, `room_type_id` → `roomTypeId`).
+- `PascalCase` for types and type aliases: `NightAvailability`, `Policy`, `RoomTypeRates`, `RoomOption`, `ReservationFormValues`.
+- Zod schemas: `camelCase` with a `Schema` suffix, co-located at the top of the route: `createSchema`, `listSchema` (`src/app/api/reservations/route.ts`).
+- Local error classes use `PascalCase` + `Error` suffix: `class MissingGuestError extends Error {}`.
+
+**Database (Prisma ↔ Postgres):**
+- Prisma model fields are `camelCase` (`roomTypeId`, `baseRate`, `collectsPayment`); Postgres tables/columns are `snake_case` (`room_type_id`, `archived_at`) — visible in the raw SQL in `src/lib/availability.ts`.
 
 ## Code Style
 
 **Formatting:**
-- No Prettier config present; formatting is consistent by hand: 2-space indentation, double-quoted strings, trailing commas in multi-line literals, semicolons always.
-- No `.prettierrc` or `biome.json` in the repo.
+- No Prettier config present. Style is hand-consistent: 2-space indent, double-quoted strings, semicolons, trailing commas in multiline literals.
+- Module-leading block comments explain *why* (see every file in `src/lib/`).
 
 **Linting:**
-- ESLint flat config in `eslint.config.mjs`, extending `next/core-web-vitals` and `next/typescript` via `FlatCompat`. No custom rule overrides.
-- Run with `npm run lint` (`next lint`).
-- TypeScript is `strict: true` (`tsconfig.json`), targeting `ES2022`, `moduleResolution: "bundler"`, `noEmit`.
+- ESLint flat config in `eslint.config.mjs` extending `next/core-web-vitals` and `next/typescript` via `FlatCompat`.
+- Run with `npm run lint` (`next lint`). CI runs lint on every push/PR (`.github/workflows/ci.yml`).
+
+**TypeScript:**
+- `strict: true` in `tsconfig.json` (also `isolatedModules`, `noEmit`, `moduleResolution: "bundler"`, target `ES2022`).
+- Path alias `@/*` → `./src/*`, mirrored in `vitest.config.ts`.
 
 ## Import Organization
 
-**Order (observed convention):**
-1. External packages first (`zod`, `next/server`, `react`, `date-fns`, `@prisma/client`).
-2. Internal `@/` alias imports after (`@/lib/prisma`, `@/lib/api`, `@/components/...`).
-3. `import type { ... }` is used for type-only imports (e.g. `import type { Prisma } from "@prisma/client"` in `src/lib/reservations.ts`).
+**Order (observed):**
+1. Third-party / framework: `next/server`, `next/link`, `react`, `zod`, `date-fns`, `@prisma/client`.
+2. Internal `@/lib/*` modules: `@/lib/prisma`, `@/lib/api`, `@/lib/dates`, `@/lib/db-errors`.
+3. Internal `@/components/*`.
+
+Example (`src/app/api/reservations/route.ts`):
+```typescript
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { ok, fail, zodFail } from "@/lib/api";
+import { dateOnly, parseDateOnly } from "@/lib/dates";
+import { isOverlapError } from "@/lib/db-errors";
+```
 
 **Path Aliases:**
-- `@/*` → `./src/*`, configured in `tsconfig.json` (`paths`) and mirrored in `vitest.config.ts` (`resolve.alias`). Always import internal modules via `@/`, never relative `../../`.
+- `@/` is the only alias, pointing at `src/`. Always prefer it over relative `../../` paths.
+
+## Exports
+
+- **Named exports only.** No `export default` for functions, helpers, or types (`export function ok`, `export const prisma`, `export type NightAvailability`).
+- The sole `export default` usage is required by the framework: each page/component a route renders (`export default async function ReservationDetailPage`) and config objects (`export default eslintConfig`).
 
 ## Error Handling
 
-**API boundary envelope:** Every route returns a consistent envelope built from `src/lib/api.ts`:
-- Success → `ok(data, status?)` → `{ data }` (default 200; reservation create returns `201`).
-- Failure → `fail(message, status?)` → `{ error }` (default 400).
-- Zod failures → `zodFail(error)` → `{ error: "path: message" }` with HTTP `422` (takes the first issue only).
+**API envelope — every route returns one shape (`src/lib/api.ts`):**
+```typescript
+export function ok<T>(data: T, status = 200) {
+  return NextResponse.json({ data }, { status });
+}
+export function fail(error: string, status = 400) {
+  return NextResponse.json({ error }, { status });
+}
+export function zodFail(error: ZodError) {
+  const first = error.issues[0];
+  const path = first.path.join(".");
+  return fail(path ? `${path}: ${first.message}` : first.message, 422);
+}
+```
+- Success → `{ data }`. Failure → `{ error: "message" }`. Never leak raw 500s for known cases.
+- Validation failures → `zodFail` (HTTP 422) with a single human-readable `path: message`.
 
-**Validation:** Zod schemas are co-located at the top of each route file and parsed with `safeParse`; on failure the route returns `zodFail(parsed.error)` immediately. Bodies are read defensively with `await request.json().catch(() => null)` so malformed JSON becomes a clean validation error, not a 500. See `src/app/api/reservations/route.ts`.
+**The double-booking guarantee (the correctness core):**
+- The DB exclusion constraint `no_overlapping_confirmed_stays` raises SQLSTATE `23P01`. Prisma does not type this, so `isOverlapError` sniffs the code/constraint name off the raw error (`src/lib/db-errors.ts`):
+```typescript
+export function isOverlapError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message = "message" in error ? String(error.message) : "";
+  const meta = "meta" in error ? JSON.stringify(error.meta) : "";
+  return `${message} ${meta}`.includes("23P01") || `${message} ${meta}`.includes("no_overlapping_confirmed_stays");
+}
+```
+- Routes catch it and return a friendly 409, never a 500 (`src/app/api/reservations/route.ts`):
+```typescript
+if (isOverlapError(error)) {
+  return fail("Those dates are no longer available for this room.", 409);
+}
+```
+- Custom domain errors (e.g. `MissingGuestError`) are caught by `instanceof` and mapped to the right status; anything unrecognized is re-thrown.
 
-**The booking-conflict path (correctness core):**
-- The Postgres GiST exclusion constraint `no_overlapping_confirmed_stays` raises SQLSTATE `23P01` on overlap.
-- `src/lib/db-errors.ts` → `isOverlapError(error)` sniffs the raw error message/`meta` for `23P01` or the constraint name (Prisma does not type this error).
-- `src/lib/reservations.ts` wraps every reservation write (`createReservation`, `updateReservation`) and rethrows a domain `OverlapError` with a friendly message.
-- Route handlers catch `OverlapError` and map it to HTTP `409` via `fail(error.message, 409)`. Never let a constraint violation surface as a raw 500.
-- Pattern: catch the specific overlap error, `throw` everything else so unexpected failures still bubble up.
+**Transactions:**
+- Multi-write operations run in `prisma.$transaction(async (tx) => { ... })` so a constraint rejection rolls back everything (e.g. guest upsert + reservation insert — no orphan guests). See `src/app/api/reservations/route.ts`.
 
-**Client-side:** `src/components/ReservationForm.tsx` checks `res.ok`, reads `json.error`, and renders it in a red alert box. 409 (overlap) and 422 (validation) both arrive as `{ error }` and are shown identically; network failures fall back to a generic message.
+## Input Validation (Zod)
+
+- **Zod on every API input**, co-located at the top of the route file (not in a shared schema module).
+- Pattern: `const x = schema.safeParse(body); if (!x.success) return zodFail(x.error);` then use `x.data`.
+- Cross-field rules via `.refine(...)` with explicit `path` and `message`:
+```typescript
+.refine((d) => d.checkOut > d.checkIn, { path: ["checkOut"], message: "check-out must be after check-in" })
+```
+- Shared field validators live in `src/lib/dates.ts` and are imported: `dateOnly` (regex `^\d{4}-\d{2}-\d{2}$`).
+- GET query params are validated too — pull from `searchParams`, coerce `null` → `undefined`, then `safeParse`.
+
+## Dates & Time
+
+- All stays are **date-only**, anchored to UTC midnight so `YYYY-MM-DD` round-trips through Postgres `DATE` without timezone drift (`src/lib/dates.ts`):
+```typescript
+export function parseDateOnly(value: string): Date { return new Date(`${value}T00:00:00.000Z`); }
+export function formatDateOnly(date: Date): string { return date.toISOString().slice(0, 10); }
+```
+- Stays are stored as a **half-open Postgres `DATERANGE` `[check-in, check-out)`** — checkout day is free for a same-day arrival. Overlap and containment use range ops (`@>`, `&&`) in raw SQL (`src/lib/availability.ts`).
+- `todayDateOnly()` returns the property's local calendar date; never store a mutable "today".
+- Display formatting rebuilds a *local* Date from UTC parts before `date-fns` formatting so dates never shift across the day boundary (`src/lib/format.ts` `displayDate`/`displayShortDate`).
+
+## Prisma Decimal Handling
+
+- Prisma returns money/percent columns as `Prisma.Decimal`. **Decimals are not serializable to Client Components** — convert with `Number(...)` in the server component before passing down (`src/app/settings/page.tsx`):
+```typescript
+baseRate: Number(t.baseRate),
+leadEarlyAdjustPct: policy?.leadEarlyAdjustPct == null ? null : Number(policy.leadEarlyAdjustPct),
+```
+- For display, `displayMoney(amount: Prisma.Decimal | null)` handles the null case (`—`) and formats via `Intl.NumberFormat("en-IN", { currency: "INR" })` (`src/lib/format.ts`).
 
 ## Logging
 
-**Framework:** None. No logger dependency; no stray `console.log` in `src/lib` or routes. Errors are surfaced through the `{ error }` envelope or rethrown.
+- No logging framework. Server code throws or returns the `{ error }` envelope; CLI scripts (`scripts/migrate.mjs`) use `console.log`/`console.error` with `→`/`✓`/`✗` prefixes for human-readable progress.
 
 ## Comments
 
-**When to Comment:** Comment the *why*, not the *what*. Comments are reserved for non-obvious decisions, especially correctness-critical ones:
-- The half-open `[check-in, check-out)` daterange semantics and same-day turnover (`src/lib/availability.ts`, `prisma/migrations/20260601114302_init/migration.sql`).
-- Why availability is DERIVED and never stored, and why a reserved+blocked room counts once (`src/lib/availability.ts`).
-- Why the overlap error is sniffed by SQLSTATE rather than typed (`src/lib/db-errors.ts`).
-- Why the Prisma client is memoized across hot-reloads (`src/lib/prisma.ts`).
-- Why credential comparison is constant-time (`src/lib/auth.ts`).
+- **Comment the *why*, not the *what*.** Nearly every `src/lib/` and route file opens with a block comment explaining the rationale (timezone anchoring, derived availability, the exclusion-constraint sniffing, transaction-for-rollback reasoning).
+- Inline comments flag non-obvious correctness decisions (half-open ranges, same-day turnover, constant-time compare).
+- No JSDoc/TSDoc tags; types carry the contract, prose carries the reasoning.
 
-**JSDoc/TSDoc:** Not used. Plain `//` line comments only; no `/** */` doc blocks anywhere in `src/`.
+## Function & Module Design
 
-## Function Design
+- Small, single-purpose functions. Domain logic lives in `src/lib/*` (pure where possible, e.g. `computeNightRate` in `src/lib/pricing.ts`); routes stay thin (validate → call lib → envelope).
+- Pure functions are kept DB-free so they can be unit-tested without Postgres (pricing).
+- Derived data (availability) is computed via a single raw `prisma.$queryRaw` with parameter interpolation — never stored as a counter.
+- No barrel files; import directly from the module that owns the symbol.
 
-**Size:** Small and single-purpose. Lib functions stay tight (`createReservation` is ~7 lines); larger files compose many small named helpers rather than one big function.
+## Auth Conventions
 
-**Parameters:** Positional for 1-3 args; an options object once a component/function grows (React props are always a single typed object). Optional fields use `?` and `.optional()` in the matching Zod schema.
+- Single-owner auth, zero deps (`src/lib/auth.ts`). Session is a signed `payload.signature` token in an httpOnly cookie, signed/verified with Web Crypto (`crypto.subtle`) so the same code runs in Edge middleware and Node routes.
+- Credentials compared with a constant-time `safeEqual` to avoid timing leaks.
+- `src/middleware.ts` gates the whole app; the `matcher` excludes `/login`, `/api/auth`, `/api/ical`, `/api/cron`, and static assets.
 
-**Return Values:**
-- `async`/`await` everywhere; no raw `.then()` promise chains.
-- Lib functions return typed domain objects/arrays; route handlers return `NextResponse` via `ok`/`fail`.
-- Parallel independent reads use `Promise.all` (e.g. dashboard load in `src/app/page.tsx`, fixture setup in tests).
+## Design System (CSS)
 
-## Module Design
+- Styling is driven by **CSS custom-property tokens + component classes** in `src/app/globals.css` (362 lines), not utility-class soup. Tailwind is imported (`@import "tailwindcss"`) but the screens use named component classes.
+- Tokens are defined on `:root` (colors `--sys-*`, accents `--tint*`, radii `--r-*`, easings, shadows). Legacy Ops-Hub names alias to the system values.
+- Theming is **attribute-driven on `<html>`**: `data-appearance` (light/dark), `data-tint` (green/blue/indigo/warm), `data-material` (crisp), `data-btnshape` (pill). A head script sets `data-appearance` from the OS when preference is "system".
+- Component class vocabulary: `.btn` (+ modifiers `--primary/--ghost/--outline/--danger-outline/--sm/--block`), `.card`, `.input`/`.select`/`.textarea`, `.pill` (+ `--good/--warn/--danger/--ink/--teal`), `.tbl`, `.kpi`/`.kpi__value`/`.kpi__label`, `.segmented`, `.app-main`, `.row`/`.col`, `.eyebrow`, `.num`, `.shimmer`.
+- Mobile-first: design for ~390px, then scale up; `.app-main` caps width and adds bottom padding for the tab bar.
 
-**Exports:** Named exports only — no `default` exports except where Next.js requires them (page components, `middleware`). Verified across `src/lib/*` and `src/components/*`.
+## Migrations
 
-**Barrel Files:** None. No `index.ts` re-export barrels; modules are imported directly by path.
-
-**Prisma access:** Always through the shared singleton `prisma` from `@/lib/prisma`. Raw SQL uses tagged-template `prisma.$queryRaw` with interpolated params (never string concatenation) — see the availability query in `src/lib/availability.ts`.
-
-## Project-Specific Invariants (enforce in all new code)
-
-- **Availability is derived, never stored.** Compute from confirmed reservations + blocks; never persist a "free rooms" counter.
-- **Never weaken the `no_overlapping_confirmed_stays` exclusion constraint.** If it blocks a feature, the feature has a bug.
-- **Dates are date-only, anchored to UTC midnight.** Use `dateOnly` (Zod) for input, `parseDateOnly` / `formatDateOnly` for conversion (`src/lib/dates.ts`). The property's local calendar date is the reference.
-- **Migration hand-edit (recurring manual step):** Prisma's generated SQL emits a spurious `ALTER COLUMN "stay"/"period" DROP DEFAULT` whenever a migration touches the `GENERATED ALWAYS` daterange columns. These must be stripped by hand from every generated migration — see the documented notes in `prisma/migrations/20260601163543_ical_feeds_and_block_source/migration.sql`, `prisma/migrations/20260601165448_room_last_cleaned/migration.sql`, and `prisma/migrations/20260601170706_payments/migration.sql`.
-- **No secrets in code.** Credentials/secrets (`AUTH_SECRET`, `OWNER_EMAIL`, `OWNER_PASSWORD`, `DATABASE_URL`) live in `.env`; `.env.example` documents placeholders.
-
-## Styling Conventions
-
-- Tailwind CSS v4 (`@import "tailwindcss"` in `src/app/globals.css`); configured via `@tailwindcss/postcss` (`postcss.config.mjs`). No `tailwind.config.js`.
-- **Mobile-first**: layouts target a ~390px phone (`max-w-md`, `grid-cols-2`) and scale up with `lg:` variants (`lg:max-w-5xl`, `lg:grid-cols-4`). See `src/app/page.tsx`.
-- Utility classes inline in JSX. Repeated class strings are hoisted to a module-level `const` (e.g. `inputClass` in `src/components/ReservationForm.tsx`).
-- Neutral palette for chrome (`neutral-*`), semantic colours for state: red for conflicts/errors, amber for housekeeping.
-
-## React/Next Conventions
-
-- Server Components by default; data fetched directly in the async page component (`src/app/page.tsx`). Mark data-heavy pages `export const dynamic = "force-dynamic"` to avoid static caching.
-- Interactive components opt in with `"use client"` and use hooks (`useState`, `useRouter`) — see `src/components/ReservationForm.tsx`.
-- After mutations, navigate with `router.push(...)` then `router.refresh()` to revalidate server data.
-- Auth is enforced globally in `src/middleware.ts` (Edge), with a matcher excluding `/login`, `/api/auth`, `/api/ical`, `/api/cron`, and static assets.
+- Never run plain `prisma migrate dev` for schema changes that touch the generated `DATERANGE` columns. Use the wrapper:
+  - `npm run db:migrate:new <name>` → create + strip, review.
+  - `npm run db:migrate:new <name> --apply` → create + strip + apply + verify.
+- `scripts/migrate.mjs` creates with `--create-only`, deterministically strips Prisma's spurious `ALTER COLUMN "stay"/"period" DROP DEFAULT` statements on the generated columns, then (with `--apply`) runs `prisma migrate deploy` and re-verifies the `no_overlapping_confirmed_stays` exclusion constraint still exists — failing loudly if it vanished.
 
 ---
 
-*Convention analysis: 2026-06-01*
+*Convention analysis: 2026-06-02*

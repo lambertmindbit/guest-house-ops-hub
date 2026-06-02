@@ -1,111 +1,147 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-02
+
+> Scope note: Analysis performed on branch `feature/property-management`, which
+> carries Phases 1–6. As of this date that branch is **not yet merged to `main`**
+> (`main` is at the Phase 1 design-handoff commit). Everything below describes the
+> feature branch — the code that will land when it merges. Some items are
+> intentional Phase 1 scoping decisions per `CLAUDE.md`, called out as such.
 
 ## Tech Debt
 
-**Prisma migrations require a recurring manual hand-edit on every `migrate dev`:** _(RESOLVED 2026-06-01, commit efb12d4 — automated by `scripts/migrate.mjs` / `npm run db:migrate:new`, which deterministically strips the spurious lines and verifies the exclusion constraint. History below kept for context.)_
-- Issue: The `stay` (reservations) and `period` (blocks) columns are real Postgres `GENERATED ALWAYS AS (...) STORED` daterange columns, declared in Prisma as `Unsupported("daterange")?`. On every new migration that touches those tables, Prisma's diff engine emits spurious `ALTER COLUMN "stay"/"period" DROP DEFAULT` statements that must be deleted by hand from the generated SQL before applying. Dropping a default on a `GENERATED ALWAYS` column is at best a no-op and at worst risks the column definition that the no-double-booking exclusion constraint depends on.
-- Files: `prisma/schema.prisma` (lines 99-100, 138-139), `prisma/migrations/20260601114302_init/migration.sql` (lines 58-59, 75-76 define the generated columns), `prisma/migrations/20260601163543_ical_feeds_and_block_source/migration.sql` (lines 4-7 document the manual removal), `prisma/migrations/20260601165448_room_last_cleaned/migration.sql` (line 2), `prisma/migrations/20260601170706_payments/migration.sql` (line 4)
-- Impact: Every schema change is a manual, error-prone step. A migration applied without the edit could alter the generated columns underpinning `no_overlapping_confirmed_stays` — the project's single most important correctness guarantee (per `CLAUDE.md`). The risk is silent: the spurious statement applies without error.
-- Fix approach: Document the edit as a required checklist step in the migration workflow (it is currently only captured as inline comments). Better: add a wrapper script that runs `prisma migrate dev --create-only`, strips any `DROP DEFAULT` line targeting `stay`/`period` via a deterministic post-process, then applies. Verify the exclusion constraint still exists after every migration (e.g. a smoke test querying `pg_constraint`).
+**Hand-edited raw migrations for generated columns + GiST constraint:**
+- Issue: The half-open `stay`/`period` `DATERANGE` columns are `GENERATED ALWAYS … STORED` and the no-double-booking guarantee is a GiST exclusion constraint (`no_overlapping_confirmed_stays`). Prisma's diff engine cannot model either, and it repeatedly emits spurious `ALTER COLUMN "stay"/"period" DROP DEFAULT` statements on every new migration. A custom helper strips them with three regexes.
+- Files: `scripts/migrate.mjs` (strip logic lines 38–54, verify step lines 80–90), `prisma/migrations/20260601114302_init/migration.sql` (generated columns lines 59/76, constraint lines 114–119).
+- Impact: If a contributor runs `prisma migrate dev` directly (the package.json `db:migrate` script does exactly this) instead of `node scripts/migrate.mjs` (`db:migrate:new`), the spurious `DROP DEFAULT` lines are NOT stripped. Applying them is "at best a no-op and at worst risks the columns the exclusion constraint depends on" (the script's own comment). The two `db:migrate*` scripts pointing at different tools is a footgun.
+- Fix approach: Make `db:migrate` an alias for the safe helper, or add a CI/check that fails if any migration SQL contains `ALTER COLUMN "(stay|period)" DROP DEFAULT`. The helper's post-apply constraint check (lines 82–90) only runs with `--apply`; consider a standalone "verify constraint exists" test in the suite.
 
-**Orphan guest record left behind when a reservation is rejected for overlap:** _(RESOLVED 2026-06-01, commit efb12d4 — guest upsert + reservation insert now run in a single `prisma.$transaction`, so an overlap rejection rolls the guest back. History below kept for context.)_
-- Issue: In the create-reservation handler, the guest is upserted by phone *before* the reservation insert is attempted. If the reservation then fails the overlap exclusion constraint (returned as a 409), the newly created guest row is not rolled back — the upsert and the insert are not in a shared transaction.
-- Files: `src/app/api/reservations/route.ts` (lines 50-57 upsert the guest, lines 60-78 attempt the insert and catch `OverlapError`), `src/lib/reservations.ts` (lines 14-21 `createReservation`)
-- Impact: A failed booking for a brand-new guest leaves a dangling guest record with no reservation. For repeat guests (matched by phone) the upsert is idempotent so only their name/email may be updated by a booking that never completed. Pollutes the guest CRM and the guests list/search.
-- Fix approach: Wrap the guest upsert and reservation insert in a single `prisma.$transaction` so an overlap rejection rolls back the guest. Alternatively, resolve/validate availability before upserting the guest, accepting the small race window the DB constraint still closes.
+**Two `db:migrate` scripts with divergent behaviour:** — ✅ RESOLVED 2026-06-02
+- Issue: `db:migrate` → `prisma migrate dev` (unsafe — generates migrations and emits the spurious `DROP DEFAULT`); `db:migrate:new` → `node scripts/migrate.mjs` (safe).
+- Resolution: `db:migrate` now runs `prisma migrate deploy` (apply-only; never generates SQL, so it can't emit the spurious statements). Creating migrations is exclusively the safe `db:migrate:new` helper. The footgun is gone; the underlying need to hand-maintain the generated-column/constraint SQL (above) remains.
 
-**Revenue attribution simplified to check-in date with proration:**
-- Issue: Finance attributes a booking's entire gross/commission/net to the month of its check-in date (no proration), while analytics prorates revenue by nights-in-window. The two modules use different, deliberately simplified accounting models.
-- Files: `src/lib/finance.ts` (lines 43-54: "Revenue is attributed by check-in date") vs `src/lib/analytics.ts` (lines 38-72: prorates `grossAmount * nightsInWindow / totalNights`)
-- Impact: A long stay straddling a month boundary is counted wholly in the arrival month by finance but split across months by analytics, so the two dashboards can disagree. Accepted as an MVP simplification, not a bug — but a reconciliation hazard if treated as authoritative accounting. No GST, no payout timing, no accrual.
-- Fix approach: Document the chosen model explicitly for the owner. If period-accurate financials are needed later, unify on the prorated model and add GST/payout handling (deferred — see Missing Critical Features).
+**`tsconfig.tsbuildinfo` tracked in git:** — ✅ RESOLVED 2026-06-02
+- Issue: The TypeScript incremental build cache was committed and not in `.gitignore`.
+- Resolution: `git rm --cached tsconfig.tsbuildinfo`; added `*.tsbuildinfo` to `.gitignore`.
+
+**Pricing engine re-fetches global config per room-type on the rate calendar (N+1-ish):**
+- Issue: `quoteRoomType()` independently fetches policy, all seasons, overrides, availability, and property settings for each room type. The `/pricing` rate calendar calls it once per room type via `Promise.all(roomTypes.map(...))`, so policy/seasons/property are queried `roomTypes.length` times for the same 14-day window.
+- Files: `src/lib/pricing.ts` `quoteRoomType` (lines 130–181, the `Promise.all` at 133–142), `src/app/pricing/page.tsx` (lines 25–26).
+- Impact: For a small property (a handful of room types) this is a few extra cheap queries per page load — acceptable today. It will not scale linearly with room types and duplicates work that is constant across the page.
+- Fix approach: Add a batched calendar function that loads policy/seasons/property once and computes all room types against shared inputs, reusing the pure `computeNightRate`.
+
+**Occupancy in advisory quotes reflects current state only:**
+- Issue: The occupancy adjustment uses live availability at quote time (`getAvailability` inside `quoteRoomType`, lines 140 + 158–160). A quote shown in the booking form is a point-in-time snapshot; it is not persisted with the reservation.
+- Files: `src/lib/pricing.ts` (lines 140, 158–160, 89–92).
+- Impact: Advisory only by design (the engine never pushes rates and never rewrites a saved booking — comment at lines 6–9). The owner may see a different suggested rate later for the same dates as bookings fill up. Not a bug, but worth knowing: there is no audit trail of what rate was suggested when.
+- Fix approach: None required for Phase scope. If reproducibility is ever needed, snapshot the quote onto the reservation.
 
 ## Known Bugs
 
-No outright defects found beyond the orphan-guest issue (categorized as tech debt above). No `TODO`/`FIXME`/`HACK` markers were found in `src/`.
+No confirmed functional bugs found in the reviewed paths. The booking-conflict
+core is enforced at the database level and covered by integration tests
+(`tests/conflict.test.ts`, `tests/availability.test.ts`).
+
+**Money handled as JS `number` with `Math.round` — rounding risk:**
+- Symptoms: All money crosses the server→client boundary as `Number(...)` of a Prisma `Decimal` and is summed/rounded in floating point. Commission is `Math.round((gross * pct) / 100)`; pricing rates are `Math.round`ed; finance totals accumulate floats.
+- Files: `src/lib/finance.ts` `num()` (lines 4–6) + accumulation (lines 79–130), commission rounding (line 81); `src/lib/pricing.ts` `round` (line 42); client conversions in `src/app/reservations/[id]/page.tsx` (lines 91–94), `src/app/reservations/[id]/invoice/page.tsx` (lines 23–24, 102), `src/components/ReservationForm.tsx` (line 118), `src/app/api/export/reservations.csv/route.ts` (lines 31–32).
+- Trigger: Amounts are whole-rupee in practice (INR, no sub-unit handling), and DB columns are `DECIMAL(10,2)`, so the blast radius is small today. Per-booking commission is rounded before summing, which can drift a rupee or two from "round the total" across many bookings.
+- Workaround: Stay whole-rupee. If sub-unit precision or strict accounting is ever required, this needs integer-paise storage or decimal arithmetic end to end.
 
 ## Security Considerations
 
-**Single hardcoded owner credential with no rate limiting or account recovery:**
-- Risk: Authentication compares a single `OWNER_EMAIL`/`OWNER_PASSWORD` pair from environment variables. There is no login rate limiting or lockout, no multi-user support, no password hashing (the password is stored in plaintext in env and compared directly), and no password-reset path. A signed HMAC cookie (`AUTH_SECRET`) is the only session mechanism.
-- Files: `src/lib/auth.ts` (lines 74-78 `verifyCredentials`, lines 39-64 token sign/verify), `src/app/api/auth/login/route.ts` (lines 16-29, no throttling), `src/middleware.ts` (lines 7-13 gate the app)
-- Current mitigation: Constant-time credential comparison (`safeEqual`, lines 67-72) mitigates timing attacks; cookie is `httpOnly`, `sameSite=lax`, and `secure` in production. The middleware matcher gates all non-public routes.
-- Recommendations: Add login rate limiting / exponential backoff to blunt brute force. Hash the stored password. For Phase 1's single-owner scope these are acceptable trade-offs, but they should be revisited before any multi-user or higher-value deployment.
+**Single-owner auth, no rate limiting, no lockout:**
+- Risk: Login compares plaintext `OWNER_EMAIL`/`OWNER_PASSWORD` from env (constant-time, good) but there is no rate limiting, no failed-attempt lockout, and no captcha. Password is stored in plaintext in `.env` (not hashed — acceptable for single-owner self-host, but means env exposure = credential exposure).
+- Files: `src/lib/auth.ts` `verifyCredentials` (lines 74–78), `src/app/api/auth/login/route.ts` (no throttling, lines 16–30).
+- Current mitigation: Constant-time comparison (`safeEqual`, lines 67–72); HMAC-SHA256 signed httpOnly cookie (lines 39–64); `secure` cookie in production (line 83); 30-day expiry. Session token has no server-side revocation list — a leaked valid cookie works until expiry.
+- Recommendations: Add basic rate limiting on `/api/auth/login` (per-IP, in-memory is fine for one box). This is explicitly deferred per `CLAUDE.md` (multi-role auth + prod hardening are out of Phase 1 scope), so flag-only — do not build now.
 
-**Public iCal export feed exposes a room's busy dates to anyone with the URL:**
-- Risk: The iCal export endpoint is intentionally excluded from the auth middleware and gated only by a shared `ICAL_FEED_TOKEN` embedded in the public feed URL. Anyone holding a feed URL can read that room's occupancy.
-- Files: `src/app/api/ical/[token]/[room]/route.ts`, `src/middleware.ts` (line 19 matcher excludes `api/ical`), `.env.example` (lines documenting `ICAL_FEED_TOKEN`)
-- Current mitigation: Token must match; no PII (guest names) is exposed in the feed by design — only busy/free dates.
-- Recommendations: Acceptable for the OTA-readable use case. Rotate the token if a URL leaks; consider per-room tokens if finer revocation is needed.
+**No multi-user / roles:**
+- Risk: A single shared credential gates everything; no per-user audit, no revocation, no least privilege.
+- Files: `src/middleware.ts` (whole-app gate), `src/lib/auth.ts`.
+- Current mitigation: Intentional Phase 1 design ("single-owner login — keep it simple", `CLAUDE.md`).
+- Recommendations: Roadmap Phase 2+ ("multi-role auth"). No action now.
 
-**`.env` committed-adjacency risk is controlled but a live DB password lives in `.env`:**
-- Risk: `.env` is correctly git-ignored (`.gitignore` line excluding `.env` and `.env*.local`). It contains the live Supabase `DATABASE_URL` (with DB password), owner credentials, `AUTH_SECRET`, `ICAL_FEED_TOKEN`, and `CRON_SECRET`.
-- Files: `.env` (git-ignored, keys only inspected), `.gitignore`, `.env.example`
-- Current mitigation: File is git-ignored; `.env.example` carries only placeholders. No secrets found in tracked source.
-- Recommendations: Keep `.env` out of version control (currently correct). Because the same credentials reach production (see Scaling/Environment below), treat them as production secrets — rotate periodically and avoid pasting `.env` into shared tooling.
+**Public token-gated routes bypass the session cookie:**
+- Risk: `/api/ical/*` and `/api/cron/sync` are excluded from the middleware matcher and so are NOT behind the owner cookie. Each relies on its own shared-secret token.
+- Files: `src/middleware.ts` matcher (line 19 excludes `api/ical`, `api/cron`); `src/app/api/ical/[token]/[room]/route.ts` (constant-time token check lines 8–14, 404-on-mismatch to avoid room enumeration); `src/app/api/cron/sync/route.ts` (Bearer `CRON_SECRET` check lines, returns 401 if secret unset or mismatched).
+- Current mitigation: Both use constant-time / exact-match secret checks and fail closed when the env secret is unset (`!secret` → 401 for cron; empty `ICAL_FEED_TOKEN` → invalid for ical). The ical feed leaks only busy date ranges for a room, by design (OTAs must read it unauthenticated).
+- Recommendations: Acceptable. Just ensure `ICAL_FEED_TOKEN` and `CRON_SECRET` are long random values (the `.env.example` says so). The ical token is a single shared secret for all feeds — rotating it invalidates every OTA subscription at once.
+
+**CSV export — no formula-injection guard:** — ✅ RESOLVED 2026-06-02
+- Risk: The CSV builder quoted `,`/`"`/newlines but did NOT neutralize cells beginning with `=`, `+`, `-`, or `@`. A guest-controlled name like `=HYPERLINK(...)` would be interpreted as a formula in Excel/Sheets.
+- Resolution: `src/lib/csv.ts` `escape` now prefixes a tab to any **string** cell starting with `= + - @ \t \r` (and quotes it), so spreadsheets render it as inert text. The guard is type-aware: numeric cells (e.g. negative balances) are emitted verbatim. Verified: `=HYPERLINK(...)` is neutralized, `-500` (number) is untouched.
 
 ## Performance Bottlenecks
 
-**Feeds synced sequentially, not in parallel:**
-- Problem: `syncAllFeeds` fetches and parses each iCal feed one at a time in a `for` loop, each making a blocking network call to an external OTA.
-- Files: `src/lib/ical-import.ts` (lines 63-68)
-- Cause: Serial `await` inside the loop; total time scales linearly with feed count and is dominated by remote latency/timeouts.
-- Improvement path: With more than a handful of feeds, parallelize with `Promise.allSettled`. Low priority at the property's current scale (few rooms/feeds), and the daily cron has loose time budget.
+**Rate calendar query fan-out:** See "N+1-ish" under Tech Debt (`src/lib/pricing.ts`,
+`src/app/pricing/page.tsx`). Low impact at current scale.
+
+No other hot paths identified. Calendar, dashboard, housekeeping, and finance
+each batch their reads via `Promise.all` and aggregate in memory over a small
+property's data volume.
 
 ## Fragile Areas
 
-**iCal all-day date parsing depends on node-ical's local-midnight behavior:**
-- Files: `src/lib/ical-import.ts` (lines 13-20 `toDateOnly`, lines 32-41 mapping events to blocks)
-- Why fragile: `node-ical` parses an all-day `VALUE=DATE` as local midnight, and the code reads back the local Y/M/D to recover the calendar date. This is correct only as long as node-ical keeps that behavior and the server's local timezone does not shift interpretation. A library version change, a server running in a surprising TZ, or a feed using `DATETIME`/`TZID` values could silently produce off-by-one block dates — which would corrupt derived availability.
-- Safe modification: Pin/verify `node-ical` behavior on upgrade. Add a unit test with fixture `.ics` content (all-day events) asserting exact block start/end dates. Consider parsing the raw `DTSTART;VALUE=DATE` string directly rather than going through a `Date`.
-- Test coverage: No tests currently exercise `ical-import.ts` (only `tests/conflict.test.ts` and `tests/availability.test.ts` exist). This is an untested, timezone-sensitive code path.
+**Overlap-error detection by string sniffing:**
+- Files: `src/lib/db-errors.ts` `isOverlapError` (sniffs the raw error for `"23P01"` or the literal constraint name `no_overlapping_confirmed_stays`).
+- Why fragile: Prisma does not type the exclusion-violation error, so the code searches `message` + `JSON.stringify(meta)` for substrings. Renaming the constraint, a Prisma version that changes error shape, or a localized Postgres message could silently break the friendly-409 path and surface a raw 500 instead.
+- Safe modification: If you rename the constraint, update `CONSTRAINT_NAME` here AND `scripts/migrate.mjs` verify query AND the init migration in lockstep. The `409` behaviour is exercised by `tests/conflict.test.ts` — keep that test as the guard.
+- Test coverage: Covered for reservations create. Other write paths that can hit the constraint (reservation update `stay`, cancel/reactivate) should be checked.
 
-**Daily sync silently 401s if `CRON_SECRET` is unset in Vercel:**
-- Files: `src/app/api/cron/sync/route.ts` (lines 7-11), `vercel.json` (cron schedule `0 2 * * *` -> `/api/cron/sync`)
-- Why fragile: The handler requires both that `CRON_SECRET` is set *and* that the incoming `Authorization: Bearer` header matches. If the env var is missing in the Vercel project, `if (!secret || ...)` short-circuits to `401 Unauthorized` and the feeds simply never sync — with no alert. Stale OTA blocks then risk a double-booking the system thinks is available.
-- Safe modification: Treat a missing `CRON_SECRET` as a deploy-time misconfiguration that should fail loudly (e.g. surface last-sync age on the dashboard or feeds page). `IcalFeed.lastSyncedAt`/`lastError` are tracked (`src/lib/ical-import.ts` lines 48-58) but a never-invoked cron leaves `lastSyncedAt` untouched — monitor for staleness.
-- Test coverage: None for the cron route.
+**Migration-time generated columns + constraint:** See Tech Debt. The whole
+correctness core depends on hand-maintained SQL surviving every future migration.
+
+**Manual cleaning-flag override vs derived cleanliness:**
+- Files: `src/lib/housekeeping.ts` (needsCleaning logic lines 53–58); `prisma/schema.prisma` `Room.needsCleaningFlag`, `Room.lastCleanedAt`.
+- Why fragile: "Needs cleaning" is `needsCleaningFlag || (lastDeparture exists && lastCleanedAt < lastDeparture)` — a mix of a manual boolean override AND a derived signal from the most-recent past checkout. The two can disagree: marking a room clean updates `lastCleanedAt`, but a stale `needsCleaningFlag=true` would keep it dirty regardless. This is correct by current design but is two sources of truth for one fact.
+- Safe modification: When changing the cleaning workflow, decide explicitly whether the manual flag should be cleared on "mark clean". Maintenance blocks (`blocks` table) are a separate concept from cleanliness — do not conflate them.
+- Test coverage: No automated test for housekeeping derivation.
 
 ## Scaling Limits
 
-**No staging/production separation — one shared Supabase database:**
-- Current capacity: A single Supabase Postgres instance referenced by `DATABASE_URL` serves local development, automated tests, and the Vercel production deployment alike.
-- Limit: There is no isolation. Local dev work, schema experiments, and especially the integration test suite all read/write the same database the live property depends on.
-- Files: `prisma/schema.prisma` (lines 17-20 datasource reads `DATABASE_URL`), `.env` / `.env.example` (single `DATABASE_URL`), `vitest.config.ts` (lines 13-14 load env from `.env` via `dotenv/config`)
-- Scaling path: Provision a separate database (or Supabase project/branch) for production vs dev/test. At minimum, point the test suite at a disposable database. See Test Coverage Gaps for the immediate data-safety angle.
+Not a concern for the stated use case (one small guest house, single owner,
+phone-first). All queries operate over a few rooms and a small reservation
+volume. No pagination on list endpoints (`GET /api/reservations`,
+`GET /api/guests`) — fine at this scale, would need attention only at
+thousands of rows.
 
 ## Dependencies at Risk
 
-**`node-ical` is a CJS package requiring special bundling handling:**
-- Risk: `node-ical` does not bundle cleanly under Next.js and is declared in `serverExternalPackages` so it loads at runtime instead of being bundled.
-- Files: `next.config.mjs` (line 6 `serverExternalPackages: ["node-ical"]`), `package.json` (`node-ical@^0.26.1`)
-- Impact: A Next.js or node-ical upgrade could break the runtime-external arrangement, taking down iCal import. Combined with the timezone fragility above, this is the project's most upgrade-sensitive dependency.
-- Migration plan: Cover iCal import with fixture-based tests before upgrading either package. If it becomes unmaintained, a focused custom `.ics` parser for the (small) subset of fields used here is feasible.
+No at-risk dependencies. The stack is intentionally lean (`@prisma/client`,
+`next`, `react`, `zod`, `date-fns`, `node-ical`) and pinned to current major
+versions in `package.json`. No heavy or abandoned packages observed.
 
 ## Missing Critical Features
 
-These are deliberately deferred per `CLAUDE.md`'s roadmap, not accidental gaps. Listed so future planning treats them as known absences:
-- OTA confirmation-email parser (Phase 2) — bookings from Booking.com/Agoda/MakeMyTrip still require manual entry; only iCal busy-date import exists.
-- Messaging automation (Phase 3) — WhatsApp/email/SMS templates and triggers: not present.
-- GST handling and payout/transaction-timing tracking (Phase 5) — finance computes commission/net/collected/outstanding only (`src/lib/finance.ts`); no tax or payout accounting.
-- Dynamic pricing engine (Phase 4) — `room_types` carry `rate_floor`/`rate_ceiling` fields but no pricing logic consumes them.
+These are roadmap-deferred per `CLAUDE.md` — listed for completeness, NOT as
+defects to fix now:
+
+**OTA email parsing / iCal-driven ingestion (Phase 2):**
+- Problem: Bookings from Booking.com/Agoda/MakeMyTrip are not auto-ingested from the owner's inbox. iCal import exists (`src/lib/ical-import.ts`, feeds + cron) but email parsing does not.
+- Blocks: Fully hands-off multi-channel sync. By design — direct OTA APIs are off-limits for a single property.
+
+**Messaging automation (Phase 3):** WhatsApp/email/SMS templates and triggers — not built.
+
+**ID document / photo upload + server-side PDF — flagged, intentionally not built:**
+- Problem: Guest ID is text-only (`idNumber`); the schema comment explicitly notes no document/photo upload "which would need object storage" (`prisma/schema.prisma` lines 93–95). The invoice is a printable HTML page using the browser's Print-to-PDF, not a server-generated PDF.
+- Files: `src/app/reservations/[id]/invoice/page.tsx`, `src/components/PrintButton.tsx` ("Print / Save PDF").
+- Blocks: Storing scanned IDs and emailing finished PDF invoices. Deferred until object storage is in scope.
+
+**Production hardening / multi-role auth (Phase 2+):** Deferred per `CLAUDE.md`.
 
 ## Test Coverage Gaps
 
-**Tests run against the live/shared production database:** _(RESOLVED 2026-06-01, commit efb12d4 + setup — `tests/setup.ts` refuses to run unless `TEST_DATABASE_URL` is set, and `TEST_DATABASE_URL` now points at an isolated `test` schema in the same Supabase project (`...&schema=test`), with all migrations applied there. Verified: the suite runs in `test` and leaves the `public` data untouched. History below kept for context.)_
-- What's not tested safely: The two integration suites connect to the database from `.env`'s `DATABASE_URL`, which is the same shared Supabase instance used by production. They create and delete rooms, room types, guests, channels, and reservations.
-- Files: `tests/conflict.test.ts` (lines 16-49 create fixtures, lines 42-48 `deleteMany` cleanup), `tests/availability.test.ts` (lines 23-30 create fixtures), `vitest.config.ts` (lines 13-14 `setupFiles: ["dotenv/config"]` loads `.env`)
-- Risk: Running the suite against production data is a live-data-safety hazard. Cleanup is tag-scoped (`test-conflict-<timestamp>` / `test-avail-<timestamp>`) and runs in `afterAll`, so a crashed or interrupted run can leave orphan test rows in the real database. A bug in fixture teardown could also touch real records.
-- Priority: High — point the test suite at a disposable/staging database (ties into the staging/prod separation gap above).
+**No automated tests for API routes or the pricing data-wrapper:**
+- What's not tested: Every route handler under `src/app/api/**` (create/update/cancel reservation HTTP behaviour, validation, the 409/422 envelopes, auth/login, CSV export, settings, payments, expenses). The async `quoteRoomType` wrapper in `src/lib/pricing.ts` (DB fetch + assembly) is untested; only the pure `computeNightRate` calculator is covered.
+- Files with coverage today: `tests/pricing.test.ts` (pure pricing math), `tests/conflict.test.ts` + `tests/availability.test.ts` (DB-level conflict + derived availability integration tests), `tests/setup.ts` (test-DB guard).
+- Risk: Regressions in route validation, the friendly-error mapping (`isOverlapError` path), money math in finance/CSV, and housekeeping derivation would not be caught by CI. The string-sniffing overlap detector and the migration constraint are the highest-value untested-at-the-route-level areas.
+- Priority: Medium. The single most important correctness rule (no double-booking) IS tested at the DB layer and verified by `scripts/migrate.mjs --apply`. Adding a thin route-level test for the create-overlap → 409 path and for `quoteRoomType` would close the biggest gaps.
 
-**Untested code paths:**
-- What's not tested: iCal import (`src/lib/ical-import.ts`), the cron sync route (`src/app/api/cron/sync/route.ts`), auth/session logic (`src/lib/auth.ts`), finance (`src/lib/finance.ts`), and analytics (`src/lib/analytics.ts`) have no automated tests. Coverage exists only for the conflict constraint and availability derivation.
-- Files: `src/lib/ical-import.ts`, `src/lib/auth.ts`, `src/lib/finance.ts`, `src/lib/analytics.ts`, `src/app/api/cron/sync/route.ts`
-- Risk: Timezone regressions in iCal parsing, accounting drift between finance and analytics, and auth changes could ship unnoticed. The conflict core is well covered; everything around it is not.
-- Priority: Medium — start with iCal date parsing (highest fragility + correctness impact on availability).
+**CI runs lint + build + tests on every push/PR** (`.github/workflows/ci.yml`
+with an ephemeral `postgres:16`), so what tests exist do gate merges — the gap
+is breadth of tests, not whether they run.
 
 ---
 
-*Concerns audit: 2026-06-01*
+*Concerns audit: 2026-06-02*

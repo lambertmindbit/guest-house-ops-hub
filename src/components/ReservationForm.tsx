@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
+
+type Quote = { total: number; nights: { date: string; rate: number; applied: string[] }[] };
 
 export type RoomOption = { id: string; label: string; roomTypeName: string };
 export type ChannelOption = { id: string; name: string };
@@ -32,10 +34,73 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [quote, setQuote] = useState<Quote | null>(null);
 
   function set<K extends keyof ReservationFormValues>(key: K, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
   }
+
+  // Advisory pricing: when room + dates are set, fetch a suggested total and
+  // pre-fill the amount if the owner hasn't typed one. Debounced + abortable.
+  const { roomId, checkIn, checkOut } = values;
+  useEffect(() => {
+    if (!roomId || !checkIn || !checkOut || checkOut <= checkIn) {
+      setQuote(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/pricing/quote?roomId=${roomId}&checkIn=${checkIn}&checkOut=${checkOut}`,
+          { signal: ctrl.signal },
+        );
+        const json = await res.json();
+        if (!res.ok) return setQuote(null);
+        setQuote(json.data);
+        // Only auto-fill an empty amount — never clobber what the owner typed.
+        setValues((v) => (v.grossAmount.trim() === "" ? { ...v, grossAmount: String(json.data.total) } : v));
+      } catch {
+        /* aborted — ignore */
+      }
+    }, 250);
+    return () => {
+      ctrl.abort();
+      clearTimeout(t);
+    };
+  }, [roomId, checkIn, checkOut]);
+
+  // Blacklist check: if the typed phone matches a blocked guest, warn the owner
+  // (advisory — booking is still allowed). Create mode only.
+  const [blockedWarn, setBlockedWarn] = useState<string | null>(null);
+  const phone = values.guestPhone.trim();
+  useEffect(() => {
+    if (mode !== "create" || phone.length < 4) {
+      setBlockedWarn(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/guests?q=${encodeURIComponent(phone)}`, { signal: ctrl.signal });
+        const json = await res.json();
+        if (!res.ok) return;
+        const match = (json.data as { phone: string; blocked: boolean; blockReason: string | null }[]).find((g) => g.phone === phone && g.blocked);
+        setBlockedWarn(match ? match.blockReason || "This guest is blacklisted." : null);
+      } catch {
+        /* aborted */
+      }
+    }, 300);
+    return () => {
+      ctrl.abort();
+      clearTimeout(t);
+    };
+  }, [mode, phone]);
+
+  // Distinct applied-adjustment labels across the stay (for a compact summary).
+  const adjustments = quote
+    ? [...new Set(quote.nights.flatMap((n) => n.applied))].filter((a) => a !== "Clamped to floor/ceiling")
+    : [];
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,6 +152,12 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         <div className="banner banner--danger" style={{ cursor: "default", marginBottom: 14 }}>
           <span className="banner__icon"><Icon name="alert" size={18} /></span>
           <span style={{ flex: 1 }}>{error}</span>
+        </div>
+      )}
+      {blockedWarn && (
+        <div className="banner banner--warn" style={{ cursor: "default", marginBottom: 14 }}>
+          <span className="banner__icon"><Icon name="alert" size={18} /></span>
+          <span style={{ flex: 1 }}><b>Blacklisted guest:</b> {blockedWarn}</span>
         </div>
       )}
 
@@ -141,6 +212,26 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
           <label className="field-label">Amount (₹)</label>
           <input className="input" inputMode="numeric" min="0" value={values.grossAmount} onChange={(e) => set("grossAmount", e.target.value)} placeholder="0" />
         </div>
+        {quote && quote.nights.length > 0 && (
+          <div style={{ gridColumn: "1 / -1", marginTop: -4 }}>
+            <div className="card" style={{ padding: "10px 12px", background: "var(--teal-50)", borderColor: "transparent" }}>
+              <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
+                <div style={{ fontSize: 13 }}>
+                  <span style={{ fontWeight: 700 }}>Suggested ₹{quote.total.toLocaleString("en-IN")}</span>
+                  <span style={{ color: "var(--subtle)" }}> · {quote.nights.length} night{quote.nights.length === 1 ? "" : "s"}</span>
+                  {adjustments.length > 0 && (
+                    <span style={{ color: "var(--subtle)" }}> · {adjustments.join(", ")}</span>
+                  )}
+                </div>
+                {String(quote.total) !== values.grossAmount.trim() && (
+                  <button type="button" onClick={() => set("grossAmount", String(quote.total))} className="btn btn--ghost btn--sm" style={{ flex: "none" }}>
+                    Use
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <div style={{ gridColumn: "1 / -1" }}>
           <label className="field-label">Special requests</label>
           <textarea className="textarea" value={values.specialRequests} onChange={(e) => set("specialRequests", e.target.value)} placeholder="Dietary needs, late arrival, extra bed…" />

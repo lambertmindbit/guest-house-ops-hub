@@ -26,12 +26,27 @@ type Settings = {
   gstNumber: string | null;
 } | null;
 
+type Policy = {
+  enabled: boolean;
+  weekendDays: number[];
+  weekendAdjustPct: number;
+  leadEarlyDays: number | null;
+  leadEarlyAdjustPct: number | null;
+  leadLateDays: number | null;
+  leadLateAdjustPct: number | null;
+  occupancyThresholdPct: number | null;
+  occupancyAdjustPct: number | null;
+};
+type Season = { id: string; name: string; startDate: string; endDate: string; adjustPct: number };
+
 export type SettingsData = {
   settings: Settings;
   roomTypes: RoomType[];
   rooms: Room[];
   channels: Channel[];
   blocks: Block[];
+  policy: Policy;
+  seasons: Season[];
 };
 
 async function send(method: string, url: string, body?: unknown): Promise<{ ok: boolean; error?: string }> {
@@ -52,6 +67,7 @@ export function SettingsClient({ data }: { data: SettingsData }) {
       <RoomTypesSection types={data.roomTypes} />
       <RoomsSection rooms={data.rooms} types={data.roomTypes} />
       <ChannelsSection channels={data.channels} />
+      <PricingSection policy={data.policy} seasons={data.seasons} />
       <BlocksSection blocks={data.blocks} rooms={activeRooms} />
     </div>
   );
@@ -436,6 +452,205 @@ function ChannelsSection({ channels }: { channels: Channel[] }) {
             <button type="button" onClick={() => { setEditing(null); setAdding(false); }} className="btn btn--ghost btn--sm">Cancel</button>
           </div>
         </form>
+      )}
+    </section>
+  );
+}
+
+/* ---------------- Pricing (policy + seasons) ---------------- */
+const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const numOrNull = (s: string) => (s.trim() === "" ? null : Number(s));
+
+function PricingSection({ policy, seasons }: { policy: Policy; seasons: Season[] }) {
+  const router = useRouter();
+  const [p, setP] = useState({
+    enabled: policy.enabled,
+    weekendDays: new Set(policy.weekendDays),
+    weekendAdjustPct: String(policy.weekendAdjustPct),
+    leadEarlyDays: policy.leadEarlyDays?.toString() ?? "",
+    leadEarlyAdjustPct: policy.leadEarlyAdjustPct?.toString() ?? "",
+    leadLateDays: policy.leadLateDays?.toString() ?? "",
+    leadLateAdjustPct: policy.leadLateAdjustPct?.toString() ?? "",
+    occupancyThresholdPct: policy.occupancyThresholdPct?.toString() ?? "",
+    occupancyAdjustPct: policy.occupancyAdjustPct?.toString() ?? "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  function toggleDay(d: number) {
+    const next = new Set(p.weekendDays);
+    if (next.has(d)) next.delete(d);
+    else next.add(d);
+    setP({ ...p, weekendDays: next });
+  }
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    setSaved(false);
+    const r = await send("PATCH", "/api/pricing/policy", {
+      enabled: p.enabled,
+      weekendDays: [...p.weekendDays].sort(),
+      weekendAdjustPct: Number(p.weekendAdjustPct || 0),
+      leadEarlyDays: numOrNull(p.leadEarlyDays),
+      leadEarlyAdjustPct: numOrNull(p.leadEarlyAdjustPct),
+      leadLateDays: numOrNull(p.leadLateDays),
+      leadLateAdjustPct: numOrNull(p.leadLateAdjustPct),
+      occupancyThresholdPct: numOrNull(p.occupancyThresholdPct),
+      occupancyAdjustPct: numOrNull(p.occupancyAdjustPct),
+    });
+    setBusy(false);
+    if (!r.ok) return setError(r.error!);
+    setSaved(true);
+    router.refresh();
+  }
+
+  // Seasons sub-form
+  const [adding, setAdding] = useState(false);
+  const [s, setS] = useState({ name: "", startDate: "", endDate: "", adjustPct: "" });
+  const [sErr, setSErr] = useState<string | null>(null);
+
+  async function addSeason(e: React.FormEvent) {
+    e.preventDefault();
+    setSErr(null);
+    const r = await send("POST", "/api/seasons", {
+      name: s.name,
+      startDate: s.startDate,
+      endDate: s.endDate,
+      adjustPct: Number(s.adjustPct || 0),
+    });
+    if (!r.ok) return setSErr(r.error!);
+    setS({ name: "", startDate: "", endDate: "", adjustPct: "" });
+    setAdding(false);
+    router.refresh();
+  }
+
+  async function removeSeason(id: string) {
+    if (!confirm("Delete this season?")) return;
+    await send("DELETE", `/api/seasons/${id}`);
+    router.refresh();
+  }
+
+  return (
+    <section>
+      <SectionLabel>Pricing rules</SectionLabel>
+      <p style={{ fontSize: 13, color: "var(--subtle)", margin: "0 0 12px", lineHeight: 1.5 }}>
+        Advisory only — these suggest a nightly rate and pre-fill new bookings. They&apos;re never pushed to OTAs.
+        Every suggestion is clamped to each room type&apos;s floor/ceiling.
+      </p>
+
+      <div className="card" style={{ padding: 16 }}>
+        <ErrorLine msg={error} />
+
+        <div className="tweaks__row" style={{ padding: "2px 0 12px" }}>
+          <label style={{ fontWeight: 600 }}>Pricing engine on</label>
+          <button type="button" className={`switch${p.enabled ? " on" : ""}`} onClick={() => setP({ ...p, enabled: !p.enabled })} aria-label="Toggle pricing"><span /></button>
+        </div>
+
+        <div style={{ fontWeight: 700, fontSize: 13.5, margin: "6px 0 8px" }}>Weekend</div>
+        <div className="row" style={{ gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+          {DAY_LABELS.map((lbl, i) => (
+            <button key={i} type="button" onClick={() => toggleDay(i)} className={`btn btn--sm ${p.weekendDays.has(i) ? "btn--dark" : "btn--outline"}`} style={{ minWidth: 40, padding: "6px 0" }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        <div style={{ maxWidth: 220, marginBottom: 18 }}>
+          <label className="field-label">Weekend adjustment %</label>
+          <input className="input" type="number" value={p.weekendAdjustPct} onChange={(e) => setP({ ...p, weekendAdjustPct: e.target.value })} placeholder="e.g. 20" />
+        </div>
+
+        <div style={{ fontWeight: 700, fontSize: 13.5, margin: "0 0 8px" }}>Lead time</div>
+        <div className="form-grid" style={{ gap: 12, marginBottom: 18 }}>
+          <div>
+            <label className="field-label">Early-bird if ≥ days out</label>
+            <input className="input" type="number" min="0" value={p.leadEarlyDays} onChange={(e) => setP({ ...p, leadEarlyDays: e.target.value })} placeholder="e.g. 30" />
+          </div>
+          <div>
+            <label className="field-label">Early-bird adjustment %</label>
+            <input className="input" type="number" value={p.leadEarlyAdjustPct} onChange={(e) => setP({ ...p, leadEarlyAdjustPct: e.target.value })} placeholder="e.g. -10" />
+          </div>
+          <div>
+            <label className="field-label">Last-minute if ≤ days out</label>
+            <input className="input" type="number" min="0" value={p.leadLateDays} onChange={(e) => setP({ ...p, leadLateDays: e.target.value })} placeholder="e.g. 3" />
+          </div>
+          <div>
+            <label className="field-label">Last-minute adjustment %</label>
+            <input className="input" type="number" value={p.leadLateAdjustPct} onChange={(e) => setP({ ...p, leadLateAdjustPct: e.target.value })} placeholder="e.g. 15" />
+          </div>
+        </div>
+
+        <div style={{ fontWeight: 700, fontSize: 13.5, margin: "0 0 8px" }}>Occupancy (high demand)</div>
+        <div className="form-grid" style={{ gap: 12 }}>
+          <div>
+            <label className="field-label">When occupancy ≥ %</label>
+            <input className="input" type="number" min="0" max="100" value={p.occupancyThresholdPct} onChange={(e) => setP({ ...p, occupancyThresholdPct: e.target.value })} placeholder="e.g. 80" />
+          </div>
+          <div>
+            <label className="field-label">Adjustment %</label>
+            <input className="input" type="number" value={p.occupancyAdjustPct} onChange={(e) => setP({ ...p, occupancyAdjustPct: e.target.value })} placeholder="e.g. 15" />
+          </div>
+        </div>
+
+        <div className="row" style={{ gap: 10, marginTop: 16 }}>
+          <button onClick={save} disabled={busy} className="btn btn--primary btn--sm">{busy ? "Saving…" : "Save pricing rules"}</button>
+          {saved && <span style={{ fontSize: 13, color: "var(--good-700)" }}>Saved ✓</span>}
+        </div>
+      </div>
+
+      {/* Seasons */}
+      <div className="row" style={{ justifyContent: "space-between", margin: "20px 0 10px" }}>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>Seasons &amp; holidays <span style={{ color: "var(--subtle)", fontWeight: 600 }}>({seasons.length})</span></span>
+        <button onClick={() => { setAdding(!adding); setSErr(null); }} className="btn btn--outline btn--sm">+ Add season</button>
+      </div>
+
+      {adding && (
+        <form onSubmit={addSeason} className="card" style={{ padding: 16, marginBottom: 12 }}>
+          <ErrorLine msg={sErr} />
+          <div className="form-grid" style={{ gap: 12 }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label className="field-label">Name</label>
+              <input className="input" required value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Diwali week" />
+            </div>
+            <div>
+              <label className="field-label">From</label>
+              <input className="input" required type="date" value={s.startDate} onChange={(e) => setS({ ...s, startDate: e.target.value })} />
+            </div>
+            <div>
+              <label className="field-label">To</label>
+              <input className="input" required type="date" value={s.endDate} onChange={(e) => setS({ ...s, endDate: e.target.value })} />
+            </div>
+            <div>
+              <label className="field-label">Adjustment %</label>
+              <input className="input" required type="number" value={s.adjustPct} onChange={(e) => setS({ ...s, adjustPct: e.target.value })} placeholder="e.g. 40" />
+            </div>
+          </div>
+          <div className="row" style={{ gap: 10, marginTop: 14 }}>
+            <button type="submit" className="btn btn--primary btn--sm">Add season</button>
+            <button type="button" onClick={() => setAdding(false)} className="btn btn--ghost btn--sm">Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {seasons.length === 0 ? (
+        <div className="empty">No seasons defined.</div>
+      ) : (
+        <div className="col" style={{ gap: 10 }}>
+          {seasons.map((season) => (
+            <div key={season.id} className="card" style={{ padding: 14 }}>
+              <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14.5 }}>{season.name}</div>
+                  <div style={{ fontSize: 12.5, color: "var(--subtle)", marginTop: 3 }}>
+                    {season.startDate} → {season.endDate} · {season.adjustPct > 0 ? "+" : ""}{season.adjustPct}%
+                  </div>
+                </div>
+                <button onClick={() => removeSeason(season.id)} className="btn btn--danger-outline btn--sm" style={{ flex: "none" }}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </section>
   );

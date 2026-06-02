@@ -90,6 +90,11 @@ model Guest {
   phone        String        @unique
   email        String?
   notes        String?
+  // Government ID reference (text only — no document/photo upload, which would
+  // need object storage). Blacklist flag warns the owner at booking time.
+  idNumber     String?       @map("id_number")
+  blocked      Boolean       @default(false)
+  blockReason  String?       @map("block_reason")
   reservations Reservation[]
 
   @@map("guests")
@@ -106,6 +111,11 @@ model Reservation {
   // Generated in the DB from check_in/check_out as a half-open [) daterange.
   stay            Unsupported("daterange")? @map("stay")
   status          ReservationStatus        @default(confirmed)
+  // Live arrival/departure stamps. Orthogonal to `status` (a confirmed booking
+  // may or may not be in-house yet) and to `stay`, so the exclusion constraint
+  // is untouched. Drive the Today board's in-house view + housekeeping handoff.
+  checkedInAt     DateTime?                @map("checked_in_at")
+  checkedOutAt    DateTime?                @map("checked_out_at")
   arrivalTime     String?                  @map("arrival_time")
   specialRequests String?                  @map("special_requests")
   grossAmount     Decimal?                 @map("gross_amount") @db.Decimal(10, 2)
@@ -155,6 +165,70 @@ model Block {
   @@index([roomId])
   @@index([feedId])
   @@map("blocks")
+}
+
+// A cost the property incurred. Attributed to Finance by `date`. Turns the
+// revenue-only view into true net profit (revenue − commission − expenses).
+model Expense {
+  id          String       @id @default(cuid())
+  date        DateTime     @db.Date
+  category    String
+  amount      Decimal      @db.Decimal(10, 2)
+  note        String?
+  paymentMode PaymentMode? @map("payment_mode")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@index([date])
+  @@map("expenses")
+}
+
+// Single configurable pricing policy (one row). The pricing engine starts from a
+// room type's base_rate and compounds the applicable adjustments below, then
+// clamps to [rate_floor, rate_ceiling]. All adjustments are advisory — they only
+// suggest a nightly rate and pre-fill the booking amount; nothing is pushed to OTAs.
+// Percentages may be negative (a discount). Zero / null = that rule is off.
+model PricingPolicy {
+  id                    String   @id @default(cuid())
+  enabled               Boolean  @default(true)
+  // Weekday numbers (0=Sun … 6=Sat) that count as "weekend", + their uplift.
+  weekendDays           Int[]    @default([5, 6]) @map("weekend_days")
+  weekendAdjustPct      Decimal  @default(0) @map("weekend_adjust_pct") @db.Decimal(6, 2)
+  // Early-bird discount when the booking is at least N days out.
+  leadEarlyDays         Int?     @map("lead_early_days")
+  leadEarlyAdjustPct    Decimal? @map("lead_early_adjust_pct") @db.Decimal(6, 2)
+  // Last-minute uplift when the booking is within M days of check-in.
+  leadLateDays          Int?     @map("lead_late_days")
+  leadLateAdjustPct     Decimal? @map("lead_late_adjust_pct") @db.Decimal(6, 2)
+  // Occupancy uplift when that night's derived occupancy ≥ threshold %.
+  occupancyThresholdPct Int?     @map("occupancy_threshold_pct")
+  occupancyAdjustPct    Decimal? @map("occupancy_adjust_pct") @db.Decimal(6, 2)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("pricing_policy")
+}
+
+// A named date range (festival / peak season) with a rate adjustment. Inclusive
+// of both endpoints. Owner-managed in Settings.
+model Season {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  adjustPct Decimal  @map("adjust_pct") @db.Decimal(6, 2)
+
+  @@map("seasons")
+}
+
+// An explicit nightly rate the owner pins for a room type on a specific date.
+// Overrides win over every rule (and over the floor/ceiling clamp).
+model RateOverride {
+  id         String   @id @default(cuid())
+  roomTypeId String   @map("room_type_id")
+  date       DateTime @db.Date
+  rate       Decimal  @db.Decimal(10, 2)
+
+  @@unique([roomTypeId, date])
+  @@map("rate_overrides")
 }
 
 // Single-row table holding the owner's property profile. Read with findFirst;

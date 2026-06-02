@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ChannelBadge, StatusPill, Icon } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
+import { StayActions } from "@/components/StayActions";
 import { displayDate, displayMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,14 @@ export default async function ReservationDetailPage({
           </div>
         </div>
 
+        {r.status === "confirmed" && (
+          <StayActions
+            reservationId={r.id}
+            checkedInAt={r.checkedInAt ? r.checkedInAt.toISOString() : null}
+            checkedOutAt={r.checkedOutAt ? r.checkedOutAt.toISOString() : null}
+          />
+        )}
+
         <PaymentsPanel
           reservationId={r.id}
           gross={r.grossAmount ? Number(r.grossAmount) : 0}
@@ -90,9 +99,14 @@ export default async function ReservationDetailPage({
         />
 
         <div style={{ height: 16 }} />
-        <Link href={`/reservations/${r.id}/edit`} className="btn btn--primary btn--block">
-          <Icon name="edit" size={17} /> Edit reservation
-        </Link>
+        <div className="row" style={{ gap: 10 }}>
+          <Link href={`/reservations/${r.id}/edit`} className="btn btn--primary" style={{ flex: 1 }}>
+            <Icon name="edit" size={17} /> Edit
+          </Link>
+          <Link href={`/reservations/${r.id}/invoice`} className="btn btn--outline" style={{ flex: 1 }}>
+            <Icon name="copy" size={16} /> Invoice
+          </Link>
+        </div>
       </div>
     </main>
   );
