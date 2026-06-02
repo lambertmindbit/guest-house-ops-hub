@@ -52,8 +52,9 @@ export async function getHousekeeping(): Promise<Housekeeping> {
   const result: HousekeepingRoom[] = rooms.map((room) => {
     const lastDeparture = lastDepartureByRoom.get(room.id) ?? null;
     const needsCleaning =
-      lastDeparture !== null &&
-      (room.lastCleanedAt === null || room.lastCleanedAt < lastDeparture);
+      room.needsCleaningFlag ||
+      (lastDeparture !== null &&
+        (room.lastCleanedAt === null || room.lastCleanedAt < lastDeparture));
     const arrivalToday = arrivingTodayRooms.has(room.id);
 
     return {

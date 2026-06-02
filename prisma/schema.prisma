@@ -59,6 +59,9 @@ model Room {
   // Housekeeping: a room "needs cleaning" when a guest has checked out since
   // this timestamp. Marking a room clean sets it to now.
   lastCleanedAt DateTime?    @map("last_cleaned_at")
+  // Manual override: lets the owner flag a room dirty when there's no checkout
+  // to derive from (dust, maintenance, own use). Cleared on "mark clean".
+  needsCleaningFlag Boolean  @default(false) @map("needs_cleaning_flag")
   roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
   reservations Reservation[]
   blocks       Block[]

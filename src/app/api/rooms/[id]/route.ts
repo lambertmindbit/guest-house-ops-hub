@@ -2,8 +2,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 
-// markCleaned: true  -> stamp lastCleanedAt now (clears the cleaning task)
-// markCleaned: false -> clear it (flag the room as needing cleaning again)
+// markCleaned: true  -> stamp lastCleanedAt now + clear the manual flag (room is clean)
+// markCleaned: false -> set the manual "needs cleaning" flag (works even with no checkout)
 const schema = z.object({ markCleaned: z.boolean() });
 
 export async function PATCH(
@@ -20,7 +20,9 @@ export async function PATCH(
 
   const room = await prisma.room.update({
     where: { id },
-    data: { lastCleanedAt: parsed.data.markCleaned ? new Date() : null },
+    data: parsed.data.markCleaned
+      ? { lastCleanedAt: new Date(), needsCleaningFlag: false }
+      : { needsCleaningFlag: true },
   });
   return ok(room);
 }
