@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest House Ops Hub — Project Status</title>
+<style>
+  :root{
+    --ink:#1c2421; --sub:#5b6b64; --line:#e3e8e5; --paper:#fff; --bg:#f6f8f7;
+    --teal:#0fa68e; --teal-bg:#e7f5f1; --good:#1f9d57; --good-bg:#e6f6ec;
+    --warn:#b9791f; --warn-bg:#fbf1e0; --danger:#cf3a3a; --danger-bg:#fbe9e9;
+    --ink-bg:#eef1ef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       color:var(--ink);background:var(--bg);padding:32px 18px}
+  .wrap{max-width:960px;margin:0 auto}
+  header{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:8px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+  .meta{color:var(--sub);font-size:13.5px}
+  h2{font-size:19px;margin:34px 0 12px;padding-top:18px;border-top:1px solid var(--line)}
+  h2 .em{color:var(--teal)}
+  p{margin:.5em 0}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+  .p-done{background:var(--good-bg);color:var(--good)}
+  .p-defer{background:var(--ink-bg);color:var(--sub)}
+  .p-warn{background:var(--warn-bg);color:var(--warn)}
+  .p-risk{background:var(--danger-bg);color:var(--danger)}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+  .phase{display:flex;gap:14px;align-items:flex-start}
+  .num{flex:none;width:34px;height:34px;border-radius:9px;background:var(--teal-bg);color:var(--teal);
+       font-weight:800;display:flex;align-items:center;justify-content:center}
+  .phase h3{margin:0 0 2px;font-size:16px}
+  .phase p{margin:.25em 0 0;color:var(--sub);font-size:14px}
+  table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);
+        border-radius:12px;overflow:hidden;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#eef2f0;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub)}
+  tr:last-child td{border-bottom:0}
+  td.k{font-weight:600;white-space:nowrap}
+  ul{margin:.4em 0;padding-left:20px}
+  li{margin:.3em 0}
+  code{background:#eef2f0;padding:1px 6px;border-radius:5px;font-size:13px}
+  .note{background:var(--teal-bg);border:1px solid #bfe3da;border-radius:12px;padding:14px 16px;margin:14px 0}
+  .sev{font-weight:700}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--sub);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Guest House Operations Hub — Project Status</h1>
+    <div class="meta">Self-hosted, mobile-first ops hub for a single small property · Next.js 15 · Prisma · PostgreSQL (Supabase) · Vercel · As of 2026-06-02</div>
+  </header>
+
+  <p><strong>Bottom line:</strong> all six planned milestones are <strong>built, tested, and live in production on <code>main</code></strong>. Remaining items are <strong>deferred by design</strong> (out of the agreed scope), not unfinished work. CI (lint + build + 21 tests on an ephemeral Postgres) gates every merge.</p>
+
+  <div class="legend">
+    <span class="pill p-done">● Delivered</span>
+    <span class="pill p-defer">○ Deferred by design</span>
+    <span class="pill p-warn">▲ Known concern</span>
+    <span class="pill p-risk">◆ Higher-attention</span>
+  </div>
+
+  <!-- ============ DELIVERED ============ -->
+  <h2><span class="em">✓</span> Delivered phases</h2>
+
+  <div class="card">
+    <div class="phase">
+      <div class="num">1</div>
+      <div>
+        <h3>Operations core + Admin <span class="pill p-done">Delivered</span></h3>
+        <p>Bookings (create / edit / cancel) with <strong>database-enforced no-double-booking</strong>; unified colour-coded calendar (rooms × dates, week / 2-week / month views); Today dashboard; guest list &amp; search; housekeeping (derived “needs cleaning” + manual flag); single-owner login; installable PWA. Plus a full <strong>Settings/Admin</strong> area: add / edit / <em>archive</em> rooms, manage room types, channels &amp; commissions, the property profile, and <strong>maintenance blocks</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="phase">
+      <div class="num">2</div>
+      <div>
+        <h3>Pricing engine + rate calendar <span class="pill p-done">Delivered</span></h3>
+        <p>Rule-based nightly rate suggestions — weekend, season/holiday, lead-time (early-bird / last-minute), and occupancy — compounded then clamped to each room type’s floor/ceiling. Rate calendar with tap-to-pin overrides; suggested price pre-fills new bookings. <strong>Advisory only</strong>: never pushed to OTAs, never rewrites saved bookings.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="phase">
+      <div class="num">3</div>
+      <div>
+        <h3>Check-in / check-out <span class="pill p-done">Delivered</span></h3>
+        <p>Live arrival/departure tracking on each booking (check-in / check-out / undo), surfaced on the reservation detail and the Today board.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="phase">
+      <div class="num">4</div>
+      <div>
+        <h3>Guest CRM <span class="pill p-done">Delivered</span></h3>
+        <p>Guest profiles with stay history, repeat-guest badge, lifetime value, ID (text), notes, and a blacklist toggle that warns at booking time.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="phase">
+      <div class="num">5</div>
+      <div>
+        <h3>Finance → real net profit <span class="pill p-done">Delivered</span></h3>
+        <p>Per-channel revenue and commission, plus <strong>expense tracking</strong> so Finance shows true net profit (gross − commission − expenses).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="phase">
+      <div class="num">6</div>
+      <div>
+        <h3>Invoices + CSV export <span class="pill p-done">Delivered</span></h3>
+        <p>Printable guest invoices (browser Print → PDF, using the property profile) and dependency-free Bookings / Payments CSV exports for the accountant.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DEFERRED ============ -->
+  <h2><span class="em">○</span> Deferred — by design (the “why”)</h2>
+  <p>These were intentionally excluded from scope. They are <strong>not bugs or unfinished work</strong> — most are blocked by external constraints or need new infrastructure.</p>
+
+  <table>
+    <tr><th>Item</th><th>Why it’s deferred</th></tr>
+    <tr>
+      <td class="k">OTA email ingestion</td>
+      <td>Auto-create bookings by parsing the owner’s confirmation emails. Needs a dedicated inbox + parser. (iCal import already exists for blocked dates.)</td>
+    </tr>
+    <tr>
+      <td class="k">Messaging automation</td>
+      <td>WhatsApp / email / SMS templates &amp; triggers (confirmation, check-in, review request). Requires a third-party messaging provider + account.</td>
+    </tr>
+    <tr>
+      <td class="k">Push pricing to OTAs</td>
+      <td><strong>Not possible for a single property</strong> — Booking.com/Agoda/MakeMyTrip connectivity APIs are gated to certified channel-manager partners. Pricing therefore stays advisory/internal.</td>
+    </tr>
+    <tr>
+      <td class="k">Multi-user / roles + prod hardening</td>
+      <td>Today it’s a single shared owner login (by design, for simplicity). Multiple staff with roles, rate-limiting, and lockout were agreed as a later phase.</td>
+    </tr>
+    <tr>
+      <td class="k">Guest ID document / photo upload</td>
+      <td>ID is stored as text only. Storing scanned documents needs object storage (e.g. Supabase Storage), which wasn’t in scope.</td>
+    </tr>
+    <tr>
+      <td class="k">Server-side PDF invoices</td>
+      <td>Invoices use the browser’s Print → Save as PDF (zero new dependencies). Server-generated/emailed PDFs would need a PDF library.</td>
+    </tr>
+  </table>
+
+  <!-- ============ CONCERNS ============ -->
+  <h2><span class="em">▲</span> Known concerns &amp; tech debt</h2>
+  <p>Tracked with file/line references in <code>.planning/codebase/CONCERNS.md</code>. None are blockers; the most important to understand are flagged ◆.</p>
+
+  <table>
+    <tr><th>Area</th><th>What &amp; why it matters</th><th>Severity</th></tr>
+    <tr>
+      <td class="k">Migration discipline</td>
+      <td>The correctness core uses generated <code>DATERANGE</code> columns + a GiST exclusion constraint that Prisma’s diff engine mangles. Migrations <strong>must</strong> be created with <code>npm&nbsp;run&nbsp;db:migrate:new</code>, never <code>prisma migrate dev</code>. Most load-bearing, easiest-to-trip area.</td>
+      <td><span class="sev" style="color:var(--danger)">◆ High</span></td>
+    </tr>
+    <tr>
+      <td class="k">Overlap-error detection</td>
+      <td>The friendly “dates unavailable” 409 relies on sniffing the Postgres error string (<code>23P01</code> / constraint name) in <code>src/lib/db-errors.ts</code>. A rename or Prisma change could silently break it → keep <code>tests/conflict.test.ts</code> green.</td>
+      <td><span class="sev" style="color:var(--danger)">◆ Medium-High</span></td>
+    </tr>
+    <tr>
+      <td class="k">Test breadth</td>
+      <td>Correctness core (conflicts, availability) and pure pricing math are tested; API route handlers and the <code>quoteRoomType</code> data wrapper are not. Route-level regressions wouldn’t be caught by CI.</td>
+      <td><span class="sev" style="color:var(--warn)">▲ Medium</span></td>
+    </tr>
+    <tr>
+      <td class="k">Money math</td>
+      <td>Amounts are whole-rupee JS <code>number</code> with <code>Math.round</code>; per-booking commission is rounded before summing. Fine today; strict accounting would need integer-paise / decimal arithmetic end to end.</td>
+      <td><span class="sev" style="color:var(--warn)">▲ Low</span></td>
+    </tr>
+    <tr>
+      <td class="k">Auth</td>
+      <td>Single-owner login: constant-time compare + signed httpOnly cookie, but no rate-limiting/lockout and the env password is plaintext. Acceptable for single-owner self-host; revisit with multi-role.</td>
+      <td><span class="sev" style="color:var(--warn)">▲ Low (by design)</span></td>
+    </tr>
+    <tr>
+      <td class="k">Pricing rate-calendar queries</td>
+      <td>The rate calendar re-fetches global config (policy/seasons/property) once per room type — a mild N+1. Negligible at this scale; batch it only if room types grow large.</td>
+      <td><span class="sev" style="color:var(--warn)">▲ Low</span></td>
+    </tr>
+    <tr>
+      <td class="k">Resolved during handoff</td>
+      <td>Already fixed: CSV formula-injection guard; <code>db:migrate</code> footgun (now apply-only <code>prisma migrate deploy</code>); untracked <code>tsconfig.tsbuildinfo</code>.</td>
+      <td><span class="pill p-done">Fixed</span></td>
+    </tr>
+  </table>
+
+  <!-- ============ NEXT TASKS ============ -->
+  <h2><span class="em">→</span> Suggested first tasks (for the new team)</h2>
+  <ol>
+    <li><strong>Read in order:</strong> <code>docs/ARCHITECTURE.md</code> (the correctness core) → <code>docs/CONTRIBUTING.md</code> (migration safety) → <code>docs/SETUP.md</code> (get a local env up and run <code>npm test</code>).</li>
+    <li><strong>Close the biggest test gap:</strong> add a route-level test for the create-overlap → <code>409</code> path, plus a housekeeping-derivation test. These cover the highest-risk untested code.</li>
+    <li><strong>Harden the constraint guard:</strong> add a standalone “exclusion constraint exists” check to the suite so an accidental migration can’t silently drop it.</li>
+    <li><strong>Skim the debt list:</strong> <code>.planning/codebase/CONCERNS.md</code> before any large refactor.</li>
+    <li><strong>Optional privacy hardening:</strong> move the single shared iCal token to per-feed tokens so rotating one feed doesn’t invalidate all OTA subscriptions.</li>
+  </ol>
+
+  <div class="note">
+    <strong>The one rule to internalise first:</strong> never run <code>prisma migrate dev</code>. Create migrations with <code>npm run db:migrate:new &lt;name&gt;</code>; apply them with <code>npm run db:migrate</code>. This protects the generated columns and the no-double-booking constraint that the whole app’s correctness depends on.
+  </div>
+
+  <footer>
+    Full docs: <code>README.md</code> · <code>docs/SETUP.md</code> · <code>docs/ARCHITECTURE.md</code> · <code>docs/CONTRIBUTING.md</code> · <code>docs/API.md</code> · <code>docs/DEPLOYMENT.md</code> · <code>docs/ROADMAP.md</code>. Original product spec &amp; hard rules in <code>CLAUDE.md</code>.
+  </footer>
+
+</div>
+</body>
+</html>

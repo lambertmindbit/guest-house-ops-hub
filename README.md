@@ -93,6 +93,7 @@ Detailed setup (Supabase connection-string nuances, the separate test database):
 | [docs/API.md](docs/API.md) | HTTP endpoint reference |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel + Supabase + cron + CI |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What's built, what's deferred, and why |
+| [docs/STATUS.html](docs/STATUS.html) | At-a-glance status report (open in a browser) — delivered phases, deferred items, concerns, first tasks |
 | [CLAUDE.md](CLAUDE.md) | Original product spec + the hard rules (also used by AI coding agents) |
 
 ## Hard rules (do NOT break)
