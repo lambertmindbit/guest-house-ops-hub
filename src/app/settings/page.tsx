@@ -6,7 +6,7 @@ import { SettingsClient } from "@/components/SettingsClient";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [settings, roomTypes, rooms, channels, blocks] = await Promise.all([
+  const [settings, roomTypes, rooms, channels, blocks, policy, seasons] = await Promise.all([
     prisma.propertySettings.findFirst(),
     prisma.roomType.findMany({
       include: { _count: { select: { rooms: true } } },
@@ -22,6 +22,8 @@ export default async function SettingsPage() {
       include: { room: true },
       orderBy: { startDate: "asc" },
     }),
+    prisma.pricingPolicy.findFirst(),
+    prisma.season.findMany({ orderBy: { startDate: "asc" } }),
   ]);
 
   // Decimals/Dates aren't directly serialisable to a client component — flatten.
@@ -65,6 +67,24 @@ export default async function SettingsPage() {
       startDate: formatDateOnly(b.startDate),
       endDate: formatDateOnly(b.endDate),
       reason: b.reason,
+    })),
+    policy: {
+      enabled: policy?.enabled ?? true,
+      weekendDays: policy?.weekendDays ?? [5, 6],
+      weekendAdjustPct: Number(policy?.weekendAdjustPct ?? 0),
+      leadEarlyDays: policy?.leadEarlyDays ?? null,
+      leadEarlyAdjustPct: policy?.leadEarlyAdjustPct == null ? null : Number(policy.leadEarlyAdjustPct),
+      leadLateDays: policy?.leadLateDays ?? null,
+      leadLateAdjustPct: policy?.leadLateAdjustPct == null ? null : Number(policy.leadLateAdjustPct),
+      occupancyThresholdPct: policy?.occupancyThresholdPct ?? null,
+      occupancyAdjustPct: policy?.occupancyAdjustPct == null ? null : Number(policy.occupancyAdjustPct),
+    },
+    seasons: seasons.map((s) => ({
+      id: s.id,
+      name: s.name,
+      startDate: formatDateOnly(s.startDate),
+      endDate: formatDateOnly(s.endDate),
+      adjustPct: Number(s.adjustPct),
     })),
   };
 

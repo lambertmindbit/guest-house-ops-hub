@@ -157,6 +157,55 @@ model Block {
   @@map("blocks")
 }
 
+// Single configurable pricing policy (one row). The pricing engine starts from a
+// room type's base_rate and compounds the applicable adjustments below, then
+// clamps to [rate_floor, rate_ceiling]. All adjustments are advisory — they only
+// suggest a nightly rate and pre-fill the booking amount; nothing is pushed to OTAs.
+// Percentages may be negative (a discount). Zero / null = that rule is off.
+model PricingPolicy {
+  id                    String   @id @default(cuid())
+  enabled               Boolean  @default(true)
+  // Weekday numbers (0=Sun … 6=Sat) that count as "weekend", + their uplift.
+  weekendDays           Int[]    @default([5, 6]) @map("weekend_days")
+  weekendAdjustPct      Decimal  @default(0) @map("weekend_adjust_pct") @db.Decimal(6, 2)
+  // Early-bird discount when the booking is at least N days out.
+  leadEarlyDays         Int?     @map("lead_early_days")
+  leadEarlyAdjustPct    Decimal? @map("lead_early_adjust_pct") @db.Decimal(6, 2)
+  // Last-minute uplift when the booking is within M days of check-in.
+  leadLateDays          Int?     @map("lead_late_days")
+  leadLateAdjustPct     Decimal? @map("lead_late_adjust_pct") @db.Decimal(6, 2)
+  // Occupancy uplift when that night's derived occupancy ≥ threshold %.
+  occupancyThresholdPct Int?     @map("occupancy_threshold_pct")
+  occupancyAdjustPct    Decimal? @map("occupancy_adjust_pct") @db.Decimal(6, 2)
+  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("pricing_policy")
+}
+
+// A named date range (festival / peak season) with a rate adjustment. Inclusive
+// of both endpoints. Owner-managed in Settings.
+model Season {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  adjustPct Decimal  @map("adjust_pct") @db.Decimal(6, 2)
+
+  @@map("seasons")
+}
+
+// An explicit nightly rate the owner pins for a room type on a specific date.
+// Overrides win over every rule (and over the floor/ceiling clamp).
+model RateOverride {
+  id         String   @id @default(cuid())
+  roomTypeId String   @map("room_type_id")
+  date       DateTime @db.Date
+  rate       Decimal  @db.Decimal(10, 2)
+
+  @@unique([roomTypeId, date])
+  @@map("rate_overrides")
+}
+
 // Single-row table holding the owner's property profile. Read with findFirst;
 // the first save creates the row. Used by invoices/receipts and as defaults
 // (check-in/out times) elsewhere.
