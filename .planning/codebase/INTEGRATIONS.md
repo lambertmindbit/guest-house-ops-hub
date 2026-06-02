@@ -1,80 +1,95 @@
 # External Integrations
 
-**Analysis Date:** 2026-06-01
+**Analysis Date:** 2026-06-02
+
+## Design Constraint: NO Direct OTA API Integration
+
+By deliberate design, this app does **not** integrate directly with Booking.com, Agoda, or MakeMyTrip APIs, and does **not** scrape OTA extranets. Real-time connectivity APIs are gated to certified channel-manager partners and unavailable to a single property. Channels (`Direct`, `WhatsApp`, `Booking.com`, `Agoda`, `MakeMyTrip`) exist only as labels/attribution on reservations (`channels` table). OTA awareness flows one way each:
+- **In:** owner-pasted iCal feed URLs (busy dates only) via `node-ical` — see iCal Import below.
+- **Out:** public token-gated `.ics` export feeds OTAs can subscribe to — see iCal Export below.
+
+Treat any task that proposes calling an OTA API or automating an extranet as out of scope.
 
 ## APIs & External Services
 
-**OTA Calendar Feeds (iCal):**
-- The only external connectivity in the project. Per the project's hard rules, there is NO direct Booking.com / Agoda / MakeMyTrip API integration and no scraping — sync happens purely over standard `.ics` URLs.
-- **Inbound (import):** `node-ical` fetches each owner-configured feed URL and mirrors busy `VEVENT`s into `ical`-sourced `blocks`.
-  - SDK/Client: `node-ical` (`nodeIcal.async.fromURL`) in `src/lib/ical-import.ts`.
-  - Auth: none — feed URLs are public/secret-in-URL OTA exports the owner pastes in (`IcalFeed` rows, managed via `src/app/api/feeds/route.ts` and `src/app/feeds/page.tsx`).
-- **Outbound (export):** Token-gated public `.ics` feed per room so OTAs can read busy dates.
-  - Endpoint: `src/app/api/ical/[token]/[room]/route.ts` (writer in `src/lib/ical.ts`, no external dependency).
-  - Auth: `ICAL_FEED_TOKEN` compared constant-time; 404 on mismatch. Events are anonymised ("Reserved" / "Blocked").
+**Calendar sync (iCal, the only OTA-facing integration):**
+- iCal Import - Pulls busy dates from OTA-provided iCal URLs into `ical`-sourced `blocks`.
+  - SDK/Client: `node-ical` ^0.26.1, used in `src/lib/ical-import.ts` (`nodeIcal.async.fromURL`).
+  - Source URLs: stored per room in the `ical_feeds` table (`IcalFeed` model), managed at `src/app/api/feeds/route.ts` and the UI `src/app/feeds/page.tsx` / `src/components/ImportFeeds.tsx`.
+  - Sync is idempotent + self-healing: each run delete-then-inserts that feed's blocks in a transaction.
+- iCal Export - Publishes a room's anonymised busy periods as an `.ics` feed OTAs can read.
+  - Implementation: homegrown RFC 5545 writer in `src/lib/ical.ts` (zero dependency), served by `src/app/api/ical/[token]/[room]/route.ts`.
+  - Auth: path token compared in constant time against `ICAL_FEED_TOKEN`; mismatch returns 404 (does not confirm room existence). Anonymised — only "Reserved"/"Blocked", never guest details.
+
+**Fonts:**
+- Google Fonts (Poppins) - Loaded via `next/font/google` in `src/app/layout.tsx` (weights 400/500/600/700, `display: swap`, exposed as CSS var `--font-poppins`). Self-hosted/optimized at build time by Next; no runtime call to Google.
 
 ## Data Storage
 
 **Databases:**
-- PostgreSQL (Supabase) - Single source of truth for all entities.
-  - Connection: `DATABASE_URL` env var.
-  - In use: Supabase, host `aws-1-ap-southeast-2.pooler.supabase.com:5432` (the Supabase **connection pooler** / session mode), `sslmode=require`.
-  - Local alternative: `docker compose up -d db` (`postgres:16`, `docker-compose.yml`) for offline/parity dev.
-  - Client: Prisma (`@prisma/client`), singleton in `src/lib/prisma.ts`; schema `prisma/schema.prisma`.
-  - Requires `btree_gist` extension (created in `prisma/migrations/20260601114302_init/migration.sql`) for the no-double-booking GiST exclusion constraint.
+- PostgreSQL (hosted on Supabase in dev/prod; PG16 locally via Docker)
+  - Connection: `DATABASE_URL` env var, consumed by `prisma/schema.prisma` datasource and the `src/lib/prisma.ts` singleton.
+  - Client: Prisma ^6.5.0 (`@prisma/client`).
+  - **Supabase pooling (per `.env.example` guidance):** use the **session pooler / direct connection on port 5432** for Prisma **migrations** (`prisma migrate`). For serverless runtime use the **transaction pooler on port 6543 with `?pgbouncer=true`**. `sslmode=require` is expected in the connection string.
+  - Correctness core is enforced in-DB, not in app code: GiST `EXCLUDE` constraint `no_overlapping_confirmed_stays` and GENERATED `daterange` columns (`stay`, `period`), added via raw SQL in `prisma/migrations/20260601114302_init/`. Requires the `btree_gist` extension (PG16).
 
 **File Storage:**
-- Local/repo filesystem only. PWA icons in `public/icons/`; no external object storage.
+- None. No object storage is used — by design. Guest IDs are stored as text only (`guests.id_number`); no document/photo upload (noted in `prisma/schema.prisma`).
 
 **Caching:**
-- None (application-level). The public iCal export sets HTTP `cache-control: public, max-age=300` (`src/app/api/ical/[token]/[room]/route.ts`).
+- None (application level). The public iCal export sets HTTP `cache-control: public, max-age=300`.
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- Custom / homegrown (NOT next-auth, NOT Supabase Auth).
-  - Implementation: `src/lib/auth.ts`. Single-owner login: credentials checked against `OWNER_EMAIL` / `OWNER_PASSWORD` via constant-time compare (`verifyCredentials`).
-  - Session: HMAC-SHA-256 signed token (`payload.signature`) stored in an httpOnly cookie `ota_session`, signed with `AUTH_SECRET`. Built with Web Crypto (`crypto.subtle`) so the same code runs in Edge middleware and Node route handlers. 30-day expiry.
-  - Enforcement: `src/middleware.ts` gates the whole app; matcher excludes `/login`, `/api/auth`, `/api/ical`, `/api/cron`, and static/PWA assets.
-  - Routes: `src/app/api/auth/login/route.ts`, `src/app/api/auth/logout/route.ts`; UI `src/app/login/page.tsx`.
+- Custom, single-owner, zero-dependency (no external IdP).
+  - Implementation: `src/lib/auth.ts`. Session is a base64url `payload.signature` token signed with **HMAC-SHA-256 via Web Crypto** (`crypto.subtle`), stored in an `httpOnly`, `sameSite=lax`, `secure`-in-prod cookie named `ota_session` (30-day max age).
+  - Credentials: `OWNER_EMAIL` / `OWNER_PASSWORD` compared in constant time (`safeEqual`). Cookie signed with `AUTH_SECRET`.
+  - Login/logout routes: `src/app/api/auth/login/route.ts`, `src/app/api/auth/logout/route.ts`.
+  - Enforcement: `src/middleware.ts` gates the whole app (Edge runtime). Matcher excludes `/login`, `/api/auth`, `/api/ical`, `/api/cron`, and Next/PWA static assets; everything else requires a valid session cookie.
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None. iCal sync failures are persisted per-feed instead: `IcalFeed.lastError` / `lastSyncedAt` updated in `src/lib/ical-import.ts`, surfaced in the feeds UI.
+- None. No Sentry/error-tracking SDK. iCal sync failures are persisted per-feed in `ical_feeds.last_error` (`src/lib/ical-import.ts`).
 
 **Logs:**
-- No structured logging framework; relies on platform (Vercel) request logs and `console`.
+- Console / platform (Vercel) logs only. No structured logging library.
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Vercel (serverless). `vercel.json` present; `next build` runs `prisma generate` first.
+- Vercel (serverless). PWA-installable via `public/manifest.webmanifest`.
 
 **CI Pipeline:**
-- None detected (no `.github/workflows`, no other CI config).
+- GitHub Actions - `.github/workflows/ci.yml`, runs on every push and pull_request.
+  - Steps: checkout → setup Node 22 (npm cache) → `npm ci` → `npm run lint` → `npx prisma migrate deploy` → `npm run build` → `npm test`.
+  - Uses an ephemeral `postgres:16` service container (user/pass/db `postgres`/`postgres`/`ota_test`, port 5432). No secrets, no production data. Sets both `DATABASE_URL` and `TEST_DATABASE_URL` to the throwaway DB.
 
 ## Environment Configuration
 
 **Required env vars** (documented in `.env.example`):
-- `DATABASE_URL` - Supabase Postgres connection string (pooler, `sslmode=require`).
+- `DATABASE_URL` - Supabase/Postgres connection string (port 5432 session pooler for migrations; port 6543 `?pgbouncer=true` for serverless runtime).
 - `OWNER_EMAIL`, `OWNER_PASSWORD` - Single-owner login credentials.
-- `AUTH_SECRET` - HMAC key for signing the session cookie.
-- `ICAL_FEED_TOKEN` - Secret embedded in public `.ics` export URLs.
-- `CRON_SECRET` - Bearer token Vercel Cron sends to authorize the daily sync.
+- `AUTH_SECRET` - HMAC key signing the session cookie.
+- `ICAL_FEED_TOKEN` - Secret embedded in public `.ics` export feed URLs.
+- `CRON_SECRET` - Bearer token authorizing the daily Vercel Cron call to `/api/cron/sync`.
+
+**Optional / test:**
+- `TEST_DATABASE_URL` - Disposable DB for the Vitest integration suite. If unset, tests refuse to run unless `ALLOW_PROD_DB_TESTS=1`. Guard logic: `tests/setup.ts`.
 
 **Secrets location:**
-- `.env` (git-ignored). Production secrets set in Vercel project environment variables. Never committed (`.gitignore`).
+- `.env` (git-ignored per `.gitignore`). Placeholders only in `.env.example`. Production secrets set in the Vercel project's environment variables.
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- Vercel Cron → `GET /api/cron/sync` (`src/app/api/cron/sync/route.ts`). Scheduled `0 2 * * *` (daily 02:00) in `vercel.json`. Authorized via `Authorization: Bearer <CRON_SECRET>`; runs `syncAllFeeds()` to refresh OTA blocks. Not behind the owner cookie.
-- Manual trigger: `POST /api/sync` (`src/app/api/sync/route.ts`), behind owner auth — "Sync now" button (`src/components/ImportFeeds.tsx`).
+- `GET /api/cron/sync` (`src/app/api/cron/sync/route.ts`) - Daily Vercel Cron target. Defined in `vercel.json`: `{ "path": "/api/cron/sync", "schedule": "0 2 * * *" }` (02:00 daily). Not behind the owner cookie; authorized via `Authorization: Bearer <CRON_SECRET>`. Calls `syncAllFeeds()` to refresh all active iCal feeds.
+- `GET /api/ical/[token]/[room]` - Public, token-gated `.ics` feed OTAs poll (busy dates only).
 
 **Outgoing:**
-- None (no outbound webhooks). Outbound data exposure is limited to the pull-based iCal export feed.
+- iCal feed fetches: `node-ical` performs outbound HTTP GETs to OTA-provided feed URLs during sync. No other outbound webhooks/callbacks (no messaging/email/SMS in current scope).
 
 ---
 
-*Integration audit: 2026-06-01*
+*Integration audit: 2026-06-02*
