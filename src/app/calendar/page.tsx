@@ -38,17 +38,21 @@ export default async function CalendarPage({
   return (
     <main className="app-main">
       <div className="shimmer">
-        <PageHead
-          title="Calendar"
-          sub={sub}
-          right={
-            <div className="row" style={{ gap: 8 }}>
-              <Link href={`/calendar?start=${prev}`} className="btn btn--outline btn--sm"><Icon name="chevronL" size={16} /></Link>
-              <Link href="/calendar" className="btn btn--outline btn--sm">Today</Link>
-              <Link href={`/calendar?start=${next}`} className="btn btn--outline btn--sm"><Icon name="chevronR" size={16} /></Link>
-            </div>
-          }
-        />
+        <PageHead title="Calendar" sub={sub} />
+
+        <div className="row" style={{ gap: 8, flexWrap: "wrap", margin: "12px 0 2px" }}>
+          <Link href={`/calendar?start=${prev}`} className="btn btn--outline btn--sm" aria-label="Previous 2 weeks">
+            <Icon name="chevronL" size={16} />
+          </Link>
+          <Link href={`/calendar?start=${next}`} className="btn btn--outline btn--sm" aria-label="Next 2 weeks">
+            <Icon name="chevronR" size={16} />
+          </Link>
+          <Link href="/calendar" className="btn btn--ghost btn--sm">Today</Link>
+          <form method="get" className="row" style={{ gap: 6, marginLeft: "auto" }}>
+            <input type="date" name="start" defaultValue={start} className="input" style={{ width: 152, padding: "8px 11px", fontSize: 14 }} />
+            <button className="btn btn--dark btn--sm">Go</button>
+          </form>
+        </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 14, margin: "14px 0 12px" }}>
           <Legend swatch="var(--paper)" label="Vacant" />
