@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 };
 
 // Applies saved preferences (or the OS appearance) before first paint — no flash.
-const themeScript = `(function(){try{var d=document.documentElement,ls=localStorage;var ap=ls.getItem('ops-appearance')||'system';var eff=ap==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):ap;d.setAttribute('data-appearance',eff);d.setAttribute('data-tint',ls.getItem('ops-tint')||'green');d.setAttribute('data-material',ls.getItem('ops-material')||'rich');d.setAttribute('data-btnshape',ls.getItem('ops-btnshape')||'rounded');}catch(e){}})();`;
+const themeScript = `(function(){try{var d=document.documentElement,ls=localStorage;var ap=ls.getItem('ops-appearance')||'system';var eff=ap==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):ap;d.setAttribute('data-appearance',eff);d.setAttribute('data-tint',ls.getItem('ops-tint')||'warm');d.setAttribute('data-material',ls.getItem('ops-material')||'rich');d.setAttribute('data-btnshape',ls.getItem('ops-btnshape')||'rounded');}catch(e){}})();`;
 
 export default function RootLayout({
   children,

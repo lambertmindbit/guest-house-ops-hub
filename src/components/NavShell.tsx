@@ -43,14 +43,14 @@ export function NavShell() {
   const router = useRouter();
   const [sheet, setSheet] = useState(false);
   const [panel, setPanel] = useState(false);
-  const [prefs, setPrefs] = useState<Prefs>({ appearance: "system", tint: "green", material: "rich", btnshape: "rounded" });
+  const [prefs, setPrefs] = useState<Prefs>({ appearance: "system", tint: "warm", material: "rich", btnshape: "rounded" });
   const [effDark, setEffDark] = useState(false);
 
   useEffect(() => {
     const ls = localStorage;
     setPrefs({
       appearance: ls.getItem(STORE.appearance) ?? "system",
-      tint: ls.getItem(STORE.tint) ?? "green",
+      tint: ls.getItem(STORE.tint) ?? "warm",
       material: ls.getItem(STORE.material) ?? "rich",
       btnshape: ls.getItem(STORE.btnshape) ?? "rounded",
     });

@@ -26,9 +26,9 @@
 
   --mat-blur: 30px; --mat-sat: 180%; --mat-alpha: 0.72;
 
-  /* Accent = system green (fixed) */
-  --tint: #34c759; --tint-600: #2bb14e; --tint-text: #248a3d;
-  --tint-fill: rgba(52, 199, 89, 0.15); --tint-fill-2: rgba(52, 199, 89, 0.24); --tint-on: #ffffff;
+  /* Accent = warm teal (default; switchable in Preferences) */
+  --tint: #0fa68e; --tint-600: #0c8c77; --tint-text: #0a7665;
+  --tint-fill: rgba(15, 166, 142, 0.14); --tint-fill-2: rgba(15, 166, 142, 0.22); --tint-on: #ffffff;
 
   /* Legacy Ops-Hub token names -> Apple system values (the screens use these) */
   --teal: var(--tint); --teal-600: var(--tint-600); --teal-700: var(--tint-text);
