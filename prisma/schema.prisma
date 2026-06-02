@@ -106,6 +106,11 @@ model Reservation {
   // Generated in the DB from check_in/check_out as a half-open [) daterange.
   stay            Unsupported("daterange")? @map("stay")
   status          ReservationStatus        @default(confirmed)
+  // Live arrival/departure stamps. Orthogonal to `status` (a confirmed booking
+  // may or may not be in-house yet) and to `stay`, so the exclusion constraint
+  // is untouched. Drive the Today board's in-house view + housekeeping handoff.
+  checkedInAt     DateTime?                @map("checked_in_at")
+  checkedOutAt    DateTime?                @map("checked_out_at")
   arrivalTime     String?                  @map("arrival_time")
   specialRequests String?                  @map("special_requests")
   grossAmount     Decimal?                 @map("gross_amount") @db.Decimal(10, 2)

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
 import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
@@ -50,12 +51,12 @@ export default async function DashboardPage() {
 
         <div className="two-col">
           <div>
-            <Section title="Check-ins today" items={s.checkInsToday} empty="No arrivals today." />
-            <Section title="Check-outs today" items={s.checkOutsToday} empty="No departures today." />
+            <Section title="Check-ins today" items={s.checkInsToday} empty="No arrivals today." right={(r) => (r.checkedInAt ? "Arrived ✓" : "Awaiting")} />
+            <Section title="Check-outs today" items={s.checkOutsToday} empty="No departures today." right={(r) => (r.checkedOutAt ? "Departed ✓" : "Due out")} />
           </div>
           <div>
-            <Section title="In-house now" items={s.inHouse} empty="Nobody checked in." />
-            <Section title="Arrivals next 7 days" items={s.arrivalsNext7} empty="Nothing booked yet." showDate />
+            <Section title="In-house now" items={s.inHouse} empty="Nobody checked in." right={(r) => (r.checkedInAt ? "In-house" : "Not arrived")} />
+            <Section title="Arrivals next 7 days" items={s.arrivalsNext7} empty="Nothing booked yet." right={(r) => displayShortDate(r.checkIn)} />
           </div>
         </div>
       </div>
@@ -67,12 +68,12 @@ function Section({
   title,
   items,
   empty,
-  showDate,
+  right,
 }: {
   title: string;
   items: SummaryReservation[];
   empty: string;
-  showDate?: boolean;
+  right?: (r: SummaryReservation) => ReactNode;
 }) {
   return (
     <>
@@ -87,7 +88,7 @@ function Section({
               name={r.guest.name}
               meta={`Room ${r.room.label} · ${r.room.roomType.name}${r.arrivalTime ? ` · arr ${r.arrivalTime}` : ""}`}
               channel={r.channel.name}
-              right={showDate ? displayShortDate(r.checkIn) : undefined}
+              right={right?.(r)}
               href={`/reservations/${r.id}`}
             />
           ))}

@@ -39,7 +39,7 @@ export async function getTodaySummary() {
         include,
         orderBy: { checkIn: "asc" },
       }),
-      prisma.room.count(),
+      prisma.room.count({ where: { archivedAt: null } }),
     ]);
 
   const occupancyPct =
