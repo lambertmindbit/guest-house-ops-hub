@@ -82,14 +82,14 @@ occupancy and pricing-occupancy signals.
 
 ## Data model
 
-15 models in [`prisma/schema.prisma`](../prisma/schema.prisma):
+16 models in [`prisma/schema.prisma`](../prisma/schema.prisma):
 
 | Model | Purpose |
 |-------|---------|
 | `RoomType` | A category (Standard/Deluxe/…) with `baseRate`, `maxOccupancy`, `rateFloor`, `rateCeiling` |
 | `Room` | A physical room. `archivedAt` retires it (kept in history); `lastCleanedAt` + `needsCleaningFlag` drive housekeeping |
 | `Channel` | A booking source (Direct, WhatsApp, Booking.com, …) with `commissionPct`, `collectsPayment` |
-| `Guest` | CRM record. `phone` unique; `idNumber`, `blocked`/`blockReason` for blacklist |
+| `Guest` | CRM record. `phone` unique; `idNumber`, `blocked`/`blockReason` for blacklist; `idDocumentPath` → scanned ID in object storage (optional) |
 | `Reservation` | The booking. `stay` (generated daterange) + the exclusion constraint; `status`, `grossAmount`, `checkedInAt`/`checkedOutAt` |
 | `Payment` | Money received against a reservation (deposit, balance, …) |
 | `Block` | A room held out of service (`manual` maintenance or `ical`-imported). `period` generated daterange |
@@ -99,9 +99,11 @@ occupancy and pricing-occupancy signals.
 | `Season` | A named date range with a rate adjustment (festival/peak) |
 | `RateOverride` | A pinned nightly rate for a room type on a date (wins over rules) |
 | `PropertySettings` | Single-row property profile (name, address, GST, check-in/out times, currency) |
+| `InboundBooking` | An OTA confirmation email parsed + staged for review before becoming a `Reservation` (`pending`/`imported`/`dismissed`) |
 
 Enums: `ReservationStatus` (confirmed/cancelled/no_show), `BlockSource`
-(manual/ical), `PaymentMode` (cash/upi/card/bank/ota_collect).
+(manual/ical), `PaymentMode` (cash/upi/card/bank/ota_collect), `InboundStatus`
+(pending/imported/dismissed).
 
 ### Money & dates conventions
 
@@ -135,6 +137,10 @@ both Server Components and API routes:
 | `dates.ts` | Date-only helpers (UTC-anchored) |
 | `format.ts` | Display formatting (money, dates, labels) |
 | `csv.ts` | RFC-4180 CSV builder (with formula-injection guard) |
+| `email-parse.ts` | Pure best-effort parser for OTA confirmation emails |
+| `inbound.ts` | Stage a parsed email into `InboundBooking` (dedupe by OTA ref) |
+| `rate-limit.ts` | In-memory fixed-window limiter (login brute-force deterrent) |
+| `storage.ts` | Supabase Storage REST adapter for guest ID documents (optional) |
 | `api.ts` | `ok` / `fail` / `zodFail` response helpers |
 | `db-errors.ts` | Maps Postgres `23P01` overlap → friendly 409 |
 | `prisma.ts` | Singleton Prisma client |
@@ -152,6 +158,26 @@ and a **data** wrapper for testability:
 
 It is **advisory only**: it suggests a nightly rate and pre-fills the booking
 amount; it never pushes rates to OTAs and never rewrites a saved booking.
+
+## OTA email ingestion (staged)
+
+Bookings from OTA confirmation emails are ingested through a deliberately
+**decoupled** seam, so "how the email arrives" can change without touching "what
+we do with it":
+
+1. A raw email is parsed best-effort ([`src/lib/email-parse.ts`](../src/lib/email-parse.ts))
+   and staged as an `InboundBooking` ([`src/lib/inbound.ts`](../src/lib/inbound.ts),
+   deduped by OTA ref) — **never auto-booked**.
+2. Two entry points feed the same staging logic: the owner pastes into the
+   **Inbox** screen (`POST /api/inbound`, cookie-gated), or a future inbox/
+   forwarding webhook posts to `POST /api/ingest/email` (token-gated, excluded
+   from the owner-cookie middleware).
+3. On the Inbox screen the owner corrects fields and creates the booking through
+   the **existing** `POST /api/reservations` — inheriting the no-double-booking
+   409 — then the staged item is marked `imported`.
+
+The parser regexes are scaffolding to validate against real OTA emails; the review
+step keeps mis-parses harmless. See [ROADMAP.md](ROADMAP.md).
 
 ## Auth & request gating
 

@@ -50,11 +50,12 @@ core is enforced at the database level and covered by integration tests
 
 ## Security Considerations
 
-**Single-owner auth, no rate limiting, no lockout:**
-- Risk: Login compares plaintext `OWNER_EMAIL`/`OWNER_PASSWORD` from env (constant-time, good) but there is no rate limiting, no failed-attempt lockout, and no captcha. Password is stored in plaintext in `.env` (not hashed — acceptable for single-owner self-host, but means env exposure = credential exposure).
+**Single-owner auth — rate limiting added; password still plaintext:** — ⏳ PARTIALLY ADDRESSED 2026-06-03
+- Update: Login is now rate-limited (10 attempts / IP / 5 min → 429) via `src/lib/rate-limit.ts`, applied in `src/app/api/auth/login/route.ts`. Best-effort on serverless (in-memory, not shared across instances). The plaintext-env-password and no-lockout/no-captcha points below still stand.
+- Risk: Login compares plaintext `OWNER_EMAIL`/`OWNER_PASSWORD` from env (constant-time, good). Password is stored in plaintext in `.env` (not hashed — acceptable for single-owner self-host, but means env exposure = credential exposure).
 - Files: `src/lib/auth.ts` `verifyCredentials` (lines 74–78), `src/app/api/auth/login/route.ts` (no throttling, lines 16–30).
 - Current mitigation: Constant-time comparison (`safeEqual`, lines 67–72); HMAC-SHA256 signed httpOnly cookie (lines 39–64); `secure` cookie in production (line 83); 30-day expiry. Session token has no server-side revocation list — a leaked valid cookie works until expiry.
-- Recommendations: Add basic rate limiting on `/api/auth/login` (per-IP, in-memory is fine for one box). This is explicitly deferred per `CLAUDE.md` (multi-role auth + prod hardening are out of Phase 1 scope), so flag-only — do not build now.
+- Recommendations: Rate limiting is now in place (see Update above). Remaining hardening — a shared-store limiter for a strict global cap, optional failed-attempt lockout, and not storing the password in plaintext — stays deferred with multi-role auth per `CLAUDE.md`.
 
 **No multi-user / roles:**
 - Risk: A single shared credential gates everything; no per-user audit, no revocation, no least privilege.

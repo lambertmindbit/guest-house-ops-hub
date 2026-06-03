@@ -29,8 +29,13 @@ All six planned milestones are built and in production:
 | 5 | **Finance** | Per-channel revenue + commission, expense tracking → net profit |
 | 6 | **Invoices / export** | Printable invoices, Bookings/Payments CSV export |
 
-Deferred by design: OTA email ingestion, messaging automation, multi-role auth,
-guest ID document upload, server-side PDFs. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
+- **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) is ready for automation later.
+- **Login rate-limiting** — active (10 attempts / IP / 5 min).
+- **Guest ID document upload** — Supabase Storage adapter + UI; activate by setting the storage env vars.
+
+Still deferred by design: messaging automation, multi-role auth, server-side PDFs,
+pushing rates to OTAs (not possible for a single property). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Tech stack
 

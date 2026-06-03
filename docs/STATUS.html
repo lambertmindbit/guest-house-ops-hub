@@ -24,6 +24,7 @@
   .legend{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
   .pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
   .p-done{background:var(--good-bg);color:var(--good)}
+  .p-prep{background:var(--warn-bg);color:var(--warn)}
   .p-defer{background:var(--ink-bg);color:var(--sub)}
   .p-warn{background:var(--warn-bg);color:var(--warn)}
   .p-risk{background:var(--danger-bg);color:var(--danger)}
@@ -52,13 +53,14 @@
 
   <header>
     <h1>Guest House Operations Hub — Project Status</h1>
-    <div class="meta">Self-hosted, mobile-first ops hub for a single small property · Next.js 15 · Prisma · PostgreSQL (Supabase) · Vercel · As of 2026-06-02</div>
+    <div class="meta">Self-hosted, mobile-first ops hub for a single small property · Next.js 15 · Prisma · PostgreSQL (Supabase) · Vercel · As of 2026-06-03</div>
   </header>
 
-  <p><strong>Bottom line:</strong> all six planned milestones are <strong>built, tested, and live in production on <code>main</code></strong>. Remaining items are <strong>deferred by design</strong> (out of the agreed scope), not unfinished work. CI (lint + build + 21 tests on an ephemeral Postgres) gates every merge.</p>
+  <p><strong>Bottom line:</strong> all six planned milestones are <strong>built, tested, and live in production on <code>main</code></strong>. Several once-deferred items now have their <strong>app-side groundwork built behind clean seams</strong> (off by default) so they aren&rsquo;t a last-minute scramble — see the Deferred section. CI (lint + build + 25 tests on an ephemeral Postgres) gates every merge.</p>
 
   <div class="legend">
     <span class="pill p-done">● Delivered</span>
+    <span class="pill p-prep">🟡 Groundwork ready</span>
     <span class="pill p-defer">○ Deferred by design</span>
     <span class="pill p-warn">▲ Known concern</span>
     <span class="pill p-risk">◆ Higher-attention</span>
@@ -128,34 +130,38 @@
   </div>
 
   <!-- ============ DEFERRED ============ -->
-  <h2><span class="em">○</span> Deferred — by design (the “why”)</h2>
-  <p>These were intentionally excluded from scope. They are <strong>not bugs or unfinished work</strong> — most are blocked by external constraints or need new infrastructure.</p>
+  <h2><span class="em">○</span> Deferred — with status</h2>
+  <p>These were out of the original scope. Several now have their <strong>app-side groundwork built</strong> (🟡) so the only remaining work is configuration; the rest are genuinely deferred (○) or blocked by external limits.</p>
 
   <table>
-    <tr><th>Item</th><th>Why it’s deferred</th></tr>
+    <tr><th>Item</th><th>Status &amp; what remains</th></tr>
     <tr>
       <td class="k">OTA email ingestion</td>
-      <td>Auto-create bookings by parsing the owner’s confirmation emails. Needs a dedicated inbox + parser. (iCal import already exists for blocked dates.)</td>
+      <td><span class="pill p-prep">🟡 Groundwork built</span><br>Parser + <strong>Inbox</strong> paste/review/create flow + a token-gated webhook seam (<code>/api/ingest/email</code>) all exist. <strong>Usable today</strong> via paste. Remaining: wire an inbox/forwarding rule, and tune the parser against real OTA emails.</td>
+    </tr>
+    <tr>
+      <td class="k">Login rate-limiting</td>
+      <td><span class="pill p-done">● Done</span><br>10 attempts / IP / 5 min on the login endpoint (<code>src/lib/rate-limit.ts</code>).</td>
+    </tr>
+    <tr>
+      <td class="k">Guest ID document upload</td>
+      <td><span class="pill p-prep">🟡 Groundwork built</span><br>Supabase Storage adapter + upload/view/delete endpoints + guest-profile UI (graceful “not configured” state). Remaining: create a private bucket + set the storage env vars.</td>
+    </tr>
+    <tr>
+      <td class="k">Multi-user / roles</td>
+      <td><span class="pill p-defer">○ Deferred</span><br>Single shared owner login by design. Accounts, roles, and lockout are a later phase (login rate-limiting is already in).</td>
     </tr>
     <tr>
       <td class="k">Messaging automation</td>
-      <td>WhatsApp / email / SMS templates &amp; triggers (confirmation, check-in, review request). Requires a third-party messaging provider + account.</td>
+      <td><span class="pill p-defer">○ Deferred</span><br>WhatsApp / email / SMS templates &amp; triggers. Requires a third-party messaging provider + account.</td>
     </tr>
     <tr>
       <td class="k">Push pricing to OTAs</td>
-      <td><strong>Not possible for a single property</strong> — Booking.com/Agoda/MakeMyTrip connectivity APIs are gated to certified channel-manager partners. Pricing therefore stays advisory/internal.</td>
-    </tr>
-    <tr>
-      <td class="k">Multi-user / roles + prod hardening</td>
-      <td>Today it’s a single shared owner login (by design, for simplicity). Multiple staff with roles, rate-limiting, and lockout were agreed as a later phase.</td>
-    </tr>
-    <tr>
-      <td class="k">Guest ID document / photo upload</td>
-      <td>ID is stored as text only. Storing scanned documents needs object storage (e.g. Supabase Storage), which wasn’t in scope.</td>
+      <td><span class="pill p-risk">◆ Won’t do</span><br><strong>Not possible for a single property</strong> — OTA connectivity APIs are gated to certified channel-manager partners. Pricing stays advisory/internal.</td>
     </tr>
     <tr>
       <td class="k">Server-side PDF invoices</td>
-      <td>Invoices use the browser’s Print → Save as PDF (zero new dependencies). Server-generated/emailed PDFs would need a PDF library.</td>
+      <td><span class="pill p-defer">○ Deferred</span><br>Invoices use the browser’s Print → Save as PDF (zero dependencies). Server-generated PDFs would need a PDF library.</td>
     </tr>
   </table>
 
@@ -187,7 +193,7 @@
     </tr>
     <tr>
       <td class="k">Auth</td>
-      <td>Single-owner login: constant-time compare + signed httpOnly cookie, but no rate-limiting/lockout and the env password is plaintext. Acceptable for single-owner self-host; revisit with multi-role.</td>
+      <td>Single-owner login: constant-time compare + signed httpOnly cookie. Login is <strong>now rate-limited</strong> (10/IP/5 min). The env password is plaintext (acceptable for single-owner self-host); no per-user roles yet.</td>
       <td><span class="sev" style="color:var(--warn)">▲ Low (by design)</span></td>
     </tr>
     <tr>
@@ -197,7 +203,7 @@
     </tr>
     <tr>
       <td class="k">Resolved during handoff</td>
-      <td>Already fixed: CSV formula-injection guard; <code>db:migrate</code> footgun (now apply-only <code>prisma migrate deploy</code>); untracked <code>tsconfig.tsbuildinfo</code>.</td>
+      <td>Already fixed: CSV formula-injection guard; <code>db:migrate</code> footgun (now apply-only <code>prisma migrate deploy</code>); untracked <code>tsconfig.tsbuildinfo</code>; <strong>login rate-limiting added</strong>.</td>
       <td><span class="pill p-done">Fixed</span></td>
     </tr>
   </table>
