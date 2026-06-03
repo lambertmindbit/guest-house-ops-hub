@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SectionLabel, StatusPill, Icon, PageHead } from "@/components/ui";
+import { StatusPill, Icon, PageHead } from "@/components/ui";
 
 type RoomType = {
   id: string;
@@ -79,54 +78,63 @@ const chipStyle = {
   display: "grid", placeItems: "center", flex: "none",
 } as const;
 
+// One-at-a-time accordion. Pure client state — tapping a header expands that
+// section instantly (no navigation/refetch). A `section` from the URL (?s=…)
+// just sets which row starts open, so the deep links still land correctly.
 export function SettingsClient({ data, section }: { data: SettingsData; section: string | null }) {
   const activeRooms = data.rooms.filter((r) => !r.archived);
-  const active = SECTIONS.find((s) => s.key === section);
+  const [open, setOpen] = useState<string | null>(
+    SECTIONS.some((s) => s.key === section) ? section : null,
+  );
 
-  // ---- Menu (no section chosen) ----
-  if (!active) {
-    const counts: Record<string, number | undefined> = {
-      rooms: activeRooms.length,
-      "room-types": data.roomTypes.length,
-      channels: data.channels.length,
-      blocks: data.blocks.length,
-    };
-    return (
-      <>
-        <PageHead title="Settings" sub="Manage your property, rooms, room types, channels, pricing, and blocks." />
-        <div className="col" style={{ gap: 10, marginTop: 12 }}>
+  const counts: Record<string, number | undefined> = {
+    rooms: activeRooms.length,
+    "room-types": data.roomTypes.length,
+    channels: data.channels.length,
+    blocks: data.blocks.length,
+  };
+
+  return (
+    <>
+      <PageHead title="Settings" sub="Tap a category to manage it." />
+      <div className="col" style={{ gap: 10, marginTop: 14 }}>
         {SECTIONS.map((s) => {
+          const isOpen = open === s.key;
           const c = counts[s.key];
           return (
-            <Link key={s.key} href={`/settings?s=${s.key}`} className="card" style={{ padding: "13px 15px", display: "flex", alignItems: "center", gap: 13 }}>
-              <span style={chipStyle}><Icon name={s.icon} size={19} /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontWeight: 700, fontSize: 15 }}>{s.title}</span>
-                <span style={{ display: "block", fontSize: 12.5, color: "var(--subtle)", marginTop: 2 }}>{s.sub}</span>
-              </span>
-              {c != null && <span className="pill pill--ink" style={{ flex: "none" }}>{c}</span>}
-              <Icon name="chevronR" size={18} style={{ color: "var(--subtle)", flex: "none" }} />
-            </Link>
+            <div key={s.key} className="card" style={{ padding: 0, overflow: "hidden" }}>
+              <button
+                onClick={() => setOpen(isOpen ? null : s.key)}
+                aria-expanded={isOpen}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 13,
+                  padding: "14px 15px", textAlign: "left", border: 0, cursor: "pointer",
+                  background: isOpen ? "var(--sand)" : "transparent",
+                }}
+              >
+                <span style={chipStyle}><Icon name={s.icon} size={19} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontWeight: 700, fontSize: 15 }}>{s.title}</span>
+                  <span style={{ display: "block", fontSize: 12.5, color: "var(--subtle)", marginTop: 2 }}>{s.sub}</span>
+                </span>
+                {c != null && <span className="pill pill--ink" style={{ flex: "none" }}>{c}</span>}
+                <Icon name="chevronR" size={18} style={{ color: "var(--subtle)", flex: "none", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
+              </button>
+              {isOpen && (
+                <div style={{ padding: "14px 15px 16px", borderTop: "1px solid var(--line)" }}>
+                  {s.key === "property" && <PropertySection settings={data.settings} />}
+                  {s.key === "rooms" && <RoomsSection rooms={data.rooms} types={data.roomTypes} />}
+                  {s.key === "room-types" && <RoomTypesSection types={data.roomTypes} />}
+                  {s.key === "channels" && <ChannelsSection channels={data.channels} />}
+                  {s.key === "pricing" && <PricingSection policy={data.policy} seasons={data.seasons} />}
+                  {s.key === "blocks" && <BlocksSection blocks={data.blocks} rooms={activeRooms} />}
+                </div>
+              )}
+            </div>
           );
         })}
-        </div>
-      </>
-    );
-  }
-
-  // ---- A single section ----
-  return (
-    <div style={{ marginTop: 8 }}>
-      <Link href="/settings" className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
-        <Icon name="chevronL" size={16} /> All settings
-      </Link>
-      {active.key === "property" && <PropertySection settings={data.settings} />}
-      {active.key === "rooms" && <RoomsSection rooms={data.rooms} types={data.roomTypes} />}
-      {active.key === "room-types" && <RoomTypesSection types={data.roomTypes} />}
-      {active.key === "channels" && <ChannelsSection channels={data.channels} />}
-      {active.key === "pricing" && <PricingSection policy={data.policy} seasons={data.seasons} />}
-      {active.key === "blocks" && <BlocksSection blocks={data.blocks} rooms={activeRooms} />}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -169,7 +177,6 @@ function PropertySection({ settings }: { settings: Settings }) {
 
   return (
     <section>
-      <SectionLabel>Property</SectionLabel>
       <form onSubmit={save} className="card" style={{ padding: 16 }}>
         <ErrorLine msg={error} />
         <div className="form-grid" style={{ gap: 12 }}>
@@ -269,9 +276,9 @@ function RoomTypesSection({ types }: { types: RoomType[] }) {
 
   return (
     <section>
-      <SectionLabel count={`(${types.length})`} action={<button onClick={startAdd} className="btn btn--outline btn--sm">+ Add type</button>}>
-        Room types
-      </SectionLabel>
+      <div className="row" style={{ justifyContent: "flex-end", marginBottom: 12 }}>
+        <button onClick={startAdd} className="btn btn--outline btn--sm">+ Add type</button>
+      </div>
       <div className="col" style={{ gap: 10 }}>
         {types.map((t) => (
           <div key={t.id} className="card" style={{ padding: 14 }}>
@@ -363,9 +370,9 @@ function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[] }) {
 
   return (
     <section>
-      <SectionLabel count={`(${rooms.filter((r) => !r.archived).length})`} action={<button onClick={() => { setAdding(!adding); setError(null); }} className="btn btn--outline btn--sm">+ Add room</button>}>
-        Rooms
-      </SectionLabel>
+      <div className="row" style={{ justifyContent: "flex-end", marginBottom: 12 }}>
+        <button onClick={() => { setAdding(!adding); setError(null); }} className="btn btn--outline btn--sm">+ Add room</button>
+      </div>
 
       {adding && (
         <form onSubmit={add} className="card" style={{ padding: 16, marginBottom: 12 }}>
@@ -464,9 +471,9 @@ function ChannelsSection({ channels }: { channels: Channel[] }) {
 
   return (
     <section>
-      <SectionLabel count={`(${channels.length})`} action={<button onClick={startAdd} className="btn btn--outline btn--sm">+ Add channel</button>}>
-        Channels
-      </SectionLabel>
+      <div className="row" style={{ justifyContent: "flex-end", marginBottom: 12 }}>
+        <button onClick={startAdd} className="btn btn--outline btn--sm">+ Add channel</button>
+      </div>
       <div className="col" style={{ gap: 10 }}>
         {channels.map((c) => (
           <div key={c.id} className="card" style={{ padding: 14 }}>
@@ -591,7 +598,6 @@ function PricingSection({ policy, seasons }: { policy: Policy; seasons: Season[]
 
   return (
     <section>
-      <SectionLabel>Pricing rules</SectionLabel>
       <p style={{ fontSize: 13, color: "var(--subtle)", margin: "0 0 12px", lineHeight: 1.5 }}>
         Advisory only — these suggest a nightly rate and pre-fill new bookings. They&apos;re never pushed to OTAs.
         Every suggestion is clamped to each room type&apos;s floor/ceiling.
@@ -747,9 +753,9 @@ function BlocksSection({ blocks, rooms }: { blocks: Block[]; rooms: Room[] }) {
 
   return (
     <section>
-      <SectionLabel count={`(${blocks.length})`} action={<button onClick={() => { setAdding(!adding); setError(null); }} className="btn btn--outline btn--sm">+ Block a room</button>}>
-        Maintenance blocks
-      </SectionLabel>
+      <div className="row" style={{ justifyContent: "flex-end", marginBottom: 12 }}>
+        <button onClick={() => { setAdding(!adding); setError(null); }} className="btn btn--outline btn--sm">+ Block a room</button>
+      </div>
       <p style={{ fontSize: 13, color: "var(--subtle)", margin: "0 0 12px", lineHeight: 1.5 }}>
         Hold a room out of service (repairs, deep clean, owner use). Blocked dates can&apos;t be booked and show on the calendar.
       </p>
