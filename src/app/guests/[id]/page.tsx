@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PageHead, SectionLabel, KPI, StatusPill, ChannelBadge, Icon, EmptyState } from "@/components/ui";
 import { GuestProfile } from "@/components/GuestProfile";
+import { IdDocumentField } from "@/components/IdDocumentField";
+import { isStorageConfigured } from "@/lib/storage";
 import { displayMoney, displayINR, displayShortDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +70,12 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
             blocked: guest.blocked,
             blockReason: guest.blockReason ?? "",
           }}
+        />
+
+        <IdDocumentField
+          guestId={guest.id}
+          configured={isStorageConfigured()}
+          hasDocument={guest.idDocumentPath !== null}
         />
 
         <SectionLabel count={`(${stays.length})`}>Stay history</SectionLabel>
