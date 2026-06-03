@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest House Ops Hub — User Guide</title>
+<style>
+  :root{
+    --ink:#1c2421; --sub:#5b6b64; --line:#e3e8e5; --paper:#fff; --bg:#f6f8f7;
+    --teal:#0fa68e; --teal-bg:#e7f5f1; --good:#1f9d57; --good-bg:#e6f6ec;
+    --warn:#b9791f; --warn-bg:#fbf1e0; --danger:#cf3a3a; --danger-bg:#fbe9e9; --ink-bg:#eef1ef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:32px 18px}
+  .wrap{max-width:880px;margin:0 auto}
+  header{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:10px}
+  h1{font-size:27px;margin:0 0 4px;letter-spacing:-.02em}
+  .meta{color:var(--sub);font-size:13.5px}
+  h2{font-size:20px;margin:36px 0 10px;padding-top:18px;border-top:1px solid var(--line);scroll-margin-top:16px}
+  h2 .n{display:inline-block;width:28px;height:28px;border-radius:7px;background:var(--teal-bg);color:var(--teal);font-size:15px;font-weight:800;text-align:center;line-height:28px;margin-right:8px}
+  h3{font-size:15.5px;margin:18px 0 6px}
+  p{margin:.5em 0}
+  ul,ol{margin:.4em 0;padding-left:22px}
+  li{margin:.35em 0}
+  code{background:var(--ink-bg);padding:1px 6px;border-radius:5px;font-size:13px}
+  .toc{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
+  .toc ol{columns:2;column-gap:28px;margin:0;padding-left:18px}
+  .toc a{color:var(--ink);text-decoration:none}
+  .toc a:hover{color:var(--teal);text-decoration:underline}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:12px 0}
+  .note{background:var(--teal-bg);border:1px solid #bfe3da;border-radius:10px;padding:12px 15px;margin:12px 0;font-size:14px}
+  .warn{background:var(--warn-bg);border:1px solid #ecd8a8;border-radius:10px;padding:12px 15px;margin:12px 0;font-size:14px}
+  table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#eef2f0;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--sub)}
+  tr:last-child td{border-bottom:0}
+  td.k{font-weight:600;white-space:nowrap}
+  .sw{display:inline-block;width:13px;height:13px;border-radius:4px;border:1px solid var(--line);vertical-align:-1px;margin-right:5px}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--ink-bg);color:var(--sub)}
+  footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);color:var(--sub);font-size:13px}
+  b.lbl{color:var(--teal)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Guest House Ops Hub — User Guide</h1>
+    <div class="meta">How to run the property day-to-day from your phone or computer. No technical knowledge needed.</div>
+  </header>
+
+  <p>This app is your single place to manage <strong>bookings, the calendar, guests, housekeeping, pricing, and money</strong>. It works on a phone (it can be installed like an app) and on a computer. This guide walks through everything you&rsquo;ll do, screen by screen.</p>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol>
+      <li><a href="#start">Getting started</a></li>
+      <li><a href="#today">Today dashboard</a></li>
+      <li><a href="#calendar">Calendar</a></li>
+      <li><a href="#new">Taking a booking</a></li>
+      <li><a href="#reservation">A booking&rsquo;s details &amp; check-in/out</a></li>
+      <li><a href="#payments">Payments &amp; invoices</a></li>
+      <li><a href="#guests">Guests</a></li>
+      <li><a href="#housekeeping">Housekeeping</a></li>
+      <li><a href="#inbox">Inbox (OTA emails)</a></li>
+      <li><a href="#pricing">Pricing &amp; rates</a></li>
+      <li><a href="#finance">Finance</a></li>
+      <li><a href="#analytics">Analytics</a></li>
+      <li><a href="#conflicts">Conflicts</a></li>
+      <li><a href="#feeds">Channel feeds (iCal)</a></li>
+      <li><a href="#settings">Settings</a></li>
+      <li><a href="#faq">Tips &amp; FAQ</a></li>
+    </ol>
+  </div>
+
+  <!-- 1 -->
+  <h2 id="start"><span class="n">1</span>Getting started</h2>
+  <h3>Logging in</h3>
+  <p>Open the app&rsquo;s web address and sign in with the owner email and password. There is one shared login for the property; staying logged in keeps you signed in for about a month.</p>
+  <h3>Finding your way around</h3>
+  <ul>
+    <li><strong>On a phone:</strong> a bar along the bottom shows <b class="lbl">Today</b>, <b class="lbl">Calendar</b>, <b class="lbl">Guests</b>, <b class="lbl">Housekeeping</b>, and <b class="lbl">More</b>. Tap <b class="lbl">More</b> for Finance, Pricing, Inbox, Analytics, Conflicts, Feeds, Settings, and Preferences.</li>
+    <li><strong>On a computer:</strong> the same destinations sit in a sidebar down the left.</li>
+    <li>The <b class="lbl">New</b> button (top corner) starts a new booking from anywhere.</li>
+  </ul>
+  <h3>Make it feel right</h3>
+  <p>Tap the moon/sun icon to switch <strong>dark / light</strong> mode. Open <strong>Preferences</strong> (the gear, or <em>More → Preferences</em>) to change the accent colour and button style. Your choices are remembered on that device.</p>
+  <div class="note"><strong>Install it like an app:</strong> on a phone, use your browser&rsquo;s &ldquo;Add to Home Screen&rdquo;. It then opens full-screen with its own icon, just like a native app.</div>
+
+  <!-- 2 -->
+  <h2 id="today"><span class="n">2</span>Today dashboard</h2>
+  <p>Your morning glance. It shows:</p>
+  <ul>
+    <li><strong>Occupancy</strong>, <strong>In-house</strong>, <strong>Check-ins</strong> and <strong>Check-outs</strong> for today (the four tiles at the top).</li>
+    <li><strong>Check-ins today</strong> / <strong>Check-outs today</strong> — each guest shows <em>Arrived ✓ / Awaiting</em> and <em>Departed ✓ / Due out</em> so you can see who&rsquo;s still expected.</li>
+    <li><strong>In-house now</strong> and <strong>Arrivals next 7 days</strong>.</li>
+    <li>If anything needs attention, a coloured banner appears at the top — e.g. <span class="pill">3 rooms to clean</span> or a booking <span class="pill">conflict</span>. Tap it to jump straight there.</li>
+  </ul>
+  <p>Tap any guest row to open that booking.</p>
+
+  <!-- 3 -->
+  <h2 id="calendar"><span class="n">3</span>Calendar</h2>
+  <p>A grid of your rooms (rows) across dates (columns). Each cell is colour-coded:</p>
+  <table>
+    <tr><th>Colour</th><th>Meaning</th></tr>
+    <tr><td><span class="sw" style="background:var(--paper)"></span>Vacant</td><td>Room is free that night.</td></tr>
+    <tr><td><span class="sw" style="background:var(--teal-bg)"></span>Occupied</td><td>A guest is staying — shows their name and the booking channel. Tap to open it.</td></tr>
+    <tr><td><span class="sw" style="background:#ece5da"></span>Blocked</td><td>Held out of service (maintenance, repairs, owner use).</td></tr>
+    <tr><td><span class="sw" style="background:var(--danger-bg)"></span>Conflict</td><td>A clash that needs fixing (e.g. a booking overlapping a block). Shown in red.</td></tr>
+    <tr><td><span class="sw" style="background:var(--good);border:0;width:5px"></span>Arriving</td><td>A green edge marks the arrival day.</td></tr>
+    <tr><td><span class="sw" style="background:#b07a52;border:0;width:5px"></span>Departing</td><td>A clay edge marks the check-out day.</td></tr>
+  </table>
+  <h3>Moving around</h3>
+  <ul>
+    <li>Switch the span with <b class="lbl">Week</b> / <b class="lbl">2 Weeks</b> / <b class="lbl">Month</b>.</li>
+    <li>Use <strong>‹</strong> / <strong>›</strong> to page back/forward, <b class="lbl">Today</b> to return to now, or pick a date and press <b class="lbl">Go</b> to jump anywhere.</li>
+    <li>Swipe sideways to see more dates.</li>
+    <li><b class="lbl">Block a room</b> takes you to where you can hold a room out of service (see <a href="#settings">Settings → Maintenance blocks</a>).</li>
+  </ul>
+
+  <!-- 4 -->
+  <h2 id="new"><span class="n">4</span>Taking a booking</h2>
+  <p>Tap <b class="lbl">New</b> (or <em>New booking</em>). Fill in:</p>
+  <ul>
+    <li><strong>Guest name &amp; phone</strong> — if the phone matches an existing guest, their record is reused automatically.</li>
+    <li><strong>Channel</strong> (where the booking came from — Direct, WhatsApp, Booking.com, etc.) and <strong>Room</strong>.</li>
+    <li><strong>Check-in / Check-out</strong> dates, optional <strong>arrival time</strong>.</li>
+    <li><strong>Amount</strong> — if pricing rules are set up, a <strong>suggested price</strong> appears and pre-fills this for you (tap <b class="lbl">Use</b> to accept, or type your own).</li>
+    <li><strong>Special requests</strong> — anything to remember.</li>
+  </ul>
+  <div class="warn"><strong>Double-booking is impossible.</strong> If those dates for that room are already taken, the app refuses to save and tells you clearly — your calendar can never end up double-booked.</div>
+  <div class="note">If the guest is <strong>blacklisted</strong>, a warning shows with the reason. You can still proceed — it&rsquo;s just a heads-up.</div>
+
+  <!-- 5 -->
+  <h2 id="reservation"><span class="n">5</span>A booking&rsquo;s details &amp; check-in/out</h2>
+  <p>Tap any booking (from the calendar, Today, or a guest) to open it. You&rsquo;ll see the room, channel, dates, nights, amount and special requests.</p>
+  <h3>Check-in &amp; check-out</h3>
+  <p>The stay card moves through three steps:</p>
+  <ol>
+    <li><strong>Not arrived yet</strong> → tap <b class="lbl">Check in</b> when the guest arrives.</li>
+    <li><strong>In-house</strong> (shows the arrival time) → tap <b class="lbl">Check out</b> when they leave.</li>
+    <li><strong>Checked out</strong>. Their room then appears in <a href="#housekeeping">Housekeeping</a> to be cleaned.</li>
+  </ol>
+  <p>Made a mistake? <b class="lbl">Undo</b> steps back one stage.</p>
+  <h3>Other actions</h3>
+  <p><b class="lbl">Edit</b> changes the booking; <b class="lbl">Invoice</b> opens a printable bill (see next section); <b class="lbl">Cancel reservation</b> cancels it and frees the dates for re-booking.</p>
+
+  <!-- 6 -->
+  <h2 id="payments"><span class="n">6</span>Payments &amp; invoices</h2>
+  <h3>Recording payments</h3>
+  <p>On a booking, the payments panel shows what&rsquo;s been collected and the <strong>balance due</strong>. <b class="lbl">Add payment</b> to record an amount and how it was paid (cash, UPI, card, bank, or collected by the OTA). Add several over time — a deposit now, the balance at check-in.</p>
+  <h3>Invoices</h3>
+  <p>On a booking, tap <b class="lbl">Invoice</b> for a clean bill with your property&rsquo;s name/address, the stay, charges, payments and balance. Tap <b class="lbl">Print / Save PDF</b> and choose &ldquo;Save as PDF&rdquo; in the print dialog to email or keep it.</p>
+  <div class="note">The property name, address and GST number on the invoice come from <a href="#settings">Settings → Property</a> — fill those in once.</div>
+
+  <!-- 7 -->
+  <h2 id="guests"><span class="n">7</span>Guests</h2>
+  <p>Search by name or phone. Each guest shows their number of stays, and badges for <span class="pill">Repeat</span> guests and <span class="pill">Blocked</span> (blacklisted) ones.</p>
+  <p>Open a guest to see:</p>
+  <ul>
+    <li><strong>Stays</strong> and <strong>lifetime value</strong> (total they&rsquo;ve spent).</li>
+    <li>Editable <strong>name, email, ID number, notes</strong>.</li>
+    <li><strong>Blacklist</strong> toggle with a reason — this is what warns you at booking time.</li>
+    <li><strong>ID document</strong> — if document storage is set up, upload a scan/photo of their ID (it&rsquo;s kept private). If it isn&rsquo;t set up, you&rsquo;ll see a short note instead.</li>
+    <li><strong>Stay history</strong> — every past and upcoming booking; tap to open.</li>
+  </ul>
+
+  <!-- 8 -->
+  <h2 id="housekeeping"><span class="n">8</span>Housekeeping</h2>
+  <p>Two lists:</p>
+  <ul>
+    <li><strong>To clean</strong> — rooms a guest has checked out of. A room with someone <em>arriving today</em> is flagged <span class="pill">clean first</span>. Tap <b class="lbl">Mark clean</b> when done.</li>
+    <li><strong>Ready</strong> — clean rooms. If a room needs attention even without a checkout (dust, a spill, maintenance), tap <b class="lbl">Needs cleaning</b> to move it to the To-clean list.</li>
+  </ul>
+
+  <!-- 9 -->
+  <h2 id="inbox"><span class="n">9</span>Inbox (OTA emails)</h2>
+  <p>For bookings that arrive by email from Booking.com / Agoda / MakeMyTrip:</p>
+  <ol>
+    <li>Copy the whole confirmation email and <strong>paste it</strong> into the box, then tap <b class="lbl">Parse email</b>.</li>
+    <li>It appears under <strong>Pending review</strong> with the guest, dates and amount filled in as best it could.</li>
+    <li><strong>Check and correct</strong> the details, pick the <strong>room</strong>, then tap <b class="lbl">Create booking</b> — it&rsquo;s added to the calendar (and checked for clashes like any booking).</li>
+    <li>Not a real booking? <b class="lbl">Dismiss</b> it. Need to see the original? <b class="lbl">Show email</b>.</li>
+  </ol>
+  <div class="note">Nothing is ever booked automatically — you always confirm. (Your tech team can later set this up to receive emails automatically; the review step stays the same.)</div>
+
+  <!-- 10 -->
+  <h2 id="pricing"><span class="n">10</span>Pricing &amp; rates</h2>
+  <p>The <b class="lbl">Pricing</b> screen shows a calendar of <strong>suggested nightly rates</strong> per room type. These are advisory — they help you decide and pre-fill new bookings; they are <em>not</em> sent to the OTAs.</p>
+  <ul>
+    <li>A rate in <em>italics</em> means a pricing rule adjusted it; a <strong>dot</strong> means you pinned a manual rate.</li>
+    <li><strong>Tap any cell</strong> to set a fixed price (an &ldquo;override&rdquo;) for that room type on that date, or to clear it.</li>
+    <li>Set the rules themselves in <a href="#settings">Settings → Pricing rules</a> (weekend uplift, season/holiday ranges, early-bird / last-minute, and busy-period pricing). Every suggestion stays within each room type&rsquo;s floor and ceiling.</li>
+  </ul>
+
+  <!-- 11 -->
+  <h2 id="finance"><span class="n">11</span>Finance</h2>
+  <p>Pick a date range at the top. You&rsquo;ll see four tiles: <strong>Gross revenue</strong>, <strong>OTA commission</strong>, <strong>Expenses</strong>, and <strong>Net profit</strong> (what&rsquo;s actually left).</p>
+  <ul>
+    <li><strong>By channel</strong> — revenue, commission and net for each booking source.</li>
+    <li><strong>Expenses</strong> — tap <b class="lbl">Add expense</b> to log a cost (utilities, salaries, supplies, etc.). These reduce net profit. Delete any with the ✕.</li>
+    <li><strong>Balances due</strong> — bookings still owing money; tap to open and record payment.</li>
+    <li><strong>Bookings CSV</strong> / <strong>Payments CSV</strong> — download spreadsheets for your accountant (respecting the date range).</li>
+  </ul>
+
+  <!-- 12 -->
+  <h2 id="analytics"><span class="n">12</span>Analytics</h2>
+  <p>Performance over a period: <strong>occupancy</strong>, <strong>ADR</strong> (average nightly rate), <strong>RevPAR</strong> (revenue per available room), and your <strong>channel mix</strong> — useful for spotting trends and your best sources.</p>
+
+  <!-- 13 -->
+  <h2 id="conflicts"><span class="n">13</span>Conflicts</h2>
+  <p>Lists any clashes that need a human decision — typically a manual block overlapping a stay. (Two confirmed bookings can never overlap; the app blocks that at the source.) Clear the list by removing the block or adjusting the booking.</p>
+
+  <!-- 14 -->
+  <h2 id="feeds"><span class="n">14</span>Channel feeds (iCal)</h2>
+  <p>The <b class="lbl">Feeds</b> screen keeps your calendars in sync with OTAs using free iCal links — no special accounts needed:</p>
+  <ul>
+    <li><strong>Import:</strong> paste the iCal link an OTA gives you for a room. Their booked dates then show as <em>blocked</em> here, so you can&rsquo;t double-book. <b class="lbl">Sync now</b> refreshes immediately; it also refreshes automatically once a day.</li>
+    <li><strong>Export:</strong> each room has a private <code>.ics</code> link you can give an OTA so <em>they</em> see your busy dates.</li>
+  </ul>
+
+  <!-- 15 -->
+  <h2 id="settings"><span class="n">15</span>Settings</h2>
+  <p>Everything you set up once and rarely change:</p>
+  <table>
+    <tr><th>Section</th><th>What you manage</th></tr>
+    <tr><td class="k">Property</td><td>Name, address, GST number, check-in/out times, currency — used on invoices.</td></tr>
+    <tr><td class="k">Room types</td><td>Categories (Standard, Deluxe…) with base rate, max occupancy, and the rate floor/ceiling pricing stays within.</td></tr>
+    <tr><td class="k">Rooms</td><td>Add a room, or <strong>Archive</strong> one to retire it (it leaves the calendar but its history is kept). Delete is only allowed for a room that was never booked.</td></tr>
+    <tr><td class="k">Channels</td><td>Booking sources and their commission %.</td></tr>
+    <tr><td class="k">Pricing rules</td><td>Turn the engine on/off; weekend days &amp; uplift; early-bird / last-minute; busy-period pricing; and a <strong>Seasons &amp; holidays</strong> list of date ranges with adjustments.</td></tr>
+    <tr><td class="k">Maintenance blocks</td><td><strong>Block a room</strong> for a date range with a comment (e.g. &ldquo;Plumbing repair&rdquo;). Blocked dates can&rsquo;t be booked and show on the calendar. Remove a block when the work&rsquo;s done.</td></tr>
+  </table>
+
+  <!-- 16 -->
+  <h2 id="faq"><span class="n">16</span>Tips &amp; FAQ</h2>
+  <h3>Common how-tos</h3>
+  <ul>
+    <li><strong>Block a room for repairs:</strong> Settings → Maintenance blocks → <em>Block a room</em>.</li>
+    <li><strong>Mark someone arrived/left:</strong> open their booking → <em>Check in</em> / <em>Check out</em>.</li>
+    <li><strong>Give a guest a bill:</strong> open the booking → <em>Invoice</em> → Print / Save PDF.</li>
+    <li><strong>See who owes money:</strong> Finance → Balances due.</li>
+    <li><strong>Retire an old room:</strong> Settings → Rooms → <em>Archive</em> (keeps its history).</li>
+    <li><strong>Stop a problem guest sneaking back:</strong> open the guest → turn on <em>Blacklist</em> with a reason.</li>
+  </ul>
+  <h3>Good to know</h3>
+  <ul>
+    <li><strong>Nothing is ever double-booked</strong> — the app prevents it.</li>
+    <li><strong>Availability is always live</strong> — it&rsquo;s worked out from your bookings and blocks, never a number that can drift.</li>
+    <li><strong>Pricing is a suggestion</strong> — it never changes prices on the OTAs by itself.</li>
+    <li><strong>Cancelled bookings free their dates</strong> immediately for re-booking.</li>
+    <li>Changes you make are saved straight away and visible on every device.</li>
+  </ul>
+
+  <footer>
+    For setup, deployment and the technical reference, your developers should see <code>README.md</code> and the <code>docs/</code> folder. This guide covers day-to-day use only.
+  </footer>
+
+</div>
+</body>
+</html>
