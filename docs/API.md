@@ -84,6 +84,22 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 |--------|------|---------|
 | `GET` | `/api/guests` | List / search guests (`?q=` name or phone) |
 | `PATCH` | `/api/guests/[id]` | Edit profile (email, ID, notes, blacklist) |
+| `POST` | `/api/guests/[id]/id-document` | Upload/replace a scanned ID (multipart `file`; JPG/PNG/WEBP/PDF ≤ 5 MB). **503** if storage isn't configured |
+| `GET` | `/api/guests/[id]/id-document` | Short-lived signed URL to view the stored document |
+| `DELETE` | `/api/guests/[id]/id-document` | Remove the stored document |
+
+## Inbound bookings (OTA email ingestion)
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET` | `/api/inbound` | owner | List pending parsed bookings awaiting review |
+| `POST` | `/api/inbound` | owner | Paste a raw confirmation email → parse + stage it (Inbox screen) |
+| `PATCH` | `/api/inbound/[id]` | owner | Mark a staged item `imported` (with `reservationId`) or `dismissed` |
+| `POST` | `/api/ingest/email` | **`INGEST_TOKEN`** | Webhook entry for automated ingestion (inbox/forwarding rule). Excluded from the owner-cookie middleware; gated by its own token. The review/import step is unchanged. |
+
+> The Inbox review screen corrects parsed fields and creates the booking through
+> the existing `POST /api/reservations` (so it gets conflict-checking for free),
+> then `PATCH`es the inbound item to `imported`.
 
 ## Finance / expenses / export
 

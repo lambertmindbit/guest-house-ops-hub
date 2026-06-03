@@ -40,6 +40,13 @@ enum PaymentMode {
   ota_collect
 }
 
+// Lifecycle of a parsed inbound (OTA email) booking awaiting the owner's review.
+enum InboundStatus {
+  pending
+  imported
+  dismissed
+}
+
 model RoomType {
   id           String  @id @default(cuid())
   name         String
@@ -93,6 +100,9 @@ model Guest {
   // Government ID reference (text only — no document/photo upload, which would
   // need object storage). Blacklist flag warns the owner at booking time.
   idNumber     String?       @map("id_number")
+  // Path to a scanned ID document in object storage (Supabase Storage). Null
+  // until uploaded; storage is optional and configured via env (see docs).
+  idDocumentPath String?     @map("id_document_path")
   blocked      Boolean       @default(false)
   blockReason  String?       @map("block_reason")
   reservations Reservation[]
@@ -165,6 +175,29 @@ model Block {
   @@index([roomId])
   @@index([feedId])
   @@map("blocks")
+}
+
+// A booking parsed out of an OTA confirmation email, staged for the owner to
+// review and confirm before it becomes a real Reservation. Decouples "how the
+// email arrives" (paste now; inbox webhook later) from "what we do with it".
+// Parsed fields are best-effort and nullable — the owner corrects on review.
+model InboundBooking {
+  id            String        @id @default(cuid())
+  source        String        // detected channel, e.g. "Booking.com" / "Agoda" / "Unknown"
+  otaRef        String?       @map("ota_ref") // used to dedupe re-sent emails
+  rawText       String        @map("raw_text")
+  guestName     String?       @map("guest_name")
+  guestPhone    String?       @map("guest_phone")
+  checkIn       DateTime?     @map("check_in") @db.Date
+  checkOut      DateTime?     @map("check_out") @db.Date
+  roomTypeHint  String?       @map("room_type_hint")
+  amount        Decimal?      @db.Decimal(10, 2)
+  status        InboundStatus @default(pending)
+  reservationId String?       @map("reservation_id") // set once imported
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  @@index([status])
+  @@map("inbound_bookings")
 }
 
 // A cost the property incurred. Attributed to Finance by `date`. Turns the

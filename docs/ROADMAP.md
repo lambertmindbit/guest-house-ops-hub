@@ -43,14 +43,14 @@ dependency-free **Bookings / Payments CSV** exports for the accountant.
 These were intentionally left out (see [CLAUDE.md](../CLAUDE.md) "do NOT" rules and
 phase scoping). They are **not** bugs:
 
-| Deferred | Why / what it would need |
-|----------|--------------------------|
-| **OTA email ingestion** | Parse the owner's confirmation emails into bookings. A dedicated inbox + parser. (iCal import already exists.) |
-| **Messaging automation** | WhatsApp/email/SMS templates + triggers (confirmation, check-in, review request). Needs a messaging provider. |
-| **Dynamic pricing → OTAs** | Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal. |
-| **Multi-role auth + prod hardening** | Currently single-owner. Would need user accounts, roles, rate-limiting, lockout. |
-| **Guest ID document/photo upload** | Needs object storage (e.g. Supabase Storage). ID is text-only today. |
-| **Server-side PDF invoices** | Would need a PDF library. Today uses the browser's Print → Save as PDF. |
+| Deferred | Why / what it would need | Status |
+|----------|--------------------------|--------|
+| **OTA email ingestion** | Parse the owner's confirmation emails into bookings. | 🟡 **Groundwork built** — parser, staging model, **Inbox** paste/review/create flow, and a token-gated webhook seam (`POST /api/ingest/email`) all exist. Usable today via paste. Only the inbox/forwarding plumbing remains, plus tuning the parser against real OTA emails. |
+| **Messaging automation** | WhatsApp/email/SMS templates + triggers. Needs a messaging provider. | ○ Deferred |
+| **Dynamic pricing → OTAs** | Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal. | ○ Won't do (external limit) |
+| **Multi-role auth + prod hardening** | Currently single-owner; would need accounts, roles, lockout. | 🟡 **Login rate-limiting done** (`src/lib/rate-limit.ts`); roles still deferred |
+| **Guest ID document/photo upload** | Needs object storage. | 🟡 **Groundwork built** — Supabase Storage adapter, upload/view/delete endpoints, and guest-profile UI. Activate by creating a private bucket + setting the storage env vars (see [SETUP.md](SETUP.md#optional-integrations-leave-unset-to-keep-them-off)). |
+| **Server-side PDF invoices** | Would need a PDF library. Today uses the browser's Print → Save as PDF. | ○ Deferred |
 
 ## Known concerns / tech debt
 

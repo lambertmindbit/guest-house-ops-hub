@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { zodFail } from "@/lib/api";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import {
   createSessionToken,
   verifyCredentials,
@@ -13,7 +14,19 @@ const schema = z.object({
   password: z.string().min(1),
 });
 
+// Blunt brute-force: 10 attempts per IP per 5 minutes.
+const LIMIT = 10;
+const WINDOW_MS = 5 * 60 * 1000;
+
 export async function POST(request: Request) {
+  const limit = rateLimit(`login:${clientIp(request)}`, LIMIT, WINDOW_MS);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many attempts. Please wait a few minutes and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSec) } },
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);

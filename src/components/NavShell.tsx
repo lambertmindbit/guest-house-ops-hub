@@ -16,6 +16,7 @@ const MORE = [
   { href: "/finance", label: "Finance", icon: "wallet" },
   { href: "/analytics", label: "Analytics", icon: "chart" },
   { href: "/conflicts", label: "Conflicts", icon: "alert" },
+  { href: "/inbox", label: "Inbox", icon: "inbox" },
   { href: "/feeds", label: "Feeds", icon: "link" },
   { href: "/settings", label: "Settings", icon: "settings" },
 ];
