@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { formatDateOnly } from "@/lib/dates";
-import { PageHead } from "@/components/ui";
 import { SettingsClient } from "@/components/SettingsClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ s?: string }>;
+}) {
+  const section = (await searchParams).s ?? null;
   const [settings, roomTypes, rooms, channels, blocks, policy, seasons] = await Promise.all([
     prisma.propertySettings.findFirst(),
     prisma.roomType.findMany({
@@ -91,8 +95,7 @@ export default async function SettingsPage() {
   return (
     <main className="app-main" style={{ maxWidth: 760 }}>
       <div className="shimmer">
-        <PageHead title="Settings" sub="Manage your property, rooms, room types, channels, and blocks." />
-        <SettingsClient data={data} />
+        <SettingsClient data={data} section={section} />
       </div>
     </main>
   );

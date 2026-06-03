@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SectionLabel, StatusPill, Icon } from "@/components/ui";
+import { SectionLabel, StatusPill, Icon, PageHead } from "@/components/ui";
 
 type RoomType = {
   id: string;
@@ -59,16 +60,72 @@ async function send(method: string, url: string, body?: unknown): Promise<{ ok: 
   return res.ok ? { ok: true } : { ok: false, error: json.error ?? "Something went wrong." };
 }
 
-export function SettingsClient({ data }: { data: SettingsData }) {
+// Settings is a menu (iOS-style) rather than one long scroll: pick a category,
+// see only that section, with a back link. The active section lives in the URL
+// (?s=…) so deep links and the browser Back button work.
+const SECTIONS = [
+  { key: "property", title: "Property", sub: "Name, address, GST, check-in/out times", icon: "settings" },
+  { key: "rooms", title: "Rooms", sub: "Add, edit, archive rooms", icon: "door" },
+  { key: "room-types", title: "Room types", sub: "Categories, rates, occupancy", icon: "bed" },
+  { key: "channels", title: "Channels", sub: "Booking sources & commission", icon: "link" },
+  { key: "pricing", title: "Pricing rules", sub: "Weekend, season, lead-time, occupancy", icon: "tag" },
+  { key: "blocks", title: "Maintenance blocks", sub: "Hold rooms out of service", icon: "alert" },
+] as const;
+
+export type SettingsSectionKey = (typeof SECTIONS)[number]["key"];
+
+const chipStyle = {
+  width: 38, height: 38, borderRadius: 10, background: "var(--teal-50)", color: "var(--teal-700)",
+  display: "grid", placeItems: "center", flex: "none",
+} as const;
+
+export function SettingsClient({ data, section }: { data: SettingsData; section: string | null }) {
   const activeRooms = data.rooms.filter((r) => !r.archived);
+  const active = SECTIONS.find((s) => s.key === section);
+
+  // ---- Menu (no section chosen) ----
+  if (!active) {
+    const counts: Record<string, number | undefined> = {
+      rooms: activeRooms.length,
+      "room-types": data.roomTypes.length,
+      channels: data.channels.length,
+      blocks: data.blocks.length,
+    };
+    return (
+      <>
+        <PageHead title="Settings" sub="Manage your property, rooms, room types, channels, pricing, and blocks." />
+        <div className="col" style={{ gap: 10, marginTop: 12 }}>
+        {SECTIONS.map((s) => {
+          const c = counts[s.key];
+          return (
+            <Link key={s.key} href={`/settings?s=${s.key}`} className="card" style={{ padding: "13px 15px", display: "flex", alignItems: "center", gap: 13 }}>
+              <span style={chipStyle}><Icon name={s.icon} size={19} /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontWeight: 700, fontSize: 15 }}>{s.title}</span>
+                <span style={{ display: "block", fontSize: 12.5, color: "var(--subtle)", marginTop: 2 }}>{s.sub}</span>
+              </span>
+              {c != null && <span className="pill pill--ink" style={{ flex: "none" }}>{c}</span>}
+              <Icon name="chevronR" size={18} style={{ color: "var(--subtle)", flex: "none" }} />
+            </Link>
+          );
+        })}
+        </div>
+      </>
+    );
+  }
+
+  // ---- A single section ----
   return (
-    <div className="col" style={{ gap: 4 }}>
-      <PropertySection settings={data.settings} />
-      <RoomTypesSection types={data.roomTypes} />
-      <RoomsSection rooms={data.rooms} types={data.roomTypes} />
-      <ChannelsSection channels={data.channels} />
-      <PricingSection policy={data.policy} seasons={data.seasons} />
-      <BlocksSection blocks={data.blocks} rooms={activeRooms} />
+    <div style={{ marginTop: 8 }}>
+      <Link href="/settings" className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
+        <Icon name="chevronL" size={16} /> All settings
+      </Link>
+      {active.key === "property" && <PropertySection settings={data.settings} />}
+      {active.key === "rooms" && <RoomsSection rooms={data.rooms} types={data.roomTypes} />}
+      {active.key === "room-types" && <RoomTypesSection types={data.roomTypes} />}
+      {active.key === "channels" && <ChannelsSection channels={data.channels} />}
+      {active.key === "pricing" && <PricingSection policy={data.policy} seasons={data.seasons} />}
+      {active.key === "blocks" && <BlocksSection blocks={data.blocks} rooms={activeRooms} />}
     </div>
   );
 }
