@@ -165,6 +165,39 @@
     </tr>
   </table>
 
+  <!-- ============ ENABLE GROUNDWORK ============ -->
+  <h2><span class="em">⚙</span> Enabling the groundwork features (setup)</h2>
+  <p>Three features are built but dormant until configured. Here is exactly how to switch each on. Set production values in <strong>Vercel → Project → Settings → Environment Variables</strong> (and in your local <code>.env</code> for testing). None require code changes except optional parser tuning.</p>
+
+  <div class="card">
+    <h3 style="margin:0 0 6px">A · Automated OTA email ingestion <span class="pill p-prep">🟡 needs wiring</span></h3>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 10px">Works <strong>today</strong> by pasting an email into the <strong>Inbox</strong> screen — no setup. The steps below make import <em>automatic</em>. Parsed bookings are always staged for your review; nothing is auto-booked.</p>
+    <ol style="padding-left:22px">
+      <li><strong>Choose how emails reach the app.</strong> Any of: a <em>Cloudflare Email Routing</em> worker; an inbound-email service (Mailgun / SendGrid / Postmark inbound parse); or a small IMAP poller on a mailbox. The job of this piece is simply to take each new OTA confirmation and POST its text to the app.</li>
+      <li><strong>Generate a token</strong> (<code>openssl rand -hex 32</code>) and set <code>INGEST_TOKEN</code> in Vercel — and the same value in the forwarder.</li>
+      <li><strong>Point the forwarder at the webhook:</strong> <code>POST https://&lt;your-app&gt;/api/ingest/email</code> with header <code>x-ingest-token: &lt;INGEST_TOKEN&gt;</code> and JSON body <code>{ "raw": "&lt;full email text&gt;" }</code>. (This route is intentionally outside the owner-login so the forwarder can reach it; its own token gates it.)</li>
+      <li><strong>Tune the parser against real emails.</strong> First paste 2–3 actual Booking.com / Agoda / MakeMyTrip confirmations into Inbox and note which fields miss. Then adjust the per-field regexes in <code>src/lib/email-parse.ts</code> (each field is isolated) and add a fixture per OTA in <code>tests/email-parse.test.ts</code>.</li>
+      <li><strong>Verify:</strong> forward a test confirmation → it appears in Inbox as <em>pending</em> → review/correct → <em>Create booking</em> (conflict-checked). Re-sends are de-duplicated by the OTA reference.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 6px">B · Guest ID document upload <span class="pill p-prep">🟡 needs a bucket</span></h3>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 10px">Until configured, the guest profile shows a “not configured” hint; everything else works.</p>
+    <ol style="padding-left:22px">
+      <li>In <strong>Supabase → Storage → New bucket</strong>, create a bucket named <code>guest-ids</code> and keep it <strong>Private</strong> (do not make it public — IDs are sensitive).</li>
+      <li>In <strong>Supabase → Project Settings → API</strong>, copy the <strong>Project URL</strong> and the <strong>service_role</strong> key.</li>
+      <li>Set in Vercel: <code>SUPABASE_URL</code> = the project URL, <code>SUPABASE_SERVICE_ROLE_KEY</code> = the service_role key, and optionally <code>SUPABASE_ID_BUCKET</code> = <code>guest-ids</code>. Redeploy.</li>
+      <li><strong>Verify:</strong> open a guest → <em>Upload</em> a JPG/PNG/WEBP/PDF (≤ 5 MB) → <em>View</em> opens it via a short-lived signed URL; <em>Remove</em> deletes it.</li>
+    </ol>
+    <div class="note" style="margin-top:6px"><strong>Security:</strong> the service-role key bypasses row-level security, so it is <strong>server-only</strong> — never put it in a <code>NEXT_PUBLIC_*</code> var. Only the API routes use it; the browser only ever receives short-lived signed URLs.</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 6px">C · Login rate-limiting <span class="pill p-done">● already on</span></h3>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">No setup needed — active out of the box (10 attempts / IP / 5 min). It is in-memory, so on serverless it is best-effort per instance. <strong>Optional upgrade:</strong> for a strict global cap, back <code>src/lib/rate-limit.ts</code> with a shared store (e.g. Upstash Redis).</p>
+  </div>
+
   <!-- ============ CONCERNS ============ -->
   <h2><span class="em">▲</span> Known concerns &amp; tech debt</h2>
   <p>Tracked with file/line references in <code>.planning/codebase/CONCERNS.md</code>. None are blockers; the most important to understand are flagged ◆.</p>
@@ -223,7 +256,7 @@
   </div>
 
   <footer>
-    Full docs: <code>README.md</code> · <code>docs/SETUP.md</code> · <code>docs/ARCHITECTURE.md</code> · <code>docs/CONTRIBUTING.md</code> · <code>docs/API.md</code> · <code>docs/DEPLOYMENT.md</code> · <code>docs/ROADMAP.md</code>. Original product spec &amp; hard rules in <code>CLAUDE.md</code>.
+    This is the consolidated standalone status report (it mirrors <code>docs/ROADMAP.md</code> and adds the setup guide above). Deeper reference: <code>README.md</code> · <code>docs/SETUP.md</code> · <code>docs/ARCHITECTURE.md</code> · <code>docs/CONTRIBUTING.md</code> · <code>docs/API.md</code> · <code>docs/DEPLOYMENT.md</code>. Original product spec &amp; hard rules in <code>CLAUDE.md</code>.
   </footer>
 
 </div>

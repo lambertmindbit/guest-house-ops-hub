@@ -1,5 +1,9 @@
 # Roadmap & Project Status
 
+> 📄 For a consolidated, shareable view of everything below **plus a step-by-step
+> guide to enabling the not-yet-wired features**, open
+> [docs/STATUS.html](STATUS.html) in a browser.
+
 ## Where we are
 
 The app shipped its planned scope across six milestones — all in production on
