@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PageHead, EmptyState, Icon } from "@/components/ui";
+import { AddGuest } from "@/components/AddGuest";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export default async function GuestsPage({
           <button className="btn btn--ghost">Search</button>
           {q && <Link href="/guests" className="btn btn--ghost">Clear</Link>}
         </form>
+
+        <AddGuest />
 
         <div className="col" style={{ gap: 12, marginTop: 16 }}>
           {guests.length === 0 ? (
