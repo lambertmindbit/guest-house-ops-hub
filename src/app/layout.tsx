@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavShell } from "@/components/NavShell";
+import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { getConflicts } from "@/lib/conflicts";
 
 // Redesign type system: Plus Jakarta Sans (UI/body), Fraunces (display titles),
@@ -69,7 +70,7 @@ export default async function RootLayout({
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <NavShell conflictCount={conflictCount} />
-        {children}
+        <ConfirmProvider>{children}</ConfirmProvider>
       </body>
     </html>
   );

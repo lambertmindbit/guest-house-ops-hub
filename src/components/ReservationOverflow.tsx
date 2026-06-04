@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
 
 // Destructive Cancel lives behind a ⋯ overflow so it's never a peer of Edit.
@@ -9,17 +10,18 @@ import { Icon } from "@/components/ui";
 // constraint only applies to confirmed stays).
 export function ReservationOverflow({ id }: { id: string }) {
   const router = useRouter();
+  const { confirm, alert } = useConfirm();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function cancel() {
-    if (!confirm("Cancel this reservation? The dates will be freed.")) return;
+    if (!(await confirm({ title: "Cancel reservation", message: "The dates will be freed.", danger: true, confirmLabel: "Cancel reservation", cancelLabel: "Keep" }))) return;
     setBusy(true);
     const res = await fetch(`/api/reservations/${id}/cancel`, { method: "POST" });
     setBusy(false);
     setOpen(false);
     if (res.ok) router.refresh();
-    else alert("Could not cancel — please try again.");
+    else await alert({ title: "Couldn’t cancel", message: "Please try again." });
   }
 
   return (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
 import { displayINR, PAYMENT_MODE_LABELS } from "@/lib/format";
 import { todayDateOnly } from "@/lib/dates";
@@ -27,6 +28,7 @@ const CAT_LABEL: Record<string, string> = {
 
 export function ExpensesPanel({ expenses, total }: { expenses: ExpenseRow[]; total: number }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [adding, setAdding] = useState(false);
   const [f, setF] = useState({ date: todayDateOnly(), category: "utilities", amount: "", note: "", paymentMode: "" });
   const [busy, setBusy] = useState(false);
@@ -59,7 +61,7 @@ export function ExpensesPanel({ expenses, total }: { expenses: ExpenseRow[]; tot
   }
 
   async function remove(id: string) {
-    if (!confirm("Delete this expense?")) return;
+    if (!(await confirm({ title: "Delete expense", message: "Delete this expense?", danger: true, confirmLabel: "Delete" }))) return;
     await fetch(`/api/expenses/${id}`, { method: "DELETE" });
     router.refresh();
   }

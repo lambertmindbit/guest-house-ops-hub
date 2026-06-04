@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon, ChannelBadge, EmptyState } from "@/components/ui";
 
 type Item = {
@@ -78,6 +79,7 @@ export function InboxReview({ data }: { data: { items: Item[]; rooms: Room[]; ch
 
 function ReviewCard({ item, rooms, channels }: { item: Item; rooms: Room[]; channels: Channel[] }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const matchedChannel = channels.find((c) => c.name.toLowerCase() === item.source.toLowerCase());
   const [f, setF] = useState({
     channelId: matchedChannel?.id ?? "",
@@ -133,7 +135,7 @@ function ReviewCard({ item, rooms, channels }: { item: Item; rooms: Room[]; chan
   }
 
   async function dismiss() {
-    if (!confirm("Dismiss this parsed email? It won't become a booking.")) return;
+    if (!(await confirm({ title: "Dismiss email", message: "Dismiss this parsed email? It won’t become a booking.", danger: true, confirmLabel: "Dismiss" }))) return;
     await fetch(`/api/inbound/${item.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },

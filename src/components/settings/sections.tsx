@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { displayShortDate } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
@@ -164,6 +165,7 @@ const BLANK_TYPE = { name: "", baseRate: "", maxOccupancy: "2", rateFloor: "", r
 
 export function RoomTypesSection({ types }: { types: RoomType[] }) {
   const router = useRouter();
+  const { confirm, alert } = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState(BLANK_TYPE);
   const [adding, setAdding] = useState(false);
@@ -187,9 +189,9 @@ export function RoomTypesSection({ types }: { types: RoomType[] }) {
   }
 
   async function remove(t: RoomType) {
-    if (!confirm(`Delete room type "${t.name}"?`)) return;
+    if (!(await confirm({ title: "Delete room type", message: `Delete “${t.name}”? This can’t be undone.`, danger: true, confirmLabel: "Delete" }))) return;
     const r = await send("DELETE", `/api/room-types/${t.id}`);
-    if (!r.ok) return alert(r.error);
+    if (!r.ok) return void alert({ title: "Couldn’t complete that", message: r.error });
     router.refresh();
   }
 
@@ -237,6 +239,7 @@ export function RoomTypesSection({ types }: { types: RoomType[] }) {
 /* ---------------- Rooms ---------------- */
 export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[] }) {
   const router = useRouter();
+  const { confirm, alert } = useConfirm();
   const [adding, setAdding] = useState(false);
   const [label, setLabel] = useState("");
   const [roomTypeId, setRoomTypeId] = useState(types[0]?.id ?? "");
@@ -253,13 +256,13 @@ export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[
   }
   async function setArchived(room: Room, archived: boolean) {
     const r = await send("PATCH", `/api/rooms/${room.id}`, { archived });
-    if (!r.ok) return alert(r.error);
+    if (!r.ok) return void alert({ title: "Couldn’t complete that", message: r.error });
     router.refresh();
   }
   async function remove(room: Room) {
-    if (!confirm(`Delete room "${room.label}"? Only possible if it has no bookings.`)) return;
+    if (!(await confirm({ title: "Delete room", message: `Delete Room ${room.label}? Only possible if it has no bookings.`, danger: true, confirmLabel: "Delete" }))) return;
     const r = await send("DELETE", `/api/rooms/${room.id}`);
-    if (!r.ok) return alert(r.error);
+    if (!r.ok) return void alert({ title: "Couldn’t complete that", message: r.error });
     router.refresh();
   }
 
@@ -311,6 +314,7 @@ const BLANK_CHANNEL = { name: "", commissionPct: "0", collectsPayment: false };
 
 export function ChannelsSection({ channels }: { channels: Channel[] }) {
   const router = useRouter();
+  const { confirm, alert } = useConfirm();
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(BLANK_CHANNEL);
@@ -333,9 +337,9 @@ export function ChannelsSection({ channels }: { channels: Channel[] }) {
     setEditing(null); setAdding(false); router.refresh();
   }
   async function remove(c: Channel) {
-    if (!confirm(`Delete channel "${c.name}"?`)) return;
+    if (!(await confirm({ title: "Delete channel", message: `Delete “${c.name}”?`, danger: true, confirmLabel: "Delete" }))) return;
     const r = await send("DELETE", `/api/channels/${c.id}`);
-    if (!r.ok) return alert(r.error);
+    if (!r.ok) return void alert({ title: "Couldn’t complete that", message: r.error });
     router.refresh();
   }
 
@@ -385,6 +389,7 @@ const BLANK_SEASON = { name: "", startDate: "", endDate: "", adjustPct: "" };
 
 export function PricingSection({ policy, seasons }: { policy: Policy; seasons: Season[] }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [p, setP] = useState({
     enabled: policy.enabled,
     weekendDays: new Set(policy.weekendDays),
@@ -445,7 +450,7 @@ export function PricingSection({ policy, seasons }: { policy: Policy; seasons: S
     setS(BLANK_SEASON); setAdding(false); setEditingSeason(null); router.refresh();
   }
   async function removeSeason(id: string) {
-    if (!confirm("Delete this season?")) return;
+    if (!(await confirm({ title: "Delete season", message: "Delete this season?", danger: true, confirmLabel: "Delete" }))) return;
     await send("DELETE", `/api/seasons/${id}`);
     router.refresh();
   }
@@ -542,6 +547,7 @@ export function PricingSection({ policy, seasons }: { policy: Policy; seasons: S
 /* ---------------- Blocks (maintenance) ---------------- */
 export function BlocksSection({ blocks, rooms }: { blocks: Block[]; rooms: Room[] }) {
   const router = useRouter();
+  const { confirm, alert } = useConfirm();
   const [adding, setAdding] = useState(false);
   const [f, setF] = useState({ roomId: "", startDate: "", endDate: "", reason: "" });
   const [error, setError] = useState<string | null>(null);
@@ -556,9 +562,9 @@ export function BlocksSection({ blocks, rooms }: { blocks: Block[]; rooms: Room[
     setF({ roomId: "", startDate: "", endDate: "", reason: "" }); setAdding(false); router.refresh();
   }
   async function remove(b: Block) {
-    if (!confirm(`Remove the block on Room ${b.roomLabel}?`)) return;
+    if (!(await confirm({ title: "Remove block", message: `Remove the block on Room ${b.roomLabel}?`, danger: true, confirmLabel: "Remove" }))) return;
     const r = await send("DELETE", `/api/blocks/${b.id}`);
-    if (!r.ok) return alert(r.error);
+    if (!r.ok) return void alert({ title: "Couldn’t complete that", message: r.error });
     router.refresh();
   }
 

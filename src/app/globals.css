@@ -572,3 +572,16 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
   body { background: #fff !important; }
   .invoice { border: 0 !important; box-shadow: none !important; }
 }
+
+/* =========================================================================
+   IN-APP DIALOG (confirm / alert) — replaces native browser popups.
+   ========================================================================= */
+.dialog-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(11,28,48,0.45);
+  display: grid; place-items: center; padding: 16px; animation: rd-fade var(--base) var(--ease); }
+.dialog { width: 380px; max-width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-lg); overflow: hidden; animation: rd-up var(--base) var(--ease-spring); }
+.dialog__body { padding: 20px 20px 6px; }
+.dialog__title { font-family: var(--font-display), Georgia, serif; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.dialog__msg { font-size: var(--fs-small); color: var(--text-muted); margin-top: 8px; line-height: 1.55; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px 18px; }
+@media (prefers-reduced-motion: reduce) { .dialog, .dialog-backdrop { animation: none !important; } }

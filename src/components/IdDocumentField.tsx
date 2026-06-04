@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
 
 export function IdDocumentField({
@@ -14,6 +15,7 @@ export function IdDocumentField({
   hasDocument: boolean;
 }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export function IdDocumentField({
   }
 
   async function remove() {
-    if (!confirm("Remove the stored ID document?")) return;
+    if (!(await confirm({ title: "Remove ID document", message: "Remove the stored ID document?", danger: true, confirmLabel: "Remove" }))) return;
     await fetch(`/api/guests/${guestId}/id-document`, { method: "DELETE" });
     router.refresh();
   }

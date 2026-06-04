@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
 
 type Action = "checkin" | "checkout" | "undo";
@@ -22,6 +23,7 @@ export function StayActions({
   checkedOutAt: string | null;
 }) {
   const router = useRouter();
+  const { alert } = useConfirm();
   const [busy, setBusy] = useState(false);
 
   async function run(action: Action) {
@@ -33,7 +35,7 @@ export function StayActions({
     });
     setBusy(false);
     if (res.ok) router.refresh();
-    else alert("Could not update — please try again.");
+    else await alert({ title: "Couldn’t update", message: "Please try again." });
   }
 
   const state = checkedOutAt ? "out" : checkedInAt ? "in" : "none";

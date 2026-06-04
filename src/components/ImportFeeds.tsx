@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
 
 export type RoomOption = { id: string; label: string; roomTypeName: string };
@@ -16,6 +17,7 @@ export type FeedRow = {
 
 export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: FeedRow[] }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [roomId, setRoomId] = useState("");
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
@@ -48,7 +50,7 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
   }
 
   async function remove(id: string) {
-    if (!confirm("Remove this feed and the dates it imported?")) return;
+    if (!(await confirm({ title: "Remove feed", message: "Remove this feed and the dates it imported?", danger: true, confirmLabel: "Remove" }))) return;
     await fetch(`/api/feeds/${id}`, { method: "DELETE" });
     router.refresh();
   }
