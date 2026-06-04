@@ -1,12 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
+import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavShell } from "@/components/NavShell";
 
-const poppins = Poppins({
+// Redesign type system: Plus Jakarta Sans (UI/body), Fraunces (display titles),
+// JetBrains Mono (numerals / times / eyebrow micro-labels).
+const ui = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
+  variable: "--font-ui",
+  display: "swap",
+});
+const display = Fraunces({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -33,7 +47,8 @@ export const viewport: Viewport = {
 };
 
 // Applies saved preferences (or the OS appearance) before first paint — no flash.
-const themeScript = `(function(){try{var d=document.documentElement,ls=localStorage;var ap=ls.getItem('ops-appearance')||'system';var eff=ap==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):ap;d.setAttribute('data-appearance',eff);d.setAttribute('data-tint',ls.getItem('ops-tint')||'warm');d.setAttribute('data-material',ls.getItem('ops-material')||'rich');d.setAttribute('data-btnshape',ls.getItem('ops-btnshape')||'rounded');}catch(e){}})();`;
+// Redesign knobs: appearance + tint (default teal) + density (default comfortable).
+const themeScript = `(function(){try{var d=document.documentElement,ls=localStorage;var ap=ls.getItem('ops-appearance')||'system';var eff=ap==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):ap;d.setAttribute('data-appearance',eff);d.setAttribute('data-tint',ls.getItem('ops-tint')||'teal');d.setAttribute('data-density',ls.getItem('ops-density')||'comfortable');}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -41,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={poppins.variable}>
+    <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`}>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <NavShell />
