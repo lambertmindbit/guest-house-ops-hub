@@ -8,7 +8,8 @@ import { Icon } from "@/components/ui";
 // One config drives BOTH the phone tabs/sheet and the desktop sidebar.
 type NavId =
   | "today" | "calendar" | "guests" | "housekeeping" | "pricing"
-  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "settings";
+  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "settings"
+  | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
   today: { label: "Today", icon: "today", href: "/" },
@@ -23,18 +24,27 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
   feeds: { label: "Feeds", icon: "link", href: "/feeds" },
   settings: { label: "Settings", icon: "settings", href: "/settings" },
+  // Settings sub-modules — surfaced directly in the desktop sidebar.
+  "set-property": { label: "Property", icon: "settings", href: "/settings/property" },
+  "set-room-types": { label: "Room types", icon: "bed", href: "/settings/room-types" },
+  "set-rooms": { label: "Rooms", icon: "door", href: "/settings/rooms" },
+  "set-channels": { label: "Channels", icon: "link", href: "/settings/channels" },
+  "set-pricing": { label: "Pricing rules", icon: "tag", href: "/settings/pricing" },
+  "set-blocks": { label: "Blocked dates", icon: "alert", href: "/settings/blocks" },
 };
 
 const PRIMARY: NavId[] = ["today", "calendar", "guests"];
 
+// Desktop sidebar: Settings' modules are listed directly under "Setup".
 const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operate", items: ["today", "calendar", "guests", "housekeeping"] },
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics", "conflicts"] },
   { label: "Data", items: ["inbox", "feeds"] },
-  { label: "System", items: ["settings"] },
+  { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks"] },
 ];
 
+// Phone "More" sheet: keep one Settings entry → the hub (don't bloat the sheet).
 const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operations", items: ["housekeeping", "conflicts"] },
   { label: "Money", items: ["pricing", "finance"] },
@@ -58,13 +68,21 @@ const STORE: Record<keyof Prefs, string> = {
 };
 
 // Which nav id "owns" the current route. Reservation routes map to Calendar.
+// Longest matching href wins so /settings/rooms picks "set-rooms", not "settings".
 function activeId(pathname: string): NavId {
   if (pathname === "/") return "today";
   if (pathname.startsWith("/reservations")) return "calendar";
-  const hit = (Object.keys(META) as NavId[]).find(
-    (id) => id !== "today" && pathname.startsWith(META[id].href),
-  );
-  return hit ?? "today";
+  let best: NavId = "today";
+  let bestLen = -1;
+  for (const id of Object.keys(META) as NavId[]) {
+    const href = META[id].href;
+    if (href === "/") continue;
+    if ((pathname === href || pathname.startsWith(`${href}/`) || pathname.startsWith(href)) && href.length > bestLen) {
+      best = id;
+      bestLen = href.length;
+    }
+  }
+  return best;
 }
 
 function toolbarTitle(pathname: string): string {
