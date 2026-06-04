@@ -10,6 +10,8 @@ function fmt(iso: string) {
   return new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 }
 
+// Contextual hero action: the primary thing to do right now (check the guest in,
+// then out). Not Edit — that lives in the footer.
 export function StayActions({
   reservationId,
   checkedInAt,
@@ -36,37 +38,38 @@ export function StayActions({
 
   const state = checkedOutAt ? "out" : checkedInAt ? "in" : "none";
 
+  if (state === "out") {
+    return (
+      <div className="card card--pad" style={{ marginTop: 14 }}>
+        <div className="spread">
+          <div>
+            <div style={{ fontWeight: 600, color: "var(--ink)" }}>Checked out</div>
+            <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>Departed {fmt(checkedOutAt!)}</div>
+          </div>
+          <button onClick={() => run("undo")} disabled={busy} className="btn btn--quiet btn--sm">Undo</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="card" style={{ padding: 16, marginTop: 16 }}>
-      <div className="row" style={{ justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 14.5 }}>
-            {state === "out" ? "Checked out" : state === "in" ? "In-house" : "Not arrived yet"}
-          </div>
-          <div style={{ fontSize: 12.5, color: "var(--subtle)", marginTop: 3 }}>
-            {state === "out" && `Departed ${fmt(checkedOutAt!)}`}
-            {state === "in" && `Arrived ${fmt(checkedInAt!)}`}
-            {state === "none" && "Tap check-in when the guest arrives"}
-          </div>
-        </div>
-        <div className="row" style={{ gap: 6, flex: "none" }}>
-          {state === "none" && (
-            <button onClick={() => run("checkin")} disabled={busy} className="btn btn--good btn--sm">
-              <Icon name="arrowR" size={16} /> Check in
-            </button>
-          )}
-          {state === "in" && (
-            <>
-              <button onClick={() => run("undo")} disabled={busy} className="btn btn--ghost btn--sm">Undo</button>
-              <button onClick={() => run("checkout")} disabled={busy} className="btn btn--primary btn--sm">
-                <Icon name="logout" size={16} /> Check out
-              </button>
-            </>
-          )}
-          {state === "out" && (
-            <button onClick={() => run("undo")} disabled={busy} className="btn btn--ghost btn--sm">Undo checkout</button>
-          )}
-        </div>
+    <div style={{ marginTop: 14 }}>
+      {state === "none" ? (
+        <button onClick={() => run("checkin")} disabled={busy} className="btn btn--primary btn--block">
+          <Icon name="arrowDown" size={17} /> Check in guest
+        </button>
+      ) : (
+        <button onClick={() => run("checkout")} disabled={busy} className="btn btn--primary btn--block">
+          <Icon name="logout" size={17} /> Check out guest
+        </button>
+      )}
+      <div className="spread" style={{ marginTop: 8 }}>
+        <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>
+          {state === "in" ? `In-house · arrived ${fmt(checkedInAt!)}` : "Tap when the guest arrives"}
+        </span>
+        {state === "in" && (
+          <button onClick={() => run("undo")} disabled={busy} className="btn btn--quiet btn--sm">Undo check-in</button>
+        )}
       </div>
     </div>
   );

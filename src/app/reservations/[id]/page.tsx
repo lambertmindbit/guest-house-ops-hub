@@ -1,22 +1,26 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { ChannelBadge, StatusPill, Icon } from "@/components/ui";
+import { ChannelBadge, Icon } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
 import { StayActions } from "@/components/StayActions";
+import { ReservationOverflow } from "@/components/ReservationOverflow";
 import { displayDate, displayMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Record<string, { kind: "good" | "ink" | "danger"; label: string }> = {
-  confirmed: { kind: "good", label: "Confirmed" },
-  cancelled: { kind: "ink", label: "Cancelled" },
-  no_show: { kind: "danger", label: "No-show" },
+const STATUS: Record<string, { cls: string; label: string }> = {
+  confirmed: { cls: "badge--good", label: "Confirmed" },
+  cancelled: { cls: "badge--neutral", label: "Cancelled" },
+  no_show: { cls: "badge--danger", label: "No-show" },
 };
 
 function nightsBetween(a: Date, b: Date) {
   return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}
+
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
 export default async function ReservationDetailPage({
@@ -41,43 +45,52 @@ export default async function ReservationDetailPage({
 
   return (
     <main className="app-main" style={{ maxWidth: 620 }}>
-      <div className="shimmer">
-        <Link href="/calendar" className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
-          <Icon name="chevronL" size={16} /> Back to calendar
-        </Link>
+      <div className="entrance">
+        <Link href="/calendar" className="backlink"><Icon name="chevronL" size={15} /> Back to calendar</Link>
 
-        <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, letterSpacing: "-0.02em" }}>{r.guest.name}</h1>
-            <div className="row" style={{ gap: 6, color: "var(--subtle)", fontSize: 13.5, marginTop: 4 }}>
-              <Icon name="phone" size={14} /> {r.guest.phone}
-              {r.guest.email ? ` · ${r.guest.email}` : ""}
+        {/* header */}
+        <div className="row" style={{ gap: 13, marginBottom: 14 }}>
+          <span className="avatar">{initials(r.guest.name)}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+              <span className="h2" style={{ fontSize: 20 }}>{r.guest.name}</span>
+              <span className={`badge ${status.cls}`}>{status.cls === "badge--good" && <span className="dot" />}{status.label}</span>
+            </div>
+            <div className="row" style={{ gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+              <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{r.guest.phone}</span>
+              <ChannelBadge name={r.channel.name} />
             </div>
           </div>
-          <StatusPill kind={status.kind}>
-            {status.kind === "good" && <span className="dot" />}
-            {status.label}
-          </StatusPill>
         </div>
 
-        <div className="card" style={{ padding: "4px 16px", marginTop: 16 }}>
-          <Row label="Room">
-            <span className="row" style={{ gap: 7, justifyContent: "flex-end" }}>
-              <Icon name="door" size={15} /> {r.room.label} · {r.room.roomType.name}
-            </span>
-          </Row>
-          <Row label="Channel"><ChannelBadge name={r.channel.name} /></Row>
-          <Row label="Check-in">{displayDate(r.checkIn)}</Row>
-          <Row label="Check-out">{displayDate(r.checkOut)} · {nights} {nights === 1 ? "night" : "nights"}</Row>
-          {r.arrivalTime && <Row label="Arrival time">{r.arrivalTime}</Row>}
-          <Row label="Amount"><span className="num">{displayMoney(r.grossAmount)}</span></Row>
-          {r.otaRef && <Row label="OTA ref">{r.otaRef}</Row>}
-          <div style={{ padding: "13px 0" }}>
-            <div style={{ fontSize: 13.5, color: "var(--subtle)", marginBottom: 6 }}>Special requests</div>
-            <div style={{ fontSize: 14.5 }}>{r.specialRequests || <span style={{ color: "var(--subtle)" }}>None</span>}</div>
+        {/* info card */}
+        <div className="card card--pad">
+          <div className="spread" style={{ marginBottom: 10 }}>
+            <div>
+              <div className="eyebrow">Room</div>
+              <div className="h3" style={{ marginTop: 3 }}>{r.room.label} · {r.room.roomType.name}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div className="eyebrow">Amount</div>
+              <div className="h3 money" style={{ marginTop: 3, fontSize: 18 }}>{displayMoney(r.grossAmount)}</div>
+            </div>
+          </div>
+          <hr className="hairline" style={{ margin: "12px 0" }} />
+          <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
+            <Fact label="Check-in" value={displayDate(r.checkIn)} />
+            <Fact label="Check-out" value={displayDate(r.checkOut)} />
+            <Fact label="Nights" value={String(nights)} />
+            {r.arrivalTime && <Fact label="Arrival" value={r.arrivalTime} />}
+            {r.otaRef && <Fact label="OTA ref" value={r.otaRef} />}
+          </div>
+          <hr className="hairline" style={{ margin: "12px 0" }} />
+          <div className="eyebrow">Special requests</div>
+          <div style={{ fontSize: "var(--fs-small)", marginTop: 4 }}>
+            {r.specialRequests || <span className="muted">None</span>}
           </div>
         </div>
 
+        {/* contextual hero action */}
         {r.status === "confirmed" && (
           <StayActions
             reservationId={r.id}
@@ -98,25 +111,26 @@ export default async function ReservationDetailPage({
           }))}
         />
 
-        <div style={{ height: 16 }} />
-        <div className="row" style={{ gap: 10 }}>
-          <Link href={`/reservations/${r.id}/edit`} className="btn btn--primary" style={{ flex: 1 }}>
-            <Icon name="edit" size={17} /> Edit
+        {/* footer: Edit · Invoice · ⋯ (Cancel inside the overflow) */}
+        <div className="row" style={{ gap: 8, marginTop: 16 }}>
+          <Link href={`/reservations/${r.id}/edit`} className="btn btn--ghost" style={{ flex: 1 }}>
+            <Icon name="edit" size={15} /> Edit
           </Link>
-          <Link href={`/reservations/${r.id}/invoice`} className="btn btn--outline" style={{ flex: 1 }}>
-            <Icon name="copy" size={16} /> Invoice
+          <Link href={`/reservations/${r.id}/invoice`} className="btn btn--ghost" style={{ flex: 1 }}>
+            <Icon name="receipt" size={15} /> Invoice
           </Link>
+          {r.status === "confirmed" && <ReservationOverflow id={r.id} />}
         </div>
       </div>
     </main>
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="row" style={{ justifyContent: "space-between", gap: 12, padding: "13px 0", borderBottom: "1px solid var(--line)" }}>
-      <span style={{ fontSize: 13.5, color: "var(--subtle)" }}>{label}</span>
-      <span style={{ fontWeight: 600, fontSize: 14.5, textAlign: "right" }}>{children}</span>
+    <div>
+      <div className="eyebrow">{label}</div>
+      <div style={{ fontWeight: 600, color: "var(--ink)", marginTop: 3 }}>{value}</div>
     </div>
   );
 }
