@@ -104,6 +104,7 @@ function DayView({
   selDate: string;
 }) {
   const booked = rows.filter((r) => r.cells[sel]?.state === "occupied").length;
+  const blocked = rows.filter((r) => r.cells[sel]?.state === "blocked").length;
   const { dow, day, mon } = dParts(selDate);
 
   return (
@@ -113,7 +114,7 @@ function DayView({
           const p = dParts(d);
           const hasBooking = rows.some((r) => {
             const s = r.cells[i]?.state;
-            return s === "occupied" || s === "conflict";
+            return s === "occupied" || s === "conflict" || s === "blocked";
           });
           return (
             <button
@@ -131,7 +132,7 @@ function DayView({
 
       <div className="row" style={{ justifyContent: "space-between", margin: "4px 2px 12px" }}>
         <span className="h3">{dow} {day} {mon}</span>
-        <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{booked} of {rows.length} rooms booked</span>
+        <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{booked} of {rows.length} booked{blocked > 0 ? ` · ${blocked} blocked` : ""}</span>
       </div>
 
       {rows.map((r) => {
@@ -255,6 +256,7 @@ function GridView({ dates, rows, today }: { dates: string[]; rows: Row[]; today:
       <div className="legend">
         <span><i style={{ background: "var(--accent-bg)" }} />Occupied</span>
         <span><i style={{ background: "var(--surface-3)" }} />Vacant</span>
+        <span><i style={{ background: "repeating-linear-gradient(135deg, var(--blocked-bg), var(--blocked-bg) 3px, var(--blocked-line) 3px, var(--blocked-line) 6px)" }} />Blocked</span>
         <span><i style={{ background: "var(--red)" }} />Conflict</span>
         <span><i style={{ background: "var(--green)", width: 4 }} />Arrives</span>
         <span><i style={{ background: "var(--orange)", width: 4 }} />Departs</span>
