@@ -442,8 +442,8 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 
 /* ---- segmented control / preferences popover / switch ---- */
 .seg { display: inline-flex; background: var(--surface-3); border-radius: 8px; padding: 2px; gap: 2px; }
-.seg button { border: 0; background: transparent; color: var(--text-subtle); font-weight: 600; font-size: 12px; padding: 6px 13px; border-radius: 6px; transition: all var(--base) var(--ease); }
-.seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-xs); }
+.seg button, .seg a { border: 0; background: transparent; color: var(--text-subtle); font-weight: 600; font-size: 12px; padding: 6px 13px; border-radius: 6px; transition: all var(--base) var(--ease); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+.seg button.on, .seg a.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-xs); }
 .prefs-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(11,28,48,0.4); display: grid; place-items: center; padding: 16px; animation: rd-fade var(--base); }
 .prefs { width: 320px; max-width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); overflow: hidden; animation: rd-up var(--base) var(--ease-spring); }
 .prefs__hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); }

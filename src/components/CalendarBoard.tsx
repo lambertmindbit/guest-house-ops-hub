@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { parseDateOnly } from "@/lib/dates";
 import type { CalendarCell } from "@/lib/calendar";
 import { ChannelBadge, Icon } from "@/components/ui";
 
+export type CalView = "day" | "week" | "2wk" | "month";
+
 type Row = { id: string; label: string; roomTypeName: string; cells: CalendarCell[] };
 type Nav = { prev: string; next: string; today: string };
+
+const VIEW_OPTS: { k: CalView; label: string }[] = [
+  { k: "day", label: "Day" },
+  { k: "week", label: "Week" },
+  { k: "2wk", label: "2 Wks" },
+  { k: "month", label: "Month" },
+];
 
 // Solid dot colours for the grid (channel badges are tinted; the grid needs a
 // single saturated dot that reads at 6px).
@@ -27,55 +36,50 @@ function dParts(d: string) {
 }
 
 export function CalendarBoard({
+  view,
   dates,
   rows,
   today,
   sub,
+  start,
   nav,
 }: {
+  view: CalView;
   dates: string[];
   rows: Row[];
   today: string;
   sub: string;
+  start: string;
   nav: Nav;
 }) {
-  // Phone defaults to Day, desktop to Grid. Start on Day (matches SSR) then
-  // promote to Grid on wide screens after mount.
-  const [view, setView] = useState<"day" | "grid">("day");
-  useEffect(() => {
-    if (window.matchMedia("(min-width: 900px)").matches) setView("grid");
-  }, []);
-
-  const initialSel = Math.max(0, dates.indexOf(today));
-  const [sel, setSel] = useState(initialSel);
-  const selDate = dates[sel] ?? dates[0];
-
   return (
     <>
-      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, gap: 12 }}>
-        <div>
-          <div className="display">Calendar</div>
-          <div className="pagehead__sub">{sub}</div>
-        </div>
-        <div className="seg">
-          <button className={view === "day" ? "on" : ""} onClick={() => setView("day")}>Day</button>
-          <button className={view === "grid" ? "on" : ""} onClick={() => setView("grid")}>Grid</button>
-        </div>
+      <div className="pagehead">
+        <div className="display">Calendar</div>
+        <div className="pagehead__sub">{sub}</div>
       </div>
 
-      {/* window navigation (moves the loaded 14-day window) */}
+      {/* view selector */}
+      <div className="seg" style={{ marginBottom: 12, maxWidth: "100%", overflowX: "auto" }}>
+        {VIEW_OPTS.map((v) => (
+          <Link key={v.k} href={`/calendar?view=${v.k}&start=${start}`} className={view === v.k ? "on" : ""}>{v.label}</Link>
+        ))}
+      </div>
+
+      {/* window navigation */}
       <div className="row" style={{ gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
         <Link href={nav.prev} className="btn btn--ghost btn--sm" aria-label="Previous"><Icon name="chevronL" size={16} /></Link>
         <Link href={nav.today} className="btn btn--ghost btn--sm">Today</Link>
         <Link href={nav.next} className="btn btn--ghost btn--sm" aria-label="Next"><Icon name="chevronR" size={16} /></Link>
         <form method="get" action="/calendar" className="row" style={{ gap: 6, marginLeft: "auto" }}>
+          <input type="hidden" name="view" value={view} />
           <input type="date" name="start" defaultValue={dates[0]} className="input" style={{ width: 150 }} />
           <button className="btn btn--ghost btn--sm">Go</button>
         </form>
       </div>
 
       {view === "day" ? (
-        <DayView dates={dates} rows={rows} today={today} sel={sel} setSel={setSel} selDate={selDate} />
+        <DayView dates={dates} rows={rows} today={today} />
       ) : (
         <GridView dates={dates} rows={rows} today={today} />
       )}
@@ -88,21 +92,11 @@ export function CalendarBoard({
   );
 }
 
-function DayView({
-  dates,
-  rows,
-  today,
-  sel,
-  setSel,
-  selDate,
-}: {
-  dates: string[];
-  rows: Row[];
-  today: string;
-  sel: number;
-  setSel: (i: number) => void;
-  selDate: string;
-}) {
+function DayView({ dates, rows, today }: { dates: string[]; rows: Row[]; today: string }) {
+  const initialSel = Math.max(0, dates.indexOf(today));
+  const [sel, setSel] = useState(initialSel);
+  const selDate = dates[sel] ?? dates[0];
+
   const booked = rows.filter((r) => r.cells[sel]?.state === "occupied").length;
   const blocked = rows.filter((r) => r.cells[sel]?.state === "blocked").length;
   const { dow, day, mon } = dParts(selDate);
