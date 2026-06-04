@@ -255,6 +255,15 @@ export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[
     setLabel(""); setAdding(false); router.refresh();
   }
   async function setArchived(room: Room, archived: boolean) {
+    if (
+      archived &&
+      !(await confirm({
+        title: "Archive room",
+        message: `Archive Room ${room.label}? It’s hidden from the calendar and new bookings, but its history is kept — you can unarchive it anytime.`,
+        confirmLabel: "Archive",
+      }))
+    )
+      return;
     const r = await send("PATCH", `/api/rooms/${room.id}`, { archived });
     if (!r.ok) return void alert({ title: "Couldn’t complete that", message: r.error });
     router.refresh();
