@@ -49,7 +49,7 @@ export default async function PricingPage({
           <Link href={`/pricing?start=${prev}`} className="btn btn--outline btn--sm" aria-label="Previous"><Icon name="chevronL" size={16} /></Link>
           <Link href={`/pricing?start=${next}`} className="btn btn--outline btn--sm" aria-label="Next"><Icon name="chevronR" size={16} /></Link>
           <Link href="/pricing" className="btn btn--ghost btn--sm">Today</Link>
-          <Link href="/settings?s=pricing" className="btn btn--ghost btn--sm">Pricing rules →</Link>
+          <Link href="/settings/pricing" className="btn btn--ghost btn--sm">Pricing rules</Link>
           <form method="get" className="row" style={{ gap: 6, marginLeft: "auto" }}>
             <input type="date" name="start" defaultValue={start} className="input" style={{ width: 152, padding: "8px 11px", fontSize: 14 }} />
             <button className="btn btn--dark btn--sm">Go</button>

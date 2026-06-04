@@ -81,7 +81,7 @@ export function CalendarBoard({
       )}
 
       <div style={{ height: 14 }} />
-      <Link href="/settings?s=blocks" className="btn btn--ghost btn--block">
+      <Link href="/settings/blocks" className="btn btn--ghost btn--block">
         <Icon name="x" size={16} /> Block a room
       </Link>
     </>

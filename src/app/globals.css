@@ -862,3 +862,19 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
   .form-save { position: sticky; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 5; }
   .form-save .btn { box-shadow: var(--shadow-lg); }
 }
+
+/* =========================================================================
+   REDESIGN SETTINGS (slice 7) — hub list → focused sub-pages.
+   ========================================================================= */
+.setgroup { margin-bottom: 18px; }
+.setgroup__label { font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); padding: 0 4px 7px; }
+.setlist { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
+.setrow { width: 100%; display: flex; align-items: center; gap: 12px; padding: 13px 15px; border: 0; background: transparent;
+  text-decoration: none; text-align: left; border-bottom: 1px solid var(--border-subtle); transition: background var(--fast); }
+.setrow:last-child { border-bottom: 0; }
+.setrow:hover { background: var(--surface-2); }
+.setrow__ic { width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--accent-bg); color: var(--accent-text); display: grid; place-items: center; flex: none; }
+.setrow__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.setrow__t { font-weight: 600; font-size: var(--fs-body); color: var(--ink); }
+.setrow__d { font-size: var(--fs-meta); color: var(--text-subtle); margin-top: 1px; }
+.setrow__chev { color: var(--text-faint); flex: none; }

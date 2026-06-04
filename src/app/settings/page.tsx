@@ -1,101 +1,49 @@
-import { prisma } from "@/lib/prisma";
-import { formatDateOnly } from "@/lib/dates";
-import { SettingsClient } from "@/components/SettingsClient";
+import Link from "next/link";
+import { Icon } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ s?: string }>;
-}) {
-  const section = (await searchParams).s ?? null;
-  const [settings, roomTypes, rooms, channels, blocks, policy, seasons] = await Promise.all([
-    prisma.propertySettings.findFirst(),
-    prisma.roomType.findMany({
-      include: { _count: { select: { rooms: true } } },
-      orderBy: { name: "asc" },
-    }),
-    prisma.room.findMany({ include: { roomType: true }, orderBy: { label: "asc" } }),
-    prisma.channel.findMany({
-      include: { _count: { select: { reservations: true } } },
-      orderBy: { name: "asc" },
-    }),
-    prisma.block.findMany({
-      where: { source: "manual" },
-      include: { room: true },
-      orderBy: { startDate: "asc" },
-    }),
-    prisma.pricingPolicy.findFirst(),
-    prisma.season.findMany({ orderBy: { startDate: "asc" } }),
-  ]);
+// The Settings hub: a grouped list of categories → each opens a focused
+// sub-page (real route, so Back and deep-links work).
+const GROUPS = [
+  { group: "Property", items: [{ key: "property", title: "Property details", sub: "Name, address, GST, check-in/out times", icon: "settings" }] },
+  {
+    group: "Inventory",
+    items: [
+      { key: "room-types", title: "Room types", sub: "Categories, rates, occupancy", icon: "bed" },
+      { key: "rooms", title: "Rooms", sub: "Add, archive, remove rooms", icon: "door" },
+    ],
+  },
+  { group: "Channels", items: [{ key: "channels", title: "Channels", sub: "Booking sources & commission", icon: "link" }] },
+  { group: "Pricing", items: [{ key: "pricing", title: "Pricing rules", sub: "Weekend, season, lead-time, occupancy", icon: "tag" }] },
+  { group: "Maintenance", items: [{ key: "blocks", title: "Blocked dates", sub: "Hold rooms out of service", icon: "alert" }] },
+];
 
-  // Decimals/Dates aren't directly serialisable to a client component — flatten.
-  const data = {
-    settings: settings && {
-      name: settings.name,
-      checkInTime: settings.checkInTime,
-      checkOutTime: settings.checkOutTime,
-      currency: settings.currency,
-      timezone: settings.timezone,
-      address: settings.address,
-      gstNumber: settings.gstNumber,
-    },
-    roomTypes: roomTypes.map((t) => ({
-      id: t.id,
-      name: t.name,
-      baseRate: Number(t.baseRate),
-      maxOccupancy: t.maxOccupancy,
-      rateFloor: Number(t.rateFloor),
-      rateCeiling: Number(t.rateCeiling),
-      roomCount: t._count.rooms,
-    })),
-    rooms: rooms.map((r) => ({
-      id: r.id,
-      label: r.label,
-      roomTypeId: r.roomTypeId,
-      roomTypeName: r.roomType.name,
-      archived: r.archivedAt !== null,
-    })),
-    channels: channels.map((c) => ({
-      id: c.id,
-      name: c.name,
-      commissionPct: Number(c.commissionPct),
-      collectsPayment: c.collectsPayment,
-      resCount: c._count.reservations,
-    })),
-    blocks: blocks.map((b) => ({
-      id: b.id,
-      roomId: b.roomId,
-      roomLabel: b.room.label,
-      startDate: formatDateOnly(b.startDate),
-      endDate: formatDateOnly(b.endDate),
-      reason: b.reason,
-    })),
-    policy: {
-      enabled: policy?.enabled ?? true,
-      weekendDays: policy?.weekendDays ?? [5, 6],
-      weekendAdjustPct: Number(policy?.weekendAdjustPct ?? 0),
-      leadEarlyDays: policy?.leadEarlyDays ?? null,
-      leadEarlyAdjustPct: policy?.leadEarlyAdjustPct == null ? null : Number(policy.leadEarlyAdjustPct),
-      leadLateDays: policy?.leadLateDays ?? null,
-      leadLateAdjustPct: policy?.leadLateAdjustPct == null ? null : Number(policy.leadLateAdjustPct),
-      occupancyThresholdPct: policy?.occupancyThresholdPct ?? null,
-      occupancyAdjustPct: policy?.occupancyAdjustPct == null ? null : Number(policy.occupancyAdjustPct),
-    },
-    seasons: seasons.map((s) => ({
-      id: s.id,
-      name: s.name,
-      startDate: formatDateOnly(s.startDate),
-      endDate: formatDateOnly(s.endDate),
-      adjustPct: Number(s.adjustPct),
-    })),
-  };
-
+export default function SettingsPage() {
   return (
     <main className="app-main" style={{ maxWidth: 760 }}>
-      <div className="shimmer">
-        <SettingsClient data={data} section={section} />
+      <div className="entrance">
+        <div className="pagehead">
+          <div className="display">Settings</div>
+          <div className="pagehead__sub">Manage your property, rooms, channels and pricing.</div>
+        </div>
+        {GROUPS.map((g) => (
+          <div key={g.group} className="setgroup">
+            <div className="setgroup__label">{g.group}</div>
+            <div className="setlist">
+              {g.items.map((it) => (
+                <Link key={it.key} href={`/settings/${it.key}`} className="setrow">
+                  <span className="setrow__ic"><Icon name={it.icon} size={17} /></span>
+                  <span className="setrow__main">
+                    <span className="setrow__t">{it.title}</span>
+                    <span className="setrow__d">{it.sub}</span>
+                  </span>
+                  <Icon name="chevronR" size={18} className="setrow__chev" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </main>
   );

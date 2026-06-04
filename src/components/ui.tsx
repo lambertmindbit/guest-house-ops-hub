@@ -27,6 +27,7 @@ const PATHS: Record<string, ReactNode> = {
   copy: (<><rect x="9" y="9" width="11" height="11" rx="2.5" /><path d="M5 15V5a2 2 0 0 1 2-2h8" /></>),
   receipt: (<><path d="M6 2h12a1 1 0 0 1 1 1v18l-3-2-3 2-3-2-3 2V3a1 1 0 0 1 1-1Z" /><path d="M9 7h6M9 11h6" /></>),
   edit: (<><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m14.5 5.5 4 4" /></>),
+  trash: (<><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" /></>),
   door: (<><path d="M14 21V4a1 1 0 0 0-1.2-1L6 4.5A1 1 0 0 0 5 5.5V21M3 21h13M16 21h5M16 8v9" /><path d="M11 12v1" /></>),
   alertCircle: (<><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h0" /></>),
   phone: (<><path d="M5 4h3l1.5 4.5L7.5 10a12 12 0 0 0 6 6l1.5-2L19.5 16V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" /></>),
