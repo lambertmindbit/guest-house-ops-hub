@@ -30,7 +30,7 @@ export default async function NewReservationPage({
 
   return (
     <main className="app-main" style={{ maxWidth: 620 }}>
-      <div className="shimmer">
+      <div className="entrance">
         <Link href="/" className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
           <Icon name="chevronL" size={16} /> Back
         </Link>

@@ -48,7 +48,7 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
 
   return (
     <div className="card" style={{ padding: 16, marginTop: 16 }}>
-      {error && <p style={{ color: "var(--danger-700)", fontSize: 13, margin: "0 0 10px" }}>{error}</p>}
+      {error && <p style={{ color: "var(--red-text)", fontSize: 13, margin: "0 0 10px" }}>{error}</p>}
 
       <div className="form-grid" style={{ gap: 12 }}>
         <div style={{ gridColumn: "1 / -1" }}>
@@ -69,8 +69,8 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
         </div>
       </div>
 
-      <div className="tweaks__row" style={{ padding: "14px 0 2px", borderTop: "1px solid var(--line)", marginTop: 14 }}>
-        <label style={{ fontWeight: 600, color: v.blocked ? "var(--danger-700)" : "var(--ink)" }}>Blacklist this guest</label>
+      <div className="spread" style={{ padding: "14px 0 2px", borderTop: "1px solid var(--border)", marginTop: 14 }}>
+        <label style={{ fontWeight: 600, color: v.blocked ? "var(--red-text)" : "var(--ink)" }}>Blacklist this guest</label>
         <button type="button" className={`switch${v.blocked ? " on" : ""}`} onClick={() => setV({ ...v, blocked: !v.blocked })} aria-label="Blacklist"><span /></button>
       </div>
       {v.blocked && (
@@ -82,7 +82,7 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
 
       <div className="row" style={{ gap: 10, marginTop: 16 }}>
         <button onClick={save} disabled={busy} className="btn btn--primary btn--sm">{busy ? "Saving…" : "Save guest"}</button>
-        {saved && <span style={{ fontSize: 13, color: "var(--good-700)" }}>Saved ✓</span>}
+        {saved && <span style={{ fontSize: 13, color: "var(--green-text)" }}>Saved ✓</span>}
       </div>
     </div>
   );

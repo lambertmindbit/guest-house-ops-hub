@@ -35,7 +35,7 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
 
   return (
     <main className="app-main" style={{ maxWidth: 720 }}>
-      <div className="shimmer">
+      <div className="entrance">
         <Link href="/guests" className="btn btn--ghost btn--sm" style={{ paddingLeft: 6, marginBottom: 8 }}>
           <Icon name="chevronL" size={16} /> All guests
         </Link>
@@ -91,13 +91,13 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
                     <div style={{ fontWeight: 600, fontSize: 14.5 }}>
                       {displayShortDate(r.checkIn)} → {displayShortDate(r.checkOut)}
                     </div>
-                    <div style={{ fontSize: 12.5, color: "var(--subtle)", marginTop: 3 }}>
+                    <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3 }}>
                       Room {r.room.label} · {r.room.roomType.name}
                     </div>
                   </div>
                   <div className="col" style={{ alignItems: "flex-end", gap: 5 }}>
                     <ChannelBadge name={r.channel.name} />
-                    <span style={{ fontSize: 12.5, color: "var(--subtle)", fontWeight: 600 }}>
+                    <span style={{ fontSize: 12.5, color: "var(--text-subtle)", fontWeight: 600 }}>
                       <span className="num">{displayMoney(r.grossAmount)}</span>
                       {r.status !== "confirmed" && <> · <StatusPill kind={st.kind}>{st.label}</StatusPill></>}
                     </span>

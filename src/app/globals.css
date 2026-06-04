@@ -1,365 +1,26 @@
 @import "tailwindcss";
 
 /* =========================================================================
-   Ops Hub — Apple edition (Claude Design handoff)
-   Apple HIG: system grays + system-green accent, light + dark, flat grouped
-   cards, iOS tab bar (mobile) + macOS sidebar/toolbar (desktop). Poppins kept.
+   BASE RESET + APP SHELL (the essentials the old Apple block uniquely held;
+   tokens + components live in the REDESIGN LAYER below).
    ========================================================================= */
-
-:root {
-  color-scheme: light dark;
-
-  /* System neutrals & status — LIGHT */
-  --sys-bg-grouped: #f2f2f7;
-  --sys-bg-elev: #ffffff;
-  --sys-fill: #e9e9ef;
-  --sys-fill-2: #e3e3ea;
-  --sys-label: #1d1d1f;
-  --sys-label-2: rgba(60, 60, 67, 0.6);
-  --sys-label-3: rgba(60, 60, 67, 0.34);
-  --sys-sep: rgba(60, 60, 67, 0.16);
-  --sys-sep-strong: rgba(60, 60, 67, 0.28);
-
-  --sys-green: #34c759; --sys-green-text: #248a3d; --sys-green-fill: rgba(52, 199, 89, 0.15);
-  --sys-orange: #ff9500; --sys-orange-text: #b25e00; --sys-orange-fill: rgba(255, 149, 0, 0.16);
-  --sys-red: #ff3b30; --sys-red-text: #c0362c; --sys-red-fill: rgba(255, 59, 48, 0.13);
-
-  --mat-blur: 30px; --mat-sat: 180%; --mat-alpha: 0.72;
-
-  /* Accent = warm teal (default; switchable in Preferences) */
-  --tint: #0fa68e; --tint-600: #0c8c77; --tint-text: #0a7665;
-  --tint-fill: rgba(15, 166, 142, 0.14); --tint-fill-2: rgba(15, 166, 142, 0.22); --tint-on: #ffffff;
-
-  /* Legacy Ops-Hub token names -> Apple system values (the screens use these) */
-  --teal: var(--tint); --teal-600: var(--tint-600); --teal-700: var(--tint-text);
-  --teal-800: var(--tint-text); --teal-50: var(--tint-fill); --teal-100: var(--tint-fill-2);
-  --lime: var(--tint-fill-2);
-  --ink: var(--sys-label); --ink-800: var(--sys-label); --ink-900: #000;
-  --deep-teal: var(--sys-label-2); --subtle: var(--sys-label-2);
-  --clay: var(--sys-orange); --clay-600: var(--sys-orange); --clay-700: var(--sys-orange-text);
-  --clay-50: var(--sys-orange-fill); --clay-100: var(--sys-orange-fill);
-  --sand: var(--sys-fill); --cream: var(--sys-bg-grouped); --paper: var(--sys-bg-elev);
-  --line: var(--sys-sep); --line-strong: var(--sys-sep-strong);
-  --good: var(--sys-green); --good-50: var(--sys-green-fill); --good-700: var(--sys-green-text);
-  --warn: var(--sys-orange); --warn-50: var(--sys-orange-fill); --warn-700: var(--sys-orange-text);
-  --danger: var(--sys-red); --danger-50: var(--sys-red-fill); --danger-700: var(--sys-red-text);
-
-  --shadow-xs: none; --shadow-sm: none;
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.22);
-  --shadow-glow: none;
-
-  --font: var(--font-poppins), -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, monospace;
-
-  --r-xs: 8px; --r-sm: 10px; --r-md: 12px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px; --r-btn: 12px;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
-  --fast: 140ms; --base: 240ms; --slow: 380ms;
-}
-
-/* Dark is attribute-driven so the in-app toggle works. The head script sets
-   data-appearance from the OS when the saved preference is "system". */
-[data-appearance="dark"] {
-  --sys-bg-grouped: #000000;
-  --sys-bg-elev: #1c1c1e;
-  --sys-fill: #2c2c2e;
-  --sys-fill-2: #3a3a3c;
-  --sys-label: #f5f5f7;
-  --sys-label-2: rgba(235, 235, 245, 0.62);
-  --sys-label-3: rgba(235, 235, 245, 0.34);
-  --sys-sep: rgba(84, 84, 88, 0.55);
-  --sys-sep-strong: rgba(84, 84, 88, 0.72);
-  --sys-green: #30d158; --sys-green-text: #30d158; --sys-green-fill: rgba(48, 209, 88, 0.2);
-  --sys-orange: #ff9f0a; --sys-orange-text: #ff9f0a; --sys-orange-fill: rgba(255, 159, 10, 0.2);
-  --sys-red: #ff453a; --sys-red-text: #ff453a; --sys-red-fill: rgba(255, 69, 58, 0.2);
-  --mat-alpha: 0.58;
-  --tint: #30d158; --tint-600: #28b94c; --tint-text: #30d158;
-  --tint-fill: rgba(48, 209, 88, 0.22); --tint-fill-2: rgba(48, 209, 88, 0.32);
-}
-
-/* Accent tints (light) */
-[data-tint="green"] { --tint: #34c759; --tint-600: #2bb14e; --tint-text: #248a3d; --tint-fill: rgba(52, 199, 89, 0.15); --tint-fill-2: rgba(52, 199, 89, 0.24); }
-[data-tint="blue"] { --tint: #007aff; --tint-600: #0066d6; --tint-text: #0062cc; --tint-fill: rgba(0, 122, 255, 0.12); --tint-fill-2: rgba(0, 122, 255, 0.2); }
-[data-tint="indigo"] { --tint: #5856d6; --tint-600: #4a48bd; --tint-text: #4a48bd; --tint-fill: rgba(88, 86, 214, 0.13); --tint-fill-2: rgba(88, 86, 214, 0.22); }
-[data-tint="warm"] { --tint: #0fa68e; --tint-600: #0c8c77; --tint-text: #0a7665; --tint-fill: rgba(15, 166, 142, 0.14); --tint-fill-2: rgba(15, 166, 142, 0.22); }
-/* Accent tints (dark — vivid) */
-[data-appearance="dark"][data-tint="green"] { --tint: #30d158; --tint-600: #28b94c; --tint-text: #30d158; --tint-fill: rgba(48, 209, 88, 0.22); --tint-fill-2: rgba(48, 209, 88, 0.32); }
-[data-appearance="dark"][data-tint="blue"] { --tint: #0a84ff; --tint-600: #0a72db; --tint-text: #0a84ff; --tint-fill: rgba(10, 132, 255, 0.2); --tint-fill-2: rgba(10, 132, 255, 0.3); }
-[data-appearance="dark"][data-tint="indigo"] { --tint: #5e5ce6; --tint-600: #504ecb; --tint-text: #5e5ce6; --tint-fill: rgba(94, 92, 230, 0.22); --tint-fill-2: rgba(94, 92, 230, 0.32); }
-[data-appearance="dark"][data-tint="warm"] { --tint: #2cd9bd; --tint-600: #23bda4; --tint-text: #2cd9bd; --tint-fill: rgba(44, 217, 189, 0.18); --tint-fill-2: rgba(44, 217, 189, 0.28); }
-
-/* Material: crisp = more opaque, less blur */
-[data-material="crisp"] { --mat-blur: 6px; --mat-sat: 120%; --mat-alpha: 0.94; }
-[data-appearance="dark"][data-material="crisp"] { --mat-alpha: 0.92; }
-
-/* Button shape */
-[data-btnshape="pill"] { --r-btn: 999px; }
-
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body {
-  font-family: var(--font);
-  color: var(--sys-label);
-  background: var(--sys-bg-grouped);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-button { font-family: inherit; cursor: pointer; }
-input, select, textarea { font-family: inherit; }
+button, input, select, textarea { font-family: inherit; }
+button { cursor: pointer; }
 ::-webkit-scrollbar { height: 8px; width: 8px; }
-::-webkit-scrollbar-thumb { background: var(--sys-sep-strong); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 
-.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sys-label-2); }
-.num { font-variant-numeric: tabular-nums; }
-.row { display: flex; align-items: center; }
-.col { display: flex; flex-direction: column; }
-.hairline { height: 1px; background: var(--line); border: 0; }
-.shimmer { animation: ax-fade var(--slow) var(--ease) both; }
-@keyframes ax-fade { from { transform: translateY(9px); } to { transform: none; } }
-@keyframes ax-sheetup { from { transform: translateY(30px); opacity: 0.5; } to { transform: none; opacity: 1; } }
-@keyframes ax-fadein { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .shimmer { animation: none; } }
-
-/* ============ Buttons ============ */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  font-weight: 600; font-size: 15px; line-height: 1; letter-spacing: -0.01em;
-  padding: 12px 18px; border-radius: var(--r-btn); border: 0;
-  transition: transform var(--fast) var(--ease), background var(--base) var(--ease), box-shadow var(--base) var(--ease), color var(--base) var(--ease);
-  white-space: nowrap; text-decoration: none;
-}
-.btn:active { transform: scale(0.96); }
-.btn--primary { background: var(--tint); color: var(--tint-on); }
-.btn--primary:hover { background: var(--tint-600); }
-.btn--dark { background: var(--sys-fill-2); color: var(--sys-label); }
-.btn--dark:hover { background: var(--sys-sep-strong); }
-.btn--good { background: var(--sys-green); color: #fff; }
-.btn--good:hover { filter: brightness(0.94); }
-.btn--clay { background: var(--sys-orange); color: #fff; }
-.btn--outline { background: var(--sys-fill); color: var(--sys-label); border: 0; }
-.btn--outline:hover { background: var(--sys-fill-2); }
-.btn--ghost { background: transparent; color: var(--tint); }
-.btn--ghost:hover { background: var(--tint-fill); }
-.btn--danger-outline { background: var(--sys-red-fill); color: var(--sys-red-text); border: 0; }
-.btn--danger-outline:hover { filter: brightness(0.97); }
-.btn--sm { padding: 8px 13px; font-size: 13.5px; border-radius: calc(var(--r-btn) - 2px); }
-.btn--block { width: 100%; padding: 14px 18px; border-radius: var(--r-lg); font-size: 16px; }
-[data-btnshape="pill"] .btn--sm, [data-btnshape="pill"] .btn--block { border-radius: 999px; }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-/* ============ Cards (iOS grouped cells) ============ */
-.card { background: var(--paper); border: 0; border-radius: var(--r-md); box-shadow: none; }
-a.card, button.card { transition: background var(--fast) var(--ease), transform var(--fast) var(--ease); }
-a.card:active, button.card:active { background: var(--sys-fill); transform: scale(0.992); }
-
-/* ============ Channel badges ============ */
-.ch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; line-height: 1; padding: 5px 10px; border-radius: var(--r-pill); white-space: nowrap; }
-.ch .ch-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
-.ch--direct { background: var(--tint-fill); color: var(--tint-text); }
-.ch--whatsapp { background: rgba(52, 199, 89, 0.15); color: var(--sys-green-text); }
-.ch--booking { background: rgba(0, 122, 255, 0.12); color: #0062cc; }
-.ch--agoda { background: rgba(255, 45, 85, 0.13); color: #c0274a; }
-.ch--makemytrip { background: rgba(255, 149, 0, 0.16); color: var(--sys-orange-text); }
-[data-appearance="dark"] .ch--booking { color: #4da3ff; }
-[data-appearance="dark"] .ch--agoda { color: #ff6b8b; }
-
-/* ============ Status pills ============ */
-.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; line-height: 1; padding: 5px 11px; border-radius: var(--r-pill); white-space: nowrap; }
-.pill--good { background: var(--sys-green-fill); color: var(--sys-green-text); }
-.pill--warn { background: var(--sys-orange-fill); color: var(--sys-orange-text); }
-.pill--danger { background: var(--sys-red-fill); color: var(--sys-red-text); }
-.pill--ink { background: var(--sys-fill); color: var(--sys-label-2); }
-.pill--teal { background: var(--tint-fill); color: var(--tint-text); }
-.pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-
-/* ============ Inputs (filled iOS field) ============ */
-.field-label { font-size: 12.5px; font-weight: 600; color: var(--sys-label-2); margin-bottom: 6px; display: block; }
-.input, .select, .textarea {
-  width: 100%; min-width: 0; max-width: 100%; font-size: 16px; color: var(--sys-label);
-  background: var(--sys-fill); border: 1px solid transparent;
-  border-radius: var(--r-sm); padding: 12px 13px;
-  transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease), background var(--fast) var(--ease);
-}
-.input:focus, .select:focus, .textarea:focus { outline: none; background: var(--paper); border-color: var(--tint); box-shadow: 0 0 0 3.5px var(--tint-fill); }
-.input::placeholder, .textarea::placeholder { color: var(--sys-label-3); }
-.textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
-.select {
-  -webkit-appearance: none; appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px;
-}
-
-/* ============ Alert banners ============ */
-.banner { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: var(--r-md); font-weight: 500; font-size: 14.5px; border: 0; cursor: pointer; text-decoration: none; transition: transform var(--fast) var(--ease), filter var(--base) var(--ease); }
-.banner:active { transform: scale(0.99); }
-.banner--danger { background: var(--sys-red-fill); color: var(--sys-red-text); }
-.banner--warn { background: var(--sys-orange-fill); color: var(--sys-orange-text); }
-.banner--good { background: var(--sys-green-fill); color: var(--sys-green-text); }
-.banner__icon { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, currentColor 16%, transparent); }
-.banner__arrow { margin-left: auto; opacity: 0.5; }
-
-/* ============ Empty state ============ */
-.empty { border: 0; border-radius: var(--r-md); padding: 28px 20px; text-align: center; color: var(--sys-label-2); background: var(--sys-fill); }
-
-/* ============ KPI ============ */
-.kpi__value { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
-.kpi__label { font-size: 13px; color: var(--sys-label-2); margin-top: 6px; }
-.kpi__sub { font-size: 12px; color: var(--sys-label-3); margin-top: 2px; }
-
-/* ============ Tables (macOS list) ============ */
-.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-.tbl thead th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sys-label-2); padding: 11px 14px; background: var(--sys-fill); white-space: nowrap; }
-.tbl tbody td { padding: 13px 14px; border-top: 1px solid var(--line); white-space: nowrap; color: var(--sys-label); }
-.tbl tbody tr:hover td { background: var(--sys-fill); }
-.tbl .ralign { text-align: right; }
-
-/* ============ Calendar ============ */
-.cal-cell { position: relative; padding: 8px 9px; min-height: 50px; font-size: 12.5px; line-height: 1.25; overflow: hidden; color: var(--sys-label); }
-.cal-cell--occ { background: var(--tint-fill); }
-.cal-cell--occ .cal-guest { font-weight: 600; color: var(--sys-label); }
-.cal-cell--occ .cal-ch { font-size: 11px; color: var(--sys-label-2); }
-.cal-cell--blocked { background: repeating-linear-gradient(135deg, var(--sys-fill), var(--sys-fill) 6px, var(--sys-fill-2) 6px, var(--sys-fill-2) 12px); color: var(--sys-label-2); font-style: italic; }
-.cal-cell--conflict { background: var(--sys-red-fill); }
-.cal-cell--conflict .cal-guest { color: var(--sys-red-text); font-weight: 700; }
-.cal-edge-arr { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--sys-green); }
-.cal-edge-dep { position: absolute; right: 0; top: 0; bottom: 0; width: 3px; background: var(--sys-orange); }
-
-/* ============ Layout grids ============ */
-.kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.two-col { display: block; }
-.form-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
-@media (min-width: 1024px) {
-  .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
-}
-@media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
-
-/* =========================================================================
-   App shell — iOS (mobile) + macOS sidebar/toolbar (desktop)
-   ========================================================================= */
-/* Responsive chrome visibility — hide each piece at the wrong breakpoint
-   directly, so when shown it keeps its own display (grid/flex/block). A generic
-   .only-* helper with `display: revert` would clobber those component displays. */
-@media (max-width: 899px) {
-  .mac-toolbar, .mac-sidebar { display: none !important; }
-}
-@media (min-width: 900px) {
-  .ios-header, .ios-tabbar, .ios-sheet-backdrop { display: none !important; }
-}
-
-/* Print: drop the app chrome and any .no-print controls so an invoice prints
-   on its own, full width, on a white page. */
-@media print {
-  .ios-header, .ios-tabbar, .ios-sheet-backdrop, .mac-toolbar, .mac-sidebar, .no-print { display: none !important; }
-  .app-main { margin: 0 !important; max-width: none !important; padding: 0 !important; }
-  body { background: #fff !important; }
-  .invoice { border: 0 !important; box-shadow: none !important; }
-}
-
-.brand__mark { width: 30px; height: 30px; border-radius: 8px; background: var(--tint); color: var(--tint-on); display: grid; place-items: center; flex: none; }
-
-/* content area */
+/* content area — offset for the desktop sidebar/toolbar; bottom space on phone
+   for the fixed tab bar (refined in the redesign shell rules below). */
 .app-main { width: 100%; max-width: 1120px; margin: 0 auto; padding: 18px 17px 96px; }
 @media (min-width: 900px) {
   .app-main { margin: 0 0 0 230px; max-width: 1230px; padding: 76px 40px 56px; }
 }
 
-/* ---------------- iOS header (mobile) ---------------- */
-.ios-header {
-  position: sticky; top: 0; z-index: 20; flex: none;
-  background: color-mix(in srgb, var(--sys-bg-elev) calc(var(--mat-alpha) * 100%), transparent);
-  -webkit-backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  border-bottom: 0.5px solid var(--line);
-}
-.ios-nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; gap: 10px; }
-.ios-nav__brand { display: flex; align-items: center; gap: 9px; min-width: 0; text-decoration: none; color: var(--sys-label); }
-.ios-nav__name { line-height: 1.04; min-width: 0; }
-.ios-nav__name b { font-weight: 700; font-size: 16px; letter-spacing: -0.01em; display: block; }
-.ios-nav__name span { font-size: 10px; letter-spacing: 0.05em; color: var(--sys-label-2); font-weight: 600; text-transform: uppercase; }
-.ios-navbtn { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--sys-fill); color: var(--tint); display: grid; place-items: center; transition: background var(--fast) var(--ease); text-decoration: none; }
-.ios-navbtn:hover { background: var(--sys-fill-2); }
-
-/* iOS tab bar */
-.ios-tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  background: color-mix(in srgb, var(--sys-bg-elev) calc(var(--mat-alpha) * 100%), transparent);
-  -webkit-backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  border-top: 0.5px solid var(--line); padding: 7px 4px calc(8px + env(safe-area-inset-bottom));
-}
-.ios-tab { border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; letter-spacing: -0.01em; color: var(--sys-label-2); padding: 4px 2px; border-radius: 10px; text-decoration: none; transition: color var(--fast) var(--ease); }
-.ios-tab.on { color: var(--tint); }
-.ios-tab:active { opacity: 0.6; }
-
-/* iOS action sheet (More) */
-.ios-sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.32); display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; gap: 8px; animation: ax-fadein var(--base) var(--ease); }
-.ios-sheet { background: color-mix(in srgb, var(--sys-bg-elev) 96%, transparent); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); border-radius: 16px; overflow: hidden; animation: ax-sheetup var(--base) var(--ease-spring); }
-.ios-sheet__hd { text-align: center; font-size: 12.5px; color: var(--sys-label-2); padding: 13px 16px 7px; font-weight: 600; }
-.ios-sheet__row { width: 100%; display: flex; align-items: center; gap: 13px; padding: 15px 18px; border: 0; background: transparent; font-size: 16px; color: var(--sys-label); border-top: 0.5px solid var(--line); text-decoration: none; transition: background var(--fast); }
-.ios-sheet__row:active { background: var(--sys-fill); }
-.ios-sheet__ic { width: 30px; height: 30px; border-radius: 8px; background: var(--tint-fill); color: var(--tint-text); display: grid; place-items: center; flex: none; }
-.ios-sheet__cancel { width: 100%; padding: 16px; border: 0; border-radius: 16px; background: color-mix(in srgb, var(--sys-bg-elev) 96%, transparent); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); font-size: 17px; font-weight: 700; color: var(--tint); }
-
-/* ---------------- macOS toolbar + sidebar (desktop) ---------------- */
-.mac-toolbar {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 30; height: 52px;
-  display: flex; align-items: center; gap: 14px; padding: 0 18px;
-  background: color-mix(in srgb, var(--sys-bg-elev) calc(var(--mat-alpha) * 100%), transparent);
-  -webkit-backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  border-bottom: 0.5px solid var(--line);
-}
-.mac-toolbar__title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; color: var(--sys-label); line-height: 1.1; }
-.mac-toolbar__title small { display: block; font-weight: 500; font-size: 11px; color: var(--sys-label-2); letter-spacing: 0; }
-.mac-toolbar__spacer { flex: 1; }
-.mac-sidebar {
-  position: fixed; top: 52px; left: 0; bottom: 0; width: 230px; z-index: 28; padding: 14px 10px; overflow-y: auto;
-  background: color-mix(in srgb, var(--sys-bg-grouped) calc(var(--mat-alpha) * 100%), transparent);
-  -webkit-backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  backdrop-filter: blur(var(--mat-blur)) saturate(var(--mat-sat));
-  border-right: 0.5px solid var(--line);
-}
-.mac-sidebar__grouplabel { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sys-label-3); padding: 12px 10px 6px; }
-.mac-navitem { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 1px; border: 0; background: transparent; border-radius: 8px; color: var(--sys-label); font-size: 14px; font-weight: 500; text-align: left; text-decoration: none; transition: background var(--fast) var(--ease); }
-.mac-navitem:hover { background: color-mix(in srgb, var(--sys-label) 8%, transparent); }
-.mac-navitem.on { background: var(--tint); color: var(--tint-on); }
-.mac-navitem.on .mac-navitem__ic { color: var(--tint-on); }
-.mac-navitem__ic { color: var(--sys-label-2); display: grid; place-items: center; flex: none; }
-
-/* neutral round chrome icon button (toolbar appearance toggle / gear) */
-.chrome-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--sys-fill); color: var(--sys-label); display: grid; place-items: center; transition: background var(--fast) var(--ease); text-decoration: none; flex: none; }
-.chrome-btn:hover { background: var(--sys-fill-2); }
-
-/* =========================================================================
-   Preferences panel
-   ========================================================================= */
-.tweaks-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, 0.32); display: grid; place-items: center; padding: 16px; animation: ax-fadein var(--base) var(--ease); }
-.tweaks { width: 100%; max-width: 340px; background: var(--sys-bg-elev); border-radius: 18px; box-shadow: var(--shadow-lg); overflow: hidden; animation: ax-sheetup var(--base) var(--ease-spring); }
-.tweaks__hd { display: flex; align-items: center; justify-content: space-between; padding: 15px 16px 15px 18px; border-bottom: 0.5px solid var(--line); }
-.tweaks__hd b { font-size: 17px; font-weight: 700; }
-.tweaks__body { padding: 8px 18px 20px; }
-.tweaks__group { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sys-label-3); margin: 16px 0 10px; }
-.tweaks__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
-.tweaks__row label { font-size: 15px; }
-
-/* iOS switch */
-.switch { width: 51px; height: 31px; border-radius: 999px; background: var(--sys-fill-2); border: 0; position: relative; transition: background var(--base) var(--ease); flex: none; }
-.switch.on { background: var(--sys-green); }
-.switch span { position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); transition: transform var(--base) var(--ease-spring); }
-.switch.on span { transform: translateX(20px); }
-
-/* accent swatches */
-.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.swatch-btn { height: 46px; border-radius: 12px; border: 2px solid transparent; cursor: pointer; display: grid; place-items: center; color: #fff; }
-.swatch-btn.on { border-color: var(--sys-label); }
-
-/* segmented control */
-.segmented { display: flex; width: 100%; background: var(--sys-fill); border-radius: 9px; padding: 2px; gap: 2px; }
-.segmented button { flex: 1; border: 0; background: transparent; color: var(--sys-label-2); font-weight: 600; font-size: 13.5px; padding: 8px 10px; border-radius: 7px; transition: all var(--base) var(--ease); }
-.segmented button.on { background: var(--sys-bg-elev); color: var(--sys-label); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14); }
+/* simple KPI grid (2-up phone, 4-up desktop) for standalone KPI cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 1024px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* =========================================================================
    ╔═══════════════════════════════════════════════════════════════════╗
@@ -514,6 +175,9 @@ body {
 .muted { color: var(--text-subtle); }
 .faint { color: var(--text-faint); }
 .spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.hairline { height: 1px; background: var(--border-subtle); border: 0; margin: 0; }
 
 /* ---------------- Buttons ---------------- */
 .btn {
@@ -878,3 +542,28 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .setrow__t { font-weight: 600; font-size: var(--fs-body); color: var(--ink); }
 .setrow__d { font-size: var(--fs-meta); color: var(--text-subtle); margin-top: 1px; }
 .setrow__chev { color: var(--text-faint); flex: none; }
+
+/* =========================================================================
+   ACCESSIBILITY + PRINT (slice 9)
+   ========================================================================= */
+/* Visible keyboard focus on every interactive element. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Prevent iOS Safari from zooming when a form field is focused (16px floor). */
+@media (max-width: 899px) {
+  .input, .select, .textarea { font-size: 16px; }
+}
+
+/* Print: drop all app chrome so an invoice prints clean on white. */
+@media print {
+  .rd-appbar, .tabbar, .sidebar, .dtoolbar, .sheet-backdrop, .prefs-backdrop, .form-save, .no-print {
+    display: none !important;
+  }
+  .app-main { margin: 0 !important; max-width: none !important; padding: 0 !important; }
+  body { background: #fff !important; }
+  .invoice { border: 0 !important; box-shadow: none !important; }
+}

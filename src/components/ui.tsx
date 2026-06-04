@@ -64,9 +64,10 @@ export function ChannelBadge({ name, dot = true }: { name: string; dot?: boolean
   );
 }
 
-/* ---------------- Status pill ---------------- */
+/* ---------------- Status pill (maps onto the new badge system) ---------------- */
+const PILL_MAP: Record<string, string> = { good: "badge--good", warn: "badge--warn", danger: "badge--danger", ink: "badge--neutral", teal: "badge--paid" };
 export function StatusPill({ kind, children }: { kind: "good" | "warn" | "danger" | "ink" | "teal"; children: ReactNode }) {
-  return <span className={`pill pill--${kind}`}>{children}</span>;
+  return <span className={`badge ${PILL_MAP[kind]}`}>{children}</span>;
 }
 
 /* ---------------- Page header ---------------- */
@@ -98,15 +99,15 @@ export function SectionLabel({ children, count, action }: { children: ReactNode;
 }
 
 /* ---------------- KPI card ---------------- */
-const TONE_BG: Record<string, string> = { good: "var(--good-50)", warn: "var(--warn-50)", teal: "var(--teal-50)", danger: "var(--danger-50)" };
-const TONE_FG: Record<string, string> = { good: "var(--good-700)", warn: "var(--warn-700)", teal: "var(--teal-700)", danger: "var(--danger-700)" };
+const TONE_BG: Record<string, string> = { good: "var(--green-bg)", warn: "var(--amber-bg)", teal: "var(--accent-bg)", danger: "var(--red-bg)" };
+const TONE_FG: Record<string, string> = { good: "var(--green-text)", warn: "var(--amber-text)", teal: "var(--accent-text)", danger: "var(--red-text)" };
 export function KPI({ value, label, sub, tone, icon }: { value: ReactNode; label: string; sub?: string; tone?: "good" | "warn" | "teal" | "danger"; icon?: string }) {
   return (
-    <div className="card" style={{ padding: 18, background: tone ? TONE_BG[tone] : "var(--paper)", borderColor: tone ? "transparent" : "var(--line)" }}>
-      {icon && <div style={{ color: tone ? TONE_FG[tone] : "var(--teal-700)", marginBottom: 8 }}><Icon name={icon} size={20} /></div>}
-      <div className="kpi__value num" style={{ color: tone ? TONE_FG[tone] : "var(--ink)" }}>{value}</div>
-      <div className="kpi__label">{label}</div>
-      {sub && <div className="kpi__sub">{sub}</div>}
+    <div className="card" style={{ padding: 18, background: tone ? TONE_BG[tone] : "var(--surface)", borderColor: tone ? "transparent" : "var(--border)" }}>
+      {icon && <div style={{ color: tone ? TONE_FG[tone] : "var(--accent-text)", marginBottom: 8 }}><Icon name={icon} size={20} /></div>}
+      <div className="num" style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1, color: tone ? TONE_FG[tone] : "var(--ink)" }}>{value}</div>
+      <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 6 }}>{label}</div>
+      {sub && <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-faint)", marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -139,7 +140,7 @@ export function RangeForm({ from, to }: { from: string; to: string }) {
           <label className="field-label">To</label>
           <input className="input" type="date" name="to" defaultValue={to} />
         </div>
-        <button className="btn btn--dark">Apply</button>
+        <button className="btn btn--ghost">Apply</button>
       </div>
     </form>
   );
@@ -151,11 +152,11 @@ export function GuestRow({ name, meta, channel, right, href }: { name: string; m
     <>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 15.5 }}>{name}</div>
-        {meta && <div style={{ fontSize: 12.5, color: "var(--subtle)", marginTop: 3 }}>{meta}</div>}
+        {meta && <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3 }}>{meta}</div>}
       </div>
       <div className="col" style={{ alignItems: "flex-end", gap: 5 }}>
         {channel && <ChannelBadge name={channel} />}
-        {right && <span style={{ fontSize: 12.5, color: "var(--subtle)", fontWeight: 600 }}>{right}</span>}
+        {right && <span style={{ fontSize: 12.5, color: "var(--text-subtle)", fontWeight: 600 }}>{right}</span>}
       </div>
     </>
   );

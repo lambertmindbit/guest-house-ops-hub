@@ -77,7 +77,7 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
           {busy ? "Working…" : "Sync now"}
         </button>
       </div>
-      <p style={{ fontSize: 13.5, color: "var(--subtle)", marginBottom: 14, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 13.5, color: "var(--text-subtle)", marginBottom: 14, lineHeight: 1.5 }}>
         Paste the iCal link each OTA gives you for a room. Imported dates show as blocks on the calendar so they can&apos;t be double-booked.
       </p>
 
@@ -89,7 +89,7 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
       )}
 
       <form onSubmit={addFeed} className="card" style={{ padding: 16, marginBottom: 16 }}>
-        {error && <p style={{ color: "var(--danger-700)", fontSize: 13.5, marginBottom: 10 }}>{error}</p>}
+        {error && <p style={{ color: "var(--red-text)", fontSize: 13.5, marginBottom: 10 }}>{error}</p>}
         <div className="form-grid" style={{ marginBottom: 10 }}>
           <div>
             <label className="field-label">Room</label>
@@ -107,7 +107,7 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
             <input className="input" required type="url" placeholder="https://… iCal link from the OTA" value={url} onChange={(e) => setUrl(e.target.value)} />
           </div>
         </div>
-        <button type="submit" disabled={busy} className="btn btn--outline btn--sm">Add feed</button>
+        <button type="submit" disabled={busy} className="btn btn--ghost btn--sm">Add feed</button>
       </form>
 
       {feeds.length === 0 ? (
@@ -119,20 +119,20 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
               <div className="row" style={{ justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 600 }}>
-                    {f.label} <span style={{ color: "var(--subtle)", fontWeight: 500 }}>· Room {f.roomLabel}</span>
+                    {f.label} <span style={{ color: "var(--text-subtle)", fontWeight: 500 }}>· Room {f.roomLabel}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.url}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.url}</div>
                   <div style={{ marginTop: 4, fontSize: 12 }}>
                     {f.lastError ? (
-                      <span style={{ color: "var(--danger-700)" }}>Error: {f.lastError}</span>
+                      <span style={{ color: "var(--red-text)" }}>Error: {f.lastError}</span>
                     ) : f.lastSyncedAt ? (
-                      <span style={{ color: "var(--subtle)" }}>Last synced {new Date(f.lastSyncedAt).toLocaleString()}</span>
+                      <span style={{ color: "var(--text-subtle)" }}>Last synced {new Date(f.lastSyncedAt).toLocaleString()}</span>
                     ) : (
-                      <span style={{ color: "var(--subtle)" }}>Not synced yet</span>
+                      <span style={{ color: "var(--text-subtle)" }}>Not synced yet</span>
                     )}
                   </div>
                 </div>
-                <button onClick={() => remove(f.id)} className="btn btn--danger-outline btn--sm" style={{ flex: "none" }}>Remove</button>
+                <button onClick={() => remove(f.id)} className="btn btn--danger btn--sm" style={{ flex: "none" }}>Remove</button>
               </div>
             </div>
           ))}

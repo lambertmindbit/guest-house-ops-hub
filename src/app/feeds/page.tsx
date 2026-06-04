@@ -23,7 +23,7 @@ export default async function FeedsPage() {
 
   return (
     <main className="app-main">
-      <div className="shimmer">
+      <div className="entrance">
         <PageHead title="Export to OTAs" sub="Paste a room’s link into the OTA’s “import calendar / iCal sync” setting so it can see when that room is booked. Links are read-only and contain a secret token — share them only with the OTA." />
 
         {!token ? (
@@ -37,10 +37,10 @@ export default async function FeedsPage() {
               return (
                 <div key={room.id} className="card" style={{ padding: 14 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-                    Room {room.label} <span style={{ color: "var(--subtle)", fontWeight: 500 }}>· {room.roomType.name}</span>
+                    Room {room.label} <span style={{ color: "var(--text-subtle)", fontWeight: 500 }}>· {room.roomType.name}</span>
                   </div>
                   <div className="row" style={{ gap: 8 }}>
-                    <code style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 10, padding: "9px 11px", fontSize: 12, color: "var(--deep-teal)", fontFamily: "var(--mono)" }}>
+                    <code style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 10, padding: "9px 11px", fontSize: 12, color: "var(--text-muted)", fontFamily: "var(--font-mono), ui-monospace, monospace" }}>
                       {url}
                     </code>
                     <CopyButton value={url} />

@@ -69,14 +69,14 @@ export function ExpensesPanel({ expenses, total }: { expenses: ExpenseRow[]; tot
       <div className="row" style={{ justifyContent: "space-between", margin: "28px 0 14px" }}>
         <div className="row" style={{ gap: 8 }}>
           <span style={{ fontWeight: 700, fontSize: 15 }}>Expenses</span>
-          <span style={{ fontSize: 13, color: "var(--subtle)", fontWeight: 600 }}>{displayINR(total)} this period</span>
+          <span style={{ fontSize: 13, color: "var(--text-subtle)", fontWeight: 600 }}>{displayINR(total)} this period</span>
         </div>
-        <button onClick={() => { setAdding(!adding); setError(null); }} className="btn btn--outline btn--sm">+ Add expense</button>
+        <button onClick={() => { setAdding(!adding); setError(null); }} className="btn btn--ghost btn--sm">+ Add expense</button>
       </div>
 
       {adding && (
         <form onSubmit={add} className="card" style={{ padding: 16, marginBottom: 12 }}>
-          {error && <p style={{ color: "var(--danger-700)", fontSize: 13, margin: "0 0 10px" }}>{error}</p>}
+          {error && <p style={{ color: "var(--red-text)", fontSize: 13, margin: "0 0 10px" }}>{error}</p>}
           <div className="form-grid" style={{ gap: 12 }}>
             <div>
               <label className="field-label">Date</label>
@@ -120,13 +120,13 @@ export function ExpensesPanel({ expenses, total }: { expenses: ExpenseRow[]; tot
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="row" style={{ gap: 7 }}>
                   <span style={{ fontWeight: 600, fontSize: 14.5 }}>{CAT_LABEL[e.category] ?? e.category}</span>
-                  {e.note && <span style={{ fontSize: 12.5, color: "var(--subtle)" }}>· {e.note}</span>}
+                  {e.note && <span style={{ fontSize: 12.5, color: "var(--text-subtle)" }}>· {e.note}</span>}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--subtle)", marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: "var(--text-subtle)", marginTop: 2 }}>
                   {e.date}{e.paymentMode ? ` · ${PAYMENT_MODE_LABELS[e.paymentMode] ?? e.paymentMode}` : ""}
                 </div>
               </div>
-              <span className="num" style={{ fontWeight: 700, color: "var(--clay-700)" }}>−{displayINR(e.amount)}</span>
+              <span className="num" style={{ fontWeight: 700, color: "var(--orange-text)" }}>−{displayINR(e.amount)}</span>
               <button onClick={() => remove(e.id)} className="btn btn--ghost btn--sm" aria-label="Delete expense" style={{ flex: "none", padding: "6px 8px" }}>
                 <Icon name="x" size={15} />
               </button>

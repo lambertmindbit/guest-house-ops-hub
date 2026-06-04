@@ -17,7 +17,7 @@ export function CopyButton({ value }: { value: string }) {
   }
 
   return (
-    <button onClick={copy} className="btn btn--outline btn--sm" style={{ flex: "none" }}>
+    <button onClick={copy} className="btn btn--ghost btn--sm" style={{ flex: "none" }}>
       <Icon name={copied ? "check" : "copy"} size={15} /> {copied ? "Copied" : "Copy"}
     </button>
   );

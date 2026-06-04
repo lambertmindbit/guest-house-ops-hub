@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
+import { displayShortDate } from "@/lib/format";
+import { parseDateOnly } from "@/lib/dates";
+
+// Shared, consistent date rendering (e.g. "1 Jun 2026") from a YYYY-MM-DD string.
+const fmtDate = (iso: string) => displayShortDate(parseDateOnly(iso));
 
 export type RoomType = {
   id: string;
@@ -524,7 +529,7 @@ export function PricingSection({ policy, seasons }: { policy: Policy; seasons: S
             <ListItem
               key={season.id}
               title={season.name}
-              meta={`${season.startDate} → ${season.endDate} · ${season.adjustPct > 0 ? "+" : ""}${season.adjustPct}%`}
+              meta={`${fmtDate(season.startDate)} – ${fmtDate(season.endDate)} · ${season.adjustPct > 0 ? "+" : ""}${season.adjustPct}%`}
               actions={<RowActions onEdit={() => startEditSeason(season)} onDelete={() => removeSeason(season.id)} />}
             />
           ))}
@@ -594,7 +599,7 @@ export function BlocksSection({ blocks, rooms }: { blocks: Block[]; rooms: Room[
             <ListItem
               key={b.id}
               title={`Room ${b.roomLabel}`}
-              meta={`${b.startDate} → ${b.endDate}${b.reason ? ` · ${b.reason}` : ""}`}
+              meta={`${fmtDate(b.startDate)} – ${fmtDate(b.endDate)}${b.reason ? ` · ${b.reason}` : ""}`}
               actions={<button onClick={() => remove(b)} className="btn btn--quiet btn--sm" style={{ color: "var(--red-text)", flex: "none" }}><Icon name="trash" size={15} /> Remove</button>}
             />
           ))}

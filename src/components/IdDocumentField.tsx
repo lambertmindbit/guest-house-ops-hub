@@ -20,9 +20,9 @@ export function IdDocumentField({
 
   if (!configured) {
     return (
-      <div className="card" style={{ padding: 14, marginTop: 12, background: "var(--sand)" }}>
+      <div className="card" style={{ padding: 14, marginTop: 12, background: "var(--surface-2)" }}>
         <div style={{ fontWeight: 600, fontSize: 13.5 }}>ID document upload</div>
-        <div style={{ fontSize: 12.5, color: "var(--subtle)", marginTop: 3, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3, lineHeight: 1.5 }}>
           Not configured. Create a private Supabase Storage bucket and set the storage env vars to enable scanned-ID uploads. See <code>docs/SETUP.md</code>.
         </div>
       </div>
@@ -61,19 +61,19 @@ export function IdDocumentField({
       <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
         <div>
           <div style={{ fontWeight: 600, fontSize: 13.5 }}>ID document</div>
-          <div style={{ fontSize: 12.5, color: "var(--subtle)", marginTop: 3 }}>
+          <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3 }}>
             {hasDocument ? "On file (private)" : "JPG, PNG, WEBP or PDF · max 5 MB"}
           </div>
-          {error && <div style={{ color: "var(--danger-700)", fontSize: 12.5, marginTop: 4 }}>{error}</div>}
+          {error && <div style={{ color: "var(--red-text)", fontSize: 12.5, marginTop: 4 }}>{error}</div>}
         </div>
         <div className="row" style={{ gap: 6, flex: "none" }}>
           {hasDocument && (
             <>
               <button onClick={view} className="btn btn--ghost btn--sm">View</button>
-              <button onClick={remove} className="btn btn--danger-outline btn--sm">Remove</button>
+              <button onClick={remove} className="btn btn--danger btn--sm">Remove</button>
             </>
           )}
-          <button onClick={() => fileRef.current?.click()} disabled={busy} className="btn btn--outline btn--sm">
+          <button onClick={() => fileRef.current?.click()} disabled={busy} className="btn btn--ghost btn--sm">
             <Icon name="plus" size={15} /> {busy ? "Uploading…" : hasDocument ? "Replace" : "Upload"}
           </button>
         </div>

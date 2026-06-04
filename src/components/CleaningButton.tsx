@@ -20,11 +20,11 @@ export function CleaningButton({ roomId, markCleaned }: { roomId: string; markCl
   }
 
   return markCleaned ? (
-    <button onClick={update} disabled={busy} className="btn btn--good" style={{ flex: "none" }}>
+    <button onClick={update} disabled={busy} className="btn btn--success" style={{ flex: "none" }}>
       <Icon name="check" size={17} /> {busy ? "…" : "Mark clean"}
     </button>
   ) : (
-    <button onClick={update} disabled={busy} className="btn btn--outline btn--sm" style={{ flex: "none" }}>
+    <button onClick={update} disabled={busy} className="btn btn--ghost btn--sm" style={{ flex: "none" }}>
       {busy ? "…" : "Needs cleaning"}
     </button>
   );

@@ -31,7 +31,7 @@ export default async function InboxPage() {
 
   return (
     <main className="app-main" style={{ maxWidth: 720 }}>
-      <div className="shimmer">
+      <div className="entrance">
         <PageHead title="Inbox" sub="Paste an OTA confirmation email, check the parsed details, then create the booking." />
         <InboxReview data={data} />
       </div>
