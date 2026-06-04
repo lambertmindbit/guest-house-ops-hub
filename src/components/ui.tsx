@@ -14,6 +14,8 @@ const PATHS: Record<string, ReactNode> = {
   chevronR: (<><path d="m9 6 6 6-6 6" /></>),
   chevronL: (<><path d="m15 6-6 6 6 6" /></>),
   arrowR: (<><path d="M5 12h14M13 6l6 6-6 6" /></>),
+  arrowDown: (<><path d="M12 5v14M19 12l-7 7-7-7" /></>),
+  arrowUp: (<><path d="M12 19V5M5 12l7-7 7 7" /></>),
   search: (<><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>),
   wallet: (<><rect x="3" y="6" width="18" height="13" rx="2.5" /><path d="M3 9h18M16 13h2" /></>),
   chart: (<><path d="M4 20V4M4 20h16" /><rect x="7.5" y="11" width="3" height="6" /><rect x="13" y="7.5" width="3" height="9.5" /></>),
@@ -54,7 +56,7 @@ const CHANNEL_CLS: Record<string, string> = {
 export function ChannelBadge({ name, dot = true }: { name: string; dot?: boolean }) {
   return (
     <span className={`ch ${CHANNEL_CLS[name] ?? "ch--direct"}`}>
-      {dot && <span className="ch-dot" />}
+      {dot && <span className="dot" />}
       {name}
     </span>
   );

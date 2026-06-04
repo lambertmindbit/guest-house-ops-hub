@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
 import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
-import { PageHead, SectionLabel, KPI, AlertBanner, GuestRow } from "@/components/ui";
+import { ChannelBadge, Icon } from "@/components/ui";
+import { Collapsible } from "@/components/Collapsible";
 import { displayDate, displayShortDate } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
@@ -15,85 +17,137 @@ export default async function DashboardPage() {
     getHousekeeping(),
   ]);
   const heading = displayDate(parseDateOnly(s.date));
+  const conflictN = conflicts.length;
+  const cleanN = housekeeping.toCleanCount;
 
   return (
     <main className="app-main">
-      <div className="shimmer">
-        <PageHead title="Today" sub={heading} />
+      <div className="entrance">
+        <div className="pagehead">
+          <div className="display">Today</div>
+          <div className="pagehead__sub">{heading}</div>
+        </div>
 
-        {(conflicts.length > 0 || housekeeping.toCleanCount > 0) && (
-          <div className="col" style={{ gap: 12, marginTop: 18 }}>
-            {conflicts.length > 0 && (
-              <AlertBanner tone="danger" icon="alert" href="/conflicts">
-                <b style={{ fontWeight: 700 }}>
-                  {conflicts.length} booking conflict{conflicts.length === 1 ? "" : "s"}
-                </b>{" "}
-                need{conflicts.length === 1 ? "s" : ""} attention
-              </AlertBanner>
-            )}
-            {housekeeping.toCleanCount > 0 && (
-              <AlertBanner tone="warn" icon="clean" href="/housekeeping">
-                <b style={{ fontWeight: 700 }}>
-                  {housekeeping.toCleanCount} room{housekeeping.toCleanCount === 1 ? "" : "s"}
-                </b>{" "}
-                to clean
-              </AlertBanner>
-            )}
-          </div>
+        {conflictN > 0 && (
+          <Link href="/conflicts" className="banner banner--danger">
+            <span className="banner__icon"><Icon name="alert" size={18} /></span>
+            <span className="banner__txt">
+              <b>{conflictN} booking conflict{conflictN === 1 ? "" : "s"}</b>{" "}
+              {conflictN === 1 ? "needs" : "need"} attention
+            </span>
+            <span className="banner__arrow"><Icon name="arrowR" size={17} /></span>
+          </Link>
+        )}
+        {cleanN > 0 && (
+          <Link href="/housekeeping" className="banner banner--warn">
+            <span className="banner__icon"><Icon name="clean" size={18} /></span>
+            <span className="banner__txt">
+              <b>{cleanN} room{cleanN === 1 ? "" : "s"}</b> to clean
+            </span>
+            <span className="banner__arrow"><Icon name="arrowR" size={17} /></span>
+          </Link>
         )}
 
-        <div className="kpi-grid" style={{ marginTop: 16 }}>
-          <KPI value={`${s.occupancyPct}%`} label="Occupancy" sub={`${s.occupiedRooms}/${s.totalRooms} rooms`} icon="bed" tone="teal" />
-          <KPI value={s.inHouse.length} label="In-house" icon="guests" />
-          <KPI value={s.checkInsToday.length} label="Check-ins" icon="arrowR" />
-          <KPI value={s.checkOutsToday.length} label="Check-outs" icon="logout" />
+        <div style={{ height: 16 }} />
+
+        {/* Verdict-first KPI strip: one container, hairline panels, navy occupancy. */}
+        <div className="kpi-strip">
+          <div className="kpi-panel kpi-panel--verdict">
+            <div className="kpi-eyebrow">Occupancy</div>
+            <div className="kpi-num">{s.occupancyPct}%</div>
+            <div className="kpi-ctx">{s.occupiedRooms} of {s.totalRooms} rooms</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">In-house</div>
+            <div className="kpi-num">{s.inHouse.length}</div>
+            <div className="kpi-ctx">guests tonight</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">Check-ins</div>
+            <div className="kpi-num">{s.checkInsToday.length}</div>
+            <div className="kpi-ctx">expected today</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">Check-outs</div>
+            <div className="kpi-num">{s.checkOutsToday.length}</div>
+            <div className="kpi-ctx">leaving today</div>
+          </div>
         </div>
 
-        <div className="two-col">
-          <div>
-            <Section title="Check-ins today" items={s.checkInsToday} empty="No arrivals today." right={(r) => (r.checkedInAt ? "Arrived ✓" : "Awaiting")} />
-            <Section title="Check-outs today" items={s.checkOutsToday} empty="No departures today." right={(r) => (r.checkedOutAt ? "Departed ✓" : "Due out")} />
-          </div>
-          <div>
-            <Section title="In-house now" items={s.inHouse} empty="Nobody checked in." right={(r) => (r.checkedInAt ? "In-house" : "Not arrived")} />
-            <Section title="Arrivals next 7 days" items={s.arrivalsNext7} empty="Nothing booked yet." right={(r) => displayShortDate(r.checkIn)} />
-          </div>
-        </div>
+        {/* Arrivals / Departures are the day's to-do. */}
+        <SectionHead title="Arrivals today" count={s.checkInsToday.length} />
+        <List items={s.checkInsToday} empty="No arrivals today." showTime showArrived />
+
+        <SectionHead title="Departures today" count={s.checkOutsToday.length} />
+        <List items={s.checkOutsToday} empty="No departures today." showDeparted />
+
+        {/* In-house is the only full list of who's staying — collapsed so it
+            no longer duplicates Arrivals at a glance. */}
+        <Collapsible title="In-house now" count={s.inHouse.length}>
+          <List items={s.inHouse} empty="Nobody checked in." />
+        </Collapsible>
+
+        <SectionHead
+          title="Next 7 days"
+          count={s.arrivalsNext7.length}
+          action={<Link href="/calendar" className="section-label__a">Calendar <Icon name="arrowR" size={13} /></Link>}
+        />
+        <List items={s.arrivalsNext7.slice(0, 3)} empty="Nothing booked yet." showDate />
+        {s.arrivalsNext7.length > 3 && (
+          <Link href="/calendar" className="section-label__a" style={{ display: "inline-flex", marginTop: 12 }}>
+            +{s.arrivalsNext7.length - 3} more arriving <Icon name="arrowR" size={13} />
+          </Link>
+        )}
       </div>
     </main>
   );
 }
 
-function Section({
-  title,
+function SectionHead({ title, count, action }: { title: string; count: number; action?: ReactNode }) {
+  return (
+    <div className="section-label">
+      <div className="section-label__l">
+        <span className="section-label__t">{title}</span>
+        <span className="section-label__c">{count}</span>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function List({
   items,
   empty,
-  right,
+  showTime,
+  showArrived,
+  showDeparted,
+  showDate,
 }: {
-  title: string;
   items: SummaryReservation[];
   empty: string;
-  right?: (r: SummaryReservation) => ReactNode;
+  showTime?: boolean;
+  showArrived?: boolean;
+  showDeparted?: boolean;
+  showDate?: boolean;
 }) {
+  if (items.length === 0) return <div className="empty">{empty}</div>;
   return (
     <>
-      <SectionLabel count={`(${items.length})`}>{title}</SectionLabel>
-      {items.length === 0 ? (
-        <div className="empty">{empty}</div>
-      ) : (
-        <div className="col" style={{ gap: 12 }}>
-          {items.map((r) => (
-            <GuestRow
-              key={r.id}
-              name={r.guest.name}
-              meta={`Room ${r.room.label} · ${r.room.roomType.name}${r.arrivalTime ? ` · arr ${r.arrivalTime}` : ""}`}
-              channel={r.channel.name}
-              right={right?.(r)}
-              href={`/reservations/${r.id}`}
-            />
-          ))}
-        </div>
-      )}
+      {items.map((r) => (
+        <Link key={r.id} href={`/reservations/${r.id}`} className="rowcard">
+          {showTime && <span className="rowcard__time">{r.arrivalTime || "—"}</span>}
+          <div className="rowcard__main">
+            <div className="rowcard__name">{r.guest.name}</div>
+            <div className="rowcard__meta">Room {r.room.label} · {r.room.roomType.name}</div>
+          </div>
+          <div className="rowcard__right">
+            <ChannelBadge name={r.channel.name} />
+            {showArrived && r.checkedInAt && <span className="badge badge--good">Arrived</span>}
+            {showDeparted && r.checkedOutAt && <span className="badge badge--good">Departed</span>}
+            {showDate && <span className="rowcard__time">{displayShortDate(r.checkIn)}</span>}
+          </div>
+        </Link>
+      ))}
     </>
   );
 }
