@@ -791,3 +791,65 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .switch.on span { transform: translateX(18px); }
 
 @media (prefers-reduced-motion: reduce) { .sheet, .sheet-backdrop, .prefs, .prefs-backdrop { animation: none !important; } }
+
+/* =========================================================================
+   REDESIGN CALENDAR (slice 4) — Day list (phone default) + Grid (desktop).
+   Conflict renders loud red in both. Ported from design/redesign/shell.css.
+   ========================================================================= */
+/* ---- Day list ---- */
+.daystrip { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 10px; -webkit-overflow-scrolling: touch; }
+.daystrip::-webkit-scrollbar { height: 0; }
+.daycell { flex: none; width: 46px; padding: 8px 0; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface);
+  text-align: center; text-decoration: none; transition: all var(--fast); cursor: pointer; }
+.daycell__dow { font-size: var(--fs-eyebrow); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); }
+.daycell__d { font-size: var(--fs-h3); font-weight: 700; color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.daycell.on { background: var(--navy); border-color: var(--navy); }
+.daycell.on .daycell__dow { color: var(--mint); }
+.daycell.on .daycell__d { color: #fff; }
+.daycell.today:not(.on) { border-color: var(--accent); }
+.daycell__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); margin: 3px auto 0; }
+.daycell.on .daycell__dot { background: var(--mint); }
+
+.dayrow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--surface); text-decoration: none; color: inherit; }
+.dayrow + .dayrow { margin-top: 8px; }
+.dayrow__room { width: 52px; flex: none; }
+.dayrow__num { font-weight: 700; font-size: var(--fs-body); color: var(--ink); }
+.dayrow__type { font-size: var(--fs-eyebrow); color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+.dayrow__body { flex: 1; min-width: 0; }
+.dayrow__guest { font-weight: 600; font-size: var(--fs-small); color: var(--ink); }
+.dayrow__tags { display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.dayrow--vacant { background: var(--surface-2); border-style: dashed; }
+.dayrow--vacant .dayrow__body { color: var(--text-faint); font-size: var(--fs-small); font-weight: 500; }
+.dayrow--blocked { background: repeating-linear-gradient(135deg, var(--surface-2), var(--surface-2) 7px, var(--surface-3) 7px, var(--surface-3) 14px); }
+.dayrow--conflict { background: var(--red-bg); border-color: var(--red-border); border-width: 1.5px; }
+.dayrow--conflict .dayrow__guest { color: var(--red-text); }
+.miniflag { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-eyebrow); font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono), ui-monospace, monospace; }
+.miniflag--arr { background: var(--green-bg); color: var(--green-text); }
+.miniflag--dep { background: var(--orange-bg); color: var(--orange-text); }
+
+/* ---- Grid ---- */
+.calgrid-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-lg); -webkit-overflow-scrolling: touch; }
+.calgrid { border-collapse: collapse; width: max-content; min-width: 100%; font-size: var(--fs-meta); }
+.calgrid th, .calgrid td { border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
+.calgrid thead th { background: var(--surface-2); padding: 8px 6px; font-weight: 600; color: var(--text-subtle); text-align: center; min-width: 84px; white-space: nowrap; }
+.calgrid thead th.today { background: var(--accent-bg); color: var(--accent-text); }
+.calgrid th.roomcol { position: sticky; left: 0; z-index: 2; text-align: left; min-width: 92px; padding-left: 12px; }
+.calgrid td.roomcell { position: sticky; left: 0; z-index: 1; background: var(--surface); padding: 8px 12px; text-align: left; }
+.calgrid td.roomcell .n { font-weight: 700; color: var(--ink); font-size: var(--fs-small); }
+.calgrid td.roomcell .t { font-size: var(--fs-eyebrow); color: var(--text-faint); text-transform: uppercase; }
+.calcell { position: relative; height: 50px; padding: 6px 7px; vertical-align: middle; }
+.calcell--occ { background: var(--accent-bg); }
+.calcell a { text-decoration: none; }
+.calcell--occ .g { font-weight: 600; color: var(--ink); font-size: var(--fs-micro); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.calcell--occ .cdot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.calcell--blocked { background: repeating-linear-gradient(135deg, var(--surface-2), var(--surface-2) 6px, var(--surface-3) 6px, var(--surface-3) 12px); }
+.calcell--conflict { background: var(--red); }
+.calcell--conflict .g { color: #fff; font-weight: 700; }
+.cal-arr { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--green); }
+.cal-dep { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; background: var(--orange); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 2px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-micro); color: var(--text-muted); }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
