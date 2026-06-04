@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavShell } from "@/components/NavShell";
+import { getConflicts } from "@/lib/conflicts";
 
 // Redesign type system: Plus Jakarta Sans (UI/body), Fraunces (display titles),
 // JetBrains Mono (numerals / times / eyebrow micro-labels).
@@ -50,16 +51,24 @@ export const viewport: Viewport = {
 // Redesign knobs: appearance + tint (default teal) + density (default comfortable).
 const themeScript = `(function(){try{var d=document.documentElement,ls=localStorage;var ap=ls.getItem('ops-appearance')||'system';var eff=ap==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):ap;d.setAttribute('data-appearance',eff);d.setAttribute('data-tint',ls.getItem('ops-tint')||'teal');d.setAttribute('data-density',ls.getItem('ops-density')||'comfortable');}catch(e){}})();`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Conflict count powers the Conflicts nav badge. Tolerate DB hiccups → 0.
+  let conflictCount = 0;
+  try {
+    conflictCount = (await getConflicts()).length;
+  } catch {
+    conflictCount = 0;
+  }
+
   return (
     <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`}>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <NavShell />
+        <NavShell conflictCount={conflictCount} />
         {children}
       </body>
     </html>

@@ -5,57 +5,88 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
 
-const PRIMARY = [
-  { href: "/", label: "Today", icon: "today" },
-  { href: "/calendar", label: "Calendar", icon: "calendar" },
-  { href: "/guests", label: "Guests", icon: "guests" },
-  { href: "/housekeeping", label: "Housekeeping", icon: "clean" },
+// One config drives BOTH the phone tabs/sheet and the desktop sidebar.
+type NavId =
+  | "today" | "calendar" | "guests" | "housekeeping" | "pricing"
+  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "settings";
+
+const META: Record<NavId, { label: string; icon: string; href: string }> = {
+  today: { label: "Today", icon: "today", href: "/" },
+  calendar: { label: "Calendar", icon: "calendar", href: "/calendar" },
+  guests: { label: "Guests", icon: "guests", href: "/guests" },
+  // Kept the owner's earlier "Housekeeping" rename (the redesign guide says "Cleaning").
+  housekeeping: { label: "Housekeeping", icon: "clean", href: "/housekeeping" },
+  pricing: { label: "Pricing", icon: "tag", href: "/pricing" },
+  finance: { label: "Finance", icon: "wallet", href: "/finance" },
+  analytics: { label: "Analytics", icon: "chart", href: "/analytics" },
+  conflicts: { label: "Conflicts", icon: "alert", href: "/conflicts" },
+  inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
+  feeds: { label: "Feeds", icon: "link", href: "/feeds" },
+  settings: { label: "Settings", icon: "settings", href: "/settings" },
+};
+
+const PRIMARY: NavId[] = ["today", "calendar", "guests"];
+
+const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
+  { label: "Operate", items: ["today", "calendar", "guests", "housekeeping"] },
+  { label: "Money", items: ["pricing", "finance"] },
+  { label: "Insights", items: ["analytics", "conflicts"] },
+  { label: "Data", items: ["inbox", "feeds"] },
+  { label: "System", items: ["settings"] },
 ];
-const MORE = [
-  { href: "/pricing", label: "Pricing", icon: "tag" },
-  { href: "/finance", label: "Finance", icon: "wallet" },
-  { href: "/analytics", label: "Analytics", icon: "chart" },
-  { href: "/conflicts", label: "Conflicts", icon: "alert" },
-  { href: "/inbox", label: "Inbox", icon: "inbox" },
-  { href: "/feeds", label: "Feeds", icon: "link" },
-  { href: "/settings", label: "Settings", icon: "settings" },
+
+const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
+  { label: "Operations", items: ["housekeeping", "conflicts"] },
+  { label: "Money", items: ["pricing", "finance"] },
+  { label: "Insights", items: ["analytics"] },
+  { label: "Data & channels", items: ["inbox", "feeds"] },
+  { label: "System", items: ["settings"] },
 ];
-const ALL = [...PRIMARY, ...MORE];
 
 const TINTS = [
-  { key: "green", color: "#34c759" },
-  { key: "blue", color: "#007aff" },
-  { key: "indigo", color: "#5856d6" },
-  { key: "warm", color: "#0fa68e" },
+  { key: "teal", color: "#006b5f" },
+  { key: "navy", color: "#1e40af" },
+  { key: "blue", color: "#2563eb" },
+  { key: "violet", color: "#6d28d9" },
 ];
 
-type Prefs = { appearance: string; tint: string; material: string; btnshape: string };
+type Prefs = { appearance: string; tint: string; density: string };
 const STORE: Record<keyof Prefs, string> = {
   appearance: "ops-appearance",
   tint: "ops-tint",
-  material: "ops-material",
-  btnshape: "ops-btnshape",
+  density: "ops-density",
 };
 
-function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+// Which nav id "owns" the current route. Reservation routes map to Calendar.
+function activeId(pathname: string): NavId {
+  if (pathname === "/") return "today";
+  if (pathname.startsWith("/reservations")) return "calendar";
+  const hit = (Object.keys(META) as NavId[]).find(
+    (id) => id !== "today" && pathname.startsWith(META[id].href),
+  );
+  return hit ?? "today";
 }
 
-export function NavShell() {
+function toolbarTitle(pathname: string): string {
+  if (pathname === "/reservations/new") return "New booking";
+  if (pathname.startsWith("/reservations")) return "Reservation";
+  return META[activeId(pathname)].label;
+}
+
+export function NavShell({ conflictCount = 0 }: { conflictCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sheet, setSheet] = useState(false);
   const [panel, setPanel] = useState(false);
-  const [prefs, setPrefs] = useState<Prefs>({ appearance: "system", tint: "warm", material: "rich", btnshape: "rounded" });
+  const [prefs, setPrefs] = useState<Prefs>({ appearance: "system", tint: "teal", density: "comfortable" });
   const [effDark, setEffDark] = useState(false);
 
   useEffect(() => {
     const ls = localStorage;
     setPrefs({
       appearance: ls.getItem(STORE.appearance) ?? "system",
-      tint: ls.getItem(STORE.tint) ?? "warm",
-      material: ls.getItem(STORE.material) ?? "rich",
-      btnshape: ls.getItem(STORE.btnshape) ?? "rounded",
+      tint: ls.getItem(STORE.tint) ?? "teal",
+      density: ls.getItem(STORE.density) ?? "comfortable",
     });
     setEffDark(document.documentElement.getAttribute("data-appearance") === "dark");
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -84,7 +115,8 @@ export function NavShell() {
 
   if (pathname === "/login") return null;
 
-  const moreActive = MORE.some((m) => isActive(pathname, m.href));
+  const active = activeId(pathname);
+  const moreActive = !PRIMARY.includes(active);
   const toggleAppearance = () => setPref("appearance", effDark ? "light" : "dark");
 
   async function logout() {
@@ -96,128 +128,147 @@ export function NavShell() {
 
   return (
     <>
-      {/* ---------- iOS header (mobile) ---------- */}
-      <header className="ios-header only-mobile">
-        <div className="ios-nav">
-          <Link href="/" className="ios-nav__brand">
-            <span className="brand__mark"><Icon name="door" size={18} /></span>
-            <span className="ios-nav__name"><b>Ops Hub</b><span>Guest House</span></span>
+      {/* ---------- mobile: top app bar ---------- */}
+      <header className="rd-appbar rd-m">
+        <div className="rd-appbar__nav">
+          <Link href="/" className="rd-appbar__brand">
+            <span className="brandmark"><Icon name="door" size={17} /></span>
+            <span className="rd-appbar__name"><b>Ops Hub</b><span>Guest House</span></span>
           </Link>
-          <div className="row" style={{ gap: 6 }}>
-            <button className="ios-navbtn" onClick={toggleAppearance} aria-label="Toggle dark mode">
-              <Icon name={effDark ? "sun" : "moon"} size={19} />
-            </button>
-            <Link href="/reservations/new" className="ios-navbtn" aria-label="New reservation">
-              <Icon name="plus" size={20} />
-            </Link>
-          </div>
+          <button className="iconbtn" onClick={toggleAppearance} aria-label="Toggle dark mode">
+            <Icon name={effDark ? "sun" : "moon"} size={18} />
+          </button>
         </div>
       </header>
 
-      {/* ---------- macOS toolbar (desktop) ---------- */}
-      <div className="mac-toolbar only-desktop">
-        <span className="brand__mark"><Icon name="door" size={18} /></span>
-        <div className="mac-toolbar__title">Ops Hub<small>Guest House</small></div>
-        <div className="mac-toolbar__spacer" />
-        <button className="chrome-btn" onClick={toggleAppearance} aria-label="Toggle dark mode">
-          <Icon name={effDark ? "sun" : "moon"} size={18} />
-        </button>
-        <button className="chrome-btn" onClick={() => setPanel(true)} aria-label="Preferences">
-          <Icon name="settings" size={18} />
-        </button>
-        <Link href="/reservations/new" className="btn btn--primary btn--sm">
-          <Icon name="plus" size={16} /> New
-        </Link>
-      </div>
-
-      {/* ---------- macOS sidebar (desktop) ---------- */}
-      <aside className="mac-sidebar only-desktop">
-        <div className="mac-sidebar__grouplabel">Menu</div>
-        {ALL.map((t) => (
-          <Link key={t.href} href={t.href} className={`mac-navitem${isActive(pathname, t.href) ? " on" : ""}`}>
-            <span className="mac-navitem__ic"><Icon name={t.icon} size={18} /></span>
-            {t.label}
+      {/* ---------- mobile: bottom tab bar ---------- */}
+      <nav className="tabbar rd-m">
+        {PRIMARY.map((id) => (
+          <Link key={id} href={META[id].href} className={`tab${active === id ? " on" : ""}`}>
+            <Icon name={META[id].icon} size={22} />
+            {META[id].label}
           </Link>
         ))}
-        <div className="mac-sidebar__grouplabel">Account</div>
-        <button className="mac-navitem" onClick={logout}>
-          <span className="mac-navitem__ic"><Icon name="logout" size={18} /></span>
-          Log out
-        </button>
-      </aside>
-
-      {/* ---------- iOS tab bar (mobile) ---------- */}
-      <nav className="ios-tabbar only-mobile">
-        {PRIMARY.map((t) => (
-          <Link key={t.href} href={t.href} className={`ios-tab${isActive(pathname, t.href) ? " on" : ""}`}>
-            <Icon name={t.icon} size={23} />
-            {t.label}
+        <div className="tab__slot">
+          <Link href="/reservations/new" className="fab" aria-label="New booking">
+            <Icon name="plus" size={24} />
           </Link>
-        ))}
-        <button className={`ios-tab${moreActive || sheet ? " on" : ""}`} onClick={() => setSheet(true)}>
-          <Icon name="more" size={23} />
+        </div>
+        <button className={`tab${moreActive || sheet ? " on" : ""}`} onClick={() => setSheet(true)}>
+          <Icon name="more" size={22} />
           More
         </button>
       </nav>
 
-      {/* ---------- iOS action sheet (More) ---------- */}
+      {/* ---------- mobile: More sheet ---------- */}
       {sheet && (
-        <div className="ios-sheet-backdrop only-mobile" onClick={() => setSheet(false)}>
-          <div className="ios-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="ios-sheet__hd">More</div>
-            {MORE.map((m) => (
-              <Link key={m.href} href={m.href} className="ios-sheet__row" onClick={() => setSheet(false)}>
-                <span className="ios-sheet__ic"><Icon name={m.icon} size={18} /></span>
-                {m.label}
-              </Link>
+        <div className="sheet-backdrop rd-m" onClick={() => setSheet(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet__handle" />
+            {SHEET_GROUPS.map((g) => (
+              <div key={g.label}>
+                <div className="sheet__group">{g.label}</div>
+                {g.items.map((id) => (
+                  <Link key={id} href={META[id].href} className="sheet__row" onClick={() => setSheet(false)}>
+                    <span className="sheet__ic"><Icon name={META[id].icon} size={17} /></span>
+                    {META[id].label}
+                    {id === "conflicts" && conflictCount > 0 && (
+                      <span className="navitem__badge" style={{ marginLeft: "auto" }}>{conflictCount}</span>
+                    )}
+                    <Icon name="chevronR" size={16} className="sheet__chev" />
+                  </Link>
+                ))}
+              </div>
             ))}
-            <button className="ios-sheet__row" onClick={() => { setSheet(false); setPanel(true); }}>
-              <span className="ios-sheet__ic"><Icon name="settings" size={18} /></span>
+            <div className="sheet__group">Account</div>
+            <button className="sheet__row" onClick={() => { setSheet(false); setPanel(true); }}>
+              <span className="sheet__ic"><Icon name="settings" size={17} /></span>
               Preferences
             </button>
-            <button className="ios-sheet__row" onClick={logout}>
-              <span className="ios-sheet__ic"><Icon name="logout" size={18} /></span>
+            <button className="sheet__row" onClick={logout}>
+              <span className="sheet__ic"><Icon name="logout" size={17} /></span>
               Log out
             </button>
           </div>
-          <button className="ios-sheet__cancel" onClick={() => setSheet(false)}>Cancel</button>
+          <button className="sheet__cancel" onClick={() => setSheet(false)}>Close</button>
         </div>
       )}
 
-      {/* ---------- Preferences panel ---------- */}
+      {/* ---------- desktop: sidebar ---------- */}
+      <aside className="sidebar rd-d">
+        <Link href="/" className="sidebar__brand">
+          <span className="brandmark"><Icon name="door" size={17} /></span>
+          <span><b>Ops Hub</b><span>Guest House</span></span>
+        </Link>
+        {SIDEBAR_GROUPS.map((g) => (
+          <div key={g.label}>
+            <div className="sidebar__group">{g.label}</div>
+            {g.items.map((id) => (
+              <Link key={id} href={META[id].href} className={`navitem${active === id ? " on" : ""}`}>
+                <span className="navitem__ic"><Icon name={META[id].icon} size={17} /></span>
+                {META[id].label}
+                {id === "conflicts" && conflictCount > 0 && <span className="navitem__badge">{conflictCount}</span>}
+              </Link>
+            ))}
+          </div>
+        ))}
+        <div className="sidebar__spacer" />
+        <button className="navitem" onClick={() => setPanel(true)}>
+          <span className="navitem__ic"><Icon name="settings" size={17} /></span>
+          Preferences
+        </button>
+        <button className="navitem" onClick={logout}>
+          <span className="navitem__ic"><Icon name="logout" size={17} /></span>
+          Log out
+        </button>
+      </aside>
+
+      {/* ---------- desktop: top toolbar ---------- */}
+      <div className="dtoolbar rd-d">
+        <span className="dtoolbar__title">{toolbarTitle(pathname)}</span>
+        <div className="dtoolbar__spacer" />
+        <form action="/guests" className="dsearch">
+          <Icon name="search" size={15} />
+          <input name="q" placeholder="Search guests…" aria-label="Search guests" />
+        </form>
+        <button className="iconbtn" onClick={toggleAppearance} aria-label="Toggle dark mode">
+          <Icon name={effDark ? "sun" : "moon"} size={17} />
+        </button>
+        <Link href="/reservations/new" className="btn btn--primary btn--sm">
+          <Icon name="plus" size={15} /> New booking
+        </Link>
+      </div>
+
+      {/* ---------- Preferences popover ---------- */}
       {panel && (
-        <div className="tweaks-backdrop" onClick={() => setPanel(false)}>
-          <div className="tweaks" onClick={(e) => e.stopPropagation()}>
-            <div className="tweaks__hd">
+        <div className="prefs-backdrop" onClick={() => setPanel(false)}>
+          <div className="prefs" onClick={(e) => e.stopPropagation()}>
+            <div className="prefs__hd">
               <b>Preferences</b>
-              <button className="chrome-btn" onClick={() => setPanel(false)} aria-label="Close"><Icon name="x" size={17} /></button>
+              <button className="iconbtn" onClick={() => setPanel(false)} aria-label="Close"><Icon name="x" size={16} /></button>
             </div>
-            <div className="tweaks__body">
-              <div className="tweaks__group">Appearance</div>
-              <div className="tweaks__row">
-                <label>Dark mode</label>
-                <button className={`switch${effDark ? " on" : ""}`} onClick={toggleAppearance} aria-label="Dark mode"><span /></button>
+            <div className="prefs__body">
+              <div className="prefs__group">Appearance</div>
+              <div className="seg" style={{ width: "100%" }}>
+                {["light", "dark", "system"].map((a) => (
+                  <button key={a} style={{ flex: 1, textTransform: "capitalize" }} className={prefs.appearance === a ? "on" : ""} onClick={() => setPref("appearance", a)}>{a}</button>
+                ))}
               </div>
 
-              <div className="tweaks__group">Accent tint</div>
+              <div className="prefs__group">Accent</div>
               <div className="swatches">
                 {TINTS.map((t) => (
-                  <button key={t.key} className={`swatch-btn${prefs.tint === t.key ? " on" : ""}`} style={{ background: t.color }} onClick={() => setPref("tint", t.key)} aria-label={`${t.key} accent`}>
-                    {prefs.tint === t.key && <Icon name="check" size={18} />}
+                  <button key={t.key} className={`swatch${prefs.tint === t.key ? " on" : ""}`} style={{ background: t.color }} onClick={() => setPref("tint", t.key)} aria-label={`${t.key} accent`}>
+                    {prefs.tint === t.key && <Icon name="check" size={16} />}
                   </button>
                 ))}
               </div>
 
-              <div className="tweaks__group">Material</div>
-              <div className="segmented">
-                <button className={prefs.material === "rich" ? "on" : ""} onClick={() => setPref("material", "rich")}>Rich</button>
-                <button className={prefs.material === "crisp" ? "on" : ""} onClick={() => setPref("material", "crisp")}>Crisp</button>
-              </div>
-
-              <div className="tweaks__group">Button shape</div>
-              <div className="segmented">
-                <button className={prefs.btnshape === "rounded" ? "on" : ""} onClick={() => setPref("btnshape", "rounded")}>Rounded</button>
-                <button className={prefs.btnshape === "pill" ? "on" : ""} onClick={() => setPref("btnshape", "pill")}>Pill</button>
+              <div className="prefs__group">Density</div>
+              <div className="seg" style={{ width: "100%" }}>
+                {["comfortable", "compact"].map((d) => (
+                  <button key={d} style={{ flex: 1, textTransform: "capitalize" }} className={prefs.density === d ? "on" : ""} onClick={() => setPref("density", d)}>{d}</button>
+                ))}
               </div>
             </div>
           </div>
