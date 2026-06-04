@@ -853,3 +853,12 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 2px 0; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-micro); color: var(--text-muted); }
 .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/* =========================================================================
+   REDESIGN FORMS (slice 5) — thumb-reach sticky save on phone.
+   ========================================================================= */
+.form-save { margin-top: 18px; }
+@media (max-width: 899px) {
+  .form-save { position: sticky; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 5; }
+  .form-save .btn { box-shadow: var(--shadow-lg); }
+}
