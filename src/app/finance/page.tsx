@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getFinanceSummary, currentMonthRange } from "@/lib/finance";
 import { displayINR } from "@/lib/format";
-import { PageHead, SectionLabel, KPI, RangeForm, ChannelBadge, Icon } from "@/components/ui";
+import { PageHead, SectionLabel, RangeForm, ChannelBadge, Icon } from "@/components/ui";
 import { ExpensesPanel } from "@/components/ExpensesPanel";
 
 export const dynamic = "force-dynamic";
@@ -22,61 +22,71 @@ export default async function FinancePage({
 
   return (
     <main className="app-main">
-      <div className="shimmer">
+      <div className="entrance">
         <PageHead title="Finance" sub={`Bookings arriving ${from} – ${to} · ${t.bookings} booking${t.bookings === 1 ? "" : "s"}`} />
         <RangeForm from={from} to={to} />
 
         <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-          <a href={`/api/export/reservations.csv?from=${from}&to=${to}`} className="btn btn--outline btn--sm" download>
-            <Icon name="arrowR" size={15} /> Bookings CSV
+          <a href={`/api/export/reservations.csv?from=${from}&to=${to}`} className="btn btn--ghost btn--sm" download>
+            <Icon name="arrowDown" size={15} /> Bookings CSV
           </a>
-          <a href={`/api/export/payments.csv?from=${from}&to=${to}`} className="btn btn--outline btn--sm" download>
-            <Icon name="arrowR" size={15} /> Payments CSV
+          <a href={`/api/export/payments.csv?from=${from}&to=${to}`} className="btn btn--ghost btn--sm" download>
+            <Icon name="arrowDown" size={15} /> Payments CSV
           </a>
         </div>
 
-        <div className="kpi-grid" style={{ marginTop: 14 }}>
-          <KPI value={displayINR(t.gross)} label="Gross revenue" icon="wallet" />
-          <KPI value={displayINR(t.commission)} label="OTA commission" icon="link" />
-          <KPI value={displayINR(summary.expensesTotal)} label="Expenses" tone="warn" icon="tag" />
-          <KPI value={displayINR(summary.netProfit)} label="Net profit" tone="good" icon="checkCircle" />
+        {/* Net-to-you verdict first. */}
+        <div className="kpi-strip" style={{ marginTop: 14 }}>
+          <div className="kpi-panel kpi-panel--verdict">
+            <div className="kpi-eyebrow">Net profit</div>
+            <div className="kpi-num">{displayINR(summary.netProfit)}</div>
+            <div className="kpi-ctx">after commission &amp; expenses</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">Gross revenue</div>
+            <div className="kpi-num">{displayINR(t.gross)}</div>
+            <div className="kpi-ctx">net to you {displayINR(t.net)}</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">Commission</div>
+            <div className="kpi-num">{displayINR(t.commission)}</div>
+            <div className="kpi-ctx">to channels · expenses {displayINR(summary.expensesTotal)}</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">Outstanding</div>
+            <div className="kpi-num" style={{ color: "var(--amber-text)" }}>{displayINR(t.outstanding)}</div>
+            <div className="kpi-ctx">balances due</div>
+          </div>
         </div>
-        <p style={{ fontSize: 12.5, color: "var(--subtle)", margin: "10px 2px 0", lineHeight: 1.5 }}>
-          Net to you after commission <b className="num" style={{ color: "var(--ink)" }}>{displayINR(t.net)}</b>
-          {" · "}less expenses <b className="num" style={{ color: "var(--ink)" }}>{displayINR(summary.expensesTotal)}</b>
-          {" · "}outstanding balances <b className="num" style={{ color: "var(--ink)" }}>{displayINR(t.outstanding)}</b>
-        </p>
 
         <SectionLabel>By channel</SectionLabel>
-        <div className="card" style={{ overflow: "hidden", padding: 0 }}>
-          <div style={{ overflowX: "auto" }}>
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Channel</th>
-                  <th className="ralign">Bookings</th>
-                  <th className="ralign">Gross</th>
-                  <th className="ralign">Commission</th>
-                  <th className="ralign">Net</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.byChannel.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--subtle)" }}>No bookings in this period.</td></tr>
-                ) : (
-                  summary.byChannel.map((c) => (
-                    <tr key={c.channel}>
-                      <td><ChannelBadge name={c.channel} /></td>
-                      <td className="ralign num">{c.bookings}</td>
-                      <td className="ralign num">{displayINR(c.gross)}</td>
-                      <td className="ralign num" style={{ color: c.commission ? "var(--clay-700)" : "var(--subtle)" }}>{displayINR(c.commission)}</td>
-                      <td className="ralign num" style={{ fontWeight: 700 }}>{displayINR(c.net)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th className="r">Bookings</th>
+                <th className="r">Gross</th>
+                <th className="r">Commission</th>
+                <th className="r">Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.byChannel.length === 0 ? (
+                <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--text-subtle)" }}>No bookings in this period.</td></tr>
+              ) : (
+                summary.byChannel.map((c) => (
+                  <tr key={c.channel}>
+                    <td><ChannelBadge name={c.channel} /></td>
+                    <td className="r num">{c.bookings}</td>
+                    <td className="r num">{displayINR(c.gross)}</td>
+                    <td className="r num" style={{ color: c.commission ? "var(--amber-text)" : "var(--text-subtle)" }}>{displayINR(c.commission)}</td>
+                    <td className="r num strong">{displayINR(c.net)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
         <ExpensesPanel expenses={summary.expenses} total={summary.expensesTotal} />
@@ -84,22 +94,18 @@ export default async function FinancePage({
         {summary.outstanding.length > 0 && (
           <>
             <SectionLabel>Balances due</SectionLabel>
-            <div className="col" style={{ gap: 12 }}>
+            <div className="col" style={{ gap: 10 }}>
               {summary.outstanding.map((o) => (
                 <Link
                   key={o.reservationId}
                   href={`/reservations/${o.reservationId}`}
-                  className="card"
-                  style={{ padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--warn-50)", borderColor: "rgba(224,152,47,.3)" }}
+                  className="banner banner--warn"
                 >
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 15 }}>{o.guestName}</div>
-                    <div style={{ fontSize: 12.5, color: "var(--subtle)" }}>Room {o.roomLabel}</div>
-                  </div>
-                  <div className="row" style={{ gap: 8 }}>
-                    <span className="num" style={{ fontWeight: 700, color: "var(--warn-700)" }}>{displayINR(o.balance)} due</span>
-                    <Icon name="chevronR" size={16} style={{ color: "var(--warn-700)" }} />
-                  </div>
+                  <span className="banner__txt">
+                    <b>{o.guestName}</b> · Room {o.roomLabel}
+                  </span>
+                  <span className="num" style={{ fontWeight: 700 }}>{displayINR(o.balance)} due</span>
+                  <span className="banner__arrow"><Icon name="chevronR" size={16} /></span>
                 </Link>
               ))}
             </div>

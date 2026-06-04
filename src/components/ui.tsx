@@ -72,12 +72,14 @@ export function StatusPill({ kind, children }: { kind: "good" | "warn" | "danger
 /* ---------------- Page header ---------------- */
 export function PageHead({ title, sub, right }: { title: string; sub?: string; right?: ReactNode }) {
   return (
-    <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 4 }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em" }}>{title}</h1>
-        {sub && <div style={{ fontSize: 13.5, color: "var(--subtle)", marginTop: 4, lineHeight: 1.5 }}>{sub}</div>}
+    <div className="pagehead">
+      <div className="spread" style={{ alignItems: "flex-start" }}>
+        <div>
+          <div className="display">{title}</div>
+          {sub && <div className="pagehead__sub">{sub}</div>}
+        </div>
+        {right}
       </div>
-      {right}
     </div>
   );
 }
@@ -85,10 +87,10 @@ export function PageHead({ title, sub, right }: { title: string; sub?: string; r
 /* ---------------- Section label ---------------- */
 export function SectionLabel({ children, count, action }: { children: ReactNode; count?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="row" style={{ justifyContent: "space-between", margin: "28px 0 14px" }}>
-      <div className="row" style={{ gap: 8 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>{children}</span>
-        {count != null && <span style={{ fontSize: 13, color: "var(--subtle)", fontWeight: 600 }}>{count}</span>}
+    <div className="section-label">
+      <div className="section-label__l">
+        <span className="section-label__t">{children}</span>
+        {count != null && <span className="section-label__c">{count}</span>}
       </div>
       {action}
     </div>

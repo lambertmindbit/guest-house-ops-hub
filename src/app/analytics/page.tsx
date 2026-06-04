@@ -1,7 +1,7 @@
 import { getAnalytics } from "@/lib/analytics";
 import { currentMonthRange } from "@/lib/finance";
 import { displayINR } from "@/lib/format";
-import { PageHead, SectionLabel, KPI, RangeForm, ChannelBadge } from "@/components/ui";
+import { PageHead, SectionLabel, RangeForm, ChannelBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -21,55 +21,69 @@ export default async function AnalyticsPage({
 
   return (
     <main className="app-main">
-      <div className="shimmer">
+      <div className="entrance">
         <PageHead title="Analytics" sub={`${from} – ${to} · ${a.nights} night${a.nights === 1 ? "" : "s"}, ${a.rooms} rooms`} />
         <RangeForm from={from} to={to} />
 
-        <div className="kpi-grid" style={{ marginTop: 14 }}>
-          <KPI value={pct(a.occupancyPct)} label="Occupancy" sub={`${a.soldRoomNights}/${a.availableRoomNights} room-nights`} tone="teal" icon="bed" />
-          <KPI value={displayINR(a.adr)} label="ADR" sub="avg nightly rate" icon="wallet" />
-          <KPI value={displayINR(a.revpar)} label="RevPAR" sub="rev / available room" icon="chart" />
-          <KPI value={`${a.avgLengthOfStay.toFixed(1)} nts`} label="Avg stay" icon="moon" />
+        <div className="kpi-strip" style={{ marginTop: 14 }}>
+          <div className="kpi-panel kpi-panel--verdict">
+            <div className="kpi-eyebrow">Occupancy</div>
+            <div className="kpi-num">{pct(a.occupancyPct)}</div>
+            <div className="kpi-ctx">{a.soldRoomNights}/{a.availableRoomNights} room-nights</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">ADR</div>
+            <div className="kpi-num">{displayINR(a.adr)}</div>
+            <div className="kpi-ctx">avg nightly rate</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">RevPAR</div>
+            <div className="kpi-num">{displayINR(a.revpar)}</div>
+            <div className="kpi-ctx">rev / available room</div>
+          </div>
+          <div className="kpi-panel">
+            <div className="kpi-eyebrow">Avg stay</div>
+            <div className="kpi-num">{a.avgLengthOfStay.toFixed(1)}</div>
+            <div className="kpi-ctx">nights</div>
+          </div>
         </div>
-        <div style={{ marginTop: 12 }}>
-          <KPI value={pct(a.cancellationPct)} label="Cancellation rate" sub={`${a.bookingsArriving} arriving this period`} icon="x" />
-        </div>
+        <p className="muted" style={{ fontSize: "var(--fs-meta)", margin: "10px 2px 0" }}>
+          Cancellation rate <b style={{ color: "var(--ink)" }}>{pct(a.cancellationPct)}</b> · {a.bookingsArriving} arriving this period
+        </p>
 
         <SectionLabel>Source mix · by room-nights</SectionLabel>
-        <div className="card" style={{ overflow: "hidden", padding: 0 }}>
-          <div style={{ overflowX: "auto" }}>
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Channel</th>
-                  <th className="ralign">Bookings</th>
-                  <th className="ralign">Room-nights</th>
-                  <th className="ralign">Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {a.sourceMix.length === 0 ? (
-                  <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--subtle)" }}>No stays in this period.</td></tr>
-                ) : (
-                  a.sourceMix.map((s) => (
-                    <tr key={s.channel}>
-                      <td><ChannelBadge name={s.channel} /></td>
-                      <td className="ralign num">{s.bookings}</td>
-                      <td className="ralign num">{s.roomNights}</td>
-                      <td className="ralign">
-                        <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
-                          <div style={{ width: 56, height: 6, borderRadius: 99, background: "var(--sand)", overflow: "hidden" }}>
-                            <div style={{ width: `${s.sharePct}%`, height: "100%", background: "var(--teal)", borderRadius: 99 }} />
-                          </div>
-                          <span className="num" style={{ fontWeight: 600, minWidth: 38, textAlign: "right" }}>{pct(s.sharePct)}</span>
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Channel</th>
+                <th className="r">Bookings</th>
+                <th className="r">Room-nights</th>
+                <th className="r">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {a.sourceMix.length === 0 ? (
+                <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text-subtle)" }}>No stays in this period.</td></tr>
+              ) : (
+                a.sourceMix.map((s) => (
+                  <tr key={s.channel}>
+                    <td><ChannelBadge name={s.channel} /></td>
+                    <td className="r num">{s.bookings}</td>
+                    <td className="r num">{s.roomNights}</td>
+                    <td className="r">
+                      <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
+                        <div style={{ width: 56, height: 6, borderRadius: 99, background: "var(--surface-3)", overflow: "hidden" }}>
+                          <div style={{ width: `${s.sharePct}%`, height: "100%", background: "var(--accent)", borderRadius: 99 }} />
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                        <span className="num" style={{ fontWeight: 600, minWidth: 38, textAlign: "right" }}>{pct(s.sharePct)}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </main>

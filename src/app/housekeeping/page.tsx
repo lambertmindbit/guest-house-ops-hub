@@ -1,6 +1,6 @@
 import { getHousekeeping, type HousekeepingRoom } from "@/lib/housekeeping";
 import { CleaningButton } from "@/components/CleaningButton";
-import { PageHead, SectionLabel, StatusPill, EmptyState } from "@/components/ui";
+import { PageHead, SectionLabel, EmptyState } from "@/components/ui";
 import { displayShortDate } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
@@ -15,33 +15,29 @@ export default async function HousekeepingPage() {
 
   return (
     <main className="app-main">
-      <div className="shimmer">
+      <div className="entrance">
         <PageHead
           title="Housekeeping"
-          sub={toCleanCount === 0 ? "All rooms are clean ✦" : `${toCleanCount} room${toCleanCount === 1 ? "" : "s"} to clean.`}
+          sub={toCleanCount === 0 ? "All rooms are clean." : `${toCleanCount} room${toCleanCount === 1 ? "" : "s"} to clean.`}
         />
 
-        <SectionLabel>To clean</SectionLabel>
+        <SectionLabel count={toClean.length}>To clean</SectionLabel>
         {toClean.length === 0 ? (
           <EmptyState>Nothing to clean — every room is ready.</EmptyState>
         ) : (
-          <div className="col" style={{ gap: 12 }}>
+          <div className="col" style={{ gap: 10 }}>
             {toClean.map((room) => (
               <div
                 key={room.id}
-                className="card"
-                style={{
-                  padding: 17,
-                  borderColor: room.highPriority ? "rgba(229,72,77,.35)" : "var(--line)",
-                  background: room.highPriority ? "var(--danger-50)" : "var(--paper)",
-                }}
+                className="card card--pad"
+                style={room.highPriority ? { background: "var(--red-bg)", borderColor: "var(--red-border)" } : undefined}
               >
-                <div className="row" style={{ justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
+                <div className="spread" style={{ alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <RoomTitle room={room} />
                     <div style={{ margin: "8px 0" }}><Tags room={room} /></div>
                     {room.lastDeparture && (
-                      <div style={{ fontSize: 12.5, color: "var(--subtle)" }}>
+                      <div className="muted" style={{ fontSize: "var(--fs-meta)" }}>
                         Checked out {displayShortDate(parseDateOnly(room.lastDeparture))}
                       </div>
                     )}
@@ -53,15 +49,15 @@ export default async function HousekeepingPage() {
           </div>
         )}
 
-        <SectionLabel count={`(${ready.length})`}>Ready</SectionLabel>
+        <SectionLabel count={ready.length}>Ready</SectionLabel>
         {ready.length === 0 ? (
-          <p style={{ fontSize: 13.5, color: "var(--subtle)" }}>No rooms are ready right now.</p>
+          <p className="muted" style={{ fontSize: "var(--fs-small)" }}>No rooms are ready right now.</p>
         ) : (
-          <div className="col" style={{ gap: 12 }}>
+          <div className="col" style={{ gap: 10 }}>
             {ready.map((room) => (
-              <div key={room.id} className="card" style={{ padding: 17 }}>
-                <div className="row" style={{ justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
+              <div key={room.id} className="card card--pad">
+                <div className="spread" style={{ alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <RoomTitle room={room} />
                     <div style={{ marginTop: 8 }}><Tags room={room} /></div>
                   </div>
@@ -78,18 +74,20 @@ export default async function HousekeepingPage() {
 
 function RoomTitle({ room }: { room: HousekeepingRoom }) {
   return (
-    <div style={{ fontWeight: 700, fontSize: 16 }}>
-      Room {room.label} <span style={{ color: "var(--subtle)", fontWeight: 500 }}>· {room.roomTypeName}</span>
+    <div className="h3" style={{ fontSize: 16 }}>
+      Room {room.label} <span className="muted" style={{ fontWeight: 500 }}>· {room.roomTypeName}</span>
     </div>
   );
 }
 
+// Red is reserved for genuine urgency (arriving today). Occupied-tonight is a
+// neutral badge so the red still means "act now".
 function Tags({ room }: { room: HousekeepingRoom }) {
   return (
     <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
-      {room.highPriority && <StatusPill kind="danger">Arriving today — clean first</StatusPill>}
-      {!room.highPriority && room.arrivalToday && <StatusPill kind="warn">Arrival today</StatusPill>}
-      {room.occupiedTonight && <StatusPill kind="teal">Occupied tonight</StatusPill>}
+      {room.highPriority && <span className="badge badge--danger">Arriving today — clean first</span>}
+      {!room.highPriority && room.arrivalToday && <span className="badge badge--warn">Arrival today</span>}
+      {room.occupiedTonight && <span className="badge badge--neutral">Occupied tonight</span>}
     </div>
   );
 }
