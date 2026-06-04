@@ -5,6 +5,7 @@ const include = {
   guest: true,
   channel: true,
   room: { include: { roomType: true } },
+  payments: { select: { amount: true } },
 } as const;
 
 // Today-dashboard summary. All "today" math uses the property's local date.

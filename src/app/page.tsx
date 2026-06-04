@@ -5,10 +5,21 @@ import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
 import { ChannelBadge, Icon } from "@/components/ui";
 import { Collapsible } from "@/components/Collapsible";
-import { displayDate, displayShortDate } from "@/lib/format";
+import { displayDate, displayShortDate, displayINR } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
+
+// Payment status for a Today row: paid / advance-paid (balance) / unpaid.
+function PayBadge({ r }: { r: SummaryReservation }) {
+  const gross = Number(r.grossAmount ?? 0);
+  if (gross <= 0) return null;
+  const collected = r.payments.reduce((s, p) => s + Number(p.amount), 0);
+  const balance = gross - collected;
+  if (balance <= 0) return <span className="badge badge--good">Paid</span>;
+  if (collected > 0) return <span className="badge badge--warn">{displayINR(balance)} due</span>;
+  return <span className="badge badge--neutral">Unpaid</span>;
+}
 
 export default async function DashboardPage() {
   const [s, conflicts, housekeeping] = await Promise.all([
@@ -76,10 +87,10 @@ export default async function DashboardPage() {
 
         {/* Arrivals / Departures are the day's to-do. */}
         <SectionHead title="Arrivals today" count={s.checkInsToday.length} />
-        <List items={s.checkInsToday} empty="No arrivals today." showTime showArrived />
+        <List items={s.checkInsToday} empty="No arrivals today." showTime showArrived showPayment />
 
         <SectionHead title="Departures today" count={s.checkOutsToday.length} />
-        <List items={s.checkOutsToday} empty="No departures today." showDeparted />
+        <List items={s.checkOutsToday} empty="No departures today." showDeparted showPayment />
 
         {/* In-house is the only full list of who's staying — collapsed so it
             no longer duplicates Arrivals at a glance. */}
@@ -122,6 +133,7 @@ function List({
   showArrived,
   showDeparted,
   showDate,
+  showPayment,
 }: {
   items: SummaryReservation[];
   empty: string;
@@ -129,6 +141,7 @@ function List({
   showArrived?: boolean;
   showDeparted?: boolean;
   showDate?: boolean;
+  showPayment?: boolean;
 }) {
   if (items.length === 0) return <div className="empty">{empty}</div>;
   return (
@@ -142,6 +155,7 @@ function List({
           </div>
           <div className="rowcard__right">
             <ChannelBadge name={r.channel.name} />
+            {showPayment && <PayBadge r={r} />}
             {showArrived && r.checkedInAt && <span className="badge badge--good">Arrived</span>}
             {showDeparted && r.checkedOutAt && <span className="badge badge--good">Departed</span>}
             {showDate && <span className="rowcard__time">{displayShortDate(r.checkIn)}</span>}
