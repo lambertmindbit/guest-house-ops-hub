@@ -169,15 +169,18 @@ we do with it":
    and staged as an `InboundBooking` ([`src/lib/inbound.ts`](../src/lib/inbound.ts),
    deduped by OTA ref) — **never auto-booked**.
 2. Two entry points feed the same staging logic: the owner pastes into the
-   **Inbox** screen (`POST /api/inbound`, cookie-gated), or a future inbox/
-   forwarding webhook posts to `POST /api/ingest/email` (token-gated, excluded
-   from the owner-cookie middleware).
+   **Inbox** screen (`POST /api/inbound`, cookie-gated), or a forwarder posts to
+   `POST /api/ingest/email` (token-gated, excluded from the owner-cookie
+   middleware). Two ready-to-deploy forwarders ship in
+   [`integrations/`](../integrations/) — a Gmail Apps Script (no domain) and a
+   Cloudflare Email Worker (for a domain / multiple properties).
 3. On the Inbox screen the owner corrects fields and creates the booking through
    the **existing** `POST /api/reservations` — inheriting the no-double-booking
    409 — then the staged item is marked `imported`.
 
 The parser regexes are scaffolding to validate against real OTA emails; the review
-step keeps mis-parses harmless. See [ROADMAP.md](ROADMAP.md).
+step keeps mis-parses harmless. See [ROADMAP.md](ROADMAP.md) and each forwarder's
+README in [`integrations/`](../integrations/).
 
 ## Auth & request gating
 

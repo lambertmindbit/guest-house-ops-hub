@@ -59,7 +59,7 @@ phase scoping). They are **not** bugs:
 
 | Deferred | Why / what it would need | Status |
 |----------|--------------------------|--------|
-| **OTA email ingestion** | Parse the owner's confirmation emails into bookings. | 🟡 **Groundwork built** — parser, staging model, **Inbox** paste/review/create flow, and a token-gated webhook seam (`POST /api/ingest/email`) all exist. Usable today via paste. Only the inbox/forwarding plumbing remains, plus tuning the parser against real OTA emails. |
+| **OTA email ingestion** | Parse the owner's confirmation emails into bookings. | 🟡 **Groundwork built** — parser, staging model, **Inbox** paste/review/create flow, and a token-gated webhook seam (`POST /api/ingest/email`) all exist. Usable today via paste. Two **ready-to-deploy forwarders** now ship in [`integrations/`](../integrations/) (Gmail Apps Script — no domain; Cloudflare Worker — for a domain/multiple properties); only setting the token + tuning the parser against real OTA emails remains. |
 | **Messaging automation** | WhatsApp/email/SMS templates + triggers. Needs a messaging provider. | ○ Deferred |
 | **Dynamic pricing → OTAs** | Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal. | ○ Won't do (external limit) |
 | **Multi-role auth + prod hardening** | Currently single-owner; would need accounts, roles, lockout. | 🟡 **Login rate-limiting done** (`src/lib/rate-limit.ts`); roles still deferred |

@@ -30,7 +30,7 @@ All six planned milestones are built and in production:
 | 6 | **Invoices / export** | Printable invoices, Bookings/Payments CSV export |
 
 **Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
-- **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) is ready for automation later.
+- **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — for a domain / multiple properties).
 - **Login rate-limiting** — active (10 attempts / IP / 5 min).
 - **Guest ID document upload** — Supabase Storage adapter + UI; activate by setting the storage env vars.
 
@@ -101,6 +101,7 @@ Detailed setup (Supabase connection-string nuances, the separate test database):
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What's built, what's deferred, and why |
 | [docs/STATUS.html](docs/STATUS.html) | At-a-glance status report (open in a browser) — delivered phases, deferred items, concerns, first tasks |
 | [docs/USER-GUIDE.html](docs/USER-GUIDE.html) | **Day-to-day user guide** (open in a browser) — how operators use every screen of the app |
+| [integrations/](integrations/) | Ready-to-deploy OTA-email forwarders (Gmail Apps Script / Cloudflare Worker), each with its own step-by-step README |
 | [CLAUDE.md](CLAUDE.md) | Original product spec + the hard rules (also used by AI coding agents) |
 
 ## Hard rules (do NOT break)

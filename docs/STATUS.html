@@ -150,7 +150,7 @@
     <tr><th>Item</th><th>Status &amp; what remains</th></tr>
     <tr>
       <td class="k">OTA email ingestion</td>
-      <td><span class="pill p-prep">🟡 Groundwork built</span><br>Parser + <strong>Inbox</strong> paste/review/create flow + a token-gated webhook seam (<code>/api/ingest/email</code>) all exist. <strong>Usable today</strong> via paste. Remaining: wire an inbox/forwarding rule, and tune the parser against real OTA emails.</td>
+      <td><span class="pill p-prep">🟡 Groundwork built</span><br>Parser + <strong>Inbox</strong> paste/review/create flow + a token-gated webhook seam (<code>/api/ingest/email</code>) all exist. <strong>Usable today</strong> via paste. <strong>Two ready-to-deploy forwarders</strong> now ship in <code>integrations/</code> (Gmail Apps Script / Cloudflare Worker — see the detailed guide below). Remaining: set the token, deploy a forwarder, and tune the parser against real OTA emails.</td>
     </tr>
     <tr>
       <td class="k">Login rate-limiting</td>
