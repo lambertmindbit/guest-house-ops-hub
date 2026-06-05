@@ -43,6 +43,9 @@
   ul{margin:.4em 0;padding-left:20px}
   li{margin:.3em 0}
   code{background:#eef2f0;padding:1px 6px;border-radius:5px;font-size:13px}
+  pre{background:#eef2f0;border:1px solid var(--line);padding:12px 14px;border-radius:10px;overflow-x:auto;font-size:12.5px;line-height:1.5;margin:10px 0}
+  pre code{background:none;padding:0;font-size:inherit}
+  .step{font-weight:700;margin:16px 0 4px;font-size:14.5px}
   .note{background:var(--teal-bg);border:1px solid #bfe3da;border-radius:12px;padding:14px 16px;margin:14px 0}
   .sev{font-weight:700}
   footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--sub);font-size:13px}
@@ -181,14 +184,82 @@
 
   <div class="card">
     <h3 style="margin:0 0 6px">A · Automated OTA email ingestion <span class="pill p-prep">🟡 needs wiring</span></h3>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 10px">Works <strong>today</strong> by pasting an email into the <strong>Inbox</strong> screen — no setup. The steps below make import <em>automatic</em>. Parsed bookings are always staged for your review; nothing is auto-booked.</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 10px">Works <strong>today</strong> with zero setup by pasting an email into the <strong>Inbox</strong> screen. The steps below make import <em>automatic</em> (emails land in the Inbox by themselves). Either way, parsed bookings are always <strong>staged for your review</strong> — nothing is ever auto-booked. Full technical walkthrough follows.</p>
+
+    <p class="step">How the webhook works (the contract you build against)</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">There is one endpoint. Your job is simply to deliver each OTA email's text to it. It lives <em>outside</em> the owner login (so a forwarder can reach it) and is gated by its own shared secret, <code>INGEST_TOKEN</code>.</p>
+    <table>
+      <tr><th>Field</th><th>Value</th></tr>
+      <tr><td class="k">Method &amp; URL</td><td><code>POST https://YOUR-APP.vercel.app/api/ingest/email</code></td></tr>
+      <tr><td class="k">Auth</td><td>Header <code>x-ingest-token: YOUR_INGEST_TOKEN</code> &nbsp;(or <code>?token=YOUR_INGEST_TOKEN</code> on the URL)</td></tr>
+      <tr><td class="k">Body</td><td><code>application/json</code> — <code>{ "raw": "FULL EMAIL TEXT" }</code> &nbsp;(headers + body, as plain text — the parser greps it)</td></tr>
+      <tr><td class="k">Success</td><td><code>201 { "data": { "id": "...", "status": "pending" } }</code> → now visible in the Inbox</td></tr>
+      <tr><td class="k">Rejected</td><td><code>401 { "error": "unauthorized" }</code> (token missing/wrong, or <code>INGEST_TOKEN</code> unset) · <code>422</code> (body isn't <code>{ raw }</code>)</td></tr>
+      <tr><td class="k">Retry-safe</td><td>De-duplicated by the OTA reference — the same confirmation arriving twice won't create two review items.</td></tr>
+    </table>
+
+    <p class="step">Step 1 — Create the secret token</p>
     <ol style="padding-left:22px">
-      <li><strong>Choose how emails reach the app.</strong> Any of: a <em>Cloudflare Email Routing</em> worker; an inbound-email service (Mailgun / SendGrid / Postmark inbound parse); or a small IMAP poller on a mailbox. The job of this piece is simply to take each new OTA confirmation and POST its text to the app.</li>
-      <li><strong>Generate a token</strong> (<code>openssl rand -hex 32</code>) and set <code>INGEST_TOKEN</code> in Vercel — and the same value in the forwarder.</li>
-      <li><strong>Point the forwarder at the webhook:</strong> <code>POST https://&lt;your-app&gt;/api/ingest/email</code> with header <code>x-ingest-token: &lt;INGEST_TOKEN&gt;</code> and JSON body <code>{ "raw": "&lt;full email text&gt;" }</code>. (This route is intentionally outside the owner-login so the forwarder can reach it; its own token gates it.)</li>
-      <li><strong>Tune the parser against real emails.</strong> First paste 2–3 actual Booking.com / Agoda / MakeMyTrip confirmations into Inbox and note which fields miss. Then adjust the per-field regexes in <code>src/lib/email-parse.ts</code> (each field is isolated) and add a fixture per OTA in <code>tests/email-parse.test.ts</code>.</li>
-      <li><strong>Verify:</strong> forward a test confirmation → it appears in Inbox as <em>pending</em> → review/correct → <em>Create booking</em> (conflict-checked). Re-sends are de-duplicated by the OTA reference.</li>
+      <li>Generate one: <code>openssl rand -hex 32</code> (any long random string works).</li>
+      <li>In <strong>Vercel → Project → Settings → Environment Variables</strong>, add <code>INGEST_TOKEN</code> = that value, for <strong>Production</strong> (and Preview if you test there). <strong>Redeploy</strong> so it takes effect.</li>
+      <li>Add the same line to your local <code>.env</code> if you want to test locally. <em>Until <code>INGEST_TOKEN</code> is set, the endpoint safely rejects everything with 401.</em></li>
     </ol>
+
+    <p class="step">Step 2 — Build the forwarder (recommended: Cloudflare Email Worker)</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">This is the only piece you build. Cloudflare Email Routing is free and lets you run a tiny script on each received email — and because <em>you</em> control the script, you can POST exactly the JSON the endpoint wants. (Any other method — Mailgun/SendGrid inbound parse, a Google Apps Script on a Gmail label, an IMAP poller — is fine too; it just has to end in the same <code>POST { raw }</code> call.)</p>
+    <ol style="padding-left:22px">
+      <li>You need a domain on Cloudflare. In <strong>Cloudflare → your domain → Email → Email Routing</strong>, enable it and verify the records.</li>
+      <li>Create an address, e.g. <code>bookings@yourdomain.com</code>, and set its action to <strong>Send to a Worker</strong>.</li>
+      <li>Create the Worker with this code, and add <code>INGEST_TOKEN</code> as a Worker <strong>Variable/Secret</strong> (same value as in Vercel):</li>
+    </ol>
+    <pre><code>export default {
+  async email(message, env) {
+    // The full raw email (headers + body) as text
+    const raw = await new Response(message.raw).text();
+
+    await fetch("https://YOUR-APP.vercel.app/api/ingest/email", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-ingest-token": env.INGEST_TOKEN,
+      },
+      body: JSON.stringify({ raw }),
+    });
+  },
+};</code></pre>
+    <ol style="padding-left:22px" start="4">
+      <li><strong>Get the OTA emails to that address.</strong> In the mailbox where Booking.com / Agoda / MakeMyTrip confirmations arrive, add a filter/forwarding rule that forwards those confirmations to <code>bookings@yourdomain.com</code>. (Or point the OTA's notification email straight there.)</li>
+    </ol>
+
+    <p class="step">Step 3 — Smoke-test the endpoint</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">Before wiring real mail, confirm the endpoint + token work with a fake email:</p>
+    <pre><code>curl -X POST https://YOUR-APP.vercel.app/api/ingest/email \
+  -H "content-type: application/json" \
+  -H "x-ingest-token: YOUR_INGEST_TOKEN" \
+  -d '{"raw":"Booking.com\nGuest name: Test Guest\nCheck-in: 2026-07-12\nCheck-out: 2026-07-14\nRoom: Deluxe\nTotal: ₹4200\nConfirmation: TEST-123"}'</code></pre>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">Expect <code>201</code> with an <code>id</code>, and the item to appear in the <strong>Inbox</strong> screen as <em>pending</em>. A 401 means the token doesn't match; a 422 means the body wasn't <code>{ "raw": "..." }</code>.</p>
+
+    <p class="step">Step 4 — Tune the parser against real emails</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">The reader in <code>src/lib/email-parse.ts</code> is best-effort scaffolding — it fills what it can and leaves the rest blank for you to correct on the review screen. Tune it once against real samples so fewer fields need correcting. It extracts:</p>
+    <table>
+      <tr><th>Field</th><th>How it's found</th></tr>
+      <tr><td class="k">source</td><td>Keyword match — "booking.com" / "agoda" / "makemytrip" → else <em>Unknown</em></td></tr>
+      <tr><td class="k">otaRef</td><td>A "booking/reservation/confirmation/itinerary number" label followed by a code</td></tr>
+      <tr><td class="k">guestName</td><td>A <code>Guest name:</code> / <code>Name:</code> / <code>Booker:</code> label</td></tr>
+      <tr><td class="k">guestPhone</td><td>A <code>Phone:</code>/<code>Mobile:</code> label, else a long phone-like number</td></tr>
+      <tr><td class="k">checkIn / checkOut</td><td>The <code>Check-in:</code> / <code>Check-out:</code> lines (dates like <code>2026-07-12</code>, <code>12 Jul 2026</code>, <code>July 12, 2026</code>)</td></tr>
+      <tr><td class="k">roomTypeHint</td><td>A <code>Room type:</code> / <code>Room:</code> / <code>Accommodation:</code> label</td></tr>
+      <tr><td class="k">amount</td><td>A <code>Total/Amount/Price</code> figure (handles ₹ / INR / Rs and commas)</td></tr>
+    </table>
+    <ol style="padding-left:22px">
+      <li>Paste 2–3 <strong>real</strong> Booking.com / Agoda / MakeMyTrip confirmations into the Inbox and note which fields come out wrong/blank.</li>
+      <li>Adjust the matching <strong>regex</strong> for just those fields in <code>src/lib/email-parse.ts</code> (each field is isolated, so changes are low-risk).</li>
+      <li>Add a real (anonymised) sample as a fixture in <code>tests/email-parse.test.ts</code> and run <code>npm test</code> so the format stays covered.</li>
+    </ol>
+
+    <p class="step">Step 5 — Verify end-to-end</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">Forward a real test confirmation to <code>bookings@yourdomain.com</code> → it appears in the <strong>Inbox</strong> as <em>pending</em> → review/correct the fields, pick the room → <strong>Create booking</strong> (which goes through the normal <code>POST /api/reservations</code>, so it's conflict-checked like any booking). Re-sends are ignored thanks to the OTA-reference de-dupe.</p>
+    <div class="warn" style="margin-top:6px"><strong>Safety:</strong> automation only fills the Inbox — it never creates a booking on its own. You always do the final review + <em>Create booking</em> step, so a mis-parsed email can't corrupt the calendar.</div>
   </div>
 
   <div class="card">
