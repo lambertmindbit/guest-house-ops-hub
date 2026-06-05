@@ -3,7 +3,17 @@ import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavShell } from "@/components/NavShell";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
+import { unstable_cache } from "next/cache";
 import { getConflicts } from "@/lib/conflicts";
+
+// The conflict badge sits in the layout, so its query would otherwise run on
+// EVERY navigation. A count that's up to ~60s stale is fine for a nav badge, so
+// cache it and keep that join off the critical path of each page load.
+const getCachedConflictCount = unstable_cache(
+  async () => (await getConflicts()).length,
+  ["nav-conflict-count"],
+  { revalidate: 60 },
+);
 
 // Redesign type system: Plus Jakarta Sans (UI/body), Fraunces (display titles),
 // JetBrains Mono (numerals / times / eyebrow micro-labels).
@@ -60,7 +70,7 @@ export default async function RootLayout({
   // Conflict count powers the Conflicts nav badge. Tolerate DB hiccups → 0.
   let conflictCount = 0;
   try {
-    conflictCount = (await getConflicts()).length;
+    conflictCount = await getCachedConflictCount();
   } catch {
     conflictCount = 0;
   }
