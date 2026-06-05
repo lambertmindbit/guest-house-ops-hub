@@ -15,8 +15,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime queries go through the Supabase pooler (port 6543, pgbouncer=true) so
+  // serverless functions reuse warm connections instead of doing a TLS handshake
+  // per request. Migrations need a DIRECT connection (port 5432) — pgbouncer's
+  // transaction pooling can't run them. DIRECT_URL falls back to DATABASE_URL
+  // locally if you keep using the direct connection in dev.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum ReservationStatus {

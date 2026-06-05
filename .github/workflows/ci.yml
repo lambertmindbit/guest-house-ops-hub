@@ -27,6 +27,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ota_test
+      # No pooler in CI — migrations use the same local Postgres directly.
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/ota_test
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ota_test
 
     steps:
