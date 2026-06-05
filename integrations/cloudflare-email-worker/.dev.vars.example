@@ -1,0 +1,5 @@
+# Copy to `.dev.vars` for local `wrangler dev`. `.dev.vars` is git-ignored.
+# In production these are set as Worker Variables/Secrets (see README), not here.
+INGEST_TOKEN="paste-the-same-value-as-in-vercel"
+INGEST_URL="https://YOUR-APP.vercel.app/api/ingest/email"
+# FALLBACK_EMAIL="owner@example.com"

@@ -1,0 +1,12 @@
+name = "ota-email-ingest"
+main = "src/worker.js"
+compatibility_date = "2025-06-01"
+
+# --- Plug in (NOT secret — safe to commit once filled) ---
+[vars]
+INGEST_URL = "https://YOUR-APP.vercel.app/api/ingest/email"
+# FALLBACK_EMAIL = "owner@example.com"   # optional; must be a VERIFIED Email Routing destination
+
+# --- Secret (do NOT put it in this file) ---
+# Set once, matching INGEST_TOKEN in Vercel:
+#   npx wrangler secret put INGEST_TOKEN
