@@ -132,14 +132,21 @@ async function main() {
 
   await m.close();
 
-  // ---------- DESKTOP ----------
+  // ---------- DESKTOP (same screens, `-desktop` suffix) ----------
   const d = await browser.newContext(DESKTOP);
   const dp = await d.newPage();
   await login(dp);
-  await dp.goto(`${BASE}/`, { waitUntil: "load" });
-  await shot(dp, "desktop-sidebar");
-  await dp.goto(`${BASE}/calendar`, { waitUntil: "load" });
-  await shot(dp, "desktop-calendar");
+  for (const [name, path] of ROUTES) {
+    await dp.goto(`${BASE}${path}`, { waitUntil: "load" });
+    await shot(dp, `${name}-desktop`);
+  }
+  if (resId) {
+    await dp.goto(`${BASE}/reservations/${resId}`, { waitUntil: "load" });
+    await shot(dp, "reservation-detail-desktop");
+    await shot(dp, "payments-desktop", { fullPage: true });
+    await dp.goto(`${BASE}/reservations/${resId}/invoice`, { waitUntil: "load" });
+    await shot(dp, "invoice-desktop", { fullPage: true });
+  }
   await d.close();
 
   await browser.close();
