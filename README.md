@@ -82,6 +82,7 @@ Detailed setup (Supabase connection-string nuances, the separate test database):
 | `npm run db:migrate:new <name> [--apply]` | **Create** a migration the safe way — see [the migration workflow](docs/CONTRIBUTING.md#database-migrations-read-this-first) |
 | `npm run db:seed` | Seed sample data |
 | `npm run db:studio` | Prisma Studio |
+| `npm run shots` | Regenerate the user-guide screenshots into `docs/img/` (app must be running; uses Playwright) |
 
 > ⚠️ **Never run `prisma migrate dev` directly.** This schema uses generated
 > `DATERANGE` columns + a GiST exclusion constraint that Prisma's diff engine
