@@ -585,3 +585,17 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .dialog__msg { font-size: var(--fs-small); color: var(--text-muted); margin-top: 8px; line-height: 1.55; }
 .dialog__actions { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px 18px; }
 @media (prefers-reduced-motion: reduce) { .dialog, .dialog-backdrop { animation: none !important; } }
+
+/* ---------- Help page (workflow visuals, dependency-free) ---------- */
+.flow { margin: 10px 0 4px; }
+.flow__step { display: flex; gap: 10px; align-items: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; }
+.flow__n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.flow__t { font-size: var(--fs-small); line-height: 1.45; }
+.flow__t b { font-weight: 600; }
+.flow__t span { display: block; color: var(--text-muted); margin-top: 1px; }
+.flow__arrow { color: var(--accent); font-weight: 800; line-height: 1; margin: 3px 0 3px 10px; }
+.help-q { font-weight: 600; margin: 0 0 1px; font-size: var(--fs-small); }
+.help-a { color: var(--text-muted); font-size: var(--fs-small); margin: 0; line-height: 1.5; }
+.navmock { display: flex; gap: 4px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 7px 9px; margin: 8px 0; }
+.navmock i { flex: 1; text-align: center; font-size: 11px; color: var(--text-muted); font-style: normal; }
+.navmock .fabm { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; }

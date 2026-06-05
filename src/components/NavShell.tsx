@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui";
 // One config drives BOTH the phone tabs/sheet and the desktop sidebar.
 type NavId =
   | "today" | "calendar" | "guests" | "housekeeping" | "pricing"
-  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "settings"
+  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "settings" | "help"
   | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
@@ -24,6 +24,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
   feeds: { label: "Feeds", icon: "link", href: "/feeds" },
   settings: { label: "Settings", icon: "settings", href: "/settings" },
+  help: { label: "Help", icon: "help", href: "/help" },
   // Settings sub-modules — surfaced directly in the desktop sidebar.
   "set-property": { label: "Property", icon: "settings", href: "/settings/property" },
   "set-room-types": { label: "Room types", icon: "bed", href: "/settings/room-types" },
@@ -42,6 +43,7 @@ const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Insights", items: ["analytics", "conflicts"] },
   { label: "Data", items: ["inbox", "feeds"] },
   { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks"] },
+  { label: "Help", items: ["help"] },
 ];
 
 // Phone "More" sheet: keep one Settings entry → the hub (don't bloat the sheet).
@@ -50,7 +52,7 @@ const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics"] },
   { label: "Data & channels", items: ["inbox", "feeds"] },
-  { label: "System", items: ["settings"] },
+  { label: "System", items: ["settings", "help"] },
 ];
 
 const TINTS = [

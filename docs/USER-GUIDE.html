@@ -39,6 +39,16 @@
   .pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--ink-bg);color:var(--sub)}
   footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);color:var(--sub);font-size:13px}
   b.lbl{color:var(--teal)}
+  /* workflow diagrams (no images — render anywhere) */
+  .flow{margin:12px 0}
+  .flow .node{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:14px}
+  .flow .node b{color:var(--ink)}
+  .flow .node small{display:block;color:var(--sub);font-size:12.5px;margin-top:2px}
+  .flow .down{text-align:center;color:var(--teal);font-weight:800;line-height:1;margin:4px 0;font-size:15px}
+  .navmock{display:flex;gap:6px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:13px;padding:8px 10px;margin:10px 0;max-width:360px}
+  .navmock i{flex:1;text-align:center;font-size:12px;color:var(--sub);font-style:normal}
+  .navmock .fab{flex:none;width:30px;height:30px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+  .flowcap{font-size:12.5px;color:var(--sub);margin:2px 0 0}
 </style>
 </head>
 <body>
@@ -79,10 +89,14 @@
   <p>Open the app&rsquo;s web address and sign in with the owner email and password. There is one shared login for the property; staying logged in keeps you signed in for about a month.</p>
   <h3>Finding your way around</h3>
   <ul>
-    <li><strong>On a phone:</strong> a bar along the bottom shows <b class="lbl">Today</b>, <b class="lbl">Calendar</b>, <b class="lbl">Guests</b>, <b class="lbl">Housekeeping</b>, and <b class="lbl">More</b>. Tap <b class="lbl">More</b> for Finance, Pricing, Inbox, Analytics, Conflicts, Feeds, Settings, and Preferences.</li>
+    <li><strong>On a phone:</strong> a bar along the bottom shows <b class="lbl">Today</b>, <b class="lbl">Calendar</b>, <b class="lbl">Guests</b>, <b class="lbl">Housekeeping</b>, and <b class="lbl">More</b>. Tap <b class="lbl">More</b> for Finance, Pricing, Inbox, Analytics, Conflicts, Feeds, Settings, <b class="lbl">Help</b>, and Preferences.</li>
     <li><strong>On a computer:</strong> the same destinations sit in a sidebar down the left.</li>
     <li>The <b class="lbl">New</b> button (top corner) starts a new booking from anywhere.</li>
   </ul>
+  <div class="navmock">
+    <i>Today</i><i>Calendar</i><span class="fab">+</span><i>Guests</i><i>More</i>
+  </div>
+  <p class="flowcap">The phone menu. The big <strong>+</strong> in the middle = new booking. <strong>More</strong> opens everything else (Finance, Pricing, Inbox, Settings, Help…).</p>
   <h3>Make it feel right</h3>
   <p>Tap the moon/sun icon to switch <strong>dark / light</strong> mode. Open <strong>Preferences</strong> (the gear, or <em>More → Preferences</em>) to change the <strong>accent colour</strong> and <strong>display density</strong> (comfortable / compact). Your choices are remembered on that device.</p>
   <div class="note"><strong>Install it like an app:</strong> on a phone, use your browser&rsquo;s &ldquo;Add to Home Screen&rdquo;. It then opens full-screen with its own icon, just like a native app.</div>
@@ -97,6 +111,18 @@
     <li>If anything needs attention, a coloured banner appears at the top — e.g. <span class="pill">3 rooms to clean</span> or a booking <span class="pill">conflict</span>. Tap it to jump straight there.</li>
   </ul>
   <p>Tap any guest row to open that booking.</p>
+  <p style="font-weight:600;margin:.8em 0 .2em">Your day, start to finish</p>
+  <div class="flow">
+    <div class="node"><b>1 · Open Today</b><small>See arrivals, departures, who's in-house, and any alerts.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>2 · Check guests in</b><small>As each arrives: open their booking → Check in.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>3 · Check guests out</b><small>As each leaves: open their booking → Check out.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>4 · Clean rooms</b><small>Checked-out rooms appear in Housekeeping.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>5 · Record payments</b><small>Log money received on each booking.</small></div>
+  </div>
 
   <!-- 3 -->
   <h2 id="calendar"><span class="n">3</span>Calendar</h2>
@@ -130,6 +156,17 @@
   </ul>
   <div class="warn"><strong>Double-booking is impossible.</strong> If those dates for that room are already taken, the app refuses to save and tells you clearly — your calendar can never end up double-booked.</div>
   <div class="note">If the guest is <strong>blacklisted</strong>, a warning shows with the reason. You can still proceed — it&rsquo;s just a heads-up.</div>
+  <div class="flow">
+    <div class="node"><b>1 · Tap +</b><small>Opens the new-booking form.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>2 · Guest name &amp; phone</b><small>A matching phone reuses the existing guest.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>3 · Channel, room, dates</b><small>Rooms already booked for those dates are greyed out.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>4 · Amount</b><small>A suggested price pre-fills if pricing rules are set.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>5 · Save</b><small>Clashing dates are refused — you can never double-book.</small></div>
+  </div>
 
   <!-- 5 -->
   <h2 id="reservation"><span class="n">5</span>A booking&rsquo;s details &amp; check-in/out</h2>
@@ -141,6 +178,13 @@
     <li><strong>In-house</strong> (shows the arrival time) → tap <b class="lbl">Check out</b> when they leave.</li>
     <li><strong>Checked out</strong>. Their room then appears in <a href="#housekeeping">Housekeeping</a> to be cleaned.</li>
   </ol>
+  <div class="flow">
+    <div class="node"><b>Not arrived</b><small>Tap “Check in” when they arrive.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>In-house</b><small>Tap “Check out” when they leave.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>Checked out → to clean</b><small>Room moves into Housekeeping.</small></div>
+  </div>
   <p>Made a mistake? <b class="lbl">Undo</b> steps back one stage.</p>
   <h3>Other actions</h3>
   <p><b class="lbl">Edit</b> changes the booking; <b class="lbl">Invoice</b> opens a printable bill (see next section); <b class="lbl">Cancel reservation</b> cancels it and frees the dates for re-booking.</p>
@@ -182,6 +226,13 @@
     <li><strong>Check and correct</strong> the details, pick the <strong>room</strong>, then tap <b class="lbl">Create booking</b> — it&rsquo;s added to the calendar (and checked for clashes like any booking).</li>
     <li>Not a real booking? <b class="lbl">Dismiss</b> it. Need to see the original? <b class="lbl">Show email</b>.</li>
   </ol>
+  <div class="flow">
+    <div class="node"><b>1 · Paste the email</b><small>Into the Inbox box, then “Parse email”. (Or it arrives automatically if set up.)</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>2 · Review &amp; correct</b><small>It fills what it can; fix any field and pick the room.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>3 · Create booking</b><small>Added to the calendar and conflict-checked like any booking.</small></div>
+  </div>
   <div class="note">Nothing is ever booked automatically — you always confirm. (Your tech team can later set this up to receive emails automatically; the review step stays the same.)</div>
 
   <!-- 10 -->
@@ -253,7 +304,7 @@
   </ul>
 
   <footer>
-    For setup, deployment and the technical reference, your developers should see <code>README.md</code> and the <code>docs/</code> folder. This guide covers day-to-day use only.
+    A short version of this guide is built into the app too — open <strong>More → Help</strong> on your phone (or the <strong>Help</strong> item in the sidebar on a computer). For setup, deployment and the technical reference, your developers should see <code>README.md</code> and the <code>docs/</code> folder. This guide covers day-to-day use only.
   </footer>
 
 </div>
