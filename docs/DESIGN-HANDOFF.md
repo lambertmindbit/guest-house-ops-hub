@@ -1,5 +1,16 @@
 # Design Handoff — Guest House Operations Hub
 
+> ⚠️ **Historical — this brief has been actioned.** The redesign it requested
+> **shipped 2026-06-05** (navy/teal/mint design system; Fraunces / Plus Jakarta
+> Sans / JetBrains Mono; mobile bottom tab bar + FAB; desktop sidebar; calendar
+> Day/Week/2-Week/Month; in-app confirm dialogs; Preferences = appearance / accent
+> / **density**). Note a few details below describe the *pre-redesign* code and
+> *proposed* knobs that changed in implementation — e.g. the shipped Preferences
+> use a **`data-density`** control, not the proposed `data-material` /
+> `data-btnshape`, and `SettingsClient` was replaced by
+> `src/components/settings/sections.tsx`. Kept as the record of the design intent.
+> For the current UI see [ARCHITECTURE.md → UI](ARCHITECTURE.md#ui--design-system).
+
 > **Purpose of this document.** Hand this to a designer (or Claude Design) to do a
 > fresh, critical pass on the whole app's UX/UI. The owner is **not convinced the
 > current design is good enough** and wants it rethought — not just re-skinned.

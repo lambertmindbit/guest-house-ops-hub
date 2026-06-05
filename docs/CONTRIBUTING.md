@@ -57,7 +57,7 @@ that calls `prisma migrate dev` by hand.
   they apply cleanly to production without downtime.
 - Apply to the **test DB** too, or local tests will fail on the new schema:
   ```bash
-  DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
+  DATABASE_URL="$TEST_DATABASE_URL" DIRECT_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
   ```
 - If you ever rename the exclusion constraint, update it in **lockstep** in three
   places: the init migration SQL, the verify query in `scripts/migrate.mjs`, and
@@ -80,8 +80,8 @@ that calls `prisma migrate dev` by hand.
   passing to client components (Decimals aren't serializable to client props).
 - **Comment the *why*, not the *what*** — especially around booking-conflict and
   pricing logic.
-- **UI**: reuse the design-system classes (`.btn`, `.card`, `.input`, `.pill`,
-  `.tbl`, `.kpi`, …) and the primitives in [`src/components/ui.tsx`](../src/components/ui.tsx).
+- **UI**: reuse the design-system classes (`.btn`, `.card`, `.input`, `.badge`,
+  `.tbl`, `.calcell`, …) and the primitives in [`src/components/ui.tsx`](../src/components/ui.tsx).
   Mobile-first (~390px), then scale up. Wrap pages in `<main className="app-main">`.
 - **Client components** are small islands: `"use client"`, do a `fetch`, then
   `router.refresh()`. Keep data in the DB.
@@ -99,7 +99,7 @@ same shape — copy an existing one:
    form posting to the API + `router.refresh()`.
 
 Reference implementations: `src/app/api/rooms/*`, `src/app/api/expenses/*`,
-`src/components/SettingsClient.tsx`, `src/components/ExpensesPanel.tsx`.
+`src/components/settings/sections.tsx`, `src/components/ExpensesPanel.tsx`.
 
 ## Testing
 

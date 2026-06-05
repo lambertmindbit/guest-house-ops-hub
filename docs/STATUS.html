@@ -53,10 +53,10 @@
 
   <header>
     <h1>Guest House Operations Hub — Project Status</h1>
-    <div class="meta">Self-hosted, mobile-first ops hub for a single small property · Next.js 15 · Prisma · PostgreSQL (Supabase) · Vercel · As of 2026-06-03</div>
+    <div class="meta">Self-hosted, mobile-first ops hub for a single small property · Next.js 15 · Prisma · PostgreSQL (Supabase) · Vercel · As of 2026-06-05</div>
   </header>
 
-  <p><strong>Bottom line:</strong> all six planned milestones are <strong>built, tested, and live in production on <code>main</code></strong>. Several once-deferred items now have their <strong>app-side groundwork built behind clean seams</strong> (off by default) so they aren&rsquo;t a last-minute scramble — see the Deferred section. CI (lint + build + 25 tests on an ephemeral Postgres) gates every merge.</p>
+  <p><strong>Bottom line:</strong> all six planned milestones are <strong>built, tested, and live in production on <code>main</code></strong>, followed by a full <strong>UI/UX redesign</strong> and a <strong>performance pass</strong> (both shipped 2026-06-05). Several once-deferred items have their <strong>app-side groundwork built behind clean seams</strong> (off by default) so they aren&rsquo;t a last-minute scramble — see the Deferred section. CI (lint + build + 26 tests on an ephemeral Postgres) gates every merge.</p>
 
   <div class="legend">
     <span class="pill p-done">● Delivered</span>
@@ -125,6 +125,16 @@
       <div>
         <h3>Invoices + CSV export <span class="pill p-done">Delivered</span></h3>
         <p>Printable guest invoices (browser Print → PDF, using the property profile) and dependency-free Bookings / Payments CSV exports for the accountant.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="phase">
+      <div class="num" style="background:var(--good-bg);color:var(--good)">✦</div>
+      <div>
+        <h3>Cross-cutting polish <span class="pill p-done">Delivered</span> <span class="meta">2026-06-05</span></h3>
+        <p><strong>UI/UX redesign</strong> to a warmer navy/teal/mint design system (Fraunces / Plus Jakarta Sans / JetBrains Mono): mobile bottom tab bar + FAB, desktop sidebar, calendar Day/Week/2-Week/Month views, in-app confirm dialogs (no raw browser pop-ups), and a Preferences panel (appearance / accent / density). <strong>Performance pass</strong>: pooled DB connections (transaction pooler + <code>DIRECT_URL</code> for migrations), Vercel functions co-located with Supabase (<code>syd1</code> ↔ <code>ap-southeast-2</code>), and instant navigation feedback (<code>app/loading.tsx</code> + a cached nav badge).</p>
       </div>
     </div>
   </div>
@@ -236,7 +246,7 @@
     </tr>
     <tr>
       <td class="k">Resolved during handoff</td>
-      <td>Already fixed: CSV formula-injection guard; <code>db:migrate</code> footgun (now apply-only <code>prisma migrate deploy</code>); untracked <code>tsconfig.tsbuildinfo</code>; <strong>login rate-limiting added</strong>.</td>
+      <td>Already fixed: CSV formula-injection guard; <code>db:migrate</code> footgun (now apply-only <code>prisma migrate deploy</code>); untracked <code>tsconfig.tsbuildinfo</code>; <strong>login rate-limiting added</strong>; <strong>production latency</strong> (switched to the Supabase transaction pooler + co-located the Vercel region with the DB → page loads from seconds to sub-second).</td>
       <td><span class="pill p-done">Fixed</span></td>
     </tr>
   </table>

@@ -55,7 +55,8 @@ Full inventory: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 npm install
 
 # 2. Configure environment
-cp .env.example .env        # then fill in DATABASE_URL, OWNER_*, secrets
+cp .env.example .env        # fill in DATABASE_URL + DIRECT_URL, OWNER_*, secrets
+                            # (DATABASE_URL = pooler for the app; DIRECT_URL = direct, for migrations)
 
 # 3. Apply migrations + seed sample data
 npm run db:migrate          # apply pending migrations (prisma migrate deploy)

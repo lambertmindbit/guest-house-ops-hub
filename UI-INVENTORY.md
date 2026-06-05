@@ -1,9 +1,23 @@
-# Current UI Inventory — Guest House Ops Hub
+# UI Inventory — Guest House Ops Hub (pre-redesign baseline)
 
-A plain-language description of every screen as it looks today, for use as input
-to a UI/UX redesign (e.g. attach this to a claude.ai design brief). The app is
-**mobile-first** (designed for ~390px phones, scales up to desktop), built with
-Next.js App Router + Tailwind CSS v4, installable as a PWA.
+> ⚠️ **Historical document.** This describes the UI **before** the redesign and
+> was the input brief for it. The redesign shipped **2026-06-05** (navy/teal/mint
+> design system, Fraunces/Plus Jakarta Sans/JetBrains Mono, mobile bottom tab bar
+> + FAB, desktop sidebar, calendar Day/Week/2-Week/Month, Preferences with
+> appearance/accent/density, in-app confirm dialogs). It also predates several
+> screens since added (Pricing, Inbox, Invoice, the Settings sub-pages).
+>
+> For the **current** UI, see the live app, the design system in
+> [`src/app/globals.css`](src/app/globals.css), the user-facing
+> [docs/USER-GUIDE.html](docs/USER-GUIDE.html), and
+> [docs/ARCHITECTURE.md → UI](docs/ARCHITECTURE.md#ui--design-system). The brief
+> that drove the redesign is [docs/DESIGN-HANDOFF.md](docs/DESIGN-HANDOFF.md).
+> The text below is kept as the record of where the redesign started from.
+
+A plain-language description of every screen as it looked before the redesign,
+for use as input to a UI/UX redesign (attached to a claude.ai design brief). The
+app is **mobile-first** (designed for ~390px phones, scales up to desktop), built
+with Next.js App Router + Tailwind CSS v4, installable as a PWA.
 
 ## Current visual language (what to improve)
 - **Palette:** mostly Tailwind neutrals — white cards on a light grey (`neutral-50`) page, `neutral-200` borders, `neutral-900` (near-black) primary buttons. Functional accents: green = confirmed/clean, amber = warnings/cleaning, red = conflicts.

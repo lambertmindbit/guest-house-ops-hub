@@ -9,6 +9,16 @@
 The app shipped its planned scope across six milestones — all in production on
 `main`. The original product brief and rationale live in [CLAUDE.md](../CLAUDE.md).
 
+Two cross-cutting passes followed the feature work:
+
+- **UI/UX redesign** (shipped 2026-06-05) — a warmer navy/teal/mint design system
+  (Fraunces / Plus Jakarta Sans / JetBrains Mono), a mobile bottom tab bar + FAB
+  and desktop sidebar, calendar Day/Week/2-Week/Month views, in-app confirm
+  dialogs, and a Preferences panel (appearance / accent / density). See
+  [ARCHITECTURE.md → UI](ARCHITECTURE.md#ui--design-system).
+- **Performance** — pooled DB connections + region co-location + instant
+  navigation feedback. See [ARCHITECTURE.md → Performance](ARCHITECTURE.md#performance-serverless--remote-db).
+
 ## Delivered
 
 ### Phase 1 — Operations core + Admin

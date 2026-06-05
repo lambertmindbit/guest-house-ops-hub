@@ -51,6 +51,7 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/api/rooms` | List rooms (`?includeArchived=1` to include retired) |
+| `GET` | `/api/rooms/available` | Which physical rooms are free for a whole stay — `?checkIn&checkOut[&exclude]` → `[{ id, label, roomTypeName, free }]` (drives the reservation form's room picker; availability stays derived) |
 | `POST` | `/api/rooms` | Create a room |
 | `PATCH` | `/api/rooms/[id]` | Edit / archive / housekeeping flag (`{ label?, roomTypeId?, archived?, markCleaned? }`) |
 | `DELETE` | `/api/rooms/[id]` | Delete — **409** unless the room has zero history (else archive) |
@@ -76,13 +77,14 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 | `GET` / `PATCH` | `/api/pricing/policy` | The single pricing policy (weekend / lead-time / occupancy rules) |
 | `POST` / `DELETE` | `/api/pricing/overrides` | Pin / clear a manual nightly rate for a room type on a date |
 | `GET` / `POST` | `/api/seasons` | List / create season (date range + adjustment) |
-| `DELETE` | `/api/seasons/[id]` | Delete a season |
+| `PATCH` / `DELETE` | `/api/seasons/[id]` | Edit / delete a season |
 
 ## Guests
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/api/guests` | List / search guests (`?q=` name or phone) |
+| `POST` | `/api/guests` | Create a guest directly (name, phone, email?, notes?, blacklist?). **409** if the phone already exists |
 | `PATCH` | `/api/guests/[id]` | Edit profile (email, ID, notes, blacklist) |
 | `POST` | `/api/guests/[id]/id-document` | Upload/replace a scanned ID (multipart `file`; JPG/PNG/WEBP/PDF ≤ 5 MB). **503** if storage isn't configured |
 | `GET` | `/api/guests/[id]/id-document` | Short-lived signed URL to view the stored document |

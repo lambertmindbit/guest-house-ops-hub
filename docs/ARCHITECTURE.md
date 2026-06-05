@@ -191,14 +191,38 @@ step keeps mis-parses harmless. See [ROADMAP.md](ROADMAP.md).
   their own shared-secret checks (`ICAL_FEED_TOKEN`, `CRON_SECRET`) since they must
   be reachable without the owner cookie.
 
+## Performance (serverless + remote DB)
+
+Every route is dynamic (the middleware reads the session cookie), so each
+navigation renders on the server and queries Supabase. Three things keep that
+fast despite the DB being remote:
+
+- **Pooled connections.** Runtime uses the Supabase **transaction pooler**
+  (`DATABASE_URL`, `:6543?pgbouncer=true&connection_limit=5`) so short-lived
+  serverless invocations reuse warm connections instead of doing a TLS handshake
+  per request. Migrations use a separate **direct** connection (`DIRECT_URL`,
+  `:5432`) declared as `directUrl` in the schema. See [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Region co-location.** Functions are pinned to the Supabase region
+  (`syd1` ↔ `ap-southeast-2`) so queries aren't a cross-region round trip.
+- **Instant navigation feedback.** [`src/app/loading.tsx`](../src/app/loading.tsx)
+  is a root Suspense fallback shown the moment you tap a link, so the browser
+  never freezes on the old page while the next renders. The nav conflict-badge
+  count is wrapped in `unstable_cache` (60s) so its join doesn't run on every page
+  load (see [`src/app/layout.tsx`](../src/app/layout.tsx)).
+
+Domain queries themselves are already parallelized (`Promise.all` in
+`dashboard.ts`, `calendar.ts`) and the calendar grid math is in-memory.
+
 ## UI / design system
 
 - Tailwind v4 (`@import "tailwindcss"`) plus a token-driven design system in
   [`src/app/globals.css`](../src/app/globals.css): CSS custom properties +
-  component classes (`.btn`, `.card`, `.input`, `.pill`, `.tbl`, `.kpi`,
-  `.cal-cell`, …). Theming is controlled by `data-appearance` / `data-tint` /
-  `data-material` / `data-btnshape` attributes on `<html>` (persisted to
-  localStorage with a no-flash inline script in the root layout).
+  component classes (`.btn`, `.card`, `.input`, `.badge`, `.tbl`, `.calcell`,
+  `.daycell`, …). Theming is controlled by `data-appearance` (light/dark/system) /
+  `data-tint` (accent) / `data-density` (comfortable/compact) attributes on
+  `<html>` (persisted to localStorage with a no-flash inline script in the root
+  layout). Type system: Fraunces (display), Plus Jakarta Sans (UI), JetBrains Mono
+  (numerals), loaded via `next/font`.
 - [`src/components/NavShell.tsx`](../src/components/NavShell.tsx) renders the
   responsive chrome (mobile iOS tab bar vs desktop sidebar) and the Preferences
   panel.

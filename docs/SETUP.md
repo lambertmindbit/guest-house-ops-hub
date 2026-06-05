@@ -27,21 +27,26 @@ Create a Supabase project (free tier is fine), then grab connection strings from
 
 ### Connection-string nuances (important)
 
-Supabase exposes the database three ways. This project uses two of them:
+[`prisma/schema.prisma`](../prisma/schema.prisma) uses **two** datasource URLs:
 
-| Use | Pooler | Port | Notes |
-|-----|--------|------|-------|
-| **Local dev & migrations** | Session pooler (or Direct) | `5432` | Needed for Prisma migrations and Prisma Studio. The "Direct" host is IPv6-only and unreachable on many machines/CI — prefer the **Session pooler** host. |
-| **Vercel serverless runtime** | Transaction pooler | `6543` | Add `?pgbouncer=true`. Set this as `DATABASE_URL` in Vercel only. |
+| Var | Used for | Pooler / port |
+|-----|----------|---------------|
+| `DATABASE_URL` | the app's **runtime** queries | Transaction pooler `6543` (+ `?pgbouncer=true&connection_limit=5`) in production; locally the session pooler on `5432` is fine |
+| `DIRECT_URL` | **migrations** (`prisma migrate`) only | Session pooler / direct on `5432` — pgbouncer's transaction pooling can't run migrations |
 
-So locally you typically point `DATABASE_URL` at the **session pooler on 5432**:
+> ⚠️ **`DIRECT_URL` is now required** — `prisma migrate` / `prisma generate`
+> read it. If it's unset you'll get *"Environment variable not found: DIRECT_URL."*
+
+Locally the simplest setup is to point **both** at the **session pooler on 5432**:
 
 ```
-postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:5432/postgres
+DIRECT_URL=postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:5432/postgres
 ```
 
 (In production on Vercel, `DATABASE_URL` uses the **transaction pooler on 6543**
-with `?pgbouncer=true` — see [DEPLOYMENT.md](DEPLOYMENT.md).)
+with `?pgbouncer=true&connection_limit=5` while `DIRECT_URL` stays on 5432 — see
+[DEPLOYMENT.md](DEPLOYMENT.md).)
 
 ## 3. Environment variables
 
@@ -53,7 +58,8 @@ Fill in:
 
 | Var | Purpose |
 |-----|---------|
-| `DATABASE_URL` | Postgres connection string (session pooler / 5432 locally) |
+| `DATABASE_URL` | Runtime Postgres connection (session pooler / 5432 locally) |
+| `DIRECT_URL` | Direct connection for **migrations** (5432). Locally, same value as `DATABASE_URL` is fine. **Required** — Prisma errors if unset. |
 | `TEST_DATABASE_URL` | **Separate, disposable** DB for the test suite (see [Testing](#5-tests--the-test-database)) |
 | `OWNER_EMAIL` / `OWNER_PASSWORD` | The single owner login |
 | `AUTH_SECRET` | Long random string — signs the session cookie |
@@ -112,8 +118,8 @@ common options:
 Bring the test DB schema up to date the same way as prod:
 
 ```bash
-# apply migrations to the test DB
-DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
+# apply migrations to the test DB (set DIRECT_URL too — migrations read it)
+DATABASE_URL="$TEST_DATABASE_URL" DIRECT_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
 ```
 
 Then:
@@ -132,7 +138,8 @@ CI spins up an ephemeral `postgres:16` for this automatically — see
 |---------|-------------|
 | `P1001` can't reach database | You're using the IPv6-only **Direct** host. Switch to the **Session pooler** host (5432). |
 | Tests refuse to run | `TEST_DATABASE_URL` not set. Point it at a disposable DB. |
-| Tests fail referencing a missing column | Test DB schema is stale — run `DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy`. |
+| Tests fail referencing a missing column | Test DB schema is stale — run `DATABASE_URL="$TEST_DATABASE_URL" DIRECT_URL="$TEST_DATABASE_URL" npx prisma migrate deploy`. |
+| `Environment variable not found: DIRECT_URL` | The schema needs `DIRECT_URL` for migrations. Set it in `.env` (same value as `DATABASE_URL` locally). |
 | 500 with `Cannot find module .../vendor-chunks/...` | Stale dev cache — `rm -rf .next` and restart. |
 | Prisma client out of date after schema change | `npx prisma generate`. |
 | `node-ical` build error (`BigInt is not a function`) | Already handled via `serverExternalPackages` in `next.config.mjs` — don't remove it. |
