@@ -173,7 +173,7 @@ we do with it":
    `POST /api/ingest/email` (token-gated, excluded from the owner-cookie
    middleware). Two ready-to-deploy forwarders ship in
    [`integrations/`](../integrations/) — a Gmail Apps Script (no domain) and a
-   Cloudflare Email Worker (for a domain / multiple properties).
+   Cloudflare Email Worker (optional, for a branded domain instead of a personal Gmail).
 3. On the Inbox screen the owner corrects fields and creates the booking through
    the **existing** `POST /api/reservations` — inheriting the no-double-booking
    409 — then the staged item is marked `imported`.

@@ -30,7 +30,7 @@ All six planned milestones are built and in production:
 | 6 | **Invoices / export** | Printable invoices, Bookings/Payments CSV export |
 
 **Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
-- **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — for a domain / multiple properties).
+- **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).
 - **Login rate-limiting** — active (10 attempts / IP / 5 min).
 - **Guest ID document upload** — Supabase Storage adapter + UI; activate by setting the storage env vars.
 

@@ -1,12 +1,14 @@
 # OTA Email Ingest — Cloudflare Email Worker
 
-**The "domain" forwarder — best once you run multiple homestays.** Cloudflare
-receives mail on your own domain and runs this tiny script on each email, sending
-it to the Ops Hub **Inbox** for review (nothing is auto-booked). Free to run.
+**The branded-domain forwarder — optional.** Cloudflare receives mail on your
+*own domain* and runs this tiny script on each email, sending it to the Ops Hub
+**Inbox** for review (nothing is auto-booked). Free to run.
 
-> Just starting, or only one mailbox? Use the **Gmail** version instead
-> (`../gmail-apps-script/`) — no domain, no Cloudflare. You can switch to this
-> later with **no app changes** (same webhook, same token).
+> **You don't need this.** The **Gmail** version (`../gmail-apps-script/`) works
+> indefinitely, for any number of rooms — no domain, no Cloudflare. Choose this
+> Cloudflare path only if you'd rather OTA mail arrive on your own domain (e.g.
+> `bookings@yourdomain.com`) instead of a personal Gmail account. You can switch
+> at any time with **no app changes** (same webhook, same token).
 
 This folder is **isolated from the main app** — its own `package.json`. Deploying
 it does not touch the Next.js app or its dependencies.
@@ -110,13 +112,6 @@ npx wrangler login           # opens a browser to authorise your Cloudflare acco
   ```bash
   npm run tail
   ```
-
-## Multiple homestays
-
-One domain can serve several properties. Per property, create:
-- a distinct address (e.g. `bookings-seaside@`, `bookings-hilltop@`), and
-- its own Worker, each with that property's own `INGEST_URL` + `INGEST_TOKEN`
-  (pointing at that property's app deployment).
 
 ## Local dev (optional)
 

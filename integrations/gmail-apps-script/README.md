@@ -5,9 +5,10 @@ Google account on a 5-minute timer: it finds OTA confirmation emails you've
 labelled, sends each to the Ops Hub **Inbox** for review (never auto-booked), then
 marks them done so they're never sent twice.
 
-> No Cloudflare, no domain, no DNS. Moving to multiple homestays later? Switch to
-> the Cloudflare Worker in `../cloudflare-email-worker/` — same webhook, same
-> token, nothing app-side changes.
+> No Cloudflare, no domain, no DNS — and it works for any number of rooms. If you
+> later want OTA mail on your own branded domain instead of a personal Gmail, you
+> can switch to the Cloudflare Worker in `../cloudflare-email-worker/` — same
+> webhook, same token, nothing app-side changes.
 
 ---
 

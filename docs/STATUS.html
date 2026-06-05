@@ -191,7 +191,7 @@
       <table style="margin:8px 0 0">
         <tr><th>Option</th><th>Best for</th><th>Needs</th></tr>
         <tr><td class="k">A · Gmail script</td><td><strong>Starting out / one mailbox</strong> (use this now)</td><td>Just a Gmail account. No domain, no Cloudflare.</td></tr>
-        <tr><td class="k">B · Cloudflare</td><td><strong>Scaling up / multiple homestays</strong></td><td>A domain + a free Cloudflare account.</td></tr>
+        <tr><td class="k">B · Cloudflare</td><td><strong>Optional — a branded domain</strong> (not a personal Gmail)</td><td>A domain + a free Cloudflare account.</td></tr>
       </table>
       Both send to the <em>same</em> webhook with the <em>same</em> token, so you can start on A and move to B later with <strong>no app changes</strong>.
     </div>
@@ -250,8 +250,8 @@
     <p style="color:var(--sub);font-size:13.5px;margin:.2em 0 0">To pause: editor → <strong>Triggers</strong> (clock icon) → delete the trigger. To resume: run <code>setup</code> again. Full notes: <code>integrations/gmail-apps-script/README.md</code>.</p>
 
     <!-- ===== OPTION B: CLOUDFLARE ===== -->
-    <p class="step" style="font-size:16px;border-top:2px solid var(--ink);padding-top:14px">Option B · Cloudflare Email Worker <span class="pill p-defer">for scaling / a domain</span></p>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">Cloudflare receives mail on your own domain and runs a tiny script on each email. Free, and tidier once you run several homestays (one domain, e.g. <code>bookings-seaside@</code>, <code>bookings-hilltop@</code>). Ready-made code is in <code>integrations/cloudflare-email-worker/</code>.</p>
+    <p class="step" style="font-size:16px;border-top:2px solid var(--ink);padding-top:14px">Option B · Cloudflare Email Worker <span class="pill p-defer">optional · branded domain</span></p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px"><strong>You don't need this — Option A (Gmail) works indefinitely, for any number of rooms.</strong> Choose Cloudflare only if you'd prefer OTA mail to arrive on your <em>own domain</em> (e.g. <code>bookings@yourdomain.com</code>) rather than relying on a personal Gmail account. Free to run; ready-made code is in <code>integrations/cloudflare-email-worker/</code>.</p>
     <div class="warn" style="margin:.2em 0 8px"><strong>Before you start:</strong> Cloudflare Email Routing takes over your domain's email (MX) records. If that domain <em>already</em> runs your business email (e.g. Google Workspace), use a <strong>different/spare domain</strong> for ingestion so you don't disrupt existing mail.</div>
 
     <p style="font-weight:600;margin:.6em 0 .2em">B1 · Get a domain onto Cloudflare</p>
@@ -312,7 +312,7 @@ npm run deploy</code></pre>
     <ol style="padding-left:22px">
       <li>Cloudflare → <strong>Email → Email Routing → Routes</strong> → <strong>Create address</strong>, e.g. <code>bookings@yourdomain.com</code>.</li>
       <li>Set its <strong>Action</strong> to <strong>Send to a Worker</strong> → pick your Worker.</li>
-      <li>In the mailbox where OTA confirmations arrive, add a forwarding rule that forwards them to <code>bookings@yourdomain.com</code>. <em>(Multiple homestays: make one address per property and one Worker each, each with its own <code>INGEST_URL</code>/<code>INGEST_TOKEN</code> for that property's app.)</em></li>
+      <li>In the mailbox where OTA confirmations arrive, add a forwarding rule that forwards them to <code>bookings@yourdomain.com</code>.</li>
     </ol>
 
     <!-- ===== SHARED: SMOKE TEST + TUNE + VERIFY ===== -->
