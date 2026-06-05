@@ -184,34 +184,114 @@
 
   <div class="card">
     <h3 style="margin:0 0 6px">A · Automated OTA email ingestion <span class="pill p-prep">🟡 needs wiring</span></h3>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 10px">Works <strong>today</strong> with zero setup by pasting an email into the <strong>Inbox</strong> screen. The steps below make import <em>automatic</em> (emails land in the Inbox by themselves). Either way, parsed bookings are always <strong>staged for your review</strong> — nothing is ever auto-booked. Full technical walkthrough follows.</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 10px">Works <strong>today</strong> with zero setup by pasting an email into the <strong>Inbox</strong> screen. The steps below make it <em>automatic</em> — OTA confirmations land in the Inbox by themselves. Either way, bookings are always <strong>staged for your review</strong>; nothing is ever auto-booked.</p>
 
-    <p class="step">How the webhook works (the contract you build against)</p>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">There is one endpoint. Your job is simply to deliver each OTA email's text to it. It lives <em>outside</em> the owner login (so a forwarder can reach it) and is gated by its own shared secret, <code>INGEST_TOKEN</code>.</p>
+    <div class="note" style="margin:.2em 0 10px">
+      <strong>Two ways to deliver the emails — pick by where you are:</strong>
+      <table style="margin:8px 0 0">
+        <tr><th>Option</th><th>Best for</th><th>Needs</th></tr>
+        <tr><td class="k">A · Gmail script</td><td><strong>Starting out / one mailbox</strong> (use this now)</td><td>Just a Gmail account. No domain, no Cloudflare.</td></tr>
+        <tr><td class="k">B · Cloudflare</td><td><strong>Scaling up / multiple homestays</strong></td><td>A domain + a free Cloudflare account.</td></tr>
+      </table>
+      Both send to the <em>same</em> webhook with the <em>same</em> token, so you can start on A and move to B later with <strong>no app changes</strong>.
+    </div>
+
+    <p class="step" style="border-top:1px solid var(--line);padding-top:14px">Shared setup — do this once, for either option</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">There is one endpoint. A forwarder's only job is to deliver each OTA email's text to it. It lives <em>outside</em> the owner login (so a forwarder can reach it) and is gated by its own shared secret, <code>INGEST_TOKEN</code>.</p>
     <table>
       <tr><th>Field</th><th>Value</th></tr>
       <tr><td class="k">Method &amp; URL</td><td><code>POST https://YOUR-APP.vercel.app/api/ingest/email</code></td></tr>
       <tr><td class="k">Auth</td><td>Header <code>x-ingest-token: YOUR_INGEST_TOKEN</code> &nbsp;(or <code>?token=YOUR_INGEST_TOKEN</code> on the URL)</td></tr>
-      <tr><td class="k">Body</td><td><code>application/json</code> — <code>{ "raw": "FULL EMAIL TEXT" }</code> &nbsp;(headers + body, as plain text — the parser greps it)</td></tr>
+      <tr><td class="k">Body</td><td><code>application/json</code> — <code>{ "raw": "FULL EMAIL TEXT" }</code></td></tr>
       <tr><td class="k">Success</td><td><code>201 { "data": { "id": "...", "status": "pending" } }</code> → now visible in the Inbox</td></tr>
-      <tr><td class="k">Rejected</td><td><code>401 { "error": "unauthorized" }</code> (token missing/wrong, or <code>INGEST_TOKEN</code> unset) · <code>422</code> (body isn't <code>{ raw }</code>)</td></tr>
-      <tr><td class="k">Retry-safe</td><td>De-duplicated by the OTA reference — the same confirmation arriving twice won't create two review items.</td></tr>
+      <tr><td class="k">Rejected</td><td><code>401</code> (token missing/wrong, or <code>INGEST_TOKEN</code> unset) · <code>422</code> (body isn't <code>{ raw }</code>)</td></tr>
+      <tr><td class="k">Retry-safe</td><td>De-duplicated by the OTA reference — the same confirmation twice won't create two items.</td></tr>
     </table>
-
-    <p class="step">Step 1 — Create the secret token</p>
+    <p style="font-weight:600;margin:.6em 0 .2em">Create the token and put it in Vercel:</p>
     <ol style="padding-left:22px">
-      <li>Generate one: <code>openssl rand -hex 32</code> (any long random string works).</li>
-      <li>In <strong>Vercel → Project → Settings → Environment Variables</strong>, add <code>INGEST_TOKEN</code> = that value, for <strong>Production</strong> (and Preview if you test there). <strong>Redeploy</strong> so it takes effect.</li>
-      <li>Add the same line to your local <code>.env</code> if you want to test locally. <em>Until <code>INGEST_TOKEN</code> is set, the endpoint safely rejects everything with 401.</em></li>
+      <li><strong>Make a long random password.</strong> On a Mac/Linux terminal run <code>openssl rand -hex 32</code> and copy the result. (Any ~40-character random string is fine.)</li>
+      <li>Go to <strong>Vercel → your project → Settings → Environment Variables → Add New</strong>. Key = <code>INGEST_TOKEN</code>, Value = that string, tick <strong>Production</strong>. <strong>Save.</strong></li>
+      <li><strong>Redeploy:</strong> Deployments → ⋯ on the latest → <strong>Redeploy</strong>. (Until the token is set, the endpoint safely rejects everything with 401.)</li>
+      <li><em>Keep that same string handy</em> — you'll paste the identical value into whichever forwarder you choose below. It must match exactly.</li>
     </ol>
 
-    <p class="step">Step 2 — Deploy the forwarder (recommended: Cloudflare Email Worker)</p>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px"><strong>Already built and ready in the repo</strong> at <code>integrations/cloudflare-email-worker/</code> (Worker + <code>wrangler.toml</code> + README) — you don't write this, you just fill in the token + URL and <code>wrangler deploy</code>. Cloudflare Email Routing is free and runs the script on each received email, so it can POST exactly the JSON the endpoint wants. (Any other method — Mailgun/SendGrid inbound parse, an IMAP poller — is fine too; it just has to end in the same <code>POST { raw }</code> call.) <strong>No domain / no Cloudflare?</strong> A ready-to-use <strong>Gmail Apps Script</strong> version is in <code>integrations/gmail-apps-script/</code> — it runs inside your Google account on a timer, same token + webhook, zero DNS. The Cloudflare Worker source for reference:</p>
+    <!-- ===== OPTION A: GMAIL ===== -->
+    <p class="step" style="font-size:16px;border-top:2px solid var(--teal);padding-top:14px;color:var(--teal)">Option A · Gmail script <span class="pill p-done" style="background:var(--good-bg);color:var(--good)">use this now</span></p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">A small free script runs inside your Google account on a 5-minute timer, sends labelled OTA emails to the Inbox, and marks them done. Ready-made code is in <code>integrations/gmail-apps-script/</code>. <strong>No domain, no Cloudflare.</strong></p>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">A1 · Tag the OTA emails in Gmail</p>
     <ol style="padding-left:22px">
-      <li>You need a domain on Cloudflare. In <strong>Cloudflare → your domain → Email → Email Routing</strong>, enable it and verify the records.</li>
-      <li>Create an address, e.g. <code>bookings@yourdomain.com</code>, and set its action to <strong>Send to a Worker</strong>.</li>
-      <li>Create the Worker with this code, and add <code>INGEST_TOKEN</code> as a Worker <strong>Variable/Secret</strong> (same value as in Vercel):</li>
+      <li>In Gmail, click the <strong>filter/sliders icon</strong> in the search bar (top) to open search options.</li>
+      <li>In the <strong>From</strong> box type: <code>booking.com OR agoda.com OR makemytrip.com</code> (use the senders you actually receive).</li>
+      <li>Click <strong>Create filter</strong> → tick <strong>Apply the label</strong> → <strong>New label…</strong> → name it exactly <code>OTA-Ingest</code> → <strong>Create filter</strong>.</li>
+      <li><em>Tip:</em> also tick "Also apply to matching conversations" to catch ones already in your inbox.</li>
     </ol>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">A2 · Create the script</p>
+    <ol style="padding-left:22px">
+      <li>Open <strong>script.google.com</strong> → <strong>New project</strong>.</li>
+      <li>Delete the sample code. Open <code>integrations/gmail-apps-script/Code.gs</code> from this project, copy <strong>all</strong> of it, and paste it in.</li>
+      <li>Rename the project (top-left) to e.g. <em>OTA Ingest</em> and click <strong>Save</strong> (💾).</li>
+    </ol>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">A3 · Plug in your two values</p>
+    <ol style="padding-left:22px">
+      <li>Click <strong>Project Settings</strong> (the ⚙ gear on the left) → scroll to <strong>Script properties</strong> → <strong>Add script property</strong>.</li>
+      <li>Add <code>INGEST_URL</code> = <code>https://YOUR-APP.vercel.app/api/ingest/email</code></li>
+      <li>Add <code>INGEST_TOKEN</code> = the <strong>same</strong> string you put in Vercel. <strong>Save script properties.</strong></li>
+    </ol>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">A4 · Test, then switch it on</p>
+    <ol style="padding-left:22px">
+      <li>Back in the editor, choose <strong>testConnection</strong> in the function dropdown (top) → <strong>Run</strong>. Approve the permission prompt (it's your own script).</li>
+      <li>Open <strong>Execution log</strong> — you should see <code>201</code>. Check the app's <strong>Inbox</strong>: a <em>Test Guest</em> item is waiting. ✅ &nbsp;(<code>401</code> = token mismatch; <code>422</code> = wrong URL.)</li>
+      <li>Choose <strong>setup</strong> in the dropdown → <strong>Run</strong>. This starts the every-5-minutes timer. <strong>Done</strong> — labelled emails now flow in on their own.</li>
+    </ol>
+    <p style="color:var(--sub);font-size:13.5px;margin:.2em 0 0">To pause: editor → <strong>Triggers</strong> (clock icon) → delete the trigger. To resume: run <code>setup</code> again. Full notes: <code>integrations/gmail-apps-script/README.md</code>.</p>
+
+    <!-- ===== OPTION B: CLOUDFLARE ===== -->
+    <p class="step" style="font-size:16px;border-top:2px solid var(--ink);padding-top:14px">Option B · Cloudflare Email Worker <span class="pill p-defer">for scaling / a domain</span></p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">Cloudflare receives mail on your own domain and runs a tiny script on each email. Free, and tidier once you run several homestays (one domain, e.g. <code>bookings-seaside@</code>, <code>bookings-hilltop@</code>). Ready-made code is in <code>integrations/cloudflare-email-worker/</code>.</p>
+    <div class="warn" style="margin:.2em 0 8px"><strong>Before you start:</strong> Cloudflare Email Routing takes over your domain's email (MX) records. If that domain <em>already</em> runs your business email (e.g. Google Workspace), use a <strong>different/spare domain</strong> for ingestion so you don't disrupt existing mail.</div>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">B1 · Get a domain onto Cloudflare</p>
+    <ol style="padding-left:22px">
+      <li><strong>Own a domain.</strong> If you don't have one, buy one (~$10–15/yr) from any registrar (Namecheap, GoDaddy, Cloudflare Registrar…).</li>
+      <li>Create a <strong>free Cloudflare account</strong> at <strong>dash.cloudflare.com</strong>.</li>
+      <li>In Cloudflare → <strong>Add a site</strong> → enter your domain → choose the <strong>Free</strong> plan.</li>
+      <li>Cloudflare shows you <strong>two nameservers</strong>. Go to your registrar, and in its DNS/nameserver settings, <strong>replace the nameservers</strong> with Cloudflare's two. Save. (Takes minutes to a few hours to activate — Cloudflare emails you when it's "Active".)</li>
+    </ol>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">B2 · Turn on Email Routing</p>
+    <ol style="padding-left:22px">
+      <li>Cloudflare → your domain → <strong>Email → Email Routing</strong> → <strong>Enable</strong>. Approve the DNS records it adds (one click).</li>
+      <li>Under <strong>Destination addresses</strong>, add and <strong>verify</strong> your own normal email (you'll get a confirmation email) — this is used as the safety fallback.</li>
+    </ol>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">B3 · Deploy the Worker</p>
+    <p style="color:var(--sub);font-size:13.5px;margin:.2em 0 4px"><strong>Technical path (recommended) — terminal:</strong></p>
+    <pre><code>cd integrations/cloudflare-email-worker
+npm install
+npx wrangler login                 # opens the browser to authorise
+
+# 1. Put your app URL in wrangler.toml  →  INGEST_URL = "https://YOUR-APP.vercel.app/api/ingest/email"
+# 2. Set the secret (paste the SAME token as in Vercel when prompted):
+npx wrangler secret put INGEST_TOKEN
+# 3. Ship it:
+npm run deploy</code></pre>
+    <p style="color:var(--sub);font-size:13.5px;margin:.6em 0 4px"><strong>No-terminal path — Cloudflare dashboard:</strong></p>
+    <ol style="padding-left:22px">
+      <li>Cloudflare → <strong>Workers &amp; Pages → Create → Create Worker</strong>. Give it a name (e.g. <code>ota-email-ingest</code>) → <strong>Deploy</strong> → <strong>Edit code</strong>.</li>
+      <li>Delete the sample, paste the contents of <code>integrations/cloudflare-email-worker/src/worker.js</code> → <strong>Deploy</strong>.</li>
+      <li>Open the Worker → <strong>Settings → Variables and Secrets</strong> and add:
+        <ul>
+          <li><code>INGEST_URL</code> — type <strong>Plaintext</strong> — your <code>…/api/ingest/email</code> URL</li>
+          <li><code>INGEST_TOKEN</code> — type <strong>Secret</strong> — the same token as in Vercel</li>
+          <li><em>(optional)</em> <code>FALLBACK_EMAIL</code> — Plaintext — your verified destination from B2</li>
+        </ul>
+        <strong>Save and deploy.</strong></li>
+    </ol>
+    <p style="color:var(--sub);font-size:13.5px;margin:.2em 0 0">Worker source, for reference:</p>
     <pre><code>export default {
   async email(message, env) {
     // The full raw email (headers + body) as text
@@ -227,39 +307,45 @@
     });
   },
 };</code></pre>
-    <ol style="padding-left:22px" start="4">
-      <li><strong>Get the OTA emails to that address.</strong> In the mailbox where Booking.com / Agoda / MakeMyTrip confirmations arrive, add a filter/forwarding rule that forwards those confirmations to <code>bookings@yourdomain.com</code>. (Or point the OTA's notification email straight there.)</li>
+
+    <p style="font-weight:600;margin:.6em 0 .2em">B4 · Route the emails to the Worker</p>
+    <ol style="padding-left:22px">
+      <li>Cloudflare → <strong>Email → Email Routing → Routes</strong> → <strong>Create address</strong>, e.g. <code>bookings@yourdomain.com</code>.</li>
+      <li>Set its <strong>Action</strong> to <strong>Send to a Worker</strong> → pick your Worker.</li>
+      <li>In the mailbox where OTA confirmations arrive, add a forwarding rule that forwards them to <code>bookings@yourdomain.com</code>. <em>(Multiple homestays: make one address per property and one Worker each, each with its own <code>INGEST_URL</code>/<code>INGEST_TOKEN</code> for that property's app.)</em></li>
     </ol>
 
-    <p class="step">Step 3 — Smoke-test the endpoint</p>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">Before wiring real mail, confirm the endpoint + token work with a fake email:</p>
+    <!-- ===== SHARED: SMOKE TEST + TUNE + VERIFY ===== -->
+    <p class="step" style="border-top:1px solid var(--line);padding-top:14px">After either option — verify &amp; fine-tune</p>
+    <p style="font-weight:600;margin:.4em 0 .2em">Quick endpoint smoke test (optional, technical)</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 4px">Confirms the token + URL independently of any email:</p>
     <pre><code>curl -X POST https://YOUR-APP.vercel.app/api/ingest/email \
   -H "content-type: application/json" \
   -H "x-ingest-token: YOUR_INGEST_TOKEN" \
   -d '{"raw":"Booking.com\nGuest name: Test Guest\nCheck-in: 2026-07-12\nCheck-out: 2026-07-14\nRoom: Deluxe\nTotal: ₹4200\nConfirmation: TEST-123"}'</code></pre>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">Expect <code>201</code> with an <code>id</code>, and the item to appear in the <strong>Inbox</strong> screen as <em>pending</em>. A 401 means the token doesn't match; a 422 means the body wasn't <code>{ "raw": "..." }</code>.</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">Expect <code>201</code> and a <em>Test Guest</em> in the Inbox. <code>401</code> = token mismatch; <code>422</code> = malformed body.</p>
 
-    <p class="step">Step 4 — Tune the parser against real emails</p>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">The reader in <code>src/lib/email-parse.ts</code> is best-effort scaffolding — it fills what it can and leaves the rest blank for you to correct on the review screen. Tune it once against real samples so fewer fields need correcting. It extracts:</p>
+    <p style="font-weight:600;margin:.8em 0 .2em">Tune the email reader against real samples</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 6px">The parser in <code>src/lib/email-parse.ts</code> fills what it can and leaves the rest blank for you to correct on the review screen. Tune it once so fewer fields need fixing. It extracts:</p>
     <table>
       <tr><th>Field</th><th>How it's found</th></tr>
-      <tr><td class="k">source</td><td>Keyword match — "booking.com" / "agoda" / "makemytrip" → else <em>Unknown</em></td></tr>
-      <tr><td class="k">otaRef</td><td>A "booking/reservation/confirmation/itinerary number" label followed by a code</td></tr>
+      <tr><td class="k">source</td><td>Keyword — "booking.com" / "agoda" / "makemytrip" → else <em>Unknown</em></td></tr>
+      <tr><td class="k">otaRef</td><td>A "booking/reservation/confirmation/itinerary number" label + code</td></tr>
       <tr><td class="k">guestName</td><td>A <code>Guest name:</code> / <code>Name:</code> / <code>Booker:</code> label</td></tr>
       <tr><td class="k">guestPhone</td><td>A <code>Phone:</code>/<code>Mobile:</code> label, else a long phone-like number</td></tr>
-      <tr><td class="k">checkIn / checkOut</td><td>The <code>Check-in:</code> / <code>Check-out:</code> lines (dates like <code>2026-07-12</code>, <code>12 Jul 2026</code>, <code>July 12, 2026</code>)</td></tr>
+      <tr><td class="k">checkIn / checkOut</td><td>The <code>Check-in:</code> / <code>Check-out:</code> lines (<code>2026-07-12</code>, <code>12 Jul 2026</code>, <code>July 12, 2026</code>)</td></tr>
       <tr><td class="k">roomTypeHint</td><td>A <code>Room type:</code> / <code>Room:</code> / <code>Accommodation:</code> label</td></tr>
-      <tr><td class="k">amount</td><td>A <code>Total/Amount/Price</code> figure (handles ₹ / INR / Rs and commas)</td></tr>
+      <tr><td class="k">amount</td><td>A <code>Total/Amount/Price</code> figure (₹ / INR / Rs, commas)</td></tr>
     </table>
     <ol style="padding-left:22px">
-      <li>Paste 2–3 <strong>real</strong> Booking.com / Agoda / MakeMyTrip confirmations into the Inbox and note which fields come out wrong/blank.</li>
-      <li>Adjust the matching <strong>regex</strong> for just those fields in <code>src/lib/email-parse.ts</code> (each field is isolated, so changes are low-risk).</li>
-      <li>Add a real (anonymised) sample as a fixture in <code>tests/email-parse.test.ts</code> and run <code>npm test</code> so the format stays covered.</li>
+      <li>Paste 2–3 <strong>real</strong> confirmations into the Inbox; note which fields are wrong/blank.</li>
+      <li>Adjust only those fields' <strong>regex</strong> in <code>src/lib/email-parse.ts</code> (each field is isolated).</li>
+      <li>Add an anonymised sample to <code>tests/email-parse.test.ts</code> and run <code>npm test</code>.</li>
     </ol>
 
-    <p class="step">Step 5 — Verify end-to-end</p>
-    <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">Forward a real test confirmation to <code>bookings@yourdomain.com</code> → it appears in the <strong>Inbox</strong> as <em>pending</em> → review/correct the fields, pick the room → <strong>Create booking</strong> (which goes through the normal <code>POST /api/reservations</code>, so it's conflict-checked like any booking). Re-sends are ignored thanks to the OTA-reference de-dupe.</p>
-    <div class="warn" style="margin-top:6px"><strong>Safety:</strong> automation only fills the Inbox — it never creates a booking on its own. You always do the final review + <em>Create booking</em> step, so a mis-parsed email can't corrupt the calendar.</div>
+    <p style="font-weight:600;margin:.8em 0 .2em">Verify end-to-end</p>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">Send a real test confirmation through your chosen forwarder → it appears in the <strong>Inbox</strong> as <em>pending</em> → review/correct fields, pick the room → <strong>Create booking</strong> (goes through the normal <code>POST /api/reservations</code>, so it's conflict-checked). Re-sends are ignored via the OTA-reference de-dupe.</p>
+    <div class="warn" style="margin-top:8px"><strong>Safety:</strong> automation only fills the Inbox — it never creates a booking on its own. You always do the final review + <em>Create booking</em>, so a mis-parsed email can't corrupt the calendar.</div>
   </div>
 
   <div class="card">
