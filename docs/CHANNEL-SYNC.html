@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Channels &amp; Double-Booking — How It Works</title>
+<style>
+  :root{
+    --ink:#1c2421; --sub:#5b6b64; --line:#e3e8e5; --paper:#fff; --bg:#f6f8f7;
+    --teal:#0fa68e; --teal-bg:#e7f5f1; --good:#1f9d57; --good-bg:#e6f6ec;
+    --warn:#b9791f; --warn-bg:#fbf1e0; --danger:#cf3a3a; --danger-bg:#fbe9e9; --ink-bg:#eef1ef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:32px 18px}
+  .wrap{max-width:880px;margin:0 auto}
+  header{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:10px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+  .meta{color:var(--sub);font-size:13.5px}
+  h2{font-size:20px;margin:34px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+  h2 .n{display:inline-block;width:28px;height:28px;border-radius:7px;background:var(--teal-bg);color:var(--teal);font-size:15px;font-weight:800;text-align:center;line-height:28px;margin-right:8px}
+  h3{font-size:15.5px;margin:18px 0 6px}
+  p{margin:.5em 0}
+  ul,ol{margin:.4em 0;padding-left:22px}
+  li{margin:.35em 0}
+  code{background:var(--ink-bg);padding:1px 6px;border-radius:5px;font-size:13px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:12px 0}
+  .note{background:var(--teal-bg);border:1px solid #bfe3da;border-radius:10px;padding:13px 16px;margin:13px 0}
+  .warn{background:var(--warn-bg);border:1px solid #ecd8a8;border-radius:10px;padding:13px 16px;margin:13px 0}
+  .bad{background:var(--danger-bg);border:1px solid #efc4c4;border-radius:10px;padding:13px 16px;margin:13px 0}
+  table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#eef2f0;font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--sub)}
+  tr:last-child td{border-bottom:0}
+  td.k{font-weight:600;white-space:nowrap}
+  .yes{color:var(--good);font-weight:700}
+  .no{color:var(--danger);font-weight:700}
+  .part{color:var(--warn);font-weight:700}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--ink-bg);color:var(--sub)}
+  .flow{margin:14px 0}
+  .flow .node{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:14px}
+  .flow .node b{color:var(--ink)}
+  .flow .node small{display:block;color:var(--sub);font-size:12.5px;margin-top:2px}
+  .flow .down{text-align:center;color:var(--teal);font-weight:800;line-height:1;margin:4px 0;font-size:15px}
+  .flow .node.bad-node{border-color:#e6b3b3;background:var(--danger-bg)}
+  .flow .node.good-node{border-color:#bfe3da;background:var(--teal-bg)}
+  footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);color:var(--sub);font-size:13px}
+  b.t{color:var(--teal)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Channels &amp; Double-Booking — How It Works</h1>
+    <div class="meta">A plain-English explainer for the team: how Booking.com knows what's available, why double-bookings happen across channels, and how iCal sync does (and doesn't) help.</div>
+  </header>
+
+  <div class="note">
+    <strong>The one thing to understand first:</strong> Booking.com only knows what
+    <em>you</em> (or a system acting for you) tell it. It has <strong>no automatic knowledge</strong>
+    of bookings made on your own website. That gap is where cross-channel double-bookings come from.
+  </div>
+
+  <!-- 1 -->
+  <h2><span class="n">1</span>How an OTA tracks your availability</h2>
+  <p>Booking.com (and Agoda, MakeMyTrip, etc.) keep <strong>their own copy</strong> of your availability:</p>
+  <ul>
+    <li>It's stored as a <strong>count per room <em>type</em></strong> — e.g. "Deluxe: 3 left on 12&nbsp;Jul" — <strong>not</strong> specific physical room numbers. The OTA sells "a Deluxe room"; <em>you</em> decide which physical room the guest actually gets.</li>
+    <li>When someone books <strong>on Booking.com</strong>, it lowers <strong>Booking.com's</strong> count. ✅</li>
+    <li>When someone books <strong>on your website</strong>, Booking.com's count <strong>does not change</strong> — it never saw that booking. ❌</li>
+  </ul>
+  <p>So the OTA's picture is only correct if <strong>something keeps pushing your latest availability to it.</strong></p>
+
+  <!-- 2 -->
+  <h2><span class="n">2</span>How a double-booking happens</h2>
+  <div class="flow">
+    <div class="node"><b>Start:</b> 1 Deluxe room left for 12 Jul<small>Both your website and Booking.com show it as available.</small></div>
+    <div class="down">↓</div>
+    <div class="node good-node"><b>A guest books it on your website</b><small>Your system now shows 0 left. But nothing told Booking.com.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>Booking.com still shows 1 available</b><small>Its count is stale — it doesn't know about the website booking.</small></div>
+    <div class="down">↓</div>
+    <div class="node bad-node"><b>A second guest books it on Booking.com</b><small>Two guests, one room → double-booking.</small></div>
+  </div>
+  <p>The fix is always the same idea: <strong>keep the availability in sync across every channel.</strong> There are three ways to do that.</p>
+
+  <!-- 3 -->
+  <h2><span class="n">3</span>The three ways to keep channels in sync</h2>
+  <table>
+    <tr><th>Method</th><th>Real-time?</th><th>Prevents oversell?</th><th>Cost</th><th>Available to a single property?</th></tr>
+    <tr>
+      <td class="k">Manual extranet updates</td>
+      <td class="no">No — you do it by hand</td>
+      <td class="part">Only if you update instantly</td>
+      <td>Free</td>
+      <td class="yes">Yes</td>
+    </tr>
+    <tr>
+      <td class="k">iCal calendar sync</td>
+      <td class="no">No — refreshed every few hours</td>
+      <td class="part">Partly — a lag window remains</td>
+      <td>Free</td>
+      <td class="part">Sometimes (depends on listing type)</td>
+    </tr>
+    <tr>
+      <td class="k">Channel manager</td>
+      <td class="yes">Yes — within seconds</td>
+      <td class="yes">Yes</td>
+      <td>Paid (monthly)</td>
+      <td class="yes">Yes — via the channel manager</td>
+    </tr>
+  </table>
+  <div class="warn">
+    <strong>Why can't we just connect to Booking.com's API ourselves?</strong> The official
+    real-time connectivity APIs (availability/rates/inventory) are granted <strong>only to certified
+    channel-manager partners</strong>, not to individual properties. That's why a single property
+    cannot build a true two-way connection on its own — the channel manager is the licensed middleman.
+  </div>
+
+  <!-- 4 -->
+  <h2><span class="n">4</span>How iCal sync works</h2>
+  <p>iCal is a free, <strong>one-way "busy dates" feed</strong> (a <code>.ics</code> file at a web URL), set up <strong>per room/unit</strong> in the Booking.com extranet (look under <em>Rates &amp; Availability → Calendar / Sync calendars</em>). You normally set up both directions:</p>
+  <h3>Import — the direction that protects you</h3>
+  <div class="flow">
+    <div class="node"><b>1 · Our app publishes a calendar link</b><small>Each room has a private <code>.ics</code> URL (our Feeds screen).</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>2 · You paste that URL into Booking.com</b><small>Extranet → Sync calendars → add the link for that room.</small></div>
+    <div class="down">↓</div>
+    <div class="node"><b>3 · Booking.com fetches it on a timer</b><small>Its servers download the link every few hours and read the "busy" dates.</small></div>
+    <div class="down">↓</div>
+    <div class="node good-node"><b>4 · Booking.com blocks those dates</b><small>So those nights can't be booked on Booking.com.</small></div>
+  </div>
+  <h3>Export — so we see their bookings too</h3>
+  <p>Booking.com also gives <strong>you</strong> an <code>.ics</code> URL for each room. You paste that into our app (Feeds screen) so Booking.com's bookings appear on our calendar as blocks. Same mechanism, opposite direction.</p>
+  <p style="color:var(--sub);font-size:13.5px">In short: each side <em>publishes</em> a calendar link and <em>subscribes</em> to the other's. Nobody is "logged in" to the other — they just fetch each other's public busy-dates file periodically.</p>
+
+  <!-- 5 -->
+  <h2><span class="n">5</span>What iCal can't do (the limits)</h2>
+  <div class="warn">
+    <ol style="margin:0">
+      <li><strong>It's not real-time.</strong> Booking.com only re-reads your feed <strong>every few hours</strong>. A booking on your website isn't reflected on Booking.com until the next refresh — so a double-booking window still exists (and the same the other way).</li>
+      <li><strong>It's binary "busy/free" for a single unit.</strong> A calendar feed can say "this unit is occupied 12–14 Jul," but it <strong>cannot</strong> say "2 of my 3 Deluxe rooms are taken." That's fine for a <strong>single apartment/homestay listing</strong>, but awkward for a <strong>hotel room type that has several physical rooms</strong> — the counts don't map cleanly.</li>
+      <li><strong>It only syncs availability</strong> — not rates, and not guest/reservation details.</li>
+    </ol>
+  </div>
+
+  <!-- 6 -->
+  <h2><span class="n">6</span>The catch for a hotel listing</h2>
+  <p>Booking.com's iCal sync is mainly offered to <strong>single-unit "Homes &amp; Apartments"</strong> style listings and small properties <strong>not</strong> already on a channel manager. <strong>Traditional multi-room hotel listings often don't get the iCal option at all</strong> — for those, Booking.com expects a certified channel manager instead.</p>
+  <div class="card">
+    <strong>So the real test takes 2 minutes:</strong> log into the Booking.com <strong>extranet</strong> and look for a <em>"Sync calendars"</em> / <em>iCal</em> option under Rates &amp; Availability.
+    <ul style="margin:.5em 0 0">
+      <li><b class="t">If it's there</b> → set up the two-way iCal sync (paste our room links in, and their links into our Feeds screen). Best for single-unit or low-overlap setups.</li>
+      <li><b class="t">If it's not there</b> (because we're listed as a hotel with room types) → iCal isn't available to us, and the only thing that fully prevents cross-channel double-booking is a paid channel manager.</li>
+    </ul>
+  </div>
+
+  <!-- 7 -->
+  <h2><span class="n">7</span>Where our own app fits</h2>
+  <p>Our Ops Hub is deliberately <strong>not</strong> a channel manager (a single property can't be one). What it <em>does</em> give us:</p>
+  <ul>
+    <li><strong>Internally bulletproof:</strong> its database makes it <strong>impossible</strong> to double-book the same physical room for any reservation it knows about.</li>
+    <li><strong>Brings OTA bookings in:</strong> we can ingest Booking.com confirmation emails (the Inbox) and import their iCal so their bookings show on our calendar; and export our iCal so OTAs can see our busy dates.</li>
+    <li><strong>Single source of truth:</strong> every booking — direct or OTA — lives in one place, so we always see the true picture even when an OTA's count lags.</li>
+  </ul>
+  <div class="bad">
+    <strong>Honest limit:</strong> the free tools available to us (iCal + email ingestion) are <strong>not real-time</strong>, so a small residual double-booking window remains between our website and Booking.com. Closing that gap <em>completely</em> requires a paid channel manager — our app is designed to sit alongside one, not replace it.
+  </div>
+
+  <!-- 8 -->
+  <h2><span class="n">8</span>What we should do</h2>
+  <ol>
+    <li><strong>Make the Ops Hub the single source of truth</strong> — enter or ingest every booking there.</li>
+    <li><strong>Check the extranet for iCal</strong> (Section 6). If available, set up <strong>two-way iCal sync</strong> with Booking.com — it removes most of the risk for free.</li>
+    <li><strong>Keep a safety buffer if nervous</strong> — e.g. don't sell the very last room on OTAs during busy periods.</li>
+    <li><strong>If volume grows and double-bookings start costing money</strong>, pair <strong>one affordable channel manager</strong> — that's the only thing that closes the gap entirely.</li>
+  </ol>
+
+  <footer>
+    Internal explainer for the Guest House Ops Hub team. The technical detail behind the app's
+    iCal import/export and email ingestion lives in <code>docs/ARCHITECTURE.md</code> and
+    <code>docs/STATUS.html</code>. Open this file in any browser.
+  </footer>
+
+</div>
+</body>
+</html>
