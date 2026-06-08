@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Channel Managers for India — Low-Cost Options Compared</title>
+<style>
+  :root{
+    --ink:#1c2421; --sub:#5b6b64; --line:#e3e8e5; --paper:#fff; --bg:#f6f8f7;
+    --teal:#0fa68e; --teal-bg:#e7f5f1; --good:#1f9d57; --good-bg:#e6f6ec;
+    --warn:#b9791f; --warn-bg:#fbf1e0; --danger:#cf3a3a; --danger-bg:#fbe9e9; --ink-bg:#eef1ef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:32px 18px}
+  .wrap{max-width:920px;margin:0 auto}
+  header{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:10px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+  .meta{color:var(--sub);font-size:13.5px}
+  h2{font-size:20px;margin:34px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+  h2 .n{display:inline-block;width:28px;height:28px;border-radius:7px;background:var(--teal-bg);color:var(--teal);font-size:15px;font-weight:800;text-align:center;line-height:28px;margin-right:8px}
+  h3{font-size:15.5px;margin:18px 0 6px}
+  p{margin:.5em 0}
+  ul,ol{margin:.4em 0;padding-left:22px}
+  li{margin:.35em 0}
+  code{background:var(--ink-bg);padding:1px 6px;border-radius:5px;font-size:13px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:12px 0}
+  .note{background:var(--teal-bg);border:1px solid #bfe3da;border-radius:10px;padding:13px 16px;margin:13px 0}
+  .warn{background:var(--warn-bg);border:1px solid #ecd8a8;border-radius:10px;padding:13px 16px;margin:13px 0}
+  table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;font-size:13.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#eef2f0;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--sub)}
+  tr:last-child td{border-bottom:0}
+  td.k{font-weight:700;white-space:nowrap}
+  .yes{color:var(--good);font-weight:700}
+  .no{color:var(--danger);font-weight:700}
+  .maybe{color:var(--warn);font-weight:700}
+  .rank{display:inline-block;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;background:var(--teal-bg);color:var(--teal);margin-right:6px}
+  .pros li{margin:.2em 0}
+  .pro{color:var(--good);font-weight:700}
+  .con{color:var(--danger);font-weight:700}
+  .src{font-size:13px;color:var(--sub)}
+  .src a{color:var(--teal)}
+  footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);color:var(--sub);font-size:13px}
+  b.t{color:var(--teal)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Channel Managers for India — Low-Cost Options Compared</h1>
+    <div class="meta">Research for the Guest House Ops Hub team · pricing as of June 2026 (indicative — confirm with each vendor). A channel manager is the paid, certified middleman that syncs availability across OTAs in real time, so the same room can't be sold twice. See <code>docs/CHANNEL-SYNC.html</code> for why we need one.</div>
+  </header>
+
+  <div class="warn">
+    <strong>Prices change and most aren't fully public.</strong> Treat the figures here as a guide for shortlisting, then get a live quote. Almost every connection also needs the OTA's own "market manager" to approve it.
+  </div>
+
+  <!-- 1 -->
+  <h2><span class="n">1</span>Two facts that decide this for us</h2>
+  <div class="note">
+    <strong>(a) Do MakeMyTrip / Goibibo matter to us?</strong> In India, usually yes. Several cheap <em>global</em> channel managers (e.g. Smoobu) only connect Booking.com / Airbnb / Expedia and <strong>do not</strong> do MMT/Goibibo. The affordable options that <em>do</em> are in the table below. (MMT + Goibibo are now a single connection, "Ingoibibo".)
+  </div>
+  <div class="note">
+    <strong>(b) We built our own app — that's an advantage.</strong> A channel manager is the only thing with the certified OTA API. The smartest setup: <strong>our Ops Hub stays the single source of truth, and we push availability to OTAs through an API-first channel manager in real time.</strong> That favours <strong>API-first CMs (Beds24, Channex)</strong> over "managed" ones that bring their own calendar/PMS we'd be duplicating.
+  </div>
+
+  <!-- 2 -->
+  <h2><span class="n">2</span>The shortlist (low-cost, India-capable)</h2>
+  <table>
+    <tr>
+      <th>Channel manager</th><th>Approx cost / month</th><th>MMT / Goibibo?</th><th>Connects to our app</th><th>Best for</th>
+    </tr>
+    <tr>
+      <td class="k">Beds24</td>
+      <td>€16 base + ~€0.55 / connection<br><span class="src">≈ ₹1,700–2,300</span></td>
+      <td class="yes">Yes*</td>
+      <td><strong>Full REST API + iCal</strong></td>
+      <td>Cheapest; technical owners</td>
+    </tr>
+    <tr>
+      <td class="k">Channex</td>
+      <td>$30 flat<br><span class="src">≈ ₹2,550</span></td>
+      <td class="yes">Yes</td>
+      <td><strong>API-first</strong> (built for this)</td>
+      <td>Clean modern API integration</td>
+    </tr>
+    <tr>
+      <td class="k">eZee Centrix</td>
+      <td>from ~$29<br><span class="src">≈ ₹2,500</span></td>
+      <td class="yes">Yes</td>
+      <td>iCal + API; managed</td>
+      <td>Hands-off India support</td>
+    </tr>
+    <tr>
+      <td class="k">ChannelManager.co.in</td>
+      <td>from ₹999</td>
+      <td class="maybe">Unverified</td>
+      <td class="maybe">Unclear</td>
+      <td>Rock-bottom budget (verify first)</td>
+    </tr>
+    <tr>
+      <td class="k">STAAH</td>
+      <td>Custom (~$50–80 typical)</td>
+      <td class="yes">Yes</td>
+      <td>API / iCal; managed</td>
+      <td>India-strong, polished</td>
+    </tr>
+    <tr>
+      <td class="k">Djubo (Instaconnekt)</td>
+      <td>from ~$46<br><span class="src">≈ ₹3,900</span></td>
+      <td class="yes">Yes</td>
+      <td>API; managed</td>
+      <td>India PMS + CM bundle</td>
+    </tr>
+    <tr>
+      <td class="k">Little Hotelier <span class="src">(SiteMinder)</span></td>
+      <td>from ~$39<br><span class="src">≈ ₹3,300</span></td>
+      <td class="yes">Yes</td>
+      <td>All-in-one (overlaps our app)</td>
+      <td>Non-technical, all-in-one</td>
+    </tr>
+    <tr>
+      <td class="k">Smoobu</td>
+      <td>€15–23<br><span class="src">≈ ₹1,400–2,150</span></td>
+      <td class="no">No</td>
+      <td>API + iCal</td>
+      <td>Only if Booking.com / Airbnb</td>
+    </tr>
+  </table>
+  <p class="src">* Beds24 supports Goibibo/MMT but you must request the link via your OTA market manager. FX used: $1≈₹86, €1≈₹93.</p>
+
+  <!-- 3 -->
+  <h2><span class="n">3</span>Pros &amp; cons of the top picks</h2>
+
+  <div class="card">
+    <h3 style="margin-top:0"><span class="rank">🥇 #1</span>Beds24 — cheapest + most flexible (best fit for us)</h3>
+    <ul class="pros">
+      <li><span class="pro">+</span> Cheapest credible option; pay-as-you-grow per connection.</li>
+      <li><span class="pro">+</span> <strong>Full API + iCal</strong> — our app can drive everything and stay the source of truth.</li>
+      <li><span class="pro">+</span> Connects Booking.com, Agoda, Airbnb, Expedia <strong>and Goibibo/MMT</strong>.</li>
+      <li><span class="con">–</span> Dated, complex UI; <strong>DIY setup</strong> (no hand-holding).</li>
+      <li><span class="con">–</span> Must request the Goibibo/MMT link via your market manager. Best when you're comfortable being technical.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0"><span class="rank">🥈 #2</span>Channex — the API-first integrator's choice</h3>
+    <ul class="pros">
+      <li><span class="pro">+</span> $30 flat; a <strong>modern REST API built for exactly this</strong> (it's the connectivity layer many PMSs use).</li>
+      <li><span class="pro">+</span> Connects MMT/Goibibo + all the majors; clean docs.</li>
+      <li><span class="con">–</span> It's a pure pipe — no rich UI; you <strong>must integrate via API</strong> to get value (little point using it manually).</li>
+      <li><span class="con">–</span> Slightly pricier than Beds24. Ideal if we'll wire the Ops Hub to it.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0"><span class="rank">🥉 #3</span>eZee Centrix — if we'd rather not do API work</h3>
+    <ul class="pros">
+      <li><span class="pro">+</span> ~$29/mo; India-based <strong>24×7 support + account manager</strong>.</li>
+      <li><span class="pro">+</span> Connects India OTAs; can sync via iCal so minimal coding.</li>
+      <li><span class="con">–</span> Managed product with its own calendar (overlaps our app).</li>
+      <li><span class="con">–</span> Real-time sync with our app needs API work, otherwise you live with iCal lag.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Budget wildcard — ChannelManager.co.in (₹999)</h3>
+    <ul class="pros">
+      <li><span class="pro">+</span> Cheapest nominal price; India-focused.</li>
+      <li><span class="con">–</span> <strong>Couldn't confirm</strong> which OTAs it connects, or iCal/API support — treat as unproven.</li>
+      <li><span class="con">–</span> Demo it and confirm MMT/Goibibo + how it talks to our app <em>before</em> trusting it.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Avoid for India — Smoobu</h3>
+    <p style="margin:.2em 0">Great value and a clean product, but <strong>no MakeMyTrip/Goibibo</strong>. Only consider if our OTAs are just Booking.com / Agoda / Airbnb.</p>
+  </div>
+
+  <!-- 4 -->
+  <h2><span class="n">4</span>Recommendation for our situation</h2>
+  <ol>
+    <li><strong>Start with Beds24</strong> — lowest cost, supports our OTAs, and its API + iCal let the Ops Hub remain the source of truth. Best price-to-capability for a technical owner.</li>
+    <li><strong>If we want a cleaner integration and don't mind ~$30</strong>, use <strong>Channex</strong> and wire our app to its API for true real-time sync.</li>
+    <li><strong>If we'd rather have support and avoid coding</strong>, <strong>eZee Centrix</strong> is the safe managed India pick.</li>
+    <li><strong>On any demo call, confirm two things:</strong> (a) it connects <em>our specific OTAs</em> (Booking.com / Agoda / MMT / Goibibo), and (b) <em>how</em> it syncs with an external system (API vs iCal) — that decides whether it's real-time or laggy with our app.</li>
+  </ol>
+
+  <div class="warn">
+    <strong>Integration effort (applies to all):</strong> the channel manager gives us the certified OTA link; <strong>bridging it to our Ops Hub is still work</strong> — a few days against Beds24/Channex's API for real-time sync, or near-zero via iCal but with the usual lag. Budget for that, not just the subscription.
+  </div>
+
+  <!-- sources -->
+  <h2><span class="n">5</span>Sources</h2>
+  <p class="src">
+    <a href="https://hoteltechreport.com/revenue-management/channel-managers">HotelTechReport — channel managers</a> ·
+    <a href="https://www.beds24.com/pricing.html">Beds24 pricing</a> ·
+    <a href="https://wiki.beds24.com/index.php/Goibibo">Beds24 Goibibo/MMT wiki</a> ·
+    <a href="https://channex.io/pricing">Channex pricing</a> ·
+    <a href="https://docs.channex.io/channel-mapping-guides/mmt">Channex MMT/Goibibo guide</a> ·
+    <a href="https://www.ezeecentrix.com/pricing.php">eZee Centrix pricing</a> ·
+    <a href="https://www.staah.com/channel-manager/">STAAH</a> ·
+    <a href="https://www.djubo.com/en-in/pricing/">Djubo pricing</a> ·
+    <a href="https://www.littlehotelier.com/pricing/">Little Hotelier pricing</a> ·
+    <a href="https://www.capterra.com/p/160106/Smoobu/pricing/">Smoobu pricing</a> ·
+    <a href="https://www.channelmanager.co.in/">ChannelManager.co.in</a>
+  </p>
+
+  <footer>
+    Internal research for the Guest House Ops Hub team. Pricing indicative as of June 2026 — confirm with each vendor.
+    Background on why a channel manager is needed: <code>docs/CHANNEL-SYNC.html</code>.
+  </footer>
+
+</div>
+</body>
+</html>
