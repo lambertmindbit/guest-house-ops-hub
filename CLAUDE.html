@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project: Guest House Operations Hub</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>CLAUDE.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="README.html">README</a></div>
+<h1>Project: Guest House Operations Hub</h1>
+<h2>WHY — what this is and why it exists</h2>
+<p>A self-hosted web app that gives a small guest-house owner a single source of truth for bookings, calendar, guests, and housekeeping across multiple booking channels (own website/WhatsApp, Agoda, Booking.com, MakeMyTrip). It replaces the expensive parts of a commercial channel manager with software the owner controls.</p>
+<p><strong>Critical reality that shapes the whole project — read carefully:</strong>
+A single small property <em>cannot</em> get direct real-time API access to Booking.com, Agoda, or MakeMyTrip. Those connectivity APIs are gated to certified partners (the channel-manager companies). So this app is <strong>NOT</strong> a true bidirectional channel manager. It is an <strong>internal operations hub</strong> that:</p>
+<ul>
+<li><em>Ingests</em> bookings via the owner&#39;s own confirmation emails + iCal feeds (later phases), and direct website/WhatsApp bookings.</li>
+<li><em>Pushes</em> availability/rates out only via free iCal export or, optionally, one cheap paired channel manager (later phases).</li>
+<li>Owns everything the OTAs don&#39;t: unified calendar, guest CRM, housekeeping, messaging, pricing decisions, finances, analytics.</li>
+</ul>
+<h2>Hard &quot;do NOT&quot; rules</h2>
+<ul>
+<li><strong>Do NOT build scrapers or browser automation against any OTA extranet.</strong> It violates their terms and risks getting the owner&#39;s listings suspended. Booking ingestion happens via the owner&#39;s own inbox and official iCal feeds only.</li>
+<li><strong>Do NOT attempt direct Booking.com / Agoda / MakeMyTrip API integration.</strong> It is not available to a single property. If a task seems to need it, stop and flag it.</li>
+<li><strong>Do NOT store availability as a mutable counter.</strong> Availability is always <em>derived</em> from reservations + blocks. (Prevents drift and is the source of correctness.)</li>
+<li><strong>Do NOT weaken or remove the database double-booking constraint</strong> to make any feature easier. If it gets in the way, that means the feature has a bug.</li>
+<li><strong>Do NOT commit secrets.</strong> <code>.env</code> is git-ignored; use <code>.env.example</code> for documented placeholders. No tokens, passwords, or keys in code.</li>
+<li><strong>Do NOT add heavy dependencies or new services without asking first.</strong></li>
+</ul>
+<hr>
+<h2>WHAT — current scope: Phase 1 (MVP) ONLY</h2>
+<p>Build only Phase 1 now. Know the later phases (below) so your choices stay forward-compatible, but do not build them yet.</p>
+<p><strong>Phase 1 deliverables (in scope):</strong></p>
+<ol>
+<li>Project scaffold (stack below), runnable with one command, with a local Postgres via Docker Compose.</li>
+<li>Database schema + migrations for: <code>room_types</code>, <code>rooms</code>, <code>channels</code>, <code>guests</code>, <code>reservations</code>, <code>blocks</code>. Reservations must enforce no-double-booking at the DB level (see schema).</li>
+<li>Seed script: a few sample rooms/room-types and the 5 channels (Direct, WhatsApp, Booking.com, Agoda, MakeMyTrip).</li>
+<li>API routes: create/list/update/cancel reservation; availability query (derived); today-dashboard summary; create/list maintenance blocks; list/search guests.</li>
+<li>Mobile-first UI (the owner runs this from a phone):<ul>
+<li><strong>Today dashboard</strong>: check-ins today, check-outs today, in-house now, arrivals next 7 days, occupancy %.</li>
+<li><strong>Unified calendar</strong>: grid of rooms (rows) × dates (columns), colour-coded — vacant/clean, occupied (show guest + channel badge), arriving, departing, blocked, and <strong>conflict</strong> highlighted red. Click a cell → reservation detail.</li>
+<li><strong>New / edit reservation form</strong>: guest, channel, room, dates, arrival time, special requests, amount, payment mode. Rejecting an overlapping booking must show a clear, friendly error.</li>
+<li><strong>Guests list</strong>: searchable by name/phone.</li>
+</ul>
+</li>
+<li>Single-owner login (keep it simple — one account). Conflict detection + friendly handling everywhere a reservation is written.</li>
+<li>At least integration tests proving: (a) an overlapping confirmed reservation for the same room is rejected, and (b) availability is computed correctly around bookings and blocks.</li>
+</ol>
+<p><strong>Explicitly OUT of Phase 1 scope (defer):</strong> OTA email parsing, iCal import/export, WhatsApp/email/SMS messaging, pricing engine, financial ledger, analytics dashboards, multi-role auth, production deployment hardening.</p>
+<hr>
+<h2>HOW — tech stack</h2>
+<ul>
+<li><strong>Framework:</strong> Next.js (latest stable, App Router) — frontend + API routes in one codebase. <strong>TypeScript, strict mode.</strong></li>
+<li><strong>Styling:</strong> Tailwind CSS. Mobile-first; design for a ~390px phone screen first, then scale up. Make it a PWA so it installs to the home screen.</li>
+<li><strong>Database:</strong> PostgreSQL. Local dev via Docker Compose. (Prod later: Supabase or a small VPS — both are full Postgres.)</li>
+<li><strong>ORM:</strong> Prisma for models and most queries. <strong>Important:</strong> Prisma cannot express PostgreSQL exclusion constraints, so the double-booking constraint goes in a <em>raw SQL migration</em> (<code>prisma migrate dev --create-only</code>, then edit the generated SQL). Do not skip this.</li>
+<li><strong>Validation:</strong> Zod on all API inputs.</li>
+<li><strong>Testing:</strong> Vitest. Prioritize tests around booking-conflict and availability logic — that is the correctness core.</li>
+<li><strong>Dates:</strong> store as Postgres <code>DATERANGE</code> for stays (<code>[check-in, check-out)</code>, half-open). Use a solid date lib (e.g. date-fns) on the client. Be careful and consistent about timezone — the property&#39;s local time is the reference.</li>
+</ul>
+<h3>Conventions</h3>
+<ul>
+<li>Named exports preferred. Async/await over raw promises.</li>
+<li>Keep API responses consistent (<code>{ data }</code> / <code>{ error }</code>).</li>
+<li>Co-locate Zod schemas with their routes.</li>
+<li>Small, logical git commits with clear messages. Commit after each working slice.</li>
+<li>Comment the <em>why</em>, not the <em>what</em>, especially around the booking-conflict logic.</li>
+</ul>
+<h3>Commands (you will create these during scaffold; keep this list updated)</h3>
+<ul>
+<li><code>docker compose up -d db</code> — start local Postgres</li>
+<li><code>npm run dev</code> — start Next.js dev server</li>
+<li><code>npm run db:migrate</code> — apply Prisma migrations</li>
+<li><code>npm run db:seed</code> — load sample data</li>
+<li><code>npm test</code> — run Vitest</li>
+<li><code>npm run lint</code> — lint</li>
+</ul>
+<hr>
+<h2>Data model (the correctness core)</h2>
+<p>Availability is <strong>derived</strong>: for a room-type on a date, available units = (units of that type) − (overlapping confirmed reservations) − (overlapping blocks). Never store a mutable &quot;free rooms&quot; number.</p>
+<p>The single most important requirement in Phase 1: <strong>two confirmed reservations for the same physical room must not be able to overlap, enforced by the database, not just app code.</strong> Implement with a Postgres GiST exclusion constraint (requires the <code>btree_gist</code> extension), added via a raw SQL migration:</p>
+<pre><code class="language-sql">CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- on the reservations table:
+ALTER TABLE reservations
+  ADD CONSTRAINT no_overlapping_confirmed_stays
+  EXCLUDE USING gist (
+    room_id WITH =,
+    stay   WITH &amp;&amp;        -- stay is a DATERANGE column, [check-in, check-out)
+  ) WHERE (status = &#39;confirmed&#39;);
+</code></pre>
+<p>Core tables (translate into Prisma schema + the raw migration above; this mirrors the project blueprint):
+<code>room_types</code>(id, name, base_rate, max_occupancy, rate_floor, rate_ceiling) ·
+<code>rooms</code>(id, room_type_id→room_types, label) ·
+<code>channels</code>(id, name, commission_pct, collects_payment) ·
+<code>guests</code>(id, name, phone unique, email, notes) ·
+<code>reservations</code>(id, room_id→rooms, guest_id→guests, channel_id→channels, ota_ref, stay DATERANGE, status[&#39;confirmed&#39;|&#39;cancelled&#39;|&#39;no_show&#39;], arrival_time, special_requests, gross_amount, created_at) + the exclusion constraint above ·
+<code>blocks</code>(id, room_id→rooms, period DATERANGE, reason).</p>
+<p>When a write would violate the exclusion constraint, catch the Postgres error and return a clean &quot;those dates are no longer available for this room&quot; message — never a raw 500.</p>
+<hr>
+<h2>Working style for this session</h2>
+<ol>
+<li><strong>Read this whole file first.</strong> Then propose a short plan and the exact dependency list, and wait for my OK before scaffolding. Use plan mode where helpful.</li>
+<li>Build in this order: scaffold → DB schema + exclusion constraint + a failing/passing conflict test → seed → API routes → Today dashboard → calendar → reservation form → guests → login.</li>
+<li>After each slice, tell me how to run/see it, and commit.</li>
+<li>Ask before: adding any dependency beyond the stack above, any architectural change, or anything that touches the &quot;do NOT&quot; rules.</li>
+<li>Keep it simple. This is for one small property, not an enterprise. Resist scope creep.</li>
+</ol>
+<hr>
+<h2>Full roadmap (context only — do not build beyond Phase 1 yet)</h2>
+<ul>
+<li><strong>Phase 1 — MVP operations hub</strong> <em>(current)</em>: rooms, reservations, DB-enforced no-double-booking, unified calendar, today dashboard, guests, single login.</li>
+<li><strong>Phase 2 — Booking ingestion</strong>: dedicated inbox + email parser for OTA confirmations; iCal import (catch blocked dates) + iCal export feeds; conflict alerts to the owner&#39;s phone.</li>
+<li><strong>Phase 3 — Messaging automation</strong>: WhatsApp Business (Cloud) API + email/SMS; templates + trigger/scheduler engine (confirmation, welcome, check-in/out, thank-you, review request); log messages to the guest&#39;s CRM thread.</li>
+<li><strong>Phase 4 — Dynamic pricing engine</strong>: rule-based multipliers (occupancy, day-of-week, season, events, lead time) with floor/ceiling guards; recommends rates (auto-applies only via a paired channel manager, if any).</li>
+<li><strong>Phase 5 — Financial dashboard</strong>: per-channel commission rules, transactions ledger across payment modes (cash/UPI/card/bank/OTA-collect), payout tracking, GST, net revenue, true-profit-by-channel.</li>
+<li><strong>Phase 6 — Analytics &amp; housekeeping polish</strong>: occupancy, ADR, RevPAR, source mix, cancellation rate, length-of-stay; auto-generated prioritized housekeeping tasks; repeat-guest insights.</li>
+</ul>
+<hr>
+<h2>Appendix — the kickoff message to paste as your first prompt</h2>
+<blockquote>
+<p>Read CLAUDE.md in full before doing anything. This is a Phase 1 MVP build. Don&#39;t write code yet — first confirm you understand the project (especially the &quot;do NOT&quot; rules and the derived-availability + DB-level double-booking requirement), then give me: (1) a short build plan in the order listed under &quot;Working style&quot;, and (2) the exact list of dependencies you&#39;ll install and why. Wait for my approval before scaffolding. Then build Phase 1 slice by slice, telling me how to run each part and committing as you go. Ask before adding anything outside the defined stack.</p>
+</blockquote>
+<hr>
+<h2>Karpathy Skills — coding guidelines</h2>
+<p>Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.</p>
+<p><strong>Tradeoff:</strong> These guidelines bias toward caution over speed. For trivial tasks, use judgment.</p>
+<h3>1. Think Before Coding</h3>
+<p><strong>Don&#39;t assume. Don&#39;t hide confusion. Surface tradeoffs.</strong></p>
+<p>Before implementing:</p>
+<ul>
+<li>State your assumptions explicitly. If uncertain, ask.</li>
+<li>If multiple interpretations exist, present them - don&#39;t pick silently.</li>
+<li>If a simpler approach exists, say so. Push back when warranted.</li>
+<li>If something is unclear, stop. Name what&#39;s confusing. Ask.</li>
+</ul>
+<h3>2. Simplicity First</h3>
+<p><strong>Minimum code that solves the problem. Nothing speculative.</strong></p>
+<ul>
+<li>No features beyond what was asked.</li>
+<li>No abstractions for single-use code.</li>
+<li>No &quot;flexibility&quot; or &quot;configurability&quot; that wasn&#39;t requested.</li>
+<li>No error handling for impossible scenarios.</li>
+<li>If you write 200 lines and it could be 50, rewrite it.</li>
+</ul>
+<p>Ask yourself: &quot;Would a senior engineer say this is overcomplicated?&quot; If yes, simplify.</p>
+<h3>3. Surgical Changes</h3>
+<p><strong>Touch only what you must. Clean up only your own mess.</strong></p>
+<p>When editing existing code:</p>
+<ul>
+<li>Don&#39;t &quot;improve&quot; adjacent code, comments, or formatting.</li>
+<li>Don&#39;t refactor things that aren&#39;t broken.</li>
+<li>Match existing style, even if you&#39;d do it differently.</li>
+<li>If you notice unrelated dead code, mention it - don&#39;t delete it.</li>
+</ul>
+<p>When your changes create orphans:</p>
+<ul>
+<li>Remove imports/variables/functions that YOUR changes made unused.</li>
+<li>Don&#39;t remove pre-existing dead code unless asked.</li>
+</ul>
+<p>The test: Every changed line should trace directly to the user&#39;s request.</p>
+<h3>4. Goal-Driven Execution</h3>
+<p><strong>Define success criteria. Loop until verified.</strong></p>
+<p>Transform tasks into verifiable goals:</p>
+<ul>
+<li>&quot;Add validation&quot; → &quot;Write tests for invalid inputs, then make them pass&quot;</li>
+<li>&quot;Fix the bug&quot; → &quot;Write a test that reproduces it, then make it pass&quot;</li>
+<li>&quot;Refactor X&quot; → &quot;Ensure tests pass before and after&quot;</li>
+</ul>
+<p>For multi-step tasks, state a brief plan:</p>
+<pre><code>1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+</code></pre>
+<p>Strong success criteria let you loop independently. Weak criteria (&quot;make it work&quot;) require constant clarification.</p>
+<hr>
+<p><strong>These guidelines are working if:</strong> fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.</p>
+
+</div>
+</body>
+</html>

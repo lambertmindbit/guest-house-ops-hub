@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guest House Operations Hub</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>README.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="README.html">README</a></div>
+<h1>Guest House Operations Hub</h1>
+<p>A self-hosted, mobile-first web app that gives a small guest-house owner a single
+source of truth for <strong>bookings, calendar, guests, housekeeping, pricing, and
+finances</strong> across multiple booking channels — software the owner controls instead
+of an expensive commercial channel manager.</p>
+<blockquote>
+<p><strong>Important architectural reality.</strong> A single small property <em>cannot</em> get
+real-time API access to Booking.com / Agoda / MakeMyTrip — those connectivity
+APIs are gated to certified channel-manager partners. So this app is <strong>not</strong> a
+bidirectional channel manager. It is an <strong>internal operations hub</strong> that ingests
+bookings from the owner&#39;s own inbox + iCal feeds and direct/WhatsApp bookings,
+pushes availability out only via free iCal export, and owns everything the OTAs
+don&#39;t (unified calendar, CRM, housekeeping, pricing decisions, finances).
+See <a href="#hard-rules-do-not-break">the hard rules</a> below.</p>
+</blockquote>
+<hr>
+<h2>Status</h2>
+<p>All six planned milestones are built and in production:</p>
+<table>
+<thead>
+<tr>
+<th align="right">Phase</th>
+<th>Area</th>
+<th>Highlights</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">1</td>
+<td><strong>Operations core + Admin</strong></td>
+<td>Bookings, unified calendar, today board, guests, housekeeping; room/room-type/channel/property admin; maintenance blocks</td>
+</tr>
+<tr>
+<td align="right">2</td>
+<td><strong>Pricing</strong></td>
+<td>Advisory rate engine (weekend / season / lead-time / occupancy + floor/ceiling) + rate calendar with overrides</td>
+</tr>
+<tr>
+<td align="right">3</td>
+<td><strong>Check-in / out</strong></td>
+<td>Live arrival/departure tracking on the Today board</td>
+</tr>
+<tr>
+<td align="right">4</td>
+<td><strong>Guest CRM</strong></td>
+<td>Stay history, repeat-guest badge, lifetime value, ID, blacklist</td>
+</tr>
+<tr>
+<td align="right">5</td>
+<td><strong>Finance</strong></td>
+<td>Per-channel revenue + commission, expense tracking → net profit</td>
+</tr>
+<tr>
+<td align="right">6</td>
+<td><strong>Invoices / export</strong></td>
+<td>Printable invoices, Bookings/Payments CSV export</td>
+</tr>
+</tbody></table>
+<p><strong>Keep-ready groundwork</strong> (built behind clean seams, off by default — activate via env):</p>
+<ul>
+<li><strong>OTA email ingestion</strong> — paste a confirmation email into the <strong>Inbox</strong> screen → review → create; a token-gated webhook seam (<code>/api/ingest/email</code>) plus <strong>two ready-to-deploy forwarders</strong> for full automation in <a href="integrations/"><code>integrations/</code></a> (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).</li>
+<li><strong>Login rate-limiting</strong> — active (10 attempts / IP / 5 min).</li>
+<li><strong>Guest ID document upload</strong> — Supabase Storage adapter + UI; activate by setting the storage env vars.</li>
+</ul>
+<p>Still deferred by design: messaging automation, multi-role auth, server-side PDFs,
+pushing rates to OTAs (not possible for a single property). See <a href="docs/ROADMAP.html">docs/ROADMAP.md</a>.</p>
+<h2>Tech stack</h2>
+<ul>
+<li><strong>Next.js 15</strong> (App Router) — frontend + API routes in one codebase</li>
+<li><strong>TypeScript</strong> (strict)</li>
+<li><strong>PostgreSQL</strong> via <strong>Supabase</strong>, <strong>Prisma</strong> ORM</li>
+<li><strong>Tailwind CSS v4</strong> (mobile-first, PWA)</li>
+<li><strong>Zod</strong> validation, <strong>Vitest</strong> tests, <strong>date-fns</strong></li>
+<li>Hosting: <strong>Vercel</strong> (+ Vercel Cron); CI: <strong>GitHub Actions</strong></li>
+</ul>
+<p>Full inventory: <a href="docs/ARCHITECTURE.html">docs/ARCHITECTURE.md</a>.</p>
+<h2>Quick start</h2>
+<pre><code class="language-bash"># 1. Install (Node 22). postinstall runs `prisma generate`.
+npm install
+
+# 2. Configure environment
+cp .env.example .env        # fill in DATABASE_URL + DIRECT_URL, OWNER_*, secrets
+                            # (DATABASE_URL = pooler for the app; DIRECT_URL = direct, for migrations)
+
+# 3. Apply migrations + seed sample data
+npm run db:migrate          # apply pending migrations (prisma migrate deploy)
+npm run db:seed             # rooms, room types, 5 channels, demo data
+
+# 4. Run (http://localhost:3100)
+npm run dev
+</code></pre>
+<p>Detailed setup (Supabase connection-string nuances, the separate test database):
+<strong><a href="docs/SETUP.html">docs/SETUP.md</a></strong>.</p>
+<h2>Commands</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>npm run dev</code></td>
+<td>Dev server on <strong>:3100</strong></td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td><code>prisma generate</code> + production build</td>
+</tr>
+<tr>
+<td><code>npm start</code></td>
+<td>Run the production build on :3100</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td>ESLint (Next.js config)</td>
+</tr>
+<tr>
+<td><code>npm test</code></td>
+<td>Vitest (integration + unit) — refuses to run without <code>TEST_DATABASE_URL</code></td>
+</tr>
+<tr>
+<td><code>npm run db:migrate</code></td>
+<td><strong>Apply</strong> pending migrations (<code>prisma migrate deploy</code>)</td>
+</tr>
+<tr>
+<td><code>npm run db:migrate:new &lt;name&gt; [--apply]</code></td>
+<td><strong>Create</strong> a migration the safe way — see <a href="docs/CONTRIBUTING.html#database-migrations-read-this-first">the migration workflow</a></td>
+</tr>
+<tr>
+<td><code>npm run db:seed</code></td>
+<td>Seed sample data</td>
+</tr>
+<tr>
+<td><code>npm run db:studio</code></td>
+<td>Prisma Studio</td>
+</tr>
+<tr>
+<td><code>npm run shots</code></td>
+<td>Regenerate the user-guide screenshots into <code>docs/img/</code> (app must be running; uses Playwright)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>⚠️ <strong>Never run <code>prisma migrate dev</code> directly.</strong> This schema uses generated
+<code>DATERANGE</code> columns + a GiST exclusion constraint that Prisma&#39;s diff engine
+mangles. Always create migrations with <code>npm run db:migrate:new</code>. This is the
+single most important thing a new contributor must know — details in
+<a href="docs/CONTRIBUTING.html#database-migrations-read-this-first">CONTRIBUTING</a>.</p>
+</blockquote>
+<h2>Documentation</h2>
+<table>
+<thead>
+<tr>
+<th>Doc</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="docs/SETUP.html">docs/SETUP.md</a></td>
+<td>Getting a local environment running (Supabase, env, test DB)</td>
+</tr>
+<tr>
+<td><a href="docs/ARCHITECTURE.html">docs/ARCHITECTURE.md</a></td>
+<td>How it&#39;s built, the correctness core, data model, directory map</td>
+</tr>
+<tr>
+<td><a href="docs/CONTRIBUTING.html">docs/CONTRIBUTING.md</a></td>
+<td>Dev workflow, conventions, the safe migration process, testing, PRs</td>
+</tr>
+<tr>
+<td><a href="docs/API.html">docs/API.md</a></td>
+<td>HTTP endpoint reference</td>
+</tr>
+<tr>
+<td><a href="docs/DEPLOYMENT.html">docs/DEPLOYMENT.md</a></td>
+<td>Vercel + Supabase + cron + CI</td>
+</tr>
+<tr>
+<td><a href="docs/ROADMAP.html">docs/ROADMAP.md</a></td>
+<td>What&#39;s built, what&#39;s deferred, and why</td>
+</tr>
+<tr>
+<td><a href="docs/STATUS.html">docs/STATUS.html</a></td>
+<td>At-a-glance status report (open in a browser) — delivered phases, deferred items, concerns, first tasks</td>
+</tr>
+<tr>
+<td><a href="docs/USER-GUIDE.html">docs/USER-GUIDE.html</a></td>
+<td><strong>Day-to-day user guide</strong> (open in a browser) — how operators use every screen of the app</td>
+</tr>
+<tr>
+<td><a href="docs/CHANNEL-SYNC.html">docs/CHANNEL-SYNC.html</a></td>
+<td>Team explainer (browser) — how OTAs track availability, why cross-channel double-bookings happen, and how iCal sync helps</td>
+</tr>
+<tr>
+<td><a href="docs/CHANNEL-MANAGERS.html">docs/CHANNEL-MANAGERS.html</a></td>
+<td>Research (browser) — low-cost channel managers for India compared (cost, OTA coverage, pros/cons, recommendation)</td>
+</tr>
+<tr>
+<td><a href="integrations/">integrations/</a></td>
+<td>Ready-to-deploy OTA-email forwarders (Gmail Apps Script / Cloudflare Worker), each with its own step-by-step README</td>
+</tr>
+<tr>
+<td><a href="CLAUDE.html">CLAUDE.md</a></td>
+<td>Original product spec + the hard rules (also used by AI coding agents)</td>
+</tr>
+</tbody></table>
+<h2>Hard rules (do NOT break)</h2>
+<p>These exist for correctness and to keep the owner&#39;s OTA listings safe:</p>
+<ol>
+<li><strong>No scrapers / browser automation against OTA extranets.</strong> Ingest only via the
+owner&#39;s own inbox and official iCal feeds.</li>
+<li><strong>No direct Booking.com / Agoda / MakeMyTrip API integration</strong> — not available
+to a single property.</li>
+<li><strong>Availability is always <em>derived</em></strong> from reservations + blocks — never stored
+as a mutable counter.</li>
+<li><strong>Never weaken the DB-level no-double-booking constraint</strong> (<code>no_overlapping_confirmed_stays</code>).</li>
+<li><strong>Never commit secrets</strong> — <code>.env</code> is git-ignored; use <code>.env.example</code> for placeholders.</li>
+<li><strong>Ask before adding heavy dependencies or new services.</strong></li>
+</ol>
+<p>See <a href="CLAUDE.html">CLAUDE.md</a> for the full rationale.</p>
+<h2>License</h2>
+<p>Private project. All rights reserved by the owner.</p>
+
+</div>
+</body>
+</html>

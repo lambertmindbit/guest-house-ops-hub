@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deployment & CI</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>DEPLOYMENT.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Deployment &amp; CI</h1>
+<p>Production runs on <strong>Vercel</strong> with a <strong>Supabase</strong> Postgres database. Deploys are
+git-driven: merging to <code>main</code> ships to production.</p>
+<h2>Topology</h2>
+<pre><code>GitHub (main)  ──push──►  Vercel build &amp; deploy  ──►  https://guest-house-ops-hub.vercel.app
+      │                          │
+      │                          └── DATABASE_URL ──► Supabase Postgres (transaction pooler :6543)
+      │
+      └──push/PR──►  GitHub Actions CI (ephemeral postgres:16)
+</code></pre>
+<h2>Vercel</h2>
+<ul>
+<li><strong>Framework preset:</strong> Next.js (auto-detected). Build command is the default
+(<code>npm run build</code>, which runs <code>prisma generate &amp;&amp; next build</code>).</li>
+<li><strong>Production branch:</strong> <code>main</code>. Every push to <code>main</code> triggers a production deploy;
+every PR gets a <strong>preview deployment</strong> with its own URL.</li>
+<li><strong>Node:</strong> 22.</li>
+</ul>
+<h3>Environment variables (set in Vercel → Project → Settings → Environment Variables)</h3>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DATABASE_URL</code></td>
+<td>Supabase <strong>transaction pooler</strong> string, port <strong>6543</strong>, with <code>?pgbouncer=true&amp;connection_limit=5</code> (serverless-safe; warm pooled connections instead of a TLS handshake per request).</td>
+</tr>
+<tr>
+<td><code>DIRECT_URL</code></td>
+<td>Supabase <strong>direct</strong> connection, port <strong>5432</strong>. Used only by <code>prisma migrate</code> (the transaction pooler can&#39;t run migrations). <strong>Required</strong> — Prisma errors if unset.</td>
+</tr>
+<tr>
+<td><code>OWNER_EMAIL</code>, <code>OWNER_PASSWORD</code></td>
+<td>The owner login.</td>
+</tr>
+<tr>
+<td><code>AUTH_SECRET</code></td>
+<td>Long random string (cookie signing). Must match nothing else; just keep it stable.</td>
+</tr>
+<tr>
+<td><code>ICAL_FEED_TOKEN</code></td>
+<td>Long random string; appears in public <code>.ics</code> URLs.</td>
+</tr>
+<tr>
+<td><code>CRON_SECRET</code></td>
+<td>Long random string; <strong>must equal</strong> what the cron sends (Vercel injects it as a Bearer for cron invocations).</td>
+</tr>
+<tr>
+<td><code>INGEST_TOKEN</code></td>
+<td><em>Optional.</em> Token for the automated email-ingestion webhook (<code>/api/ingest/email</code>). Leave unset until you wire up an inbox forwarder.</td>
+</tr>
+<tr>
+<td><code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>SUPABASE_ID_BUCKET</code></td>
+<td><em>Optional.</em> Enable guest ID-document upload (private Supabase Storage bucket). Service-role key is <strong>server-only</strong>. Leave unset to keep the feature off.</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Why <code>DATABASE_URL</code> and <code>DIRECT_URL</code>?</strong> The serverless runtime queries through
+the <em>transaction</em> pooler (<code>:6543?pgbouncer=true</code>) so short-lived invocations
+reuse warm connections instead of doing a TLS handshake each time; <code>prisma migrate</code> needs the <em>direct</em> connection (<code>:5432</code>, <code>DIRECT_URL</code>) because the
+transaction pooler can&#39;t run migrations. See
+<a href="SETUP.html#connection-string-nuances-important">SETUP.md</a>.</p>
+</blockquote>
+<h3>Function region (latency)</h3>
+<p>Vercel functions must run in the <strong>same region as Supabase</strong>, or every query is a
+cross-region round trip (the #1 cause of a slow app). This project&#39;s Supabase is
+in <strong>Sydney (<code>ap-southeast-2</code>)</strong>, so functions are pinned to <strong><code>syd1</code></strong> — both via
+<strong>Settings → Functions → Function Region</strong> (Hobby = 1 region) <em>and</em> in
+<a href="../vercel.json"><code>vercel.json</code></a> (<code>&quot;regions&quot;: [&quot;syd1&quot;]</code>), which takes precedence on
+git-driven deploys. If you move the database, update both to match.</p>
+<h3>Applying migrations to production</h3>
+<p>Migrations are <strong>not</strong> auto-applied on deploy. Apply them against the production
+database before/at release:</p>
+<pre><code class="language-bash"># migrations read DIRECT_URL — point it at the production direct connection (5432)
+DIRECT_URL=&quot;&lt;prod direct 5432 URL&gt;&quot; npx prisma migrate deploy
+</code></pre>
+<p>Or run <code>npm run db:migrate</code> locally with the prod <code>DATABASE_URL</code>. Because
+migrations are additive (new nullable columns / new tables), this is safe to run
+without downtime. <strong>Never</strong> run <code>prisma migrate dev</code> against production — see
+<a href="CONTRIBUTING.html#database-migrations-read-this-first">CONTRIBUTING</a>.</p>
+<h2>Vercel Cron</h2>
+<p><a href="../vercel.json"><code>vercel.json</code></a> pins the function region and schedules a daily
+iCal import:</p>
+<pre><code class="language-json">{
+  &quot;regions&quot;: [&quot;syd1&quot;],
+  &quot;crons&quot;: [ { &quot;path&quot;: &quot;/api/cron/sync&quot;, &quot;schedule&quot;: &quot;0 2 * * *&quot; } ]
+}
+</code></pre>
+<p>Runs at <strong>02:00 UTC</strong> daily, hitting <code>GET /api/cron/sync</code>, which is gated by
+<code>CRON_SECRET</code> (returns 401 if the secret is unset or mismatched). The owner can
+also trigger an import manually from the Feeds page (<code>POST /api/sync</code>).</p>
+<h2>Supabase</h2>
+<ul>
+<li>A managed Postgres project. <code>btree_gist</code> (required by the exclusion constraint)
+is available on Supabase.</li>
+<li>Keep a <strong>separate</strong> database/schema for tests (<code>TEST_DATABASE_URL</code>) — never point
+the test suite at production.</li>
+<li>Back up via Supabase&#39;s built-in backups; the app stores no other persistent state.</li>
+</ul>
+<h2>CI — GitHub Actions</h2>
+<p><a href="../.github/workflows/ci.yml"><code>.github/workflows/ci.yml</code></a> runs on <strong>every push and
+PR</strong>:</p>
+<ol>
+<li>Spins up an ephemeral <strong><code>postgres:16</code></strong> service (ships <code>btree_gist</code>), with
+<code>DATABASE_URL</code>, <code>DIRECT_URL</code>, and <code>TEST_DATABASE_URL</code> all pointing at it — fully
+isolated, no secrets, no production data.</li>
+<li><code>npm ci</code></li>
+<li><strong>Lint</strong> → <code>npm run lint</code></li>
+<li><strong>Apply migrations</strong> → <code>npx prisma migrate deploy</code></li>
+<li><strong>Build</strong> → <code>npm run build</code></li>
+<li><strong>Test</strong> → <code>npm test</code></li>
+</ol>
+<p>Green CI gates merges. Because CI migrates a fresh DB each run, it also continually
+verifies that the hand-edited migrations (generated columns + exclusion constraint)
+apply cleanly from scratch.</p>
+<h2>Release checklist</h2>
+<ol>
+<li>Branch → PR → CI green → review the Vercel <strong>preview</strong> deploy.</li>
+<li>If the PR includes a migration, apply it to the <strong>production</strong> DB
+(<code>prisma migrate deploy</code>).</li>
+<li>Merge to <code>main</code> → Vercel deploys production.</li>
+<li>Smoke-test production (log in, open the calendar, create a test booking).</li>
+</ol>
+<h2>Rollback</h2>
+<ul>
+<li><strong>Code:</strong> revert the merge commit on <code>main</code> (or redeploy a previous deployment
+from the Vercel dashboard).</li>
+<li><strong>Schema:</strong> migrations are additive, so a code rollback generally needs no schema
+change. If a migration must be undone, write a new additive migration that
+reverses it (don&#39;t edit applied migration files).</li>
+</ul>
+
+</div>
+</body>
+</html>

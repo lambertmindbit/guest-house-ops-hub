@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contributing / Development Guide</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>CONTRIBUTING.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Contributing / Development Guide</h1>
+<p>How to work on this codebase safely. Read the migration section before touching
+the schema — it&#39;s the one place where the obvious command is the wrong one.</p>
+<h2>Workflow at a glance</h2>
+<ol>
+<li>Branch off <code>main</code> (<code>main</code> auto-deploys to production).</li>
+<li>Make changes; keep commits small and logical.</li>
+<li><code>npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npm test</code> must all pass.</li>
+<li>Open a PR → CI runs lint + build + tests on an ephemeral Postgres.</li>
+<li>Merge to <code>main</code> → Vercel deploys to production.</li>
+</ol>
+<pre><code class="language-bash">git checkout main &amp;&amp; git pull
+git checkout -b feature/&lt;thing&gt;
+# …work…
+npm run lint &amp;&amp; npx tsc --noEmit &amp;&amp; npm test
+git push -u origin feature/&lt;thing&gt;
+gh pr create --base main
+</code></pre>
+<h2>Database migrations (read this first)</h2>
+<p>This schema uses two things Prisma&#39;s migration <strong>diff engine cannot model</strong>:</p>
+<ul>
+<li>generated <code>DATERANGE</code> columns (<code>stay</code>, <code>period</code>), and</li>
+<li>the <code>no_overlapping_confirmed_stays</code> GiST <strong>exclusion constraint</strong>.</li>
+</ul>
+<p>Because of this, <code>prisma migrate dev</code> emits <strong>spurious</strong>
+<code>ALTER COLUMN &quot;stay&quot;/&quot;period&quot; DROP DEFAULT</code> statements on every new migration,
+which at best no-op and at worst threaten the columns the constraint depends on.</p>
+<h3>✅ Always create migrations with the safe helper</h3>
+<pre><code class="language-bash">npm run db:migrate:new &lt;migration_name&gt;           # create + auto-strip the bad lines (review, then apply)
+npm run db:migrate:new &lt;migration_name&gt; --apply   # create + strip + apply + verify the constraint is intact
+</code></pre>
+<p><a href="../scripts/migrate.mjs"><code>scripts/migrate.mjs</code></a> runs <code>prisma migrate dev --create-only</code>, deterministically strips the spurious statements, and (with
+<code>--apply</code>) applies the migration and <strong>verifies <code>no_overlapping_confirmed_stays</code>
+still exists</strong>.</p>
+<h3>❌ Never run <code>prisma migrate dev</code> directly</h3>
+<p><code>npm run db:migrate</code> is <strong>apply-only</strong> (<code>prisma migrate deploy</code>) — it applies
+already-created migrations and can never generate the bad SQL. Use it to bring a
+DB up to date; use <code>db:migrate:new</code> to author a migration. There is no safe path
+that calls <code>prisma migrate dev</code> by hand.</p>
+<h3>After creating a migration</h3>
+<ul>
+<li>Review the generated SQL diff before committing.</li>
+<li>Migrations are <strong>additive</strong> by convention (new nullable columns / new tables) so
+they apply cleanly to production without downtime.</li>
+<li>Apply to the <strong>test DB</strong> too, or local tests will fail on the new schema:<pre><code class="language-bash">DATABASE_URL=&quot;$TEST_DATABASE_URL&quot; DIRECT_URL=&quot;$TEST_DATABASE_URL&quot; npx prisma migrate deploy
+</code></pre>
+</li>
+<li>If you ever rename the exclusion constraint, update it in <strong>lockstep</strong> in three
+places: the init migration SQL, the verify query in <code>scripts/migrate.mjs</code>, and
+<code>CONSTRAINT_NAME</code> in <a href="../src/lib/db-errors.ts"><code>src/lib/db-errors.ts</code></a>. The
+<code>tests/conflict.test.ts</code> test is the guard — keep it green.</li>
+</ul>
+<h2>Code conventions</h2>
+<ul>
+<li><strong>TypeScript strict.</strong> No <code>any</code> unless truly unavoidable.</li>
+<li><strong>Named exports</strong> preferred; <code>async/await</code> over raw promises.</li>
+<li><strong>Domain logic goes in <code>src/lib/</code></strong>, not in route handlers or components, so it&#39;s
+shared by Server Components and API routes.</li>
+<li><strong>API responses</strong> use the <code>{ data }</code> / <code>{ error }</code> envelope via <code>ok</code> / <code>fail</code> /
+<code>zodFail</code> from <a href="../src/lib/api.ts"><code>src/lib/api.ts</code></a>.</li>
+<li><strong>Validate every API input with Zod</strong>, schema declared at the top of the route file.</li>
+<li><strong>Dates</strong> are date-only <code>YYYY-MM-DD</code>, UTC-anchored via <a href="../src/lib/dates.ts"><code>src/lib/dates.ts</code></a>.
+Stays are half-open <code>[)</code>. Don&#39;t introduce <code>new Date()</code>-based local-time math for
+calendar dates.</li>
+<li><strong>Money</strong>: convert Prisma <code>Decimal</code> → <code>number</code> at the server boundary before
+passing to client components (Decimals aren&#39;t serializable to client props).</li>
+<li><strong>Comment the <em>why</em>, not the <em>what</em></strong> — especially around booking-conflict and
+pricing logic.</li>
+<li><strong>UI</strong>: reuse the design-system classes (<code>.btn</code>, <code>.card</code>, <code>.input</code>, <code>.badge</code>,
+<code>.tbl</code>, <code>.calcell</code>, …) and the primitives in <a href="../src/components/ui.tsx"><code>src/components/ui.tsx</code></a>.
+Mobile-first (~390px), then scale up. Wrap pages in <code>&lt;main className=&quot;app-main&quot;&gt;</code>.</li>
+<li><strong>Client components</strong> are small islands: <code>&quot;use client&quot;</code>, do a <code>fetch</code>, then
+<code>router.refresh()</code>. Keep data in the DB.</li>
+</ul>
+<h2>Adding an admin-managed entity (common pattern)</h2>
+<p>The Settings area (rooms, room types, channels, seasons, expenses) all follow the
+same shape — copy an existing one:</p>
+<ol>
+<li>Prisma model + migration (<code>db:migrate:new</code>).</li>
+<li><code>src/app/api/&lt;entity&gt;/route.ts</code> (GET list + POST) and
+<code>src/app/api/&lt;entity&gt;/[id]/route.ts</code> (PATCH/DELETE), with Zod + the <code>ok/fail</code>
+envelope. Guard deletes that would orphan history (return a friendly 409).</li>
+<li>A server page (or section) that fetches via Prisma and renders a <code>&quot;use client&quot;</code>
+form posting to the API + <code>router.refresh()</code>.</li>
+</ol>
+<p>Reference implementations: <code>src/app/api/rooms/*</code>, <code>src/app/api/expenses/*</code>,
+<code>src/components/settings/sections.tsx</code>, <code>src/components/ExpensesPanel.tsx</code>.</p>
+<h2>Testing</h2>
+<ul>
+<li><strong>Framework:</strong> Vitest. Config: <a href="../vitest.config.ts"><code>vitest.config.ts</code></a> (<code>@</code>
+alias to <code>src</code>, serial, env loaded from <code>.env</code>).</li>
+<li><strong>Two kinds of tests:</strong><ul>
+<li><em>Pure unit</em> — e.g. <a href="../tests/pricing.test.ts"><code>tests/pricing.test.ts</code></a> tests the
+pure <code>computeNightRate</code> calculator; no DB.</li>
+<li><em>Integration</em> — <a href="../tests/conflict.test.ts"><code>tests/conflict.test.ts</code></a>,
+<a href="../tests/availability.test.ts"><code>tests/availability.test.ts</code></a> run against a real
+Postgres and assert the DB-level constraint + derived availability.</li>
+</ul>
+</li>
+<li><strong>Safety gate:</strong> <a href="../tests/setup.ts"><code>tests/setup.ts</code></a> refuses to run unless
+<code>TEST_DATABASE_URL</code> is set (or <code>ALLOW_PROD_DB_TESTS=1</code>). Point it at a disposable
+DB — never production.</li>
+<li><strong>What to test:</strong> the correctness core (conflicts, availability) and pure
+business logic (pricing). Prioritize these over UI. When you fix a bug, add a
+test that reproduces it first.</li>
+</ul>
+<pre><code class="language-bash">npm test            # one-shot
+npm run test:watch  # watch mode
+</code></pre>
+<h2>CI</h2>
+<p><a href="../.github/workflows/ci.yml"><code>.github/workflows/ci.yml</code></a> runs on every push/PR:
+spins up an ephemeral <code>postgres:16</code>, then <strong>lint → <code>prisma migrate deploy</code> →
+build → test</strong>. Green CI is required before merging. See <a href="DEPLOYMENT.html">DEPLOYMENT.md</a>.</p>
+<h2>Security hygiene</h2>
+<ul>
+<li>Never commit secrets. <code>.env</code> is git-ignored; document new vars in <code>.env.example</code>
+with placeholder values.</li>
+<li>Keep <code>ICAL_FEED_TOKEN</code>, <code>CRON_SECRET</code>, <code>AUTH_SECRET</code> long and random.</li>
+<li>Respect the <a href="../README.html#hard-rules-do-not-break">hard rules</a>: no OTA scraping,
+no direct OTA APIs, no stored availability counter, never weaken the exclusion
+constraint.</li>
+</ul>
+<h2>Known concerns / tech debt</h2>
+<p>A standing list (with file/line references and what&#39;s intentional vs. worth fixing)
+lives in <a href="../.planning/codebase/CONCERNS.md"><code>.planning/codebase/CONCERNS.md</code></a>.
+Skim it before a large refactor.</p>
+
+</div>
+</body>
+</html>

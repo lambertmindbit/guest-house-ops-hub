@@ -14,7 +14,8 @@
     "db:migrate:new": "node scripts/migrate.mjs",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "shots": "node scripts/screenshots.mjs"
+    "shots": "node scripts/screenshots.mjs",
+    "docs:html": "node scripts/md-to-html.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
@@ -37,6 +38,7 @@
     "dotenv": "^16.4.0",
     "eslint": "^9.20.0",
     "eslint-config-next": "^15.2.0",
+    "marked": "^18.0.5",
     "playwright": "^1.60.0",
     "postcss": "^8.5.0",
     "prisma": "^6.5.0",

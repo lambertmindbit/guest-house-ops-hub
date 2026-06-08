@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup — Local Development</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>SETUP.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Setup — Local Development</h1>
+<p>Get a working local environment running. ~15 minutes.</p>
+<h2>Prerequisites</h2>
+<ul>
+<li><strong>Node 22</strong> (CI runs on 22; use <code>nvm use 22</code>)</li>
+<li><strong>npm</strong> (lockfile is <code>package-lock.json</code>)</li>
+<li>A <strong>PostgreSQL</strong> database. We use <strong>Supabase</strong> (managed Postgres). You can also
+use any Postgres 16+ that has the <code>btree_gist</code> extension available — it&#39;s
+required by the no-double-booking exclusion constraint.</li>
+</ul>
+<p>There is <strong>no Docker setup</strong> in this repo — the database is hosted (Supabase).</p>
+<h2>1. Install</h2>
+<pre><code class="language-bash">npm install
+</code></pre>
+<p><code>postinstall</code> automatically runs <code>prisma generate</code> to build the typed client.</p>
+<h2>2. Database (Supabase)</h2>
+<p>Create a Supabase project (free tier is fine), then grab connection strings from
+<strong>Project Settings → Database → Connection string</strong>.</p>
+<h3>Connection-string nuances (important)</h3>
+<p><a href="../prisma/schema.prisma"><code>prisma/schema.prisma</code></a> uses <strong>two</strong> datasource URLs:</p>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Used for</th>
+<th>Pooler / port</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DATABASE_URL</code></td>
+<td>the app&#39;s <strong>runtime</strong> queries</td>
+<td>Transaction pooler <code>6543</code> (+ <code>?pgbouncer=true&amp;connection_limit=5</code>) in production; locally the session pooler on <code>5432</code> is fine</td>
+</tr>
+<tr>
+<td><code>DIRECT_URL</code></td>
+<td><strong>migrations</strong> (<code>prisma migrate</code>) only</td>
+<td>Session pooler / direct on <code>5432</code> — pgbouncer&#39;s transaction pooling can&#39;t run migrations</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>⚠️ <strong><code>DIRECT_URL</code> is now required</strong> — <code>prisma migrate</code> / <code>prisma generate</code>
+read it. If it&#39;s unset you&#39;ll get <em>&quot;Environment variable not found: DIRECT_URL.&quot;</em></p>
+</blockquote>
+<p>Locally the simplest setup is to point <strong>both</strong> at the <strong>session pooler on 5432</strong>:</p>
+<pre><code>DATABASE_URL=postgresql://postgres.&lt;ref&gt;:&lt;password&gt;@aws-1-&lt;region&gt;.pooler.supabase.com:5432/postgres
+DIRECT_URL=postgresql://postgres.&lt;ref&gt;:&lt;password&gt;@aws-1-&lt;region&gt;.pooler.supabase.com:5432/postgres
+</code></pre>
+<p>(In production on Vercel, <code>DATABASE_URL</code> uses the <strong>transaction pooler on 6543</strong>
+with <code>?pgbouncer=true&amp;connection_limit=5</code> while <code>DIRECT_URL</code> stays on 5432 — see
+<a href="DEPLOYMENT.html">DEPLOYMENT.md</a>.)</p>
+<h2>3. Environment variables</h2>
+<pre><code class="language-bash">cp .env.example .env
+</code></pre>
+<p>Fill in:</p>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DATABASE_URL</code></td>
+<td>Runtime Postgres connection (session pooler / 5432 locally)</td>
+</tr>
+<tr>
+<td><code>DIRECT_URL</code></td>
+<td>Direct connection for <strong>migrations</strong> (5432). Locally, same value as <code>DATABASE_URL</code> is fine. <strong>Required</strong> — Prisma errors if unset.</td>
+</tr>
+<tr>
+<td><code>TEST_DATABASE_URL</code></td>
+<td><strong>Separate, disposable</strong> DB for the test suite (see <a href="#5-tests--the-test-database">Testing</a>)</td>
+</tr>
+<tr>
+<td><code>OWNER_EMAIL</code> / <code>OWNER_PASSWORD</code></td>
+<td>The single owner login</td>
+</tr>
+<tr>
+<td><code>AUTH_SECRET</code></td>
+<td>Long random string — signs the session cookie</td>
+</tr>
+<tr>
+<td><code>ICAL_FEED_TOKEN</code></td>
+<td>Long random string — embedded in public <code>.ics</code> export URLs</td>
+</tr>
+<tr>
+<td><code>CRON_SECRET</code></td>
+<td>Long random string — authorizes the daily Vercel cron</td>
+</tr>
+</tbody></table>
+<p><code>.env</code> is git-ignored. <strong>Never commit real secrets.</strong></p>
+<p>Generate a secret quickly: <code>openssl rand -hex 32</code>.</p>
+<h3>Optional integrations (leave unset to keep them off)</h3>
+<p>These power &quot;kept-ready&quot; features; the app runs fine without them.</p>
+<table>
+<thead>
+<tr>
+<th>Var(s)</th>
+<th>Enables</th>
+<th>Setup</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>INGEST_TOKEN</code></td>
+<td>Automated OTA-email ingestion via <code>POST /api/ingest/email</code>. <strong>Not needed</strong> for the manual paste flow on the <strong>Inbox</strong> screen.</td>
+<td>Set a long random string here, and on whatever forwards emails to the endpoint (e.g. a Cloudflare Email Worker / forwarding rule). Until then, the owner just pastes confirmation emails into Inbox.</td>
+</tr>
+<tr>
+<td><code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>SUPABASE_ID_BUCKET</code></td>
+<td>Guest <strong>ID document upload</strong>. Without it, the guest profile shows a &quot;not configured&quot; hint.</td>
+<td>In Supabase → <strong>Storage</strong>, create a <strong>private</strong> bucket named <code>guest-ids</code>. Set <code>SUPABASE_URL</code> (<code>https://&lt;ref&gt;.supabase.co</code>) and the <strong>service-role</strong> key (server-only — never exposed to the client).</td>
+</tr>
+</tbody></table>
+<h2>4. Migrate + seed</h2>
+<pre><code class="language-bash">npm run db:migrate     # applies all pending migrations (prisma migrate deploy)
+npm run db:seed        # sample rooms/room types, the 5 channels, demo bookings
+</code></pre>
+<blockquote>
+<p>To <strong>create</strong> a new migration later, use <code>npm run db:migrate:new &lt;name&gt;</code> —
+<strong>not</strong> <code>prisma migrate dev</code>. See
+<a href="CONTRIBUTING.html#database-migrations-read-this-first">CONTRIBUTING → Database migrations</a>.</p>
+</blockquote>
+<h2>5. Run</h2>
+<pre><code class="language-bash">npm run dev      # http://localhost:3100
+</code></pre>
+<p>Log in with the <code>OWNER_EMAIL</code> / <code>OWNER_PASSWORD</code> you set.</p>
+<p>The app is a PWA and is designed mobile-first (~390px). On desktop it shows a
+sidebar shell; on mobile, an iOS-style tab bar.</p>
+<h2>5. Tests &amp; the test database</h2>
+<p>The integration suite (<code>tests/conflict.test.ts</code>, <code>tests/availability.test.ts</code>)
+creates and deletes <strong>real rows</strong>, so it has a safety gate (<a href="../tests/setup.ts"><code>tests/setup.ts</code></a>):
+it refuses to run unless <code>TEST_DATABASE_URL</code> is set (or <code>ALLOW_PROD_DB_TESTS=1</code>
+is explicitly set).</p>
+<p>Point <code>TEST_DATABASE_URL</code> at a <strong>disposable</strong> database — never production. Two
+common options:</p>
+<ul>
+<li>A second Supabase project, <strong>or</strong></li>
+<li>A separate schema/database in the same project (we used this because the free
+tier caps projects).</li>
+</ul>
+<p>Bring the test DB schema up to date the same way as prod:</p>
+<pre><code class="language-bash"># apply migrations to the test DB (set DIRECT_URL too — migrations read it)
+DATABASE_URL=&quot;$TEST_DATABASE_URL&quot; DIRECT_URL=&quot;$TEST_DATABASE_URL&quot; npx prisma migrate deploy
+</code></pre>
+<p>Then:</p>
+<pre><code class="language-bash">npm test          # one-shot
+npm run test:watch
+</code></pre>
+<p>CI spins up an ephemeral <code>postgres:16</code> for this automatically — see
+<a href="DEPLOYMENT.html">DEPLOYMENT.md</a>.</p>
+<h2>Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause / fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>P1001</code> can&#39;t reach database</td>
+<td>You&#39;re using the IPv6-only <strong>Direct</strong> host. Switch to the <strong>Session pooler</strong> host (5432).</td>
+</tr>
+<tr>
+<td>Tests refuse to run</td>
+<td><code>TEST_DATABASE_URL</code> not set. Point it at a disposable DB.</td>
+</tr>
+<tr>
+<td>Tests fail referencing a missing column</td>
+<td>Test DB schema is stale — run <code>DATABASE_URL=&quot;$TEST_DATABASE_URL&quot; DIRECT_URL=&quot;$TEST_DATABASE_URL&quot; npx prisma migrate deploy</code>.</td>
+</tr>
+<tr>
+<td><code>Environment variable not found: DIRECT_URL</code></td>
+<td>The schema needs <code>DIRECT_URL</code> for migrations. Set it in <code>.env</code> (same value as <code>DATABASE_URL</code> locally).</td>
+</tr>
+<tr>
+<td>500 with <code>Cannot find module .../vendor-chunks/...</code></td>
+<td>Stale dev cache — <code>rm -rf .next</code> and restart.</td>
+</tr>
+<tr>
+<td>Prisma client out of date after schema change</td>
+<td><code>npx prisma generate</code>.</td>
+</tr>
+<tr>
+<td><code>node-ical</code> build error (<code>BigInt is not a function</code>)</td>
+<td>Already handled via <code>serverExternalPackages</code> in <code>next.config.mjs</code> — don&#39;t remove it.</td>
+</tr>
+</tbody></table>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Reference</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>API.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>API Reference</h1>
+<p>All routes live under <code>src/app/api/**/route.ts</code>. Unless noted, every endpoint
+requires the <strong>owner session cookie</strong> (enforced by <a href="../src/middleware.ts"><code>src/middleware.ts</code></a>)
+and returns the standard envelope:</p>
+<pre><code class="language-jsonc">// success
+{ &quot;data&quot;: ... }
+// error
+{ &quot;error&quot;: &quot;human-readable message&quot; }
+</code></pre>
+<p>Status codes: <code>200</code>/<code>201</code> success, <code>404</code> not found, <code>409</code> conflict (overlap or
+guarded delete), <code>422</code> Zod validation failure.</p>
+<p>Inputs are validated with <strong>Zod</strong> at the top of each route file. Dates are
+<code>YYYY-MM-DD</code>.</p>
+<hr>
+<h2>Auth (public)</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>POST</code></td>
+<td><code>/api/auth/login</code></td>
+<td>Verify <code>OWNER_EMAIL</code>/<code>OWNER_PASSWORD</code>, set signed session cookie</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/auth/logout</code></td>
+<td>Clear the session cookie</td>
+</tr>
+</tbody></table>
+<h2>Reservations</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/reservations</code></td>
+<td>List reservations</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/reservations</code></td>
+<td>Create a booking (upserts guest + inserts reservation in one transaction; returns <strong>409</strong> on overlap)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/reservations/[id]</code></td>
+<td>Fetch one</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/reservations/[id]</code></td>
+<td>Edit a booking</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/reservations/[id]/cancel</code></td>
+<td>Cancel (frees the dates)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/reservations/[id]/payments</code></td>
+<td>Record a payment</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/reservations/[id]/stay</code></td>
+<td><code>{ action: &quot;checkin&quot; | &quot;checkout&quot; | &quot;undo&quot; }</code></td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/payments/[id]</code></td>
+<td>Delete a payment</td>
+</tr>
+</tbody></table>
+<h2>Availability &amp; dashboard</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/availability</code></td>
+<td>Derived nightly availability for a room type / range</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/dashboard/today</code></td>
+<td>Today-board summary (check-ins/outs, in-house, occupancy)</td>
+</tr>
+</tbody></table>
+<h2>Rooms, room types, channels (admin)</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/rooms</code></td>
+<td>List rooms (<code>?includeArchived=1</code> to include retired)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/rooms/available</code></td>
+<td>Which physical rooms are free for a whole stay — <code>?checkIn&amp;checkOut[&amp;exclude]</code> → <code>[{ id, label, roomTypeName, free }]</code> (drives the reservation form&#39;s room picker; availability stays derived)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/rooms</code></td>
+<td>Create a room</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/rooms/[id]</code></td>
+<td>Edit / archive / housekeeping flag (<code>{ label?, roomTypeId?, archived?, markCleaned? }</code>)</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/rooms/[id]</code></td>
+<td>Delete — <strong>409</strong> unless the room has zero history (else archive)</td>
+</tr>
+<tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/room-types</code></td>
+<td>List / create room types (base/floor/ceiling rates)</td>
+</tr>
+<tr>
+<td><code>PATCH</code> / <code>DELETE</code></td>
+<td><code>/api/room-types/[id]</code></td>
+<td>Edit / delete (409 if it still has rooms)</td>
+</tr>
+<tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/channels</code></td>
+<td>List / create channels</td>
+</tr>
+<tr>
+<td><code>PATCH</code> / <code>DELETE</code></td>
+<td><code>/api/channels/[id]</code></td>
+<td>Edit / delete (409 if it has bookings)</td>
+</tr>
+<tr>
+<td><code>GET</code> / <code>PATCH</code></td>
+<td><code>/api/settings</code></td>
+<td>Property profile (single row, get-or-create)</td>
+</tr>
+</tbody></table>
+<h2>Maintenance blocks</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/blocks</code></td>
+<td>List blocks (optional <code>from</code>/<code>to</code>)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/blocks</code></td>
+<td>Hold a room out of service (<code>roomId</code>, <code>startDate</code>, <code>endDate</code>, <code>reason</code>)</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/blocks/[id]</code></td>
+<td>Remove a block (<strong>manual</strong> blocks only; iCal blocks are managed by their feed)</td>
+</tr>
+</tbody></table>
+<h2>Pricing (advisory)</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/pricing/quote</code></td>
+<td>Suggested nightly rates + total for <code>roomId</code> + <code>checkIn</code>/<code>checkOut</code></td>
+</tr>
+<tr>
+<td><code>GET</code> / <code>PATCH</code></td>
+<td><code>/api/pricing/policy</code></td>
+<td>The single pricing policy (weekend / lead-time / occupancy rules)</td>
+</tr>
+<tr>
+<td><code>POST</code> / <code>DELETE</code></td>
+<td><code>/api/pricing/overrides</code></td>
+<td>Pin / clear a manual nightly rate for a room type on a date</td>
+</tr>
+<tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/seasons</code></td>
+<td>List / create season (date range + adjustment)</td>
+</tr>
+<tr>
+<td><code>PATCH</code> / <code>DELETE</code></td>
+<td><code>/api/seasons/[id]</code></td>
+<td>Edit / delete a season</td>
+</tr>
+</tbody></table>
+<h2>Guests</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/guests</code></td>
+<td>List / search guests (<code>?q=</code> name or phone)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/guests</code></td>
+<td>Create a guest directly (name, phone, email?, notes?, blacklist?). <strong>409</strong> if the phone already exists</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/guests/[id]</code></td>
+<td>Edit profile (email, ID, notes, blacklist)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/guests/[id]/id-document</code></td>
+<td>Upload/replace a scanned ID (multipart <code>file</code>; JPG/PNG/WEBP/PDF ≤ 5 MB). <strong>503</strong> if storage isn&#39;t configured</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/guests/[id]/id-document</code></td>
+<td>Short-lived signed URL to view the stored document</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/guests/[id]/id-document</code></td>
+<td>Remove the stored document</td>
+</tr>
+</tbody></table>
+<h2>Inbound bookings (OTA email ingestion)</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Auth</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/inbound</code></td>
+<td>owner</td>
+<td>List pending parsed bookings awaiting review</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/inbound</code></td>
+<td>owner</td>
+<td>Paste a raw confirmation email → parse + stage it (Inbox screen)</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/inbound/[id]</code></td>
+<td>owner</td>
+<td>Mark a staged item <code>imported</code> (with <code>reservationId</code>) or <code>dismissed</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/ingest/email</code></td>
+<td><strong><code>INGEST_TOKEN</code></strong></td>
+<td>Webhook entry for automated ingestion (inbox/forwarding rule). Excluded from the owner-cookie middleware; gated by its own token. The review/import step is unchanged.</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>The Inbox review screen corrects parsed fields and creates the booking through
+the existing <code>POST /api/reservations</code> (so it gets conflict-checking for free),
+then <code>PATCH</code>es the inbound item to <code>imported</code>.</p>
+</blockquote>
+<h2>Finance / expenses / export</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/expenses</code></td>
+<td>List (optional <code>from</code>/<code>to</code>) / create an expense</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/expenses/[id]</code></td>
+<td>Delete an expense</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/export/reservations.csv</code></td>
+<td>Download bookings CSV (optional <code>from</code>/<code>to</code>)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/export/payments.csv</code></td>
+<td>Download payments CSV (optional <code>from</code>/<code>to</code>)</td>
+</tr>
+</tbody></table>
+<h2>iCal feeds &amp; sync</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Auth</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/feeds</code></td>
+<td>owner</td>
+<td>List / add an external iCal feed for a room</td>
+</tr>
+<tr>
+<td><code>PATCH</code> / <code>DELETE</code></td>
+<td><code>/api/feeds/[id]</code></td>
+<td>owner</td>
+<td>Toggle active / remove a feed (and its imported blocks)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/sync</code></td>
+<td>owner</td>
+<td>Manually run the iCal import now</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/ical/[token]/[room]</code></td>
+<td><strong>token</strong></td>
+<td>Public <code>.ics</code> export of a room&#39;s busy dates (for OTAs). Guarded by <code>ICAL_FEED_TOKEN</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/cron/sync</code></td>
+<td><strong><code>CRON_SECRET</code></strong></td>
+<td>Daily import, invoked by Vercel Cron (02:00 UTC). Bearer-secret gated</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>The three token/secret-gated routes (<code>/api/ical/*</code>, <code>/api/cron/sync</code>) are
+excluded from the owner-cookie middleware because they must be reachable without
+a login — they carry their own shared-secret checks.</p>
+</blockquote>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roadmap & Project Status</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>ROADMAP.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Roadmap &amp; Project Status</h1>
+<blockquote>
+<p>📄 For a consolidated, shareable view of everything below <strong>plus a step-by-step
+guide to enabling the not-yet-wired features</strong>, open
+<a href="STATUS.html">docs/STATUS.html</a> in a browser.</p>
+</blockquote>
+<h2>Where we are</h2>
+<p>The app shipped its planned scope across six milestones — all in production on
+<code>main</code>. The original product brief and rationale live in <a href="../CLAUDE.html">CLAUDE.md</a>.</p>
+<p>Two cross-cutting passes followed the feature work:</p>
+<ul>
+<li><strong>UI/UX redesign</strong> (shipped 2026-06-05) — a warmer navy/teal/mint design system
+(Fraunces / Plus Jakarta Sans / JetBrains Mono), a mobile bottom tab bar + FAB
+and desktop sidebar, calendar Day/Week/2-Week/Month views, in-app confirm
+dialogs, and a Preferences panel (appearance / accent / density). See
+<a href="ARCHITECTURE.html#ui--design-system">ARCHITECTURE.md → UI</a>.</li>
+<li><strong>Performance</strong> — pooled DB connections + region co-location + instant
+navigation feedback. See <a href="ARCHITECTURE.html#performance-serverless--remote-db">ARCHITECTURE.md → Performance</a>.</li>
+</ul>
+<h2>Delivered</h2>
+<h3>Phase 1 — Operations core + Admin</h3>
+<p>Bookings (create/edit/cancel) with DB-enforced no-double-booking; unified
+calendar (rooms × dates, colour-coded, week/2-week/month views); Today dashboard;
+guests list/search; housekeeping (derived &quot;needs cleaning&quot; + manual flag);
+single-owner login; PWA. Plus <strong>Admin/Settings</strong>: add/edit/<strong>archive</strong> rooms,
+manage room types, channels + commissions, the property profile, and <strong>maintenance
+blocks</strong> (hold a room out of service with a comment).</p>
+<h3>Phase 2 — Pricing (advisory)</h3>
+<p>Rule-based nightly rate engine — weekend, season/holiday, lead-time (early-bird /
+last-minute), and occupancy adjustments, compounded then clamped to each room
+type&#39;s floor/ceiling. A <strong>rate calendar</strong> with tap-to-pin manual overrides, and a
+suggested price that pre-fills new bookings. Advisory only: never pushed to OTAs,
+never rewrites saved bookings.</p>
+<h3>Phase 3 — Check-in / check-out</h3>
+<p><code>checkedInAt</code> / <code>checkedOutAt</code> on bookings with check-in/out/undo actions, surfaced
+on the reservation detail and the Today board.</p>
+<h3>Phase 4 — Guest CRM</h3>
+<p>Guest profiles with stay history, repeat-guest badge, lifetime value, ID (text),
+notes, and a blacklist toggle that warns at booking time.</p>
+<h3>Phase 5 — Finance → real profit</h3>
+<p>Per-channel revenue and commission, plus <strong>expense tracking</strong> so Finance shows true
+<strong>net profit</strong> (gross − commission − expenses).</p>
+<h3>Phase 6 — Invoices + export</h3>
+<p>Printable guest invoices (browser Print → PDF, using the property profile) and
+dependency-free <strong>Bookings / Payments CSV</strong> exports for the accountant.</p>
+<h2>Deferred — by design</h2>
+<p>These were intentionally left out (see <a href="../CLAUDE.html">CLAUDE.md</a> &quot;do NOT&quot; rules and
+phase scoping). They are <strong>not</strong> bugs:</p>
+<table>
+<thead>
+<tr>
+<th>Deferred</th>
+<th>Why / what it would need</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>OTA email ingestion</strong></td>
+<td>Parse the owner&#39;s confirmation emails into bookings.</td>
+<td>🟡 <strong>Groundwork built</strong> — parser, staging model, <strong>Inbox</strong> paste/review/create flow, and a token-gated webhook seam (<code>POST /api/ingest/email</code>) all exist. Usable today via paste. Two <strong>ready-to-deploy forwarders</strong> now ship in <a href="../integrations/"><code>integrations/</code></a> (Gmail Apps Script — no domain; Cloudflare Worker — optional, for a branded domain instead of a personal Gmail); only setting the token + tuning the parser against real OTA emails remains.</td>
+</tr>
+<tr>
+<td><strong>Messaging automation</strong></td>
+<td>WhatsApp/email/SMS templates + triggers. Needs a messaging provider.</td>
+<td>○ Deferred</td>
+</tr>
+<tr>
+<td><strong>Dynamic pricing → OTAs</strong></td>
+<td>Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal.</td>
+<td>○ Won&#39;t do (external limit)</td>
+</tr>
+<tr>
+<td><strong>Multi-role auth + prod hardening</strong></td>
+<td>Currently single-owner; would need accounts, roles, lockout.</td>
+<td>🟡 <strong>Login rate-limiting done</strong> (<code>src/lib/rate-limit.ts</code>); roles still deferred</td>
+</tr>
+<tr>
+<td><strong>Guest ID document/photo upload</strong></td>
+<td>Needs object storage.</td>
+<td>🟡 <strong>Groundwork built</strong> — Supabase Storage adapter, upload/view/delete endpoints, and guest-profile UI. Activate by creating a private bucket + setting the storage env vars (see <a href="SETUP.html#optional-integrations-leave-unset-to-keep-them-off">SETUP.md</a>).</td>
+</tr>
+<tr>
+<td><strong>Server-side PDF invoices</strong></td>
+<td>Would need a PDF library. Today uses the browser&#39;s Print → Save as PDF.</td>
+<td>○ Deferred</td>
+</tr>
+</tbody></table>
+<h2>Known concerns / tech debt</h2>
+<p>Tracked with file/line references in
+<a href="../.planning/codebase/CONCERNS.md"><code>.planning/codebase/CONCERNS.md</code></a>. Highlights
+worth a new team&#39;s attention:</p>
+<ul>
+<li><strong>Migration discipline</strong> is load-bearing: the generated <code>DATERANGE</code> columns +
+GiST constraint require the safe <code>db:migrate:new</code> helper. Most fragile area of
+the repo. (See <a href="CONTRIBUTING.html#database-migrations-read-this-first">CONTRIBUTING</a>.)</li>
+<li><strong>Overlap-error detection</strong> sniffs the Postgres error string (<code>23P01</code> / constraint
+name) in <a href="../src/lib/db-errors.ts"><code>src/lib/db-errors.ts</code></a> — keep <code>tests/conflict.test.ts</code>
+green if you touch it.</li>
+<li><strong>Money is whole-rupee <code>number</code> math</strong> — fine today; would need integer-paise or
+decimal arithmetic for strict accounting.</li>
+<li><strong>Test breadth</strong>: the correctness core (conflicts, availability) and pure pricing
+are tested; route handlers and the <code>quoteRoomType</code> data wrapper are not. The
+highest-value gap to close is a route-level create-overlap → 409 test.</li>
+<li><strong>Pricing rate-calendar</strong> re-fetches global config per room type (mild N+1, fine
+at small scale).</li>
+</ul>
+<h2>Suggested next steps for a new team</h2>
+<ol>
+<li>Read <a href="ARCHITECTURE.html">ARCHITECTURE.md</a> (correctness core) and
+<a href="CONTRIBUTING.html">CONTRIBUTING.md</a> (migration safety) first.</li>
+<li>Get a local env up (<a href="SETUP.html">SETUP.md</a>) and run <code>npm test</code> to confirm the DB
+wiring.</li>
+<li>Skim <a href="../.planning/codebase/CONCERNS.md"><code>.planning/codebase/CONCERNS.md</code></a>.</li>
+<li>Good first improvements: route-level tests for the booking/overlap path; a
+housekeeping-derivation test; rotate the single iCal token to per-feed tokens if
+feed privacy matters.</li>
+</ol>
+
+</div>
+</body>
+</html>

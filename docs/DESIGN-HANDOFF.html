@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Handoff — Guest House Operations Hub</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>DESIGN-HANDOFF.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Design Handoff — Guest House Operations Hub</h1>
+<blockquote>
+<p>⚠️ <strong>Historical — this brief has been actioned.</strong> The redesign it requested
+<strong>shipped 2026-06-05</strong> (navy/teal/mint design system; Fraunces / Plus Jakarta
+Sans / JetBrains Mono; mobile bottom tab bar + FAB; desktop sidebar; calendar
+Day/Week/2-Week/Month; in-app confirm dialogs; Preferences = appearance / accent
+/ <strong>density</strong>). Note a few details below describe the <em>pre-redesign</em> code and
+<em>proposed</em> knobs that changed in implementation — e.g. the shipped Preferences
+use a <strong><code>data-density</code></strong> control, not the proposed <code>data-material</code> /
+<code>data-btnshape</code>, and <code>SettingsClient</code> was replaced by
+<code>src/components/settings/sections.tsx</code>. Kept as the record of the design intent.
+For the current UI see <a href="ARCHITECTURE.html#ui--design-system">ARCHITECTURE.md → UI</a>.</p>
+</blockquote>
+<blockquote>
+<p><strong>Purpose of this document.</strong> Hand this to a designer (or Claude Design) to do a
+fresh, critical pass on the whole app&#39;s UX/UI. The owner is <strong>not convinced the
+current design is good enough</strong> and wants it rethought — not just re-skinned.
+Everything you need to understand the product, who uses it, the current design
+system, every screen, and the hard technical constraints is below.</p>
+</blockquote>
+<hr>
+<h2>1. What this product is (in one paragraph)</h2>
+<p>A self-hosted, <strong>mobile-first</strong> web app (PWA) that lets the owner/staff of a <strong>single
+small guest house</strong> run the whole property from one place: bookings, a unified
+calendar, guest records, housekeeping, advisory pricing, and finances — across
+several booking channels (their own website/WhatsApp, Booking.com, Agoda,
+MakeMyTrip). It is <strong>not</strong> a channel manager; it&#39;s an internal operations hub. It
+records and organises; it doesn&#39;t talk to OTA APIs.</p>
+<h2>2. Who actually uses it, and how</h2>
+<ul>
+<li><strong>Primary user: the owner</strong>, on a <strong>phone</strong>, standing at the front desk or walking
+the property. Often one-handed, often in a hurry, sometimes poor lighting. This is
+the case to optimise. The default and most-used view is <strong>Today</strong>.</li>
+<li><strong>Secondary: 1–2 staff</strong> (housekeeping / reception) on a phone.</li>
+<li><strong>Occasional: the owner on a laptop</strong> for finance/analytics/admin (desktop layout
+exists but is the minority case).</li>
+<li><strong>Scale is small and human:</strong> ~5–20 rooms, a handful of bookings a day. This is not
+an enterprise dashboard. It should feel calm, fast, and obvious — closer to a
+well-made consumer app than to a SaaS admin panel.</li>
+<li><strong>Frequency:</strong> Today / Calendar / New booking are touched many times a day.
+Settings, Finance, Analytics are occasional.</li>
+</ul>
+<h2>3. Design priorities (in order)</h2>
+<ol>
+<li><strong>Phone-first, thumb-first.</strong> ~390px screen is the design target. Primary actions
+reachable with one thumb. Big tap targets. Minimal typing.</li>
+<li><strong>Glanceability.</strong> The owner should grasp &quot;what&#39;s happening today / is anything
+wrong&quot; in under two seconds. Conflicts and rooms-to-clean must surface loudly.</li>
+<li><strong>Obviousness over density.</strong> Few choices per screen, clear hierarchy, no jargon.
+Staff are not power users.</li>
+<li><strong>Calm, trustworthy, modern.</strong> It holds money and bookings; it should feel
+dependable, not flashy.</li>
+<li><strong>Desktop is a bonus, not the brief.</strong> Make it good, but never at the phone&#39;s expense.</li>
+</ol>
+<h2>4. The job to be done — what we want from this redesign</h2>
+<p>We want a <strong>critical design review + a concrete redesign direction</strong>, not a coat of
+paint. Specifically:</p>
+<ul>
+<li><strong>Audit the current UX</strong> screen by screen. Call out what&#39;s weak, confusing,
+cluttered, or inconsistent. Be blunt.</li>
+<li><strong>Rethink the information architecture &amp; navigation</strong> if it&#39;s wrong (see the known
+pain points in §8). Propose the right model for a phone-first ops app with this many
+surfaces.</li>
+<li><strong>Define a coherent visual language</strong>: type scale, spacing system, colour roles,
+elevation, iconography, motion. It can keep or replace the current Apple-HIG
+direction — argue for your choice.</li>
+<li><strong>Redesign the key flows</strong> end-to-end (priority order in §7): Today, Calendar, New/
+Edit reservation, Reservation detail, Settings.</li>
+<li><strong>Deliver it as something we can build</strong>: annotated screen designs or hi-fi mockups,
+plus the token/component spec (so it maps onto our CSS-variable system — see §9).</li>
+</ul>
+<p>Deliverables we&#39;d love: (a) a short written critique, (b) the redesigned system
+(tokens + core components), (c) redesigned screens for the priority flows, (d) notes
+on responsive behaviour (phone → desktop) and dark mode.</p>
+<h2>5. The current design system (what exists today)</h2>
+<p>The current look is an <strong>&quot;Apple HIG / iOS edition&quot;</strong> built entirely with <strong>CSS custom
+properties + a small set of utility/component classes</strong> in one stylesheet
+(<code>src/app/globals.css</code>). There is <strong>no UI component library</strong> (no shadcn, no MUI) and
+<strong>no Tailwind component usage</strong> beyond the <code>@import &quot;tailwindcss&quot;</code> reset — almost all
+styling is these hand-rolled classes + inline <code>style={{}}</code> props. A redesign must
+keep that &quot;tokens + thin component classes&quot; shape (see §9 constraints).</p>
+<p><strong>Theming is token-driven and user-adjustable at runtime</strong> via a Preferences panel:</p>
+<ul>
+<li><strong>Appearance:</strong> light / dark / system (sets <code>data-appearance</code> on <code>&lt;html&gt;</code>).</li>
+<li><strong>Accent tint:</strong> green / blue / indigo / warm-teal (sets <code>data-tint</code>). Warm-teal is
+the default brand accent.</li>
+<li><strong>Material:</strong> &quot;rich&quot; (heavy blur/translucency) vs &quot;crisp&quot; (more opaque) — <code>data-material</code>.</li>
+<li><strong>Button shape:</strong> rounded vs pill — <code>data-btnshape</code>.</li>
+</ul>
+<p><strong>Core tokens</strong> (abridged — full list in <code>globals.css</code>):</p>
+<ul>
+<li>Neutrals/surfaces: <code>--sys-bg-grouped</code> (app bg), <code>--paper</code> (card), <code>--sys-fill</code> /
+<code>--sys-fill-2</code> (filled controls), <code>--line</code> / <code>--line-strong</code> (separators).</li>
+<li>Text: <code>--sys-label</code> (primary), <code>--sys-label-2</code> (secondary), <code>--sys-label-3</code> (tertiary).</li>
+<li>Accent: <code>--tint</code>, <code>--tint-600</code>, <code>--tint-text</code>, <code>--tint-fill</code>.</li>
+<li>Status: green (<code>--good</code>), orange (<code>--warn</code>/<code>--clay</code>), red (<code>--danger</code>) each with a
+<code>-fill</code> and <code>-text</code> variant.</li>
+<li>Radii <code>--r-xs…--r-xl</code> + <code>--r-pill</code>; shadows <code>--shadow-md/-lg</code> (mostly flat); motion
+eases <code>--ease</code>, <code>--ease-spring</code> and durations <code>--fast/--base/--slow</code>.</li>
+<li>A large set of <strong>legacy alias tokens</strong> (<code>--teal-50</code>, <code>--sand</code>, <code>--cream</code>, <code>--ink</code>,
+<code>--clay</code>, etc.) map onto the system tokens because the screens were written against
+the old names. A redesign can rationalise these but should expect them in the markup.</li>
+<li>Font: <strong>Poppins</strong> (loaded as <code>--font-poppins</code>), fallback to the system stack.</li>
+</ul>
+<p><strong>Component classes</strong> that already exist (reuse/redesign these names where sensible):
+<code>.btn</code> (+ <code>--primary/--dark/--good/--clay/--outline/--ghost/--danger-outline/--sm/--block</code>),
+<code>.card</code>, <code>.pill</code> (status), <code>.ch</code> (channel badge), <code>.input</code>/<code>.select</code>/<code>.textarea</code> +
+<code>.field-label</code>, <code>.banner</code> (alert), <code>.kpi</code>, <code>.tbl</code>, <code>.cal-cell</code> (+ occupied/blocked/
+conflict/edge variants), <code>.empty</code>, <code>.segmented</code>, <code>.switch</code>, <code>.swatches</code>, plus the
+<strong>app-shell</strong> classes below.</p>
+<p><strong>Shared React components</strong> (<code>src/components/ui.tsx</code>): <code>Icon</code> (a hand-rolled
+Lucide-style stroke icon set — ~35 glyphs, <code>currentColor</code>), <code>ChannelBadge</code>,
+<code>StatusPill</code>, <code>PageHead</code> (title + subtitle), <code>SectionLabel</code>, <code>KPI</code>, <code>AlertBanner</code>,
+<code>EmptyState</code>, <code>RangeForm</code>, <code>GuestRow</code>.</p>
+<h2>6. Navigation model today</h2>
+<p>Two completely different chromes by breakpoint (in <code>src/components/NavShell.tsx</code>):</p>
+<ul>
+<li><strong>Mobile (&lt;900px): iOS pattern.</strong> A translucent sticky <strong>top header</strong> (brand left;
+dark-mode toggle + &quot;＋ New&quot; right) and a fixed <strong>bottom tab bar</strong> with 5 slots:
+<strong>Today · Calendar · Guests · Housekeeping · More</strong>. &quot;More&quot; opens an <strong>iOS action
+sheet</strong> listing the rest. A <strong>Preferences</strong> sheet handles theming.</li>
+<li><strong>Desktop (≥900px): macOS pattern.</strong> A fixed top <strong>toolbar</strong> + a left <strong>sidebar</strong>
+listing <em>all</em> destinations in one flat &quot;Menu&quot; group, plus Account/Log out.</li>
+</ul>
+<p><strong>Full destination list</strong> (PRIMARY = tab bar; MORE = behind &quot;More&quot;/in sidebar):
+<code>Today, Calendar, Guests, Housekeeping</code> (primary) · <code>Pricing, Finance, Analytics, Conflicts, Inbox, Feeds, Settings</code> (more). That&#39;s <strong>11 destinations</strong> — a lot for a
+phone, and a known smell (see §8).</p>
+<h2>7. Screen inventory (every surface, with intent)</h2>
+<p>Priority for redesign is marked ⭐ (do these first).</p>
+<table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>Route</th>
+<th>Purpose / contents</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>⭐ <strong>Today</strong></td>
+<td><code>/</code></td>
+<td>The home/default. Conflict + to-clean alert banners; 4 KPIs (Occupancy, In-house, Check-ins, Check-outs); lists: check-ins today, check-outs today, in-house now, arrivals next 7 days.</td>
+</tr>
+<tr>
+<td>⭐ <strong>Calendar</strong></td>
+<td><code>/calendar</code></td>
+<td>Rooms (rows) × dates (cols) grid. Week / 2-week / month views; date picker; prev/next/today; &quot;Block a room&quot;. Cells colour-coded: vacant / occupied (guest + channel) / blocked (hatched) / conflict (red) / arriving+departing edges. Horizontally scrolls on phone.</td>
+</tr>
+<tr>
+<td>⭐ <strong>New / Edit reservation</strong></td>
+<td><code>/reservations/new</code>, <code>/reservations/[id]/edit</code></td>
+<td>The main data-entry form: guest, channel, room, dates, arrival time, special requests, amount (pre-filled by pricing), payment mode. Must reject overlapping bookings with a friendly error.</td>
+</tr>
+<tr>
+<td>⭐ <strong>Reservation detail</strong></td>
+<td><code>/reservations/[id]</code></td>
+<td>One booking: guest, stay, channel, amount, status; check-in/out actions; payments; edit/cancel; link to invoice.</td>
+</tr>
+<tr>
+<td>⭐ <strong>Settings</strong></td>
+<td><code>/settings</code></td>
+<td>Admin. <strong>Currently a single-open accordion</strong> of 6 sections: Property, Rooms, Room types, Channels, Pricing rules, Maintenance blocks. (This screen was reworked twice and still isn&#39;t loved — see §8.)</td>
+</tr>
+<tr>
+<td><strong>Guests list</strong></td>
+<td><code>/guests</code></td>
+<td>Searchable by name/phone; rows link to detail.</td>
+</tr>
+<tr>
+<td><strong>Guest detail</strong></td>
+<td><code>/guests/[id]</code></td>
+<td>Profile: stay history, repeat badge, lifetime value, ID number, blacklist toggle, notes, optional ID-document upload.</td>
+</tr>
+<tr>
+<td><strong>Housekeeping</strong></td>
+<td><code>/housekeeping</code></td>
+<td>Rooms needing cleaning (derived from checkouts + a manual &quot;needs cleaning&quot; flag); mark-cleaned action.</td>
+</tr>
+<tr>
+<td><strong>Pricing</strong></td>
+<td><code>/pricing</code></td>
+<td>Advisory rate calendar: room-types × dates of suggested nightly rates; tap a cell to pin a manual override; link to pricing rules in Settings.</td>
+</tr>
+<tr>
+<td><strong>Finance</strong></td>
+<td><code>/finance</code></td>
+<td>Per-channel revenue + commission, expenses panel, net-profit KPI; CSV export buttons.</td>
+</tr>
+<tr>
+<td><strong>Analytics</strong></td>
+<td><code>/analytics</code></td>
+<td>Occupancy / ADR / RevPAR / source mix etc.</td>
+</tr>
+<tr>
+<td><strong>Conflicts</strong></td>
+<td><code>/conflicts</code></td>
+<td>List of overlapping/double-booking situations to resolve.</td>
+</tr>
+<tr>
+<td><strong>Inbox</strong></td>
+<td><code>/inbox</code></td>
+<td>Paste an OTA confirmation email → parsed preview → create booking (groundwork feature).</td>
+</tr>
+<tr>
+<td><strong>Feeds</strong></td>
+<td><code>/feeds</code></td>
+<td>iCal import/export feeds (groundwork).</td>
+</tr>
+<tr>
+<td><strong>Invoice</strong></td>
+<td><code>/reservations/[id]/invoice</code></td>
+<td>Print-friendly invoice (Print → Save as PDF; print CSS strips app chrome).</td>
+</tr>
+<tr>
+<td><strong>Login</strong></td>
+<td><code>/login</code></td>
+<td>Single-owner login; no nav chrome.</td>
+</tr>
+</tbody></table>
+<h2>8. Known pain points (start here — these are why we&#39;re redoing it)</h2>
+<ol>
+<li><strong>Settings has been the sore spot.</strong> It began as one long page (&quot;looks really bad
+with everything in 1 page&quot;), then a menu→detail attempt (&quot;yeah this doesn&#39;t work&quot;),
+now a single-open accordion. It functions but still doesn&#39;t feel right. <strong>Treat
+Settings&#39; IA as an open design problem</strong>, not solved.</li>
+<li><strong>Too many top-level destinations (11).</strong> The phone hides 7 behind &quot;More&quot;. The split
+between PRIMARY and MORE is somewhat arbitrary. Reconsider the whole IA: what truly
+deserves a tab, what should be grouped, what should live inside another screen.</li>
+<li><strong>Two different navigation paradigms</strong> (iOS bottom-tabs vs macOS sidebar) maintained
+in parallel — a lot of surface area and a slightly split personality. Decide whether
+one coherent system can scale across breakpoints.</li>
+<li><strong>Heavy reliance on inline <code>style={{}}</code></strong> with magic numbers (font sizes like 12.5px,
+13.5px, ad-hoc paddings/margins) means spacing &amp; type are <strong>not systematic</strong>.
+A real type scale + spacing scale would tighten everything.</li>
+<li><strong>Calendar on a phone</strong> is a horizontally-scrolling grid — workable but cramped;
+worth rethinking the mobile presentation of occupancy.</li>
+<li><strong>Visual identity is borrowed (generic Apple HIG).</strong> It&#39;s clean but has little
+personality or sense of &quot;this is a guest-house tool.&quot; Brand/warmth is thin.</li>
+<li><strong>Forms</strong> (New reservation especially) are the highest-value flow and deserve the
+most care: minimal typing, smart defaults, forgiving errors.</li>
+</ol>
+<h2>9. Hard constraints (the redesign must live within these)</h2>
+<p><strong>Technical (non-negotiable unless you flag and we agree):</strong></p>
+<ul>
+<li><strong>Stack:</strong> Next.js 15 (App Router, RSC), React 19, <strong>TypeScript strict</strong>, <strong>Tailwind
+CSS v4</strong> (currently only as a reset; styling is custom-property + component classes).</li>
+<li><strong>Keep the &quot;design tokens (CSS custom properties) + thin component classes&quot; model.</strong>
+Output should map to tokens + classes, not a new component-library dependency.
+<strong>No heavy UI/design dependencies without asking first</strong> (project rule).</li>
+<li><strong>Theming must survive:</strong> light/dark/system, 4 accent tints, material rich/crisp,
+button rounded/pill — all driven by <code>data-*</code> attributes on <code>&lt;html&gt;</code> + tokens. A
+redesign can change <em>which</em> knobs exist, but theming is attribute+token driven.</li>
+<li><strong>PWA / installs to home screen.</strong> Respect safe-area insets (the tab bar already uses
+<code>env(safe-area-inset-bottom)</code>).</li>
+<li><strong>Accessibility:</strong> real tap-target sizes, focus states, <code>prefers-reduced-motion</code>
+respected, sufficient contrast in both themes.</li>
+<li><strong>Print:</strong> the invoice must print clean (app chrome is hidden via print CSS).</li>
+<li><strong>Font</strong> is currently Poppins; changeable, but it&#39;s a Google/Next font load.</li>
+</ul>
+<p><strong>Product (from the build spec — won&#39;t change):</strong></p>
+<ul>
+<li>It is <strong>mobile-first</strong>; ~390px is the canvas. Desktop adapts up.</li>
+<li><strong>Calendar truth:</strong> availability is <em>derived</em>; the calendar must clearly show
+vacant / occupied / blocked / <strong>conflict (red, loud)</strong> / arriving / departing.</li>
+<li><strong>Conflicts and double-bookings are a first-class, high-visibility concept</strong> — the DB
+prevents them and the UI must make any conflict impossible to miss.</li>
+<li>Channels have <strong>distinct badges</strong> (Direct, WhatsApp, Booking.com, Agoda, MakeMyTrip)
+— colour-coding is meaningful, keep them differentiable.</li>
+<li>Money is INR by default; respect currency/locale formatting.</li>
+</ul>
+<h2>10. Where things live (for whoever implements the redesign)</h2>
+<ul>
+<li>Global styles &amp; all tokens/classes: <code>src/app/globals.css</code></li>
+<li>Shared components &amp; icon set: <code>src/components/ui.tsx</code></li>
+<li>App shell / navigation: <code>src/components/NavShell.tsx</code>, <code>src/app/layout.tsx</code></li>
+<li>Screens: <code>src/app/**/page.tsx</code> (see §7 for the route map)</li>
+<li>Feature client components: <code>src/components/*.tsx</code> (e.g. <code>ReservationForm</code>,
+<code>SettingsClient</code>, <code>RateCalendar</code>, <code>GuestProfile</code>, <code>PaymentsPanel</code>)</li>
+<li>A live screenshot tour / operator manual exists at <code>docs/USER-GUIDE.html</code> (open in a
+browser) — useful to see real content in each screen.</li>
+</ul>
+<hr>
+<h3>TL;DR for the designer</h3>
+<p>Phone-first ops app for one small guest house, used many times a day by the owner
+standing at the desk. Current look is a competent-but-generic Apple-HIG theme built on
+CSS custom properties; the <strong>IA/navigation (11 destinations) and Settings are the weak
+spots</strong>, spacing/type aren&#39;t systematic, and the brand has little personality. We want
+a critical review and a buildable redesign of the system + the priority flows (Today,
+Calendar, New/Edit reservation, Reservation detail, Settings), staying within the
+tokens-and-classes model and the theming knobs. Be opinionated.</p>
+<hr>
+<h2>Appendix — Prompt to start the redesign</h2>
+<p>Paste this into a fresh Claude Code session in this repo. It pairs with this document.</p>
+<blockquote>
+<p>Read <code>docs/DESIGN-HANDOFF.md</code> in full, then read <code>CLAUDE.md</code> for the product&#39;s hard rules. Don&#39;t write any code yet.</p>
+<p>I&#39;m not convinced the current UX/UI is good enough and I want you to redesign it — a real rethink, not a re-skin. This is a phone-first operations app for one small guest house; the owner uses it many times a day standing at the front desk.</p>
+<p><strong>First, do a critical design review.</strong> Walk the app screen by screen (the routes are mapped in the handoff §7; you can run it locally and look, and <code>docs/USER-GUIDE.html</code> shows real content per screen). Be blunt about what&#39;s cluttered, confusing, inconsistent, or off-brand. Pay special attention to the known pain points in §8: the Settings information architecture, the 11 top-level destinations, the two parallel nav paradigms, the un-systematic spacing/type (lots of inline magic numbers), and the thin brand identity.</p>
+<p><strong>Then propose a redesign direction</strong> before touching code:</p>
+<ol>
+<li>A revised information architecture &amp; navigation model for a phone-first app with this many surfaces.</li>
+<li>A coherent visual system — type scale, spacing scale, colour roles, elevation, iconography, motion — expressed as CSS custom properties + thin component classes (keep that model; <strong>no new heavy UI/design dependencies without asking</strong> — it&#39;s a project rule). Theming must still work via <code>data-*</code> attributes on <code>&lt;html&gt;</code>: light/dark/system, accent tints, material, button shape.</li>
+<li>Redesigned layouts for the priority flows in order: <strong>Today, Calendar, New/Edit reservation, Reservation detail, Settings.</strong> ASCII wireframes or a written spec is fine at this stage.</li>
+</ol>
+<p>Respect every constraint in §9 (Next.js 15 App Router, TS strict, Tailwind v4, mobile-first ~390px, derived-availability calendar with a loud red conflict state, distinct channel badges, PWA + safe-area, accessible focus/contrast/reduced-motion, clean invoice print).</p>
+<p>Show me the critique and the proposed direction, and <strong>wait for my approval before implementing.</strong> Then rebuild it screen by screen, committing each slice.</p>
+</blockquote>
+
+</div>
+</body>
+</html>
