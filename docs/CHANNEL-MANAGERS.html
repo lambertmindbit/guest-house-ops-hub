@@ -191,14 +191,69 @@
     <strong>Integration effort (applies to all):</strong> the channel manager gives us the certified OTA link; <strong>bridging it to our Ops Hub is still work</strong> — a few days against Beds24/Channex's API for real-time sync, or near-zero via iCal but with the usual lag. Budget for that, not just the subscription.
   </div>
 
+  <!-- direct connections -->
+  <h2><span class="n">5</span>Can we build direct OTA connections ourselves?</h2>
+  <p>Our goal is to build a <strong>channel-manager product</strong> to offer other hotels — not just sync our own property — so this is the central question. Short answer: <strong>yes, it's possible, but "the API is free" does not mean "open access."</strong></p>
+
+  <div class="note">
+    <strong>Free ≠ open.</strong> The OTAs (Booking.com, Agoda, Expedia, Airbnb, MakeMyTrip) don't <em>charge</em> for connectivity API access — their business runs on the 10–25% commission they take from hotels, so they <em>want</em> channel managers to exist. But they <strong>gate</strong> it: they won't issue production API keys to an independent developer without a customer base and a passed certification. Building direct means <strong>becoming a certified connectivity partner</strong> with each OTA, one at a time. (That "catch" is the same gate noted throughout this research.)
+  </div>
+
+  <h3>What "building direct" actually involves — per OTA</h3>
+  <ul>
+    <li><strong>Apply</strong> to each partner program: Booking.com <em>Connectivity Partner Programme</em>, <em>Agoda Connectivity (YCS)</em>, <em>Expedia Partner Connectivity</em>, <em>MakeMyTrip Connect / Ingommt</em>.</li>
+    <li><strong>Pass technical certification</strong> — they review your integration against their test cases before granting production keys.</li>
+    <li>Often <strong>already have connected properties</strong> to be accepted — the chicken-and-egg: you need clients to get keys, and keys to serve clients.</li>
+    <li><strong>Build &amp; maintain</strong> a separate integration per OTA, indefinitely, as each API changes; meet their uptime / support expectations.</li>
+  </ul>
+  <p>In other words, <strong>building direct = building a channel manager</strong> — exactly the business Beds24, STAAH, eZee and Channex are in.</p>
+
+  <h3>Three ways to ship a channel-manager product</h3>
+  <table>
+    <tr><th>Approach</th><th>Time to market</th><th>OTA certification</th><th>Margin / control</th><th>Best when</th></tr>
+    <tr>
+      <td class="k">Build on Channex (white-label API)</td>
+      <td class="yes">Fast — weeks</td>
+      <td class="yes">Channex holds it — none for you</td>
+      <td class="maybe">Pay Channex per property; less control</td>
+      <td><strong>Starting out / validating the product</strong></td>
+    </tr>
+    <tr>
+      <td class="k">Direct certification, OTA by OTA</td>
+      <td class="no">Slow — months to years</td>
+      <td class="no">You certify with each OTA yourself</td>
+      <td class="yes">Best margin + full control at scale</td>
+      <td>Once you have real client volume</td>
+    </tr>
+    <tr>
+      <td class="k">Hybrid</td>
+      <td class="maybe">Medium</td>
+      <td class="maybe">Channex now; certify top OTAs later</td>
+      <td class="yes">Improves as you migrate</td>
+      <td>Growing — de-risk first, optimise later</td>
+    </tr>
+  </table>
+
+  <div class="note">
+    <strong>Recommended path for us:</strong> start on <strong>Channex's white-label / Open Channel API</strong>. We build the product on top of our existing Ops Hub (which is already the PMS / calendar layer), and Channex supplies the <em>already-certified</em> Booking.com / Agoda / MMT / Goibibo connections — so we reach market in <strong>weeks</strong> instead of spending a year on certifications. Later, once we have client volume, we can certify directly with the biggest OTAs to cut the per-property cost and own the pipe.
+  </div>
+
+  <div class="warn">
+    <strong>This is a real business, not a weekend project.</strong> Being a channel-manager vendor means uptime guarantees, per-OTA mapping quirks (room types, rate plans, restrictions), reconciling bookings / cancellations / modifications across channels, and supporting paying hotel clients. Our Ops Hub is a strong head start — the calendar, availability and no-double-booking core already exist — but the <strong>distribution layer</strong> (and running it as a product) is the new, hard part. Treat it as its own roadmap.
+  </div>
+
+  <h3>Payments (PCI) — only if the product collects money</h3>
+  <p>If the SaaS will handle card payments for hotels, <strong>do not store raw card data</strong> — redirect to a hosted payment page (Razorpay / Cashfree / Stripe). That keeps PCI scope at the cheapest self-assessment tier (≈ <strong>₹0–25,000/yr</strong>) instead of a full audit. Our current Ops Hub only <em>records</em> the payment method (no card numbers), so this applies only once we add online collection or process OTA virtual cards.</p>
+
   <!-- sources -->
-  <h2><span class="n">5</span>Sources</h2>
+  <h2><span class="n">6</span>Sources</h2>
   <p class="src">
     <a href="https://hoteltechreport.com/revenue-management/channel-managers">HotelTechReport — channel managers</a> ·
     <a href="https://www.beds24.com/pricing.html">Beds24 pricing</a> ·
     <a href="https://wiki.beds24.com/index.php/Goibibo">Beds24 Goibibo/MMT wiki</a> ·
     <a href="https://channex.io/pricing">Channex pricing</a> ·
     <a href="https://docs.channex.io/channel-mapping-guides/mmt">Channex MMT/Goibibo guide</a> ·
+    <a href="https://docs.channex.io/for-ota/open-channel-api">Channex Open Channel / white-label API</a> ·
     <a href="https://www.ezeecentrix.com/pricing.php">eZee Centrix pricing</a> ·
     <a href="https://www.staah.com/channel-manager/">STAAH</a> ·
     <a href="https://www.djubo.com/en-in/pricing/">Djubo pricing</a> ·
