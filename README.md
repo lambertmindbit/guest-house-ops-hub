@@ -104,6 +104,7 @@ Detailed setup (Supabase connection-string nuances, the separate test database):
 | [docs/USER-GUIDE.html](docs/USER-GUIDE.html) | **Day-to-day user guide** (open in a browser) — how operators use every screen of the app |
 | [docs/CHANNEL-SYNC.html](docs/CHANNEL-SYNC.html) | Team explainer (browser) — how OTAs track availability, why cross-channel double-bookings happen, and how iCal sync helps |
 | [docs/CHANNEL-MANAGERS.html](docs/CHANNEL-MANAGERS.html) | Research (browser) — low-cost channel managers for India compared (cost, OTA coverage, pros/cons, recommendation) |
+| [docs/PRODUCT-ROADMAP-CM.html](docs/PRODUCT-ROADMAP-CM.html) | Roadmap (browser) — turning the Ops Hub into a multi-tenant channel-manager SaaS: reuse vs build, phased plan |
 | [integrations/](integrations/) | Ready-to-deploy OTA-email forwarders (Gmail Apps Script / Cloudflare Worker), each with its own step-by-step README |
 | [CLAUDE.md](CLAUDE.md) | Original product spec + the hard rules (also used by AI coding agents) |
 
