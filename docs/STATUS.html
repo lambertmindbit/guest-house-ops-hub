@@ -56,10 +56,10 @@
 
   <header>
     <h1>Guest House Operations Hub — Project Status</h1>
-    <div class="meta">Self-hosted, mobile-first ops hub for a single small property · Next.js 15 · Prisma · PostgreSQL (Supabase) · Vercel · As of 2026-06-05</div>
+    <div class="meta">Self-hosted, mobile-first ops hub for a single small property · Next.js 15 · Prisma · PostgreSQL (Supabase) · Vercel · As of 2026-06-30</div>
   </header>
 
-  <p><strong>Bottom line:</strong> all six planned milestones are <strong>built, tested, and live in production on <code>main</code></strong>, followed by a full <strong>UI/UX redesign</strong> and a <strong>performance pass</strong> (both shipped 2026-06-05). Several once-deferred items have their <strong>app-side groundwork built behind clean seams</strong> (off by default) so they aren&rsquo;t a last-minute scramble — see the Deferred section. CI (lint + build + 26 tests on an ephemeral Postgres) gates every merge.</p>
+  <p><strong>Bottom line:</strong> all six planned milestones are <strong>built, tested, and live in production on <code>main</code></strong>, followed by a full <strong>UI/UX redesign</strong> + a <strong>performance pass</strong>, and most recently the <strong>ROOT agent integration</strong> (phases A&ndash;F) — a token-gated seam that lets the AI agents check availability, quote, book, escalate, and message without ever getting direct write access to money or bookings. Several once-deferred items have their <strong>app-side groundwork built behind clean seams</strong> (off by default) so they aren&rsquo;t a last-minute scramble — see the Deferred section. CI (lint + build + 41 tests on an ephemeral Postgres) gates every merge.</p>
 
   <div class="legend">
     <span class="pill p-done">● Delivered</span>
@@ -142,6 +142,25 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="phase">
+      <div class="num" style="background:var(--good-bg);color:var(--good)">⌁</div>
+      <div>
+        <h3>ROOT agent integration (phases A&ndash;F) <span class="pill p-done">Delivered</span> <span class="meta">2026-06-30</span></h3>
+        <p>The deterministic core&rsquo;s half of the contract with the ROOT AI agents — a small, <strong>token-gated seam</strong> (<code>/api/agent/*</code>, gated by <code>AGENT_TOKEN</code>, fail-closed) so agents reach the app without direct write access to money or bookings. Sensitive actions are <strong>escalated for a human</strong>, never taken by an agent.</p>
+        <ul>
+          <li><strong>A · Escalations</strong> — a human-in-the-loop queue (<code>/escalations</code>, nav badge) agents file into.</li>
+          <li><strong>B · Agent seam</strong> — <code>availability</code> / <code>quote</code> / <code>reservations</code>; agent bookings run the same GiST-guarded transaction as the owner path (409 on overlap).</li>
+          <li><strong>C · C-Form</strong> — 13 foreign-national registration fields on the guest profile (passport / visa / port + date of entry / purpose).</li>
+          <li><strong>D · Scam-number list + payment verification</strong> — warns at booking time (Settings → Scam numbers) and a UPI/bank verification checklist on payments.</li>
+          <li><strong>E · Advance-payment tracking</strong> — <code>advanceRequired</code> on a booking + <code>isAdvance</code> on a payment; advance status is derived, never stored.</li>
+          <li><strong>F · Messaging outbox</strong> — a LogAdapter (<code>src/lib/messaging.ts</code>) + <code>/messages</code> screen; agents queue via <code>POST /api/agent/messages</code> (<code>status=logged</code> until a provider is wired).</li>
+        </ul>
+        <p>Plus an all-bookings <strong>Reservations</strong> list (<code>/reservations</code>) — search and status-filter — alongside the calendar and Today board. Full agent contract: <code>docs/INTEGRATION.md</code>.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ DEFERRED ============ -->
   <h2><span class="em">○</span> Deferred — with status</h2>
   <p>These were out of the original scope. Several now have their <strong>app-side groundwork built</strong> (🟡) so the only remaining work is configuration; the rest are genuinely deferred (○) or blocked by external limits.</p>
@@ -166,7 +185,7 @@
     </tr>
     <tr>
       <td class="k">Messaging automation</td>
-      <td><span class="pill p-defer">○ Deferred</span><br>WhatsApp / email / SMS templates &amp; triggers. Requires a third-party messaging provider + account.</td>
+      <td><span class="pill p-prep">🟡 Groundwork built</span><br>A <strong>LogAdapter outbox</strong> (<code>src/lib/messaging.ts</code>), the <code>/messages</code> review screen, and the agent <code>POST /api/agent/messages</code> seam all exist and log every message (<code>status=logged</code>). Remaining: wire a third-party provider (WhatsApp / email / SMS) and flip the status to sent/failed — callers don&rsquo;t change. Templates &amp; triggers are the later automation layer on top.</td>
     </tr>
     <tr>
       <td class="k">Push pricing to OTAs</td>
@@ -365,6 +384,18 @@ npm run deploy</code></pre>
     <p style="color:var(--sub);font-size:14px;margin:.2em 0 0">No setup needed — active out of the box (10 attempts / IP / 5 min). It is in-memory, so on serverless it is best-effort per instance. <strong>Optional upgrade:</strong> for a strict global cap, back <code>src/lib/rate-limit.ts</code> with a shared store (e.g. Upstash Redis).</p>
   </div>
 
+  <div class="card">
+    <h3 style="margin:0 0 6px">D · ROOT agent seam <span class="pill p-prep">🟡 needs a token</span></h3>
+    <p style="color:var(--sub);font-size:14px;margin:.2em 0 10px">The <code>/api/agent/*</code> endpoints (availability, quote, reservations, escalations, messages) <strong>fail closed (401) until <code>AGENT_TOKEN</code> is set</strong>, so the seam stays dark until the agents are ready. The agents are separate services that connect to it — this is the app side only.</p>
+    <ol style="padding-left:22px">
+      <li><strong>Make a long random token:</strong> <code>openssl rand -hex 32</code>.</li>
+      <li>Set it in <strong>Vercel → Settings → Environment Variables</strong>: <code>AGENT_TOKEN</code> = that string, tick <strong>Production</strong>, <strong>Save</strong>, then <strong>Redeploy</strong>. (Also in local <code>.env</code> for testing — the key already exists in <code>.env.example</code>.)</li>
+      <li>Give the <em>same</em> token to each ROOT agent; they send it as <code>x-agent-token</code> (or <code>Authorization: Bearer …</code>) on every call.</li>
+      <li><strong>Verify:</strong> a request without the header returns <code>401</code>; with it, <code>POST /api/agent/escalations</code> creates a queue item visible at <code>/escalations</code>. Full contract + per-agent mapping: <code>docs/INTEGRATION.md</code>.</li>
+    </ol>
+    <div class="note" style="margin-top:6px"><strong>Why it&rsquo;s safe:</strong> agent bookings run the <em>same</em> GiST-guarded transaction as the owner path (so the no-double-booking core governs them), and sensitive actions (cancel, refund) are <strong>filed as escalations</strong> for a human to commit — never performed by an agent.</div>
+  </div>
+
   <!-- ============ CONCERNS ============ -->
   <h2><span class="em">▲</span> Known concerns &amp; tech debt</h2>
   <p>Tracked with file/line references in <code>.planning/codebase/CONCERNS.md</code>. None are blockers; the most important to understand are flagged ◆.</p>
@@ -383,8 +414,8 @@ npm run deploy</code></pre>
     </tr>
     <tr>
       <td class="k">Test breadth</td>
-      <td>Correctness core (conflicts, availability) and pure pricing math are tested; API route handlers and the <code>quoteRoomType</code> data wrapper are not. Route-level regressions wouldn’t be caught by CI.</td>
-      <td><span class="sev" style="color:var(--warn)">▲ Medium</span></td>
+      <td>Correctness core (conflicts, availability), pure pricing math, and the <strong>agent seam routes</strong> (token gate, availability, quote, 409-overlap on agent booking, messages) are tested — 41 tests. Still untested: most owner-side route handlers and the <code>quoteRoomType</code> data wrapper.</td>
+      <td><span class="sev" style="color:var(--warn)">▲ Low-Medium</span></td>
     </tr>
     <tr>
       <td class="k">Money math</td>

@@ -84,6 +84,8 @@
       <li><a href="#analytics">Analytics</a></li>
       <li><a href="#conflicts">Conflicts</a></li>
       <li><a href="#feeds">Channel feeds (iCal)</a></li>
+      <li><a href="#reservations">All reservations (list)</a></li>
+      <li><a href="#agents">Escalations &amp; Messages</a></li>
       <li><a href="#settings">Settings</a></li>
       <li><a href="#faq">Tips &amp; FAQ</a></li>
     </ol>
@@ -96,7 +98,7 @@
   <img class="shot" src="img/login.png" alt="Login screen">
   <h3>Finding your way around</h3>
   <ul>
-    <li><strong>On a phone:</strong> a bar along the bottom shows <b class="lbl">Today</b>, <b class="lbl">Calendar</b>, <b class="lbl">Guests</b>, <b class="lbl">Housekeeping</b>, and <b class="lbl">More</b>. Tap <b class="lbl">More</b> for Finance, Pricing, Inbox, Analytics, Conflicts, Feeds, Settings, <b class="lbl">Help</b>, and Preferences.</li>
+    <li><strong>On a phone:</strong> a bar along the bottom shows <b class="lbl">Today</b>, <b class="lbl">Calendar</b>, <b class="lbl">Reservations</b>, and <b class="lbl">More</b>. Tap <b class="lbl">More</b> for Guests, Housekeeping, Finance, Pricing, Inbox, Analytics, Conflicts, Feeds, Escalations, Messages, Settings, <b class="lbl">Help</b>, and Preferences.</li>
     <li><strong>On a computer:</strong> the same destinations sit in a sidebar down the left.</li>
     <li>The <b class="lbl">New</b> button (top corner) starts a new booking from anywhere.</li>
   </ul>
@@ -177,6 +179,7 @@
   </ul>
   <div class="warn"><strong>Double-booking is impossible.</strong> If those dates for that room are already taken, the app refuses to save and tells you clearly — your calendar can never end up double-booked.</div>
   <div class="note">If the guest is <strong>blacklisted</strong>, a warning shows with the reason. You can still proceed — it&rsquo;s just a heads-up.</div>
+  <div class="warn"><strong>Scam-number check.</strong> As you type the phone, the app also checks it against your <strong>scam / flagged-numbers list</strong> (managed in <a href="#settings">Settings → Scam numbers</a>). If it&rsquo;s a known-bad number, an amber warning appears so you can verify before taking the booking or any payment.</div>
   <div class="flow">
     <div class="node"><b>1 · Tap +</b><small>Opens the new-booking form.</small></div>
     <div class="down">↓</div>
@@ -222,6 +225,10 @@
   <img class="shot shot--wide" src="img/invoice-desktop.png" alt="Invoice on a computer">
   <h3>Recording payments</h3>
   <p>On a booking, the payments panel shows what&rsquo;s been collected and the <strong>balance due</strong>. <b class="lbl">Add payment</b> to record an amount and how it was paid (cash, UPI, card, bank, or collected by the OTA). Add several over time — a deposit now, the balance at check-in.</p>
+  <h3>Advance deposit</h3>
+  <p>If a booking expects an <strong>advance</strong> (you can set the amount on the booking form or when editing), the panel shows an advance status — <span class="pill">Advance pending</span> until enough advance-tagged payments are in, then <span class="pill">Advance received</span>. When you add a payment while an advance is owed, tick <b class="lbl">Mark as advance deposit</b> so it counts toward it.</p>
+  <h3>Verifying UPI / bank payments</h3>
+  <p>When you choose <strong>UPI</strong> or <strong>bank transfer</strong>, a short <strong>verification checklist</strong> appears (e.g. confirm the sender name, that the money actually landed, and the reference). Enter the <strong>UTR / reference number</strong> and tick each item — the <b class="lbl">Add payment</b> button stays disabled until all are checked. This is a guard against fake-payment scams.</p>
   <h3>Invoices</h3>
   <p>On a booking, tap <b class="lbl">Invoice</b> for a clean bill with your property&rsquo;s name/address, the stay, charges, payments and balance. Tap <b class="lbl">Print / Save PDF</b> and choose &ldquo;Save as PDF&rdquo; in the print dialog to email or keep it.</p>
   <div class="note">The property name, address and GST number on the invoice come from <a href="#settings">Settings → Property</a> — fill those in once.</div>
@@ -237,6 +244,7 @@
     <li>Editable <strong>name, email, ID number, notes</strong>.</li>
     <li><strong>Blacklist</strong> toggle with a reason — this is what warns you at booking time.</li>
     <li><strong>ID document</strong> — if document storage is set up, upload a scan/photo of their ID (it&rsquo;s kept private). If it isn&rsquo;t set up, you&rsquo;ll see a short note instead.</li>
+    <li><strong>Foreign-national details (C-Form)</strong> — a collapsible section for overseas guests: nationality, passport (number, issue date/place, expiry), visa (number, type, issue date/place, expiry), and port + date of entry into India plus purpose of visit. Required for the Form-C registration of foreigners; leave it closed/blank for Indian guests.</li>
     <li><strong>Stay history</strong> — every past and upcoming booking; tap to open.</li>
   </ul>
 
@@ -316,7 +324,30 @@
   </ul>
 
   <!-- 15 -->
-  <h2 id="settings"><span class="n">15</span>Settings</h2>
+  <h2 id="reservations"><span class="n">15</span>All reservations (list)</h2>
+  <p>The <b class="lbl">Reservations</b> tab is a single searchable list of <strong>every booking</strong> — handy when you want to find one without hunting on the calendar.</p>
+  <ul>
+    <li><strong>Search</strong> by guest name, phone, room, or OTA reference number.</li>
+    <li><strong>Filter</strong> by status with the tabs at the top: <span class="pill">All</span> / <span class="pill">Confirmed</span> / <span class="pill">Cancelled</span> / <span class="pill">No-show</span> (each shows a count).</li>
+    <li>Each row shows the guest, channel, room, dates, nights and amount. <strong>Tap any row</strong> to open the booking.</li>
+    <li><b class="lbl">+ New booking</b> in the corner starts a fresh booking.</li>
+  </ul>
+
+  <!-- 16 -->
+  <h2 id="agents"><span class="n">16</span>Escalations &amp; Messages</h2>
+  <div class="note">These two screens light up once your tech team connects the <strong>AI assistant</strong> (the &ldquo;ROOT&rdquo; agents that can chat with guests, coordinate cabs, and help at the front desk). Until then they simply sit empty — nothing to do.</div>
+  <h3>Escalations</h3>
+  <p>When an AI assistant hits something it shouldn&rsquo;t decide on its own — a special meal request, a complaint, a cab with no driver, or any action needing your approval (like cancelling a booking) — it <strong>files an escalation</strong> here instead of acting. The <b class="lbl">Escalations</b> screen is your to-do queue:</p>
+  <ul>
+    <li>Items are tagged by <strong>who raised it</strong> (assistant / cab / front desk), <strong>category</strong>, and <strong>severity</strong> (a count badge shows open ones in the menu).</li>
+    <li>Open one to read the guest&rsquo;s original message and the assistant&rsquo;s summary, then <strong>act</strong> — and move it through <em>open → in progress → resolved</em>.</li>
+    <li>If it&rsquo;s linked to a booking, you do the actual change (e.g. the cancellation) through the normal booking screen — the assistant never touches money or the calendar itself.</li>
+  </ul>
+  <h3>Messages</h3>
+  <p>The <b class="lbl">Messages</b> screen is an <strong>outbox</strong> — a log of every message the assistant or system has sent (or queued) to guests, with the channel (WhatsApp / SMS / email), who it went to, and the text. Today messages are <strong>logged</strong> here for your records; once a messaging provider is connected they&rsquo;ll actually send, and this same screen shows their delivery status.</p>
+
+  <!-- 17 -->
+  <h2 id="settings"><span class="n">17</span>Settings</h2>
   <div class="shots">
     <img class="shot" src="img/settings-rooms.png" alt="Settings — Rooms">
     <img class="shot" src="img/settings-pricing.png" alt="Settings — Pricing rules">
@@ -334,10 +365,11 @@
     <tr><td class="k">Channels</td><td>Booking sources and their commission %.</td></tr>
     <tr><td class="k">Pricing rules</td><td>Turn the engine on/off; weekend days &amp; uplift; early-bird / last-minute; busy-period pricing; and a <strong>Seasons &amp; holidays</strong> list of date ranges with adjustments.</td></tr>
     <tr><td class="k">Maintenance blocks</td><td><strong>Block a room</strong> for a date range with a comment (e.g. &ldquo;Plumbing repair&rdquo;). Blocked dates can&rsquo;t be booked and show on the calendar. Remove a block when the work&rsquo;s done.</td></tr>
+    <tr><td class="k">Scam numbers</td><td>A list of <strong>known-bad phone numbers</strong> (with a reason). Add or remove entries here; when one of these numbers turns up on a new booking, the booking form shows a warning so you can verify before taking money.</td></tr>
   </table>
 
-  <!-- 16 -->
-  <h2 id="faq"><span class="n">16</span>Tips &amp; FAQ</h2>
+  <!-- 18 -->
+  <h2 id="faq"><span class="n">18</span>Tips &amp; FAQ</h2>
   <h3>Common how-tos</h3>
   <ul>
     <li><strong>Block a room for repairs:</strong> Settings → Maintenance blocks → <em>Block a room</em>.</li>
@@ -346,6 +378,9 @@
     <li><strong>See who owes money:</strong> Finance → Balances due.</li>
     <li><strong>Retire an old room:</strong> Settings → Rooms → <em>Archive</em> (keeps its history).</li>
     <li><strong>Stop a problem guest sneaking back:</strong> open the guest → turn on <em>Blacklist</em> with a reason.</li>
+    <li><strong>Find any booking fast:</strong> the <em>Reservations</em> tab → search by name, phone, room or reference.</li>
+    <li><strong>Flag a scam phone number:</strong> Settings → Scam numbers → add it with a reason (you&rsquo;ll be warned next time it&rsquo;s used).</li>
+    <li><strong>Record a foreign guest&rsquo;s passport/visa (Form C):</strong> open the guest → the <em>Foreign-national details</em> section.</li>
   </ul>
   <h3>Good to know</h3>
   <ul>
