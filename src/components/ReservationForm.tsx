@@ -112,22 +112,32 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
     };
   }, [roomId, checkIn, checkOut]);
 
-  // Blacklist check (create only, advisory).
+  // Blacklist + scam-number check (create only, advisory).
   const [blockedWarn, setBlockedWarn] = useState<string | null>(null);
+  const [scamWarn, setScamWarn] = useState<string | null>(null);
   const phone = values.guestPhone.trim();
   useEffect(() => {
     if (mode !== "create" || phone.length < 4) {
       setBlockedWarn(null);
+      setScamWarn(null);
       return;
     }
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/guests?q=${encodeURIComponent(phone)}`, { signal: ctrl.signal });
-        const json = await res.json();
-        if (!res.ok) return;
-        const match = (json.data as { phone: string; blocked: boolean; blockReason: string | null }[]).find((g) => g.phone === phone && g.blocked);
-        setBlockedWarn(match ? match.blockReason || "This guest is blacklisted." : null);
+        const [guestRes, scamRes] = await Promise.all([
+          fetch(`/api/guests?q=${encodeURIComponent(phone)}`, { signal: ctrl.signal }),
+          fetch(`/api/flagged-numbers?check=${encodeURIComponent(phone)}`, { signal: ctrl.signal }),
+        ]);
+        if (guestRes.ok) {
+          const json = await guestRes.json();
+          const match = (json.data as { phone: string; blocked: boolean; blockReason: string | null }[]).find((g) => g.phone === phone && g.blocked);
+          setBlockedWarn(match ? match.blockReason || "This guest is blacklisted." : null);
+        }
+        if (scamRes.ok) {
+          const sj = await scamRes.json();
+          setScamWarn(sj.data.flagged ? sj.data.reason || "This number is on your scam list." : null);
+        }
       } catch {
         /* aborted */
       }
@@ -197,9 +207,15 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         </div>
       )}
       {blockedWarn && (
-        <div className="banner banner--warn" style={{ marginBottom: 14 }}>
+        <div className="banner banner--danger" style={{ marginBottom: 14 }}>
           <span className="banner__icon"><Icon name="alert" size={18} /></span>
           <span className="banner__txt"><b>Blacklisted guest:</b> {blockedWarn}</span>
+        </div>
+      )}
+      {scamWarn && (
+        <div className="banner banner--warn" style={{ marginBottom: 14 }}>
+          <span className="banner__icon"><Icon name="alert" size={18} /></span>
+          <span className="banner__txt"><b>Scam list:</b> {scamWarn}</span>
         </div>
       )}
 

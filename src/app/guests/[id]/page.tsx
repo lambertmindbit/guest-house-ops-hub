@@ -28,6 +28,7 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
     },
   });
   if (!guest) notFound();
+  const scamEntry = await prisma.flaggedNumber.findUnique({ where: { phone: guest.phone } });
 
   const stays = guest.reservations;
   const realised = stays.filter((r) => r.status !== "cancelled");
@@ -53,6 +54,14 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
           <div className="banner banner--danger" style={{ cursor: "default", marginTop: 12 }}>
             <span className="banner__icon"><Icon name="alert" size={18} /></span>
             <span style={{ flex: 1 }}>{guest.blockReason}</span>
+          </div>
+        )}
+        {scamEntry && (
+          <div className="banner banner--warn" style={{ cursor: "default", marginTop: 12 }}>
+            <span className="banner__icon"><Icon name="alert" size={18} /></span>
+            <span style={{ flex: 1 }}>
+              <b>On scam list</b>{scamEntry.reason ? ` — ${scamEntry.reason}` : ""}
+            </span>
           </div>
         )}
 

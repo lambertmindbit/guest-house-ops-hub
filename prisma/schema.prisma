@@ -428,3 +428,14 @@ model Escalation {
   @@index([category, status])
   @@map("escalations")
 }
+
+// Phone numbers flagged as potential scammers. Checked at booking time so the
+// owner sees a warning before accepting a reservation from a known bad number.
+model FlaggedNumber {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("flagged_numbers")
+}

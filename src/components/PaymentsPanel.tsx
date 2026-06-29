@@ -15,6 +15,15 @@ export type PaymentRow = {
 
 const MODES = ["cash", "upi", "card", "bank", "ota_collect"] as const;
 
+// Checklist items shown before recording a UPI or bank transfer payment.
+// Prevents the owner from accepting fake/edited screenshots.
+const VERIFY_ITEMS = [
+  "Confirmed receipt in bank / UPI app (not just a screenshot)",
+  "Sender name matches the guest's name",
+  "Amount is exactly correct",
+  "UTR / transaction reference noted in the field below",
+];
+
 export function PaymentsPanel({
   reservationId,
   gross,
@@ -27,8 +36,24 @@ export function PaymentsPanel({
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<string>("cash");
+  const [note, setNote] = useState("");
+  const [checklist, setChecklist] = useState<boolean[]>(VERIFY_ITEMS.map(() => false));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const needsVerify = mode === "upi" || mode === "bank";
+  const allChecked = checklist.every(Boolean);
+  const canAdd = !needsVerify || allChecked;
+
+  function toggleCheck(i: number) {
+    setChecklist((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
+  }
+
+  // Reset checklist when mode changes away from upi/bank
+  function changeMode(m: string) {
+    setMode(m);
+    setChecklist(VERIFY_ITEMS.map(() => false));
+  }
 
   const collected = payments.reduce((s, p) => s + p.amount, 0);
   const balance = gross - collected;
@@ -42,7 +67,7 @@ export function PaymentsPanel({
       const res = await fetch(`/api/reservations/${reservationId}/payments`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ amount: Number(amount), mode }),
+        body: JSON.stringify({ amount: Number(amount), mode, note: note.trim() || undefined }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -50,6 +75,8 @@ export function PaymentsPanel({
         return;
       }
       setAmount("");
+      setNote("");
+      setChecklist(VERIFY_ITEMS.map(() => false));
       router.refresh();
     } finally {
       setBusy(false);
@@ -86,6 +113,7 @@ export function PaymentsPanel({
           <div key={p.id} className="spread" style={{ padding: "8px 0", borderTop: i ? "1px solid var(--border-subtle)" : 0 }}>
             <span style={{ fontSize: "var(--fs-small)" }}>
               <b className="num" style={{ color: "var(--ink)" }}>{displayINR(p.amount)}</b> · {PAYMENT_MODE_LABELS[p.mode] ?? p.mode}
+              {p.note && <span className="muted"> · {p.note}</span>}
             </span>
             <span className="row" style={{ gap: 8 }}>
               <span className="faint" style={{ fontSize: "var(--fs-meta)" }}>{p.paidAt.slice(0, 10)}</span>
@@ -97,14 +125,57 @@ export function PaymentsPanel({
         ))}
         {payments.length === 0 && <div className="muted" style={{ fontSize: "var(--fs-small)" }}>No payments recorded yet.</div>}
 
-        <form onSubmit={add} className="row" style={{ gap: 8, marginTop: 14, alignItems: "stretch" }}>
-          <input className="input" inputMode="numeric" min="1" required placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ flex: 1 }} />
-          <select className="select" value={mode} onChange={(e) => setMode(e.target.value)} style={{ width: 140, flex: "none" }}>
-            {MODES.map((m) => (
-              <option key={m} value={m}>{PAYMENT_MODE_LABELS[m]}</option>
-            ))}
-          </select>
-          <button type="submit" disabled={busy} className="btn btn--ghost" style={{ flex: "none" }}>{busy ? "…" : "Add"}</button>
+        <form onSubmit={add} style={{ marginTop: 14 }}>
+          <div className="row" style={{ gap: 8, alignItems: "stretch" }}>
+            <input className="input" inputMode="numeric" min="1" required placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ flex: 1 }} />
+            <select className="select" value={mode} onChange={(e) => changeMode(e.target.value)} style={{ width: 140, flex: "none" }}>
+              {MODES.map((m) => (
+                <option key={m} value={m}>{PAYMENT_MODE_LABELS[m]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* UTR / reference field for UPI and bank transfers */}
+          {needsVerify && (
+            <input
+              className="input"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="UTR / transaction reference (e.g. 408912345678)"
+              style={{ marginTop: 8 }}
+            />
+          )}
+
+          {/* Verification checklist — prevents accepting fake screenshots */}
+          {needsVerify && (
+            <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--warn-fill, #fffbeb)", borderRadius: 8, border: "1px solid var(--warn-text, #b45309)" }}>
+              <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--warn-text, #b45309)", marginBottom: 8 }}>
+                Verify before recording
+              </div>
+              {VERIFY_ITEMS.map((item, i) => (
+                <label key={i} className="row" style={{ gap: 8, fontSize: 13, cursor: "pointer", marginBottom: i < VERIFY_ITEMS.length - 1 ? 6 : 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={checklist[i]}
+                    onChange={() => toggleCheck(i)}
+                    style={{ flexShrink: 0, marginTop: 2 }}
+                  />
+                  <span style={{ color: checklist[i] ? "var(--text-subtle)" : "var(--ink)" }}>{item}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            <button type="submit" disabled={busy || !canAdd} className="btn btn--ghost" style={{ flex: "none" }}>
+              {busy ? "…" : "Add payment"}
+            </button>
+            {needsVerify && !allChecked && (
+              <span style={{ fontSize: 12, color: "var(--text-subtle)", alignSelf: "center" }}>
+                Tick all items above to enable
+              </span>
+            )}
+          </div>
         </form>
         {error && <p className="field-error" style={{ marginTop: 8 }}>{error}</p>}
       </div>
