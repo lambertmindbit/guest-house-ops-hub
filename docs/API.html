@@ -37,7 +37,10 @@
 <h1>API Reference</h1>
 <p>All routes live under <code>src/app/api/**/route.ts</code>. Unless noted, every endpoint
 requires the <strong>owner session cookie</strong> (enforced by <a href="../src/middleware.ts"><code>src/middleware.ts</code></a>)
-and returns the standard envelope:</p>
+and returns the standard envelope. Two families are exempt from the cookie gate
+and carry their own shared secret instead: the <strong>token-gated webhook</strong>
+(<code>/api/ingest/email</code>, <code>/api/cron/sync</code>, <code>/api/ical/*</code>) and the <strong>ROOT agent seam</strong>
+(<code>/api/agent/*</code>, gated by <code>AGENT_TOKEN</code> — see <a href="#agent-seam-root-integration">Agent seam</a>).</p>
 <pre><code class="language-jsonc">// success
 { &quot;data&quot;: ... }
 // error
@@ -105,7 +108,7 @@ guarded delete), <code>422</code> Zod validation failure.</p>
 <tr>
 <td><code>POST</code></td>
 <td><code>/api/reservations/[id]/payments</code></td>
-<td>Record a payment</td>
+<td>Record a payment (<code>isAdvance?</code> tags it as the advance deposit)</td>
 </tr>
 <tr>
 <td><code>PATCH</code></td>
@@ -118,6 +121,11 @@ guarded delete), <code>422</code> Zod validation failure.</p>
 <td>Delete a payment</td>
 </tr>
 </tbody></table>
+<p><code>POST</code>/<code>PATCH</code> accept an optional <code>advanceRequired</code> (the deposit the booking
+expects); advance status is <strong>derived</strong> at render time from advance-tagged
+payments vs that figure — never stored as a paid/unpaid flag. The
+all-reservations list page (<code>/reservations</code>) reads <code>GET /api/reservations</code> with
+<code>?status</code> and <code>?q</code> filters.</p>
 <h2>Availability &amp; dashboard</h2>
 <table>
 <thead>
@@ -280,7 +288,7 @@ guarded delete), <code>422</code> Zod validation failure.</p>
 <tr>
 <td><code>PATCH</code></td>
 <td><code>/api/guests/[id]</code></td>
-<td>Edit profile (email, ID, notes, blacklist)</td>
+<td>Edit profile (email, ID, notes, blacklist, <strong>C-Form</strong> fields)</td>
 </tr>
 <tr>
 <td><code>POST</code></td>
@@ -298,6 +306,148 @@ guarded delete), <code>422</code> Zod validation failure.</p>
 <td>Remove the stored document</td>
 </tr>
 </tbody></table>
+<blockquote>
+<p>Guests carry optional <strong>C-Form</strong> fields for foreign-national registration
+(Registration of Foreigners Rules, 1992): nationality, passport (number /
+issue date+place / expiry), visa (number / type / issue date+place / expiry),
+port + date of entry into India, purpose of visit. All nullable; create/update
+accept them and the guest profile surfaces them in a collapsible section.</p>
+</blockquote>
+<h2>Scam / flagged numbers (safety)</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/flagged-numbers</code></td>
+<td>List flagged numbers, or <code>?check=&lt;phone&gt;</code> → <code>{ flagged, reason }</code> quick-lookup</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/flagged-numbers</code></td>
+<td>Add a phone to the list (<code>phone</code>, <code>reason?</code>). <strong>409</strong> if already listed</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/flagged-numbers/[id]</code></td>
+<td>Remove a number</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>The booking form and guest detail page check the list and show a warning when a
+phone is known-bad; the list is managed at <strong>Settings → Scam numbers</strong>.</p>
+</blockquote>
+<h2>Escalations (HITL queue)</h2>
+<p>The human-in-the-loop inbox ROOT agents file into. See
+<a href="INTEGRATION.md">INTEGRATION.md</a> for the full agent contract.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Auth</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/escalations</code></td>
+<td>owner</td>
+<td>List the queue (filter by status/severity)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/escalations</code></td>
+<td>owner</td>
+<td>File an escalation manually</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/escalations/[id]</code></td>
+<td>owner</td>
+<td>Fetch one</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/escalations/[id]</code></td>
+<td>owner</td>
+<td>Triage (status transition, assignee, notes)</td>
+</tr>
+</tbody></table>
+<h2>Messaging outbox</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/messages</code></td>
+<td>List logged outbound messages (<code>?guestId</code>, <code>?reservationId</code>, <code>?limit</code>)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Messages are written through a <strong>LogAdapter</strong> (<a href="../src/lib/messaging.ts"><code>src/lib/messaging.ts</code></a>)
+that records <code>status=logged</code> today (no provider wired). When WhatsApp/SMS/email
+is configured later, the adapter sends and flips the status — callers don&#39;t change.
+Agents queue messages via the <a href="#agent-seam-root-integration">agent seam</a>.</p>
+</blockquote>
+<h2>Agent seam (ROOT integration)</h2>
+<p>Token-gated endpoints the ROOT AI agents call. <strong>Excluded</strong> from the owner-cookie
+middleware; each requires the shared secret in <code>x-agent-token</code> (or
+<code>Authorization: Bearer …</code>), compared in constant time against <code>AGENT_TOKEN</code>. The
+routes <strong>fail closed</strong> (401) if <code>AGENT_TOKEN</code> is unset, so the seam stays dark
+until the agents are ready. All accept an optional forward-compatible <code>propertyRef</code>
+(ignored today).</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>POST</code></td>
+<td><code>/api/agent/escalations</code></td>
+<td>File a HITL escalation (idempotent on <code>externalId</code>; <strong>200</strong> <code>deduped:true</code> on repeat). See <a href="INTEGRATION.md">INTEGRATION.md</a></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/agent/availability</code></td>
+<td>Derived availability for <code>roomTypeId</code> + <code>checkIn</code>/<code>checkOut</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/agent/quote</code></td>
+<td>Suggested price for <code>roomId</code> + <code>checkIn</code>/<code>checkOut</code> (reuses the advisory pricing engine)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/agent/reservations</code></td>
+<td>Create a booking — same guest-upsert + transaction path as the owner route, so the GiST overlap constraint governs (<strong>409</strong> on overlap)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/agent/messages</code></td>
+<td>Queue an outbound message via the LogAdapter (returns <strong>201</strong> with the id + <code>status:&quot;logged&quot;</code>)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Agents never get direct write access to money or bookings beyond this seam. The
+booking route runs the <strong>same</strong> <code>tx.reservation.create</code> as the owner path — the
+no-double-booking core still governs every write. Sensitive actions (e.g.
+cancelling) are filed as escalations for a human to commit, never performed by
+the agent.</p>
+</blockquote>
 <h2>Inbound bookings (OTA email ingestion)</h2>
 <table>
 <thead>
@@ -410,9 +560,10 @@ then <code>PATCH</code>es the inbound item to <code>imported</code>.</p>
 </tr>
 </tbody></table>
 <blockquote>
-<p>The three token/secret-gated routes (<code>/api/ical/*</code>, <code>/api/cron/sync</code>) are
-excluded from the owner-cookie middleware because they must be reachable without
-a login — they carry their own shared-secret checks.</p>
+<p>The token/secret-gated routes (<code>/api/ical/*</code>, <code>/api/cron/sync</code>,
+<code>/api/ingest/email</code>, and the whole <code>/api/agent/*</code> seam) are excluded from the
+owner-cookie middleware because they must be reachable without a login — they
+carry their own shared-secret checks.</p>
 </blockquote>
 
 </div>

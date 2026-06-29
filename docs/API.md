@@ -2,7 +2,10 @@
 
 All routes live under `src/app/api/**/route.ts`. Unless noted, every endpoint
 requires the **owner session cookie** (enforced by [`src/middleware.ts`](../src/middleware.ts))
-and returns the standard envelope:
+and returns the standard envelope. Two families are exempt from the cookie gate
+and carry their own shared secret instead: the **token-gated webhook**
+(`/api/ingest/email`, `/api/cron/sync`, `/api/ical/*`) and the **ROOT agent seam**
+(`/api/agent/*`, gated by `AGENT_TOKEN` — see [Agent seam](#agent-seam-root-integration)).
 
 ```jsonc
 // success
@@ -35,9 +38,15 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 | `GET` | `/api/reservations/[id]` | Fetch one |
 | `PATCH` | `/api/reservations/[id]` | Edit a booking |
 | `POST` | `/api/reservations/[id]/cancel` | Cancel (frees the dates) |
-| `POST` | `/api/reservations/[id]/payments` | Record a payment |
+| `POST` | `/api/reservations/[id]/payments` | Record a payment (`isAdvance?` tags it as the advance deposit) |
 | `PATCH` | `/api/reservations/[id]/stay` | `{ action: "checkin" \| "checkout" \| "undo" }` |
 | `DELETE` | `/api/payments/[id]` | Delete a payment |
+
+`POST`/`PATCH` accept an optional `advanceRequired` (the deposit the booking
+expects); advance status is **derived** at render time from advance-tagged
+payments vs that figure — never stored as a paid/unpaid flag. The
+all-reservations list page (`/reservations`) reads `GET /api/reservations` with
+`?status` and `?q` filters.
 
 ## Availability & dashboard
 
@@ -85,10 +94,73 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 |--------|------|---------|
 | `GET` | `/api/guests` | List / search guests (`?q=` name or phone) |
 | `POST` | `/api/guests` | Create a guest directly (name, phone, email?, notes?, blacklist?). **409** if the phone already exists |
-| `PATCH` | `/api/guests/[id]` | Edit profile (email, ID, notes, blacklist) |
+| `PATCH` | `/api/guests/[id]` | Edit profile (email, ID, notes, blacklist, **C-Form** fields) |
 | `POST` | `/api/guests/[id]/id-document` | Upload/replace a scanned ID (multipart `file`; JPG/PNG/WEBP/PDF ≤ 5 MB). **503** if storage isn't configured |
 | `GET` | `/api/guests/[id]/id-document` | Short-lived signed URL to view the stored document |
 | `DELETE` | `/api/guests/[id]/id-document` | Remove the stored document |
+
+> Guests carry optional **C-Form** fields for foreign-national registration
+> (Registration of Foreigners Rules, 1992): nationality, passport (number /
+> issue date+place / expiry), visa (number / type / issue date+place / expiry),
+> port + date of entry into India, purpose of visit. All nullable; create/update
+> accept them and the guest profile surfaces them in a collapsible section.
+
+## Scam / flagged numbers (safety)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/flagged-numbers` | List flagged numbers, or `?check=<phone>` → `{ flagged, reason }` quick-lookup |
+| `POST` | `/api/flagged-numbers` | Add a phone to the list (`phone`, `reason?`). **409** if already listed |
+| `DELETE` | `/api/flagged-numbers/[id]` | Remove a number |
+
+> The booking form and guest detail page check the list and show a warning when a
+> phone is known-bad; the list is managed at **Settings → Scam numbers**.
+
+## Escalations (HITL queue)
+
+The human-in-the-loop inbox ROOT agents file into. See
+[INTEGRATION.md](INTEGRATION.md) for the full agent contract.
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET` | `/api/escalations` | owner | List the queue (filter by status/severity) |
+| `POST` | `/api/escalations` | owner | File an escalation manually |
+| `GET` | `/api/escalations/[id]` | owner | Fetch one |
+| `PATCH` | `/api/escalations/[id]` | owner | Triage (status transition, assignee, notes) |
+
+## Messaging outbox
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/messages` | List logged outbound messages (`?guestId`, `?reservationId`, `?limit`) |
+
+> Messages are written through a **LogAdapter** ([`src/lib/messaging.ts`](../src/lib/messaging.ts))
+> that records `status=logged` today (no provider wired). When WhatsApp/SMS/email
+> is configured later, the adapter sends and flips the status — callers don't change.
+> Agents queue messages via the [agent seam](#agent-seam-root-integration).
+
+## Agent seam (ROOT integration)
+
+Token-gated endpoints the ROOT AI agents call. **Excluded** from the owner-cookie
+middleware; each requires the shared secret in `x-agent-token` (or
+`Authorization: Bearer …`), compared in constant time against `AGENT_TOKEN`. The
+routes **fail closed** (401) if `AGENT_TOKEN` is unset, so the seam stays dark
+until the agents are ready. All accept an optional forward-compatible `propertyRef`
+(ignored today).
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/api/agent/escalations` | File a HITL escalation (idempotent on `externalId`; **200** `deduped:true` on repeat). See [INTEGRATION.md](INTEGRATION.md) |
+| `GET` | `/api/agent/availability` | Derived availability for `roomTypeId` + `checkIn`/`checkOut` |
+| `GET` | `/api/agent/quote` | Suggested price for `roomId` + `checkIn`/`checkOut` (reuses the advisory pricing engine) |
+| `POST` | `/api/agent/reservations` | Create a booking — same guest-upsert + transaction path as the owner route, so the GiST overlap constraint governs (**409** on overlap) |
+| `POST` | `/api/agent/messages` | Queue an outbound message via the LogAdapter (returns **201** with the id + `status:"logged"`) |
+
+> Agents never get direct write access to money or bookings beyond this seam. The
+> booking route runs the **same** `tx.reservation.create` as the owner path — the
+> no-double-booking core still governs every write. Sensitive actions (e.g.
+> cancelling) are filed as escalations for a human to commit, never performed by
+> the agent.
 
 ## Inbound bookings (OTA email ingestion)
 
@@ -122,6 +194,7 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 | `GET` | `/api/ical/[token]/[room]` | **token** | Public `.ics` export of a room's busy dates (for OTAs). Guarded by `ICAL_FEED_TOKEN` |
 | `GET` | `/api/cron/sync` | **`CRON_SECRET`** | Daily import, invoked by Vercel Cron (02:00 UTC). Bearer-secret gated |
 
-> The three token/secret-gated routes (`/api/ical/*`, `/api/cron/sync`) are
-> excluded from the owner-cookie middleware because they must be reachable without
-> a login — they carry their own shared-secret checks.
+> The token/secret-gated routes (`/api/ical/*`, `/api/cron/sync`,
+> `/api/ingest/email`, and the whole `/api/agent/*` seam) are excluded from the
+> owner-cookie middleware because they must be reachable without a login — they
+> carry their own shared-secret checks.

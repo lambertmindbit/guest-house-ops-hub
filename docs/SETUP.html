@@ -137,6 +137,11 @@ with <code>?pgbouncer=true&amp;connection_limit=5</code> while <code>DIRECT_URL<
 </tr>
 </thead>
 <tbody><tr>
+<td><code>AGENT_TOKEN</code></td>
+<td>ROOT agent API seam (<code>/api/agent/*</code>). All agent routes return 401 if unset — the seam stays dark until a real agent is pointed at it.</td>
+<td>Set a long random string (<code>openssl rand -hex 32</code>), add the same value in the ROOT agent service config and in Vercel env vars.</td>
+</tr>
+<tr>
 <td><code>INGEST_TOKEN</code></td>
 <td>Automated OTA-email ingestion via <code>POST /api/ingest/email</code>. <strong>Not needed</strong> for the manual paste flow on the <strong>Inbox</strong> screen.</td>
 <td>Set a long random string here, and on whatever forwards emails to the endpoint (e.g. a Cloudflare Email Worker / forwarding rule). Until then, the owner just pastes confirmation emails into Inbox.</td>

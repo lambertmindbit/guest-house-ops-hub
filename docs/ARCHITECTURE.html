@@ -99,7 +99,7 @@ does this in one raw SQL query using the daterange <code>@&gt;</code> containmen
 (archived rooms excluded). This prevents drift and is the source of truth for
 occupancy and pricing-occupancy signals.</p>
 <h2>Data model</h2>
-<p>16 models in <a href="../prisma/schema.prisma"><code>prisma/schema.prisma</code></a>:</p>
+<p>17 models in <a href="../prisma/schema.prisma"><code>prisma/schema.prisma</code></a>:</p>
 <table>
 <thead>
 <tr>
@@ -121,15 +121,15 @@ occupancy and pricing-occupancy signals.</p>
 </tr>
 <tr>
 <td><code>Guest</code></td>
-<td>CRM record. <code>phone</code> unique; <code>idNumber</code>, <code>blocked</code>/<code>blockReason</code> for blacklist; <code>idDocumentPath</code> → scanned ID in object storage (optional)</td>
+<td>CRM record. <code>phone</code> unique; <code>idNumber</code>, <code>blocked</code>/<code>blockReason</code> for blacklist; <code>idDocumentPath</code> → scanned ID in object storage (optional); 13 nullable <strong>C-Form</strong> fields (nationality, passport, visa, port/date of entry, purpose) for foreign-national registration</td>
 </tr>
 <tr>
 <td><code>Reservation</code></td>
-<td>The booking. <code>stay</code> (generated daterange) + the exclusion constraint; <code>status</code>, <code>grossAmount</code>, <code>checkedInAt</code>/<code>checkedOutAt</code></td>
+<td>The booking. <code>stay</code> (generated daterange) + the exclusion constraint; <code>status</code>, <code>grossAmount</code>, <code>checkedInAt</code>/<code>checkedOutAt</code>, <code>advanceRequired</code> (deposit expected)</td>
 </tr>
 <tr>
 <td><code>Payment</code></td>
-<td>Money received against a reservation (deposit, balance, …)</td>
+<td>Money received against a reservation (deposit, balance, …); <code>isAdvance</code> tags the advance deposit</td>
 </tr>
 <tr>
 <td><code>Block</code></td>
@@ -163,10 +163,25 @@ occupancy and pricing-occupancy signals.</p>
 <td><code>InboundBooking</code></td>
 <td>An OTA confirmation email parsed + staged for review before becoming a <code>Reservation</code> (<code>pending</code>/<code>imported</code>/<code>dismissed</code>)</td>
 </tr>
+<tr>
+<td><code>Escalation</code></td>
+<td>A human-in-the-loop item ROOT agents file (source/category/severity/status, optional reservation link, <code>externalId</code> for idempotency)</td>
+</tr>
+<tr>
+<td><code>OutboundMessage</code></td>
+<td>A logged outbound guest message (source/channel/to/body/status), written via the LogAdapter</td>
+</tr>
+<tr>
+<td><code>FlaggedNumber</code></td>
+<td>A phone on the scam/flagged list (<code>phone</code> unique, <code>reason</code>) — warns at booking time</td>
+</tr>
 </tbody></table>
 <p>Enums: <code>ReservationStatus</code> (confirmed/cancelled/no_show), <code>BlockSource</code>
 (manual/ical), <code>PaymentMode</code> (cash/upi/card/bank/ota_collect), <code>InboundStatus</code>
-(pending/imported/dismissed).</p>
+(pending/imported/dismissed); the escalation set <code>EscalationSource</code>/<code>Category</code>/
+<code>Severity</code>/<code>Status</code>/<code>RelatedType</code>; and the messaging set <code>MessageChannel</code>
+(whatsapp/sms/email/manual), <code>MessageStatus</code> (queued/sent/failed/logged),
+<code>MessageSource</code> (assistant/cab/console/system).</p>
 <h3>Money &amp; dates conventions</h3>
 <ul>
 <li><strong>Dates</strong> are date-only, anchored to <strong>UTC midnight</strong> so a <code>YYYY-MM-DD</code>
@@ -253,6 +268,18 @@ both Server Components and API routes:</p>
 <td>Stage a parsed email into <code>InboundBooking</code> (dedupe by OTA ref)</td>
 </tr>
 <tr>
+<td><code>escalations.ts</code></td>
+<td>HITL queue — list / get / create (dedupe) / transition / KPI stats</td>
+</tr>
+<tr>
+<td><code>messaging.ts</code></td>
+<td>LogAdapter — <code>logMessage</code> (records <code>status=logged</code> today) + <code>listMessages</code></td>
+</tr>
+<tr>
+<td><code>agent-auth.ts</code></td>
+<td>Constant-time <code>AGENT_TOKEN</code> check for the <code>/api/agent/*</code> seam (fails closed)</td>
+</tr>
+<tr>
 <td><code>rate-limit.ts</code></td>
 <td>In-memory fixed-window limiter (login brute-force deterrent)</td>
 </tr>
@@ -306,17 +333,45 @@ the <strong>existing</strong> <code>POST /api/reservations</code> — inheriting
 <p>The parser regexes are scaffolding to validate against real OTA emails; the review
 step keeps mis-parses harmless. See <a href="ROADMAP.html">ROADMAP.md</a> and each forwarder&#39;s
 README in <a href="../integrations/"><code>integrations/</code></a>.</p>
+<h2>ROOT agent seam</h2>
+<p>The deterministic core&#39;s contract with the ROOT AI agents (separate services).
+The agents <strong>never</strong> get direct write access to money or bookings — they reach the
+app only through a small, token-gated seam under <code>/api/agent/*</code>, and any sensitive
+action is <strong>filed for a human</strong>, not performed:</p>
+<ul>
+<li><strong>One gate, fail-closed.</strong> Every <code>/api/agent/*</code> route calls <code>agentTokenOk()</code>
+(<a href="../src/lib/agent-auth.ts"><code>src/lib/agent-auth.ts</code></a>) — a constant-time compare
+against <code>AGENT_TOKEN</code>. The seam is excluded from the owner-cookie middleware and
+returns 401 if the token is unset, so it stays dark until the agents are wired.</li>
+<li><strong>Same write path as the owner.</strong> <code>POST /api/agent/reservations</code> runs the
+identical guest-upsert + <code>tx.reservation.create</code> transaction as the owner route,
+so the <code>no_overlapping_confirmed_stays</code> GiST constraint governs agent bookings
+too (409 on overlap). Availability/quote reuse <code>availability.ts</code> / <code>pricing.ts</code>.</li>
+<li><strong>Sensitive actions are escalated, not taken.</strong> Cancellations, payments, anything
+needing approval → the agent POSTs to <code>/api/agent/escalations</code> and a human commits
+the change through the guarded owner route. Same discipline as the Inbox: external
+intent is staged; a human commits the state change. Full contract + per-agent
+mapping in <a href="INTEGRATION.md">INTEGRATION.md</a>.</li>
+<li><strong>Messaging via LogAdapter.</strong> <code>POST /api/agent/messages</code> records the message with
+<code>status=logged</code> (<a href="../src/lib/messaging.ts"><code>src/lib/messaging.ts</code></a>). No provider
+is wired yet; when one is, the adapter sends and flips the status without changing
+any caller. The owner reviews everything at <code>/messages</code>.</li>
+<li><strong>Forward-compatible tenancy.</strong> Agent payloads carry an optional <code>propertyRef</code>
+(ignored today, single property). When multi-tenancy lands, start persisting it
+without changing the agent contract.</li>
+</ul>
 <h2>Auth &amp; request gating</h2>
 <ul>
 <li><a href="../src/middleware.ts"><code>src/middleware.ts</code></a> (Edge) gates the whole app behind a
 valid session cookie. The matcher excludes <code>/login</code>, <code>/api/auth</code>, <code>/api/ical</code>,
-<code>/api/cron</code>, and static assets.</li>
+<code>/api/cron</code>, <code>/api/ingest</code>, <code>/api/agent</code>, and static assets.</li>
 <li>Session = an HMAC-SHA256-signed, httpOnly cookie (<a href="../src/lib/auth.ts"><code>src/lib/auth.ts</code></a>),
 derived from <code>AUTH_SECRET</code>; credentials compared in constant time against
 <code>OWNER_EMAIL</code>/<code>OWNER_PASSWORD</code>.</li>
-<li>Public token-gated routes (<code>/api/ical/[token]/[room]</code>, <code>/api/cron/sync</code>) carry
-their own shared-secret checks (<code>ICAL_FEED_TOKEN</code>, <code>CRON_SECRET</code>) since they must
-be reachable without the owner cookie.</li>
+<li>Public token-gated routes carry their own shared-secret checks since they must be
+reachable without the owner cookie: <code>/api/ical/[token]/[room]</code> (<code>ICAL_FEED_TOKEN</code>),
+<code>/api/cron/sync</code> (<code>CRON_SECRET</code>), <code>/api/ingest/email</code> (<code>INGEST_TOKEN</code>), and the
+whole <code>/api/agent/*</code> seam (<code>AGENT_TOKEN</code>, via <code>agent-auth.ts</code>).</li>
 </ul>
 <h2>Performance (serverless + remote DB)</h2>
 <p>Every route is dynamic (the middleware reads the session cookie), so each

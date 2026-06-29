@@ -79,6 +79,32 @@ notes, and a blacklist toggle that warns at booking time.</p>
 <h3>Phase 6 — Invoices + export</h3>
 <p>Printable guest invoices (browser Print → PDF, using the property profile) and
 dependency-free <strong>Bookings / Payments CSV</strong> exports for the accountant.</p>
+<h3>ROOT agent integration (phases A–F)</h3>
+<p>The deterministic core&#39;s half of the contract with the ROOT AI agents — built as a
+small, token-gated seam (<code>AGENT_TOKEN</code>, fail-closed) so agents reach the app
+without ever getting direct write access to money or bookings. See
+<a href="INTEGRATION.md">INTEGRATION.md</a> and <a href="ARCHITECTURE.html#root-agent-seam">ARCHITECTURE.md → ROOT agent seam</a>.</p>
+<ul>
+<li><strong>A — Escalations.</strong> A human-in-the-loop queue (<code>/escalations</code>, nav badge) agents
+file into; sensitive actions are escalated for a human to commit, never taken.</li>
+<li><strong>B — Agent seam.</strong> <code>GET /api/agent/availability</code> · <code>GET /api/agent/quote</code> ·
+<code>POST /api/agent/reservations</code> — bookings run the same GiST-guarded transaction as
+the owner path (409 on overlap).</li>
+<li><strong>C — C-Form.</strong> 13 nullable foreign-national registration fields on the guest
+profile (passport / visa / port + date of entry / purpose).</li>
+<li><strong>D — Scam-number list + payment verification.</strong> A flagged-numbers list that warns
+at booking time (Settings → Scam numbers) and a UPI/bank verification checklist on
+the payments panel.</li>
+<li><strong>E — Advance-payment tracking.</strong> <code>advanceRequired</code> on a booking + <code>isAdvance</code> on a
+payment; advance status is derived, never stored.</li>
+<li><strong>F — Messaging outbox.</strong> A LogAdapter (<code>src/lib/messaging.ts</code>) + <code>/messages</code>
+outbox; agents queue messages via <code>POST /api/agent/messages</code> (<code>status=logged</code>
+until a provider is wired). This is the groundwork the deferred messaging
+automation will plug a provider into.</li>
+</ul>
+<h2>Reservations list</h2>
+<p>An all-bookings view at <code>/reservations</code> — search by guest/phone/room/OTA ref and
+filter by status — added alongside the calendar and Today board.</p>
 <h2>Deferred — by design</h2>
 <p>These were intentionally left out (see <a href="../CLAUDE.html">CLAUDE.md</a> &quot;do NOT&quot; rules and
 phase scoping). They are <strong>not</strong> bugs:</p>
@@ -98,7 +124,7 @@ phase scoping). They are <strong>not</strong> bugs:</p>
 <tr>
 <td><strong>Messaging automation</strong></td>
 <td>WhatsApp/email/SMS templates + triggers. Needs a messaging provider.</td>
-<td>○ Deferred</td>
+<td>🟡 <strong>Groundwork built</strong> — a LogAdapter outbox (<code>src/lib/messaging.ts</code>), <code>/messages</code> review screen, and the agent <code>POST /api/agent/messages</code> seam all exist and log every message. Wiring a provider (and flipping <code>status</code> to sent/failed) is all that remains; callers don&#39;t change.</td>
 </tr>
 <tr>
 <td><strong>Dynamic pricing → OTAs</strong></td>

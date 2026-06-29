@@ -52,6 +52,33 @@ Per-channel revenue and commission, plus **expense tracking** so Finance shows t
 Printable guest invoices (browser Print → PDF, using the property profile) and
 dependency-free **Bookings / Payments CSV** exports for the accountant.
 
+### ROOT agent integration (phases A–F)
+The deterministic core's half of the contract with the ROOT AI agents — built as a
+small, token-gated seam (`AGENT_TOKEN`, fail-closed) so agents reach the app
+without ever getting direct write access to money or bookings. See
+[INTEGRATION.md](INTEGRATION.md) and [ARCHITECTURE.md → ROOT agent seam](ARCHITECTURE.md#root-agent-seam).
+
+- **A — Escalations.** A human-in-the-loop queue (`/escalations`, nav badge) agents
+  file into; sensitive actions are escalated for a human to commit, never taken.
+- **B — Agent seam.** `GET /api/agent/availability` · `GET /api/agent/quote` ·
+  `POST /api/agent/reservations` — bookings run the same GiST-guarded transaction as
+  the owner path (409 on overlap).
+- **C — C-Form.** 13 nullable foreign-national registration fields on the guest
+  profile (passport / visa / port + date of entry / purpose).
+- **D — Scam-number list + payment verification.** A flagged-numbers list that warns
+  at booking time (Settings → Scam numbers) and a UPI/bank verification checklist on
+  the payments panel.
+- **E — Advance-payment tracking.** `advanceRequired` on a booking + `isAdvance` on a
+  payment; advance status is derived, never stored.
+- **F — Messaging outbox.** A LogAdapter (`src/lib/messaging.ts`) + `/messages`
+  outbox; agents queue messages via `POST /api/agent/messages` (`status=logged`
+  until a provider is wired). This is the groundwork the deferred messaging
+  automation will plug a provider into.
+
+## Reservations list
+An all-bookings view at `/reservations` — search by guest/phone/room/OTA ref and
+filter by status — added alongside the calendar and Today board.
+
 ## Deferred — by design
 
 These were intentionally left out (see [CLAUDE.md](../CLAUDE.md) "do NOT" rules and
@@ -60,7 +87,7 @@ phase scoping). They are **not** bugs:
 | Deferred | Why / what it would need | Status |
 |----------|--------------------------|--------|
 | **OTA email ingestion** | Parse the owner's confirmation emails into bookings. | 🟡 **Groundwork built** — parser, staging model, **Inbox** paste/review/create flow, and a token-gated webhook seam (`POST /api/ingest/email`) all exist. Usable today via paste. Two **ready-to-deploy forwarders** now ship in [`integrations/`](../integrations/) (Gmail Apps Script — no domain; Cloudflare Worker — optional, for a branded domain instead of a personal Gmail); only setting the token + tuning the parser against real OTA emails remains. |
-| **Messaging automation** | WhatsApp/email/SMS templates + triggers. Needs a messaging provider. | ○ Deferred |
+| **Messaging automation** | WhatsApp/email/SMS templates + triggers. Needs a messaging provider. | 🟡 **Groundwork built** — a LogAdapter outbox (`src/lib/messaging.ts`), `/messages` review screen, and the agent `POST /api/agent/messages` seam all exist and log every message. Wiring a provider (and flipping `status` to sent/failed) is all that remains; callers don't change. |
 | **Dynamic pricing → OTAs** | Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal. | ○ Won't do (external limit) |
 | **Multi-role auth + prod hardening** | Currently single-owner; would need accounts, roles, lockout. | 🟡 **Login rate-limiting done** (`src/lib/rate-limit.ts`); roles still deferred |
 | **Guest ID document/photo upload** | Needs object storage. | 🟡 **Groundwork built** — Supabase Storage adapter, upload/view/delete endpoints, and guest-profile UI. Activate by creating a private bucket + setting the storage env vars (see [SETUP.md](SETUP.md#optional-integrations-leave-unset-to-keep-them-off)). |

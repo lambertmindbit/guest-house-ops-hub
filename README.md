@@ -28,14 +28,21 @@ All six planned milestones are built and in production:
 | 4 | **Guest CRM** | Stay history, repeat-guest badge, lifetime value, ID, blacklist |
 | 5 | **Finance** | Per-channel revenue + commission, expense tracking → net profit |
 | 6 | **Invoices / export** | Printable invoices, Bookings/Payments CSV export |
+| A–F | **ROOT agent integration** | Token-gated agent seam (availability / quote / book / escalate / message), HITL escalation queue, C-Form guest fields, scam-number warnings + payment verification, advance-payment tracking, messaging outbox |
+
+Plus an all-bookings **Reservations** list (`/reservations`) — search and
+status-filter — alongside the calendar and Today board.
 
 **Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
 - **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).
+- **ROOT agent seam** — `/api/agent/*` gated by `AGENT_TOKEN` (fails closed); see [docs/INTEGRATION.md](docs/INTEGRATION.md). The agents are separate services that connect to it.
+- **Messaging outbox** — a LogAdapter logs every outbound message (`/messages`); wire a WhatsApp/SMS/email provider to start sending without changing callers.
 - **Login rate-limiting** — active (10 attempts / IP / 5 min).
 - **Guest ID document upload** — Supabase Storage adapter + UI; activate by setting the storage env vars.
 
-Still deferred by design: messaging automation, multi-role auth, server-side PDFs,
-pushing rates to OTAs (not possible for a single property). See [docs/ROADMAP.md](docs/ROADMAP.md).
+Still deferred by design: messaging **delivery** (a provider behind the outbox),
+multi-role auth, server-side PDFs, pushing rates to OTAs (not possible for a single
+property). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Tech stack
 
@@ -98,6 +105,7 @@ Detailed setup (Supabase connection-string nuances, the separate test database):
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it's built, the correctness core, data model, directory map |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Dev workflow, conventions, the safe migration process, testing, PRs |
 | [docs/API.md](docs/API.md) | HTTP endpoint reference |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | ROOT agent ↔ core contract — the escalation seam + per-agent mapping |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel + Supabase + cron + CI |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What's built, what's deferred, and why |
 | [docs/STATUS.html](docs/STATUS.html) | At-a-glance status report (open in a browser) — delivered phases, deferred items, concerns, first tasks |

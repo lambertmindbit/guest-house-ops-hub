@@ -82,16 +82,16 @@ occupancy and pricing-occupancy signals.
 
 ## Data model
 
-16 models in [`prisma/schema.prisma`](../prisma/schema.prisma):
+17 models in [`prisma/schema.prisma`](../prisma/schema.prisma):
 
 | Model | Purpose |
 |-------|---------|
 | `RoomType` | A category (Standard/Deluxe/…) with `baseRate`, `maxOccupancy`, `rateFloor`, `rateCeiling` |
 | `Room` | A physical room. `archivedAt` retires it (kept in history); `lastCleanedAt` + `needsCleaningFlag` drive housekeeping |
 | `Channel` | A booking source (Direct, WhatsApp, Booking.com, …) with `commissionPct`, `collectsPayment` |
-| `Guest` | CRM record. `phone` unique; `idNumber`, `blocked`/`blockReason` for blacklist; `idDocumentPath` → scanned ID in object storage (optional) |
-| `Reservation` | The booking. `stay` (generated daterange) + the exclusion constraint; `status`, `grossAmount`, `checkedInAt`/`checkedOutAt` |
-| `Payment` | Money received against a reservation (deposit, balance, …) |
+| `Guest` | CRM record. `phone` unique; `idNumber`, `blocked`/`blockReason` for blacklist; `idDocumentPath` → scanned ID in object storage (optional); 13 nullable **C-Form** fields (nationality, passport, visa, port/date of entry, purpose) for foreign-national registration |
+| `Reservation` | The booking. `stay` (generated daterange) + the exclusion constraint; `status`, `grossAmount`, `checkedInAt`/`checkedOutAt`, `advanceRequired` (deposit expected) |
+| `Payment` | Money received against a reservation (deposit, balance, …); `isAdvance` tags the advance deposit |
 | `Block` | A room held out of service (`manual` maintenance or `ical`-imported). `period` generated daterange |
 | `IcalFeed` | An external `.ics` URL per room/OTA; the sync turns busy events into `ical` blocks |
 | `Expense` | A property cost, attributed to Finance by `date` → enables net profit |
@@ -100,10 +100,16 @@ occupancy and pricing-occupancy signals.
 | `RateOverride` | A pinned nightly rate for a room type on a date (wins over rules) |
 | `PropertySettings` | Single-row property profile (name, address, GST, check-in/out times, currency) |
 | `InboundBooking` | An OTA confirmation email parsed + staged for review before becoming a `Reservation` (`pending`/`imported`/`dismissed`) |
+| `Escalation` | A human-in-the-loop item ROOT agents file (source/category/severity/status, optional reservation link, `externalId` for idempotency) |
+| `OutboundMessage` | A logged outbound guest message (source/channel/to/body/status), written via the LogAdapter |
+| `FlaggedNumber` | A phone on the scam/flagged list (`phone` unique, `reason`) — warns at booking time |
 
 Enums: `ReservationStatus` (confirmed/cancelled/no_show), `BlockSource`
 (manual/ical), `PaymentMode` (cash/upi/card/bank/ota_collect), `InboundStatus`
-(pending/imported/dismissed).
+(pending/imported/dismissed); the escalation set `EscalationSource`/`Category`/
+`Severity`/`Status`/`RelatedType`; and the messaging set `MessageChannel`
+(whatsapp/sms/email/manual), `MessageStatus` (queued/sent/failed/logged),
+`MessageSource` (assistant/cab/console/system).
 
 ### Money & dates conventions
 
@@ -139,6 +145,9 @@ both Server Components and API routes:
 | `csv.ts` | RFC-4180 CSV builder (with formula-injection guard) |
 | `email-parse.ts` | Pure best-effort parser for OTA confirmation emails |
 | `inbound.ts` | Stage a parsed email into `InboundBooking` (dedupe by OTA ref) |
+| `escalations.ts` | HITL queue — list / get / create (dedupe) / transition / KPI stats |
+| `messaging.ts` | LogAdapter — `logMessage` (records `status=logged` today) + `listMessages` |
+| `agent-auth.ts` | Constant-time `AGENT_TOKEN` check for the `/api/agent/*` seam (fails closed) |
 | `rate-limit.ts` | In-memory fixed-window limiter (login brute-force deterrent) |
 | `storage.ts` | Supabase Storage REST adapter for guest ID documents (optional) |
 | `api.ts` | `ok` / `fail` / `zodFail` response helpers |
@@ -182,17 +191,46 @@ The parser regexes are scaffolding to validate against real OTA emails; the revi
 step keeps mis-parses harmless. See [ROADMAP.md](ROADMAP.md) and each forwarder's
 README in [`integrations/`](../integrations/).
 
+## ROOT agent seam
+
+The deterministic core's contract with the ROOT AI agents (separate services).
+The agents **never** get direct write access to money or bookings — they reach the
+app only through a small, token-gated seam under `/api/agent/*`, and any sensitive
+action is **filed for a human**, not performed:
+
+- **One gate, fail-closed.** Every `/api/agent/*` route calls `agentTokenOk()`
+  ([`src/lib/agent-auth.ts`](../src/lib/agent-auth.ts)) — a constant-time compare
+  against `AGENT_TOKEN`. The seam is excluded from the owner-cookie middleware and
+  returns 401 if the token is unset, so it stays dark until the agents are wired.
+- **Same write path as the owner.** `POST /api/agent/reservations` runs the
+  identical guest-upsert + `tx.reservation.create` transaction as the owner route,
+  so the `no_overlapping_confirmed_stays` GiST constraint governs agent bookings
+  too (409 on overlap). Availability/quote reuse `availability.ts` / `pricing.ts`.
+- **Sensitive actions are escalated, not taken.** Cancellations, payments, anything
+  needing approval → the agent POSTs to `/api/agent/escalations` and a human commits
+  the change through the guarded owner route. Same discipline as the Inbox: external
+  intent is staged; a human commits the state change. Full contract + per-agent
+  mapping in [INTEGRATION.md](INTEGRATION.md).
+- **Messaging via LogAdapter.** `POST /api/agent/messages` records the message with
+  `status=logged` ([`src/lib/messaging.ts`](../src/lib/messaging.ts)). No provider
+  is wired yet; when one is, the adapter sends and flips the status without changing
+  any caller. The owner reviews everything at `/messages`.
+- **Forward-compatible tenancy.** Agent payloads carry an optional `propertyRef`
+  (ignored today, single property). When multi-tenancy lands, start persisting it
+  without changing the agent contract.
+
 ## Auth & request gating
 
 - [`src/middleware.ts`](../src/middleware.ts) (Edge) gates the whole app behind a
   valid session cookie. The matcher excludes `/login`, `/api/auth`, `/api/ical`,
-  `/api/cron`, and static assets.
+  `/api/cron`, `/api/ingest`, `/api/agent`, and static assets.
 - Session = an HMAC-SHA256-signed, httpOnly cookie ([`src/lib/auth.ts`](../src/lib/auth.ts)),
   derived from `AUTH_SECRET`; credentials compared in constant time against
   `OWNER_EMAIL`/`OWNER_PASSWORD`.
-- Public token-gated routes (`/api/ical/[token]/[room]`, `/api/cron/sync`) carry
-  their own shared-secret checks (`ICAL_FEED_TOKEN`, `CRON_SECRET`) since they must
-  be reachable without the owner cookie.
+- Public token-gated routes carry their own shared-secret checks since they must be
+  reachable without the owner cookie: `/api/ical/[token]/[room]` (`ICAL_FEED_TOKEN`),
+  `/api/cron/sync` (`CRON_SECRET`), `/api/ingest/email` (`INGEST_TOKEN`), and the
+  whole `/api/agent/*` seam (`AGENT_TOKEN`, via `agent-auth.ts`).
 
 ## Performance (serverless + remote DB)
 

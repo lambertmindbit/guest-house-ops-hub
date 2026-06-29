@@ -90,15 +90,25 @@ See <a href="#hard-rules-do-not-break">the hard rules</a> below.</p>
 <td><strong>Invoices / export</strong></td>
 <td>Printable invoices, Bookings/Payments CSV export</td>
 </tr>
+<tr>
+<td align="right">A–F</td>
+<td><strong>ROOT agent integration</strong></td>
+<td>Token-gated agent seam (availability / quote / book / escalate / message), HITL escalation queue, C-Form guest fields, scam-number warnings + payment verification, advance-payment tracking, messaging outbox</td>
+</tr>
 </tbody></table>
+<p>Plus an all-bookings <strong>Reservations</strong> list (<code>/reservations</code>) — search and
+status-filter — alongside the calendar and Today board.</p>
 <p><strong>Keep-ready groundwork</strong> (built behind clean seams, off by default — activate via env):</p>
 <ul>
 <li><strong>OTA email ingestion</strong> — paste a confirmation email into the <strong>Inbox</strong> screen → review → create; a token-gated webhook seam (<code>/api/ingest/email</code>) plus <strong>two ready-to-deploy forwarders</strong> for full automation in <a href="integrations/"><code>integrations/</code></a> (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).</li>
+<li><strong>ROOT agent seam</strong> — <code>/api/agent/*</code> gated by <code>AGENT_TOKEN</code> (fails closed); see <a href="docs/INTEGRATION.md">docs/INTEGRATION.md</a>. The agents are separate services that connect to it.</li>
+<li><strong>Messaging outbox</strong> — a LogAdapter logs every outbound message (<code>/messages</code>); wire a WhatsApp/SMS/email provider to start sending without changing callers.</li>
 <li><strong>Login rate-limiting</strong> — active (10 attempts / IP / 5 min).</li>
 <li><strong>Guest ID document upload</strong> — Supabase Storage adapter + UI; activate by setting the storage env vars.</li>
 </ul>
-<p>Still deferred by design: messaging automation, multi-role auth, server-side PDFs,
-pushing rates to OTAs (not possible for a single property). See <a href="docs/ROADMAP.html">docs/ROADMAP.md</a>.</p>
+<p>Still deferred by design: messaging <strong>delivery</strong> (a provider behind the outbox),
+multi-role auth, server-side PDFs, pushing rates to OTAs (not possible for a single
+property). See <a href="docs/ROADMAP.html">docs/ROADMAP.md</a>.</p>
 <h2>Tech stack</h2>
 <ul>
 <li><strong>Next.js 15</strong> (App Router) — frontend + API routes in one codebase</li>
@@ -205,6 +215,10 @@ single most important thing a new contributor must know — details in
 <tr>
 <td><a href="docs/API.html">docs/API.md</a></td>
 <td>HTTP endpoint reference</td>
+</tr>
+<tr>
+<td><a href="docs/INTEGRATION.md">docs/INTEGRATION.md</a></td>
+<td>ROOT agent ↔ core contract — the escalation seam + per-agent mapping</td>
 </tr>
 <tr>
 <td><a href="docs/DEPLOYMENT.html">docs/DEPLOYMENT.md</a></td>

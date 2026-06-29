@@ -85,6 +85,10 @@ every PR gets a <strong>preview deployment</strong> with its own URL.</li>
 <td>Long random string; <strong>must equal</strong> what the cron sends (Vercel injects it as a Bearer for cron invocations).</td>
 </tr>
 <tr>
+<td><code>AGENT_TOKEN</code></td>
+<td><em>Optional.</em> Shared secret for the ROOT agent API seam (<code>/api/agent/*</code>). All agent routes return 401 if unset (fail closed). Set when wiring up the ROOT agent service.</td>
+</tr>
+<tr>
 <td><code>INGEST_TOKEN</code></td>
 <td><em>Optional.</em> Token for the automated email-ingestion webhook (<code>/api/ingest/email</code>). Leave unset until you wire up an inbox forwarder.</td>
 </tr>
