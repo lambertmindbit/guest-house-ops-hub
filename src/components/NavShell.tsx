@@ -9,7 +9,7 @@ import { Icon } from "@/components/ui";
 type NavId =
   | "today" | "calendar" | "reservations" | "guests" | "housekeeping" | "pricing"
   | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "escalations" | "messages" | "settings" | "help"
-  | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks";
+  | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks" | "set-flagged";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
   today: { label: "Today", icon: "today", href: "/" },
@@ -35,6 +35,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   "set-channels": { label: "Channels", icon: "link", href: "/settings/channels" },
   "set-pricing": { label: "Pricing rules", icon: "tag", href: "/settings/pricing" },
   "set-blocks": { label: "Blocked dates", icon: "alert", href: "/settings/blocks" },
+  "set-flagged": { label: "Scam numbers", icon: "alert", href: "/settings/flagged-numbers" },
 };
 
 const PRIMARY: NavId[] = ["today", "calendar", "reservations"];
@@ -45,7 +46,7 @@ const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics", "conflicts"] },
   { label: "Data", items: ["inbox", "feeds", "escalations", "messages"] },
-  { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks"] },
+  { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks", "set-flagged"] },
   { label: "Help", items: ["help"] },
 ];
 
@@ -55,7 +56,8 @@ const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics"] },
   { label: "Data & channels", items: ["inbox", "feeds", "escalations", "messages"] },
-  { label: "System", items: ["settings", "help"] },
+  { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks", "set-flagged"] },
+  { label: "System", items: ["help"] },
 ];
 
 const TINTS = [
