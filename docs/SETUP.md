@@ -76,6 +76,7 @@ These power "kept-ready" features; the app runs fine without them.
 
 | Var(s) | Enables | Setup |
 |--------|---------|-------|
+| `AGENT_TOKEN` | ROOT agent API seam (`/api/agent/*`). All agent routes return 401 if unset — the seam stays dark until a real agent is pointed at it. | Set a long random string (`openssl rand -hex 32`), add the same value in the ROOT agent service config and in Vercel env vars. |
 | `INGEST_TOKEN` | Automated OTA-email ingestion via `POST /api/ingest/email`. **Not needed** for the manual paste flow on the **Inbox** screen. | Set a long random string here, and on whatever forwards emails to the endpoint (e.g. a Cloudflare Email Worker / forwarding rule). Until then, the owner just pastes confirmation emails into Inbox. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ID_BUCKET` | Guest **ID document upload**. Without it, the guest profile shows a "not configured" hint. | In Supabase → **Storage**, create a **private** bucket named `guest-ids`. Set `SUPABASE_URL` (`https://<ref>.supabase.co`) and the **service-role** key (server-only — never exposed to the client). |
 

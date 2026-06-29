@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROOT — Consolidation Review & Integration Architecture</title>
+<style>
+  :root{
+    --ink:#1c2421; --sub:#5b6b64; --line:#e3e8e5; --paper:#fff; --bg:#f6f8f7;
+    --teal:#0fa68e; --teal-bg:#e7f5f1; --good:#1f9d57; --good-bg:#e6f6ec;
+    --warn:#b9791f; --warn-bg:#fbf1e0; --danger:#cf3a3a; --danger-bg:#fbe9e9; --ink-bg:#eef1ef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:32px 18px}
+  .wrap{max-width:940px;margin:0 auto}
+  header.top{border-bottom:2px solid var(--ink);padding-bottom:16px;margin-bottom:10px}
+  h1{font-size:27px;margin:0 0 4px;letter-spacing:-.02em}
+  .meta{color:var(--sub);font-size:13.5px}
+  h2{font-size:20px;margin:34px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+  h2 .n{display:inline-block;min-width:28px;height:28px;border-radius:7px;background:var(--teal-bg);color:var(--teal);font-size:15px;font-weight:800;text-align:center;line-height:28px;margin-right:8px;padding:0 4px}
+  h3{font-size:15.5px;margin:18px 0 6px}
+  p{margin:.5em 0}
+  ul,ol{margin:.4em 0;padding-left:22px}
+  li{margin:.35em 0}
+  code{background:var(--ink-bg);padding:1px 6px;border-radius:5px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:12px 0}
+  .note{background:var(--teal-bg);border:1px solid #bfe3da;border-radius:10px;padding:13px 16px;margin:13px 0}
+  .warn{background:var(--warn-bg);border:1px solid #ecd8a8;border-radius:10px;padding:13px 16px;margin:13px 0}
+  .bad{background:var(--danger-bg);border:1px solid #efc4c4;border-radius:10px;padding:13px 16px;margin:13px 0}
+  table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#eef2f0;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--sub)}
+  tr:last-child td{border-bottom:0}
+  td.k{font-weight:600;white-space:nowrap}
+  .have{color:var(--good);font-weight:700}
+  .gap{color:var(--danger);font-weight:700}
+  .part{color:var(--warn);font-weight:700}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 9px;border-radius:999px}
+  .p-have{background:var(--good-bg);color:var(--good)}
+  .p-gap{background:var(--danger-bg);color:var(--danger)}
+  .p-part{background:var(--warn-bg);color:var(--warn)}
+  .flow .node{background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:13.5px;margin:0}
+  .flow .node b{color:var(--ink)}
+  .flow .node small{display:block;color:var(--sub);font-size:12.5px;margin-top:2px}
+  .flow .down{text-align:center;color:var(--teal);font-weight:800;margin:4px 0;font-size:15px}
+  .flow .node.core{border-color:#bfe3da;background:var(--teal-bg)}
+  .flow .node.warnode{border-color:#ecd8a8;background:var(--warn-bg)}
+  .phase{display:flex;gap:13px;align-items:flex-start}
+  .pnum{flex:none;width:32px;height:32px;border-radius:9px;background:var(--teal-bg);color:var(--teal);font-weight:800;display:flex;align-items:center;justify-content:center}
+  .phase h3{margin:0 0 3px;font-size:15.5px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:6px}
+  .tag-gate{background:var(--danger-bg);color:var(--danger)}
+  .tag-core{background:var(--good-bg);color:var(--good)}
+  .tag-opt{background:var(--ink-bg);color:var(--sub)}
+  blockquote{margin:12px 0;padding:9px 15px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f;font-size:13.5px}
+  footer{margin-top:36px;padding-top:14px;border-top:1px solid var(--line);color:var(--sub);font-size:13px}
+  b.t{color:var(--teal)}
+  .lead{font-size:16px;color:#33403b}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>ROOT — Consolidation Review &amp; Integration Architecture</h1>
+  <div class="meta">From a single-property Ops Hub to one product any homestay owner can use, with the ROOT AI agents and the community network on top. Reviewed: the Ops Hub doc set (Architecture / API / Handoff / Roadmap / Channel-Sync), the Lawei Homestay discovery response, and the ROOT DPR. Companion build: <code>escalation-module/</code>.</div>
+</header>
+
+<div class="note">
+  <p class="lead" style="margin-top:0"><strong>The whole thing in one line.</strong> You don't have three projects (Ops&nbsp;Hub&nbsp;→&nbsp;any-owner, the ROOT agents, and Direction&nbsp;B channel-manager). You have <strong>one shared gate — multi-tenancy + identity — that all of them wait on</strong>, a <strong>deterministic core (the PMS) that stays the single system of record</strong>, and everything else — the AI agents, the community network, distribution — sitting on top as separable tracks.</p>
+</div>
+
+<p><strong>One naming note first:</strong> the DPR calls the platform <b>ROOT</b> (Regional Orchestration Of Tasks, singular). Your brief says "ROOTS" a few times. Pick one and keep it consistent across the grant, the LLP records, and the product — I've used <b>ROOT</b> throughout to match the DPR.</p>
+
+<!-- 1 -->
+<h2><span class="n">1</span>What you already have that's worth protecting</h2>
+<p>The Ops Hub is a genuinely strong foundation — not a prototype to throw away. Before adding anything, here's what must stay sacred, because the consolidation only works if these survive:</p>
+<ul>
+  <li><b class="t">The correctness core.</b> DB-enforced no-double-booking (GiST exclusion constraint, half-open <code>daterange</code>, <em>derived</em> availability). Your own handoff already notes it is keyed per <code>room_id</code>, so it stays correct under multi-tenancy untouched. <strong>Every booking — human, agent, or OTA — must flow through this.</strong></li>
+  <li><b class="t">The staging-seam pattern.</b> <code>InboundBooking</code> + the token-gated <code>/api/ingest/email</code> webhook is exactly the template for plugging in an external producer (an AI agent) without giving it write access. The escalation module copies this pattern.</li>
+  <li><b class="t">The domain-layer discipline.</b> Logic in <code>src/lib/*</code>, reused by both Server Components and routes; <code>{data}/{error}</code> + Zod; migration safety helper. This is what makes the agents safe to bolt on — they call the same guarded paths a human does.</li>
+  <li><b class="t">Local ownership.</b> Self-hosted, owner-controlled data. The Lawei response rates "my data stays mine" as <em>very important</em> and privacy concern <em>5/5</em> — this architecture <em>is</em> the moat the DPR sells.</li>
+</ul>
+
+<!-- 2 -->
+<h2><span class="n">2</span>The Ops Hub today — what's missing</h2>
+<p>Two lenses: what the discovery feedback asks for, and what the ROOT vision needs. Severity is about consolidation, not code quality.</p>
+
+<table>
+  <tr><th>Capability</th><th>Status in Ops Hub</th><th>Needed for</th><th>Gap</th></tr>
+  <tr><td class="k">Booking / calendar / availability / pricing / CRM / finance</td><td>Built, production</td><td>Core PMS</td><td><span class="pill p-have">Have</span></td></tr>
+  <tr><td class="k">Messaging (WhatsApp / SMS / email send)</td><td>Deferred — none</td><td>Assistant; after-hours replies; reminders</td><td><span class="pill p-gap">Missing — #1</span></td></tr>
+  <tr><td class="k">AI assistant / conversational booking / OTP</td><td>None (this is the ROOT agent)</td><td>Module 4.1</td><td><span class="pill p-gap">Missing</span></td></tr>
+  <tr><td class="k">Escalation / HITL ticket inbox</td><td>None</td><td>All 3 agents → human</td><td><span class="pill p-part">Building now</span></td></tr>
+  <tr><td class="k">Multi-tenancy (many properties)</td><td>Singleton <code>PropertySettings</code></td><td>"Any homestay owner"; community; Direction&nbsp;B</td><td><span class="pill p-gap">Missing — the gate</span></td></tr>
+  <tr><td class="k">Real auth + roles (owner/manager/staff)</td><td>Single env-var login</td><td>Staff access control (Lawei: "money only for owners")</td><td><span class="pill p-gap">Missing</span></td></tr>
+  <tr><td class="k">Community network (overflow / pet / scam / bad-guest / no-show / shared availability)</td><td>None</td><td>The 5 problem-statement pains; high pilot demand</td><td><span class="pill p-gap">Missing</span></td></tr>
+  <tr><td class="k">Cab / transport coordination</td><td>None (no transport entity)</td><td>Module 4.2</td><td><span class="pill p-gap">Missing</span></td></tr>
+  <tr><td class="k">Plain-language ops console</td><td>None</td><td>Module 4.3</td><td><span class="pill p-gap">Missing</span></td></tr>
+  <tr><td class="k">Foreigner registration (C-Form / FRRO)</td><td>None</td><td>Compliance — Lawei hosts foreigners</td><td><span class="pill p-gap">Missing</span></td></tr>
+  <tr><td class="k">Advance-payment + scam-number verification</td><td>Payments yes; scam check no</td><td>Problem 3; Lawei was a scam victim</td><td><span class="pill p-part">Partial</span></td></tr>
+  <tr><td class="k">OTA email ingestion + iCal sync</td><td>Groundwork built</td><td>Lawei is "planning to" list on OTAs</td><td><span class="pill p-part">Activate later</span></td></tr>
+</table>
+
+<!-- 3 -->
+<h2><span class="n">3</span>Discovery feedback → concrete changes</h2>
+<blockquote><strong>Caveat: n = 1.</strong> Lawei is one well-run homestay. The signal is strong and consistent with the DPR, but get Pine&nbsp;Air, Frankenstein, and Shabong to fill the same questionnaire before you treat any of this as settled product scope. The questionnaire already exports clean JSON for exactly this.</blockquote>
+
+<table>
+  <tr><th>What Lawei told us</th><th>What it means for the product</th></tr>
+  <tr><td><strong>#1 priority: "stop losing bookings to slow replies"</strong>; replies are "late" after hours; 6–15 enquiries/month lost; 30–60 messages/day.</td><td>This is the single strongest signal and it points straight at the <strong>Assistant + a messaging channel</strong>. The PMS alone doesn't fix it. <b>Messaging is the highest-value missing piece.</b></td></tr>
+  <tr><td>AI comfort 3/5; happy to let AI do FAQs, simple bookings, reminders, reports; <strong>"Booking Cancellation" must need approval.</strong></td><td>Validates the HITL model precisely. The escalation module's contract makes cancellation an escalation the owner confirms — never an agent action. Ship the agent in <em>assist</em> mode, not autopilot.</td></tr>
+  <tr><td>Overflow referrals "yes, regularly"; wants <em>"a Rapido-type app for homestays"</em>; pet/special-needs forwarding; <strong>was a scam victim</strong>; willing to share live availability with a trusted network (5/5).</td><td>The <strong>community network</strong> is wanted, not hypothetical — and the willingness to share availability is the hard part, freely given here. But it's inherently <strong>cross-property</strong>, so it cannot be built until the tenancy/identity gate exists.</td></tr>
+  <tr><td>WhatsApp "essential" (5/5); wants UPI/Razorpay, Email, Google Calendar.</td><td>WhatsApp is the channel, not a nice-to-have. Budget for a <strong>WhatsApp Business API provider</strong> (approval + per-message cost have real lead time — see risks).</td></tr>
+  <tr><td>Plain-language reporting appeal 5/5; wants today's bookings / occupancy / revenue / pending payments at a glance.</td><td>Direct mandate for the <strong>Workplace Console (4.3)</strong> reading off the PMS's existing analytics/finance libs.</td></tr>
+  <tr><td>6 staff (housekeeping, cook, reception, delivery); money visible <strong>"only for owners"</strong>.</td><td><strong>Roles</strong> aren't optional polish — field-level access (staff see bookings, not finance) is a stated requirement. Lands with the auth gate.</td></tr>
+  <tr><td>Records on paper register / paper chart; advance "always"; foreign guests "yes".</td><td>The PMS already replaces the paper. Add <strong>foreigner C-Form capture</strong> to the guest/check-in flow — a compliance gap the questionnaire surfaced that the build doesn't cover.</td></tr>
+</table>
+
+<!-- 4 -->
+<h2><span class="n">4</span>The integration architecture</h2>
+<p>The mental model that makes one product out of all the pieces. <strong>The PMS is the system of record. The agents are a layer on top that transacts through it.</strong></p>
+
+<div class="card flow">
+  <div class="node">Guests / drivers reach you via <b>Web chat · WhatsApp · phone · OTA email · iCal</b></div>
+  <div class="down">↓</div>
+  <div class="node warnode"><b>ROOT agents (separate services)</b> — Assistant (4.1) · Cab (4.2) · Console (4.3)<small>Multilingual, conversational, generative UI. <b>Stateless about bookings</b> — they never hold the source of truth.</small></div>
+  <div class="down">↓ &nbsp; read &amp; propose via the same guarded paths a human uses</div>
+  <div class="node"><b>PMS domain layer</b> — <code>src/lib/*</code> + <code>/api/**</code> ( <code>{data}/{error}</code>, Zod )<small>Availability, pricing, reservations, guests, finance. One door in.</small></div>
+  <div class="down">↓</div>
+  <div class="node core"><b>Deterministic core</b> — Postgres + the GiST no-double-booking constraint<small>The single source of truth. Impossible to double-book, no matter who asked.</small></div>
+  <div class="down">↕ &nbsp; anything an agent can't safely do →</div>
+  <div class="node warnode"><b>Escalation queue (HITL)</b> — the agent files; a human acts<small>The contract you're building now. Sensitive actions (cancel, refund) live here.</small></div>
+</div>
+
+<h3>Five principles that keep it coherent</h3>
+<ol>
+  <li><b>The PMS is the only system of record.</b> Agents and OTAs are inputs; the database is truth. No agent keeps its own booking state.</li>
+  <li><b>Agents read freely, write through the front door.</b> An agent calls <code>/api/availability</code> or <code>/api/pricing/quote</code> to answer a guest, and creates a booking via <code>POST /api/reservations</code> — inheriting the 409 conflict check. It never writes the DB directly.</li>
+  <li><b>Sensitive actions are escalations, not agent actions.</b> Cancel / refund / blacklist → filed to the HITL queue; a human commits them through the guarded route. Matches Lawei's "cancellation must need approval."</li>
+  <li><b>The escalation queue is the universal seam.</b> All three agents speak one contract (<code>POST /api/agent/escalations</code>). Build it once; every agent plugs in the same way.</li>
+  <li><b>The community network is a cross-tenant tier.</b> Overflow, scam lists, bad-guest alerts, shared availability are <em>between</em> properties — they only exist once properties are first-class (the gate).</li>
+</ol>
+
+<!-- 5 -->
+<h2><span class="n">5</span>The shared gate: multi-tenancy + identity</h2>
+<div class="warn">
+  <p style="margin-top:0">Four things you want all depend on the <strong>same</strong> prerequisite:</p>
+  <ul style="margin-bottom:0">
+    <li><b>"Any homestay owner"</b> → many properties → tenancy.</li>
+    <li><b>Staff roles</b> (Lawei: money owner-only) → real accounts + roles.</li>
+    <li><b>Community network</b> → properties must have stable identities to refer between, share availability, and attribute scam/bad-guest reports.</li>
+    <li><b>Direction B (channel-manager SaaS)</b> → multi-tenant by definition.</li>
+  </ul>
+</div>
+<p>So this isn't "the ROOT project" vs "Direction B" — they <strong>converge on one Phase&nbsp;1</strong>. Do tenancy + auth + identity <em>once</em>, carefully, and all four unlock. Your <code>PRODUCT-ROADMAP-CM.html</code> already scoped this well; the only change is recognising it's the gate for the agents and the community network too, not just the SaaS pivot.</p>
+<p><b class="t">The good news (your own handoff says it):</b> the correctness core survives tenancy unchanged because the constraint is keyed per <code>room_id</code> and a room belongs to one property. Tenancy is invasive (a <code>property_id</code> on every scoped table + a filter on every query) but it does <em>not</em> threaten the one thing that's hard to get right.</p>
+
+<!-- 6 -->
+<h2><span class="n">6</span>One consolidated roadmap</h2>
+<p>Sequenced to respect the correctness core and to line up with the DPR's 12-month grant milestones. The gate is shared; the value tracks after it are separable and can be parallelised across the three founders.</p>
+
+<div class="card"><div class="phase"><div class="pnum">0</div><div>
+  <h3>Decisions before code <span class="tag tag-opt">~1–2 weeks</span></h3>
+  <ul style="margin-bottom:0">
+    <li>Tenancy model — recommend single DB + <code>tenant_id</code> on every row (matches your CM roadmap).</li>
+    <li>Auth stack — Auth.js / Supabase Auth / Clerk for accounts + roles.</li>
+    <li>WhatsApp BSP — choose a provider and <strong>start the approval process now</strong> (it's the long pole for the #1 priority).</li>
+    <li>Confirm ROOT vs ROOTS naming across grant + LLP + product.</li>
+  </ul>
+</div></div></div>
+
+<div class="card"><div class="phase"><div class="pnum">1</div><div>
+  <h3>The gate — tenancy + identity <span class="tag tag-gate">everything waits on this</span></h3>
+  <ul style="margin-bottom:0">
+    <li><code>Organization</code> + <code>Property</code> models; <code>property_id</code> on rooms, reservations, blocks, guests, pricing, <em>escalations</em>; filter every query.</li>
+    <li>Replace env-var login with accounts + roles (owner / manager / staff); field-level masking so staff don't see finance.</li>
+    <li>Keep the GiST constraint as-is. Backfill <code>Escalation.property_id</code> (already stubbed in the module).</li>
+  </ul>
+  <p style="margin:.4em 0 0;color:var(--sub);font-size:13px">Maps to DPR Months 1–3 "foundation".</p>
+</div></div></div>
+
+<div class="card"><div class="phase"><div class="pnum">A</div><div>
+  <h3>Agents on the core <span class="tag tag-core">the DPR's headline value</span></h3>
+  <ul style="margin-bottom:0">
+    <li><b>Escalation seam</b> — done now (this drop). Point the Assistant at it first.</li>
+    <li><b>Messaging</b> — wire the WhatsApp BSP; Assistant answers FAQs / takes simple bookings / sends reminders (all green-lit by Lawei). This is the after-hours fix — the #1 pain.</li>
+    <li><b>Console (4.3)</b> — plain-language reads over existing analytics/finance libs; HITL on sensitive actions.</li>
+    <li><b>Cab (4.2)</b> — needs a transport entity in the PMS; sequence after the guesthouse loop is proven.</li>
+  </ul>
+  <p style="margin:.4em 0 0;color:var(--sub);font-size:13px">Maps to DPR Months 1–9 (Assistant → Cab → Console).</p>
+</div></div></div>
+
+<div class="card"><div class="phase"><div class="pnum">B</div><div>
+  <h3>Community network <span class="tag tag-core">high pilot demand</span></h3>
+  <ul style="margin-bottom:0">
+    <li>Overflow referrals (the "Rapido for homestays" Lawei asked for), pet/special-needs matching, opt-in shared availability.</li>
+    <li>Scam-number database + bad-guest alerts — <strong>design the trust/evidence/dispute rules first</strong> (legal exposure; see risks).</li>
+    <li>No-show / repeat-offender flags tied to advance-payment.</li>
+  </ul>
+  <p style="margin:.4em 0 0;color:var(--sub);font-size:13px">Cross-tenant — needs Phase 1. Strong differentiator vs any aggregator.</p>
+</div></div></div>
+
+<div class="card"><div class="phase"><div class="pnum">C</div><div>
+  <h3>Distribution / Direction&nbsp;B <span class="tag tag-opt">separable, lower priority</span></h3>
+  <ul style="margin-bottom:0">
+    <li>Channex integration for true OTA push/pull, per <code>PRODUCT-ROADMAP-CM.html</code>.</li>
+    <li>Self-serve onboarding + billing.</li>
+  </ul>
+  <p style="margin:.4em 0 0;color:var(--sub);font-size:13px">Real, but the pilot feedback points at <em>agents + community</em> before becoming a channel manager. Don't let the SaaS pivot crowd out the #1 pain.</p>
+</div></div></div>
+
+<!-- 7 -->
+<h2><span class="n">7</span>Honest risks &amp; what I would <em>not</em> do yet</h2>
+<div class="bad">
+<ol style="margin:0">
+  <li><b>Don't build the community network on a single-tenant base.</b> It's tempting because demand is high — but every referral/scam/availability feature assumes property identities. Retrofitting tenant isolation later risks data leaks between businesses. Gate first.</li>
+  <li><b>Don't let any agent write to the DB directly.</b> The moment an agent bypasses <code>/api/reservations</code>, the no-double-booking guarantee is gone. Reads anywhere; writes only through the guarded paths; sensitive actions via escalation.</li>
+  <li><b>WhatsApp is the long pole, not the code.</b> BSP approval + template-message rules + per-message cost have real lead time and recurring cost. The #1 pilot pain depends on it — start the provider process in Phase 0, not when you're ready to code it.</li>
+  <li><b>Scam list &amp; bad-guest alerts carry legal risk.</b> Defamation / privacy exposure if a property is wrongly flagged. The questionnaire deliberately asks who can report and what evidence is required — design that governance <em>before</em> building the feature, not after.</li>
+  <li><b>n = 1.</b> One questionnaire isn't product-market fit. Get the other three pilots' responses before locking community-network scope.</li>
+  <li><b>Money is whole-rupee <code>number</code> math today.</b> Fine for the homestay; revisit (integer paise / Decimal) before the Console reports financials others rely on, and before any billing in Direction B.</li>
+</ol>
+</div>
+
+<!-- 8 -->
+<h2><span class="n">8</span>Immediate next steps</h2>
+<ol>
+  <li><b>Merge the escalation module</b> (this drop) behind a dark <code>AGENT_TOKEN</code> — review the diff, run lint/tsc/tests, wire the middleware + nav. It's safe and additive; it doesn't wait on the gate.</li>
+  <li><b>Point the Assistant prototype at <code>POST /api/agent/escalations</code></b> — that proves the agent↔core contract end to end with one real flow (e.g. the gluten-allergy escalation from the DPR).</li>
+  <li><b>Send the questionnaire to Pine Air, Frankenstein, Shabong.</b> Three more JSON responses turn n=1 into a real scope basis.</li>
+  <li><b>Kick off the WhatsApp BSP approval</b> and pick the auth/tenancy stack — the two Phase-0 decisions that unblock the most.</li>
+  <li><b>Then schedule the tenancy gate as one focused piece of work</b> before building any cross-property feature.</li>
+</ol>
+
+<footer>
+  Consolidation review for ROOT — pairs with <code>escalation-module/</code> (the first integration seam) and the existing Ops Hub docs (<code>ARCHITECTURE.md</code>, <code>PRODUCT-ROADMAP-CM.html</code>, <code>CHANNEL-SYNC.html</code>). Open in any browser. Not auto-generated — hand-authored.
+</footer>
+
+</div>
+</body>
+</html>

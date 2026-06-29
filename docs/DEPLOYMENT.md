@@ -31,6 +31,7 @@ GitHub (main)  ──push──►  Vercel build & deploy  ──►  https://gu
 | `AUTH_SECRET` | Long random string (cookie signing). Must match nothing else; just keep it stable. |
 | `ICAL_FEED_TOKEN` | Long random string; appears in public `.ics` URLs. |
 | `CRON_SECRET` | Long random string; **must equal** what the cron sends (Vercel injects it as a Bearer for cron invocations). |
+| `AGENT_TOKEN` | *Optional.* Shared secret for the ROOT agent API seam (`/api/agent/*`). All agent routes return 401 if unset (fail closed). Set when wiring up the ROOT agent service. |
 | `INGEST_TOKEN` | *Optional.* Token for the automated email-ingestion webhook (`/api/ingest/email`). Leave unset until you wire up an inbox forwarder. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ID_BUCKET` | *Optional.* Enable guest ID-document upload (private Supabase Storage bucket). Service-role key is **server-only**. Leave unset to keep the feature off. |
 

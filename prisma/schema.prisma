@@ -304,3 +304,112 @@ model IcalFeed {
   @@index([roomId])
   @@map("ical_feeds")
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// ESCALATION MODULE — appended from _dropbox/prisma-escalation.prisma
+// Run: npm run db:migrate:new add_escalations [--apply]
+// Purely additive: new enums + one table. Does NOT touch reservations/blocks
+// generated columns or the no_overlapping_confirmed_stays GiST constraint.
+// ───────────────────────────────────────────────────────────────────────────
+
+/// Which ROOT surface raised the escalation.
+/// `manual` = an owner/staff member created it by hand in the queue.
+enum EscalationSource {
+  assistant // AI Tourism & Guesthouse Assistant (Module 4.1)
+  cab       // Multi-Agent Cab Coordination (Module 4.2)
+  console   // AI Workplace Console (Module 4.3)
+  manual    // raised by hand in the Escalations queue
+}
+
+/// Coarse routing bucket. Drives the Customer / Driver tabs in the queue UI.
+enum EscalationCategory {
+  customer    // a guest-facing issue (allergy, complaint, special request)
+  driver      // a transport/driver issue (cancellation, no-show driver)
+  booking     // booking changes the agent could not complete confidently
+  payment     // payment / refund / suspected-scam needing a human
+  maintenance // a property/maintenance issue surfaced via chat
+  other
+}
+
+enum EscalationSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum EscalationStatus {
+  open
+  in_progress
+  resolved
+  dismissed
+}
+
+/// The kind of record an escalation is attached to. Kept as a lightweight
+/// (type + id) reference rather than hard FKs so an escalation can point at a
+/// reservation, a guest, or a (future) trip without widening the schema now.
+enum EscalationRelatedType {
+  reservation
+  guest
+  trip
+  none
+}
+
+/// Human-in-the-loop inbox shared by every ROOT agent.
+///
+/// An agent (or a human) files an escalation; the owner/staff triages it from
+/// the Escalations queue. This is the deterministic core's side of the HITL
+/// contract described in the DPR (Figures 4 & 8): the agent never takes a
+/// sensitive action itself — it hands a summarised, optionally-translated
+/// request to a human and waits.
+model Escalation {
+  id String @id @default(cuid())
+
+  source   EscalationSource
+  category EscalationCategory  @default(other)
+  severity EscalationSeverity  @default(medium)
+  status   EscalationStatus    @default(open)
+
+  title   String  // short one-line summary shown in the queue
+  summary String  // the agent's plain-language summary of the request/issue
+  reason  String? // why the agent escalated (low confidence, sensitive action, …)
+
+  // Who the escalation is about (the guest / driver), as the agent saw them.
+  raisedByName    String? @map("raised_by_name")
+  raisedByContact String? @map("raised_by_contact") // phone / email / handle
+  raisedByLang    String? @map("raised_by_lang")    // BCP-47-ish: "kha", "hi", "en"
+
+  // Preserve the original message (often Khasi/Hindi) AND the translation, so a
+  // human can verify the agent's understanding — central to the local-language moat.
+  originalText   String? @map("original_text")
+  translatedText String? @map("translated_text")
+
+  // Lightweight link to the record this concerns (no hard FK — see enum note).
+  relatedType EscalationRelatedType @default(none) @map("related_type")
+  relatedId   String?               @map("related_id")
+
+  // Correlation back to the agent's conversation, and an optional idempotency
+  // key so a retrying agent doesn't create duplicate tickets (deduped in lib).
+  threadRef  String? @map("thread_ref")
+  externalId String? @unique @map("external_id")
+
+  // Triage / SLA timestamps. firstResponseAt is stamped the first time status
+  // leaves `open` — it drives the "Avg response time" KPI.
+  assignedTo      String?   @map("assigned_to") // free-text until roles land (Phase 2); then a userId
+  firstResponseAt DateTime? @map("first_response_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  resolutionNote  String?   @map("resolution_note")
+
+  // FORWARD-COMPATIBLE TENANCY. Single-property today, so this is nullable and
+  // unused. When the multi-tenancy gate lands, backfill it and add
+  // `propertyId String` + an index, and scope every query by it (one line in
+  // src/lib/escalations.ts). The agent contract already accepts `propertyRef`.
+  propertyId String? @map("property_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, severity, createdAt])
+  @@index([category, status])
+  @@map("escalations")
+}

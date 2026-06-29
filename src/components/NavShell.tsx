@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui";
 // One config drives BOTH the phone tabs/sheet and the desktop sidebar.
 type NavId =
   | "today" | "calendar" | "guests" | "housekeeping" | "pricing"
-  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "settings" | "help"
+  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "escalations" | "settings" | "help"
   | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
@@ -23,6 +23,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   conflicts: { label: "Conflicts", icon: "alert", href: "/conflicts" },
   inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
   feeds: { label: "Feeds", icon: "link", href: "/feeds" },
+  escalations: { label: "Escalations", icon: "alert", href: "/escalations" },
   settings: { label: "Settings", icon: "settings", href: "/settings" },
   help: { label: "Help", icon: "help", href: "/help" },
   // Settings sub-modules — surfaced directly in the desktop sidebar.
@@ -41,7 +42,7 @@ const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operate", items: ["today", "calendar", "guests", "housekeeping"] },
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics", "conflicts"] },
-  { label: "Data", items: ["inbox", "feeds"] },
+  { label: "Data", items: ["inbox", "feeds", "escalations"] },
   { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks"] },
   { label: "Help", items: ["help"] },
 ];
@@ -51,7 +52,7 @@ const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operations", items: ["housekeeping", "conflicts"] },
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics"] },
-  { label: "Data & channels", items: ["inbox", "feeds"] },
+  { label: "Data & channels", items: ["inbox", "feeds", "escalations"] },
   { label: "System", items: ["settings", "help"] },
 ];
 
@@ -93,7 +94,7 @@ function toolbarTitle(pathname: string): string {
   return META[activeId(pathname)].label;
 }
 
-export function NavShell({ conflictCount = 0 }: { conflictCount?: number }) {
+export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictCount?: number; escalationCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sheet, setSheet] = useState(false);
@@ -195,6 +196,9 @@ export function NavShell({ conflictCount = 0 }: { conflictCount?: number }) {
                     {id === "conflicts" && conflictCount > 0 && (
                       <span className="navitem__badge" style={{ marginLeft: "auto" }}>{conflictCount}</span>
                     )}
+                    {id === "escalations" && escalationCount > 0 && (
+                      <span className="navitem__badge" style={{ marginLeft: "auto" }}>{escalationCount}</span>
+                    )}
                     <Icon name="chevronR" size={16} className="sheet__chev" />
                   </Link>
                 ))}
@@ -228,6 +232,7 @@ export function NavShell({ conflictCount = 0 }: { conflictCount?: number }) {
                 <span className="navitem__ic"><Icon name={META[id].icon} size={17} /></span>
                 {META[id].label}
                 {id === "conflicts" && conflictCount > 0 && <span className="navitem__badge">{conflictCount}</span>}
+                {id === "escalations" && escalationCount > 0 && <span className="navitem__badge">{escalationCount}</span>}
               </Link>
             ))}
           </div>

@@ -5,13 +5,19 @@ import { NavShell } from "@/components/NavShell";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { unstable_cache } from "next/cache";
 import { getConflicts } from "@/lib/conflicts";
+import { prisma } from "@/lib/prisma";
 
-// The conflict badge sits in the layout, so its query would otherwise run on
-// EVERY navigation. A count that's up to ~60s stale is fine for a nav badge, so
-// cache it and keep that join off the critical path of each page load.
+// Nav badge counts sit in the layout — they'd otherwise run on EVERY navigation.
+// Cache both at ~60s; a slightly stale badge count is fine.
 const getCachedConflictCount = unstable_cache(
   async () => (await getConflicts()).length,
   ["nav-conflict-count"],
+  { revalidate: 60 },
+);
+
+const getCachedEscalationCount = unstable_cache(
+  async () => prisma.escalation.count({ where: { status: "open" } }),
+  ["nav-escalation-count"],
   { revalidate: 60 },
 );
 
@@ -67,19 +73,24 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Conflict count powers the Conflicts nav badge. Tolerate DB hiccups → 0.
+  // Nav badge counts. Tolerate DB hiccups → 0.
   let conflictCount = 0;
+  let escalationCount = 0;
   try {
-    conflictCount = await getCachedConflictCount();
+    [conflictCount, escalationCount] = await Promise.all([
+      getCachedConflictCount(),
+      getCachedEscalationCount(),
+    ]);
   } catch {
     conflictCount = 0;
+    escalationCount = 0;
   }
 
   return (
     <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`}>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <NavShell conflictCount={conflictCount} />
+        <NavShell conflictCount={conflictCount} escalationCount={escalationCount} />
         <ConfirmProvider>{children}</ConfirmProvider>
       </body>
     </html>
