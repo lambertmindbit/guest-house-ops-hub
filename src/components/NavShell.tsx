@@ -8,7 +8,7 @@ import { Icon } from "@/components/ui";
 // One config drives BOTH the phone tabs/sheet and the desktop sidebar.
 type NavId =
   | "today" | "calendar" | "guests" | "housekeeping" | "pricing"
-  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "escalations" | "settings" | "help"
+  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "escalations" | "messages" | "settings" | "help"
   | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
@@ -24,6 +24,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
   feeds: { label: "Feeds", icon: "link", href: "/feeds" },
   escalations: { label: "Escalations", icon: "alert", href: "/escalations" },
+  messages: { label: "Messages", icon: "inbox", href: "/messages" },
   settings: { label: "Settings", icon: "settings", href: "/settings" },
   help: { label: "Help", icon: "help", href: "/help" },
   // Settings sub-modules — surfaced directly in the desktop sidebar.
@@ -42,7 +43,7 @@ const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operate", items: ["today", "calendar", "guests", "housekeeping"] },
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics", "conflicts"] },
-  { label: "Data", items: ["inbox", "feeds", "escalations"] },
+  { label: "Data", items: ["inbox", "feeds", "escalations", "messages"] },
   { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks"] },
   { label: "Help", items: ["help"] },
 ];
@@ -52,7 +53,7 @@ const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operations", items: ["housekeeping", "conflicts"] },
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics"] },
-  { label: "Data & channels", items: ["inbox", "feeds", "escalations"] },
+  { label: "Data & channels", items: ["inbox", "feeds", "escalations", "messages"] },
   { label: "System", items: ["settings", "help"] },
 ];
 

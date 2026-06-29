@@ -126,7 +126,8 @@ model Guest {
   portOfEntry       String?   @map("port_of_entry")
   arrivalInIndia    DateTime? @map("arrival_in_india") @db.Date
   purposeOfVisit    String?   @map("purpose_of_visit")
-  reservations Reservation[]
+  reservations      Reservation[]
+  outboundMessages  OutboundMessage[]
 
   @@map("guests")
 }
@@ -155,10 +156,11 @@ model Reservation {
   advanceRequired Decimal?                 @map("advance_required") @db.Decimal(10, 2)
   createdAt       DateTime                 @default(now()) @map("created_at")
 
-  room     Room      @relation(fields: [roomId], references: [id])
-  guest    Guest     @relation(fields: [guestId], references: [id])
-  channel  Channel   @relation(fields: [channelId], references: [id])
-  payments Payment[]
+  room             Room              @relation(fields: [roomId], references: [id])
+  guest            Guest             @relation(fields: [guestId], references: [id])
+  channel          Channel           @relation(fields: [channelId], references: [id])
+  payments         Payment[]
+  outboundMessages OutboundMessage[]
 
   @@index([roomId])
   @@index([guestId])
@@ -432,6 +434,57 @@ model Escalation {
   @@index([status, severity, createdAt])
   @@index([category, status])
   @@map("escalations")
+}
+
+// Outbound message log — the LogAdapter seam for ROOT agent messaging.
+// Today every message lands here with status=logged (no actual sending).
+// When a real provider (WhatsApp Business, SMS, email) is configured, the
+// logMessage() function in src/lib/messaging.ts routes to it and updates
+// the status. Agents call POST /api/agent/messages; the owner views the log
+// at /messages. Schema is forward-compatible: propertyId is nullable today.
+
+enum MessageChannel {
+  whatsapp
+  sms
+  email
+  manual
+}
+
+enum MessageStatus {
+  queued
+  sent
+  failed
+  logged
+}
+
+enum MessageSource {
+  assistant
+  cab
+  console
+  system
+}
+
+model OutboundMessage {
+  id            String         @id @default(cuid())
+  source        MessageSource
+  channel       MessageChannel
+  to            String
+  body          String
+  status        MessageStatus  @default(logged)
+  sentAt        DateTime?      @map("sent_at")
+  error         String?
+  guestId       String?        @map("guest_id")
+  reservationId String?        @map("reservation_id")
+  propertyId    String?        @map("property_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  guest       Guest?       @relation(fields: [guestId], references: [id])
+  reservation Reservation? @relation(fields: [reservationId], references: [id])
+
+  @@index([guestId, createdAt])
+  @@index([reservationId])
+  @@index([status, createdAt])
+  @@map("outbound_messages")
 }
 
 // Phone numbers flagged as potential scammers. Checked at booking time so the
