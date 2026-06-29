@@ -1,37 +1,10 @@
 import { z } from "zod";
 import { ok, fail, zodFail } from "@/lib/api";
 import { createEscalation } from "@/lib/escalations";
+import { agentTokenOk } from "@/lib/agent-auth";
 
-// POST /api/agent/escalations
-//
-// The seam the ROOT AI agents (Assistant / Cab / Console) call to file a
-// human-in-the-loop escalation. This is the agent equivalent of the OTA
-// `POST /api/ingest/email` webhook:
-//
-//   • It is NOT behind the owner session cookie — it carries its own shared
-//     secret (`AGENT_TOKEN`). It must therefore be added to the middleware
-//     matcher's exclude list (see INTEGRATION.md).
-//   • Sensitive actions are never performed by the agent. It only *files* a
-//     request; a human acts from the queue. This is the deterministic core's
-//     half of the HITL contract.
-//   • Supply a stable `externalId` (e.g. agent conversation id + event seq) for
-//     safe retries — duplicates are de-duped, not re-created.
-
-function tokenOk(req: Request): boolean {
-  const expected = process.env.AGENT_TOKEN;
-  if (!expected) return false; // fail closed if unconfigured
-  const header =
-    req.headers.get("x-agent-token") ??
-    req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
-    "";
-  // constant-time-ish compare; lengths differ rarely, fine for a shared secret
-  if (header.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= header.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
-}
+// POST /api/agent/escalations — token-gated agent seam (see agent-auth.ts).
+// Supply a stable `externalId` for safe retries — duplicates are de-duped.
 
 const AgentBody = z.object({
   source: z.enum(["assistant", "cab", "console"]),
@@ -64,7 +37,7 @@ const AgentBody = z.object({
 });
 
 export async function POST(req: Request) {
-  if (!tokenOk(req)) return fail("Unauthorized", 401);
+  if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   let body: unknown;
   try {
