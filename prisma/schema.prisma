@@ -111,6 +111,21 @@ model Guest {
   idDocumentPath String?     @map("id_document_path")
   blocked      Boolean       @default(false)
   blockReason  String?       @map("block_reason")
+  // C-Form (Form C under Registration of Foreigners Rules, 1992).
+  // All nullable — only populated for foreign national guests.
+  nationality       String?   @map("nationality")
+  passportNumber    String?   @map("passport_number")
+  passportIssueDate DateTime? @map("passport_issue_date") @db.Date
+  passportIssuePlace String?  @map("passport_issue_place")
+  passportExpiry    DateTime? @map("passport_expiry") @db.Date
+  visaNumber        String?   @map("visa_number")
+  visaType          String?   @map("visa_type")
+  visaIssueDate     DateTime? @map("visa_issue_date") @db.Date
+  visaIssuePlace    String?   @map("visa_issue_place")
+  visaExpiry        DateTime? @map("visa_expiry") @db.Date
+  portOfEntry       String?   @map("port_of_entry")
+  arrivalInIndia    DateTime? @map("arrival_in_india") @db.Date
+  purposeOfVisit    String?   @map("purpose_of_visit")
   reservations Reservation[]
 
   @@map("guests")

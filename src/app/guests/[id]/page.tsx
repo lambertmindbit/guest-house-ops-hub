@@ -6,6 +6,7 @@ import { GuestProfile } from "@/components/GuestProfile";
 import { IdDocumentField } from "@/components/IdDocumentField";
 import { isStorageConfigured } from "@/lib/storage";
 import { displayMoney, displayINR, displayShortDate } from "@/lib/format";
+import { formatDateOnly } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,19 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
             notes: guest.notes ?? "",
             blocked: guest.blocked,
             blockReason: guest.blockReason ?? "",
+            nationality: guest.nationality ?? "",
+            passportNumber: guest.passportNumber ?? "",
+            passportIssueDate: guest.passportIssueDate ? formatDateOnly(guest.passportIssueDate) : "",
+            passportIssuePlace: guest.passportIssuePlace ?? "",
+            passportExpiry: guest.passportExpiry ? formatDateOnly(guest.passportExpiry) : "",
+            visaNumber: guest.visaNumber ?? "",
+            visaType: guest.visaType ?? "",
+            visaIssueDate: guest.visaIssueDate ? formatDateOnly(guest.visaIssueDate) : "",
+            visaIssuePlace: guest.visaIssuePlace ?? "",
+            visaExpiry: guest.visaExpiry ? formatDateOnly(guest.visaExpiry) : "",
+            portOfEntry: guest.portOfEntry ?? "",
+            arrivalInIndia: guest.arrivalInIndia ? formatDateOnly(guest.arrivalInIndia) : "",
+            purposeOfVisit: guest.purposeOfVisit ?? "",
           }}
         />
 

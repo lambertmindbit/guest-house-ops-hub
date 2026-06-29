@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
+import { dateOnly, parseDateOnly } from "@/lib/dates";
+
+const optDate = dateOnly.nullable().optional();
 
 const updateSchema = z
   .object({
@@ -10,6 +13,20 @@ const updateSchema = z
     notes: z.string().nullable().optional(),
     blocked: z.boolean().optional(),
     blockReason: z.string().nullable().optional(),
+    // C-Form fields
+    nationality: z.string().trim().nullable().optional(),
+    passportNumber: z.string().trim().nullable().optional(),
+    passportIssueDate: optDate,
+    passportIssuePlace: z.string().trim().nullable().optional(),
+    passportExpiry: optDate,
+    visaNumber: z.string().trim().nullable().optional(),
+    visaType: z.string().trim().nullable().optional(),
+    visaIssueDate: optDate,
+    visaIssuePlace: z.string().trim().nullable().optional(),
+    visaExpiry: optDate,
+    portOfEntry: z.string().trim().nullable().optional(),
+    arrivalInIndia: optDate,
+    purposeOfVisit: z.string().trim().nullable().optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
@@ -25,6 +42,33 @@ export async function PATCH(
   const existing = await prisma.guest.findUnique({ where: { id } });
   if (!existing) return fail("guest not found", 404);
 
-  const guest = await prisma.guest.update({ where: { id }, data: parsed.data });
+  const {
+    passportIssueDate,
+    passportExpiry,
+    visaIssueDate,
+    visaExpiry,
+    arrivalInIndia,
+    ...rest
+  } = parsed.data;
+
+  const parsedDates = {
+    ...(passportIssueDate !== undefined && {
+      passportIssueDate: passportIssueDate ? parseDateOnly(passportIssueDate) : null,
+    }),
+    ...(passportExpiry !== undefined && {
+      passportExpiry: passportExpiry ? parseDateOnly(passportExpiry) : null,
+    }),
+    ...(visaIssueDate !== undefined && {
+      visaIssueDate: visaIssueDate ? parseDateOnly(visaIssueDate) : null,
+    }),
+    ...(visaExpiry !== undefined && {
+      visaExpiry: visaExpiry ? parseDateOnly(visaExpiry) : null,
+    }),
+    ...(arrivalInIndia !== undefined && {
+      arrivalInIndia: arrivalInIndia ? parseDateOnly(arrivalInIndia) : null,
+    }),
+  };
+
+  const guest = await prisma.guest.update({ where: { id }, data: { ...rest, ...parsedDates } });
   return ok(guest);
 }
