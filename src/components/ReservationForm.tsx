@@ -18,6 +18,7 @@ export type ReservationFormValues = {
   arrivalTime: string;
   specialRequests: string;
   grossAmount: string;
+  advanceRequired: string;
   guestName: string;
   guestPhone: string;
 };
@@ -160,6 +161,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
     setSaving(true);
     try {
       const amount = values.grossAmount.trim();
+      const advance = values.advanceRequired.trim();
       const common = {
         roomId: values.roomId,
         channelId: values.channelId,
@@ -168,6 +170,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         arrivalTime: values.arrivalTime || undefined,
         specialRequests: values.specialRequests || undefined,
         grossAmount: amount ? Number(amount) : undefined,
+        advanceRequired: advance ? Number(advance) : undefined,
       };
 
       const res =
@@ -299,6 +302,10 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
           <div className="field">
             <label className="field-label">Amount (₹)</label>
             <input className="input num" inputMode="numeric" min="0" value={values.grossAmount} onChange={(e) => set("grossAmount", e.target.value)} placeholder="0" />
+          </div>
+          <div className="field">
+            <label className="field-label">Advance required (₹)</label>
+            <input className="input num" inputMode="numeric" min="0" value={values.advanceRequired} onChange={(e) => set("advanceRequired", e.target.value)} placeholder="0 = no advance" />
           </div>
         </div>
 

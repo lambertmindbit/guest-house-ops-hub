@@ -30,6 +30,7 @@ export default async function EditReservationPage({
     arrivalTime: reservation.arrivalTime ?? "",
     specialRequests: reservation.specialRequests ?? "",
     grossAmount: reservation.grossAmount ? String(reservation.grossAmount) : "",
+    advanceRequired: reservation.advanceRequired ? String(reservation.advanceRequired) : "",
     guestName: reservation.guest.name,
     guestPhone: reservation.guest.phone,
   };

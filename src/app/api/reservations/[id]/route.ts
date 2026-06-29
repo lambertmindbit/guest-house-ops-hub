@@ -30,6 +30,7 @@ const updateSchema = z
     arrivalTime: z.string().nullable().optional(),
     specialRequests: z.string().nullable().optional(),
     grossAmount: z.number().nonnegative().nullable().optional(),
+    advanceRequired: z.number().nonnegative().nullable().optional(),
     otaRef: z.string().nullable().optional(),
   })
   .refine((d) => !(d.checkIn && d.checkOut) || d.checkOut > d.checkIn, {
@@ -67,6 +68,7 @@ export async function PATCH(
       arrivalTime: input.arrivalTime,
       specialRequests: input.specialRequests,
       grossAmount: input.grossAmount,
+      advanceRequired: input.advanceRequired,
       otaRef: input.otaRef,
     });
     const full = await prisma.reservation.findUnique({ where: { id }, include });

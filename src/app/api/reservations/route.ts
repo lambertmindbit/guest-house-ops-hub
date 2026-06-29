@@ -27,6 +27,7 @@ const createSchema = z
     arrivalTime: z.string().optional(),
     specialRequests: z.string().optional(),
     grossAmount: z.number().nonnegative().optional(),
+    advanceRequired: z.number().nonnegative().optional(),
   })
   .refine((d) => d.checkOut > d.checkIn, {
     path: ["checkOut"],
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
           arrivalTime: input.arrivalTime,
           specialRequests: input.specialRequests,
           grossAmount: input.grossAmount,
+          advanceRequired: input.advanceRequired,
         },
       });
     });

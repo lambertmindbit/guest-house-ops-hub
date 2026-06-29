@@ -73,6 +73,11 @@ export default async function ReservationDetailPage({
             <div style={{ textAlign: "right" }}>
               <div className="eyebrow">Amount</div>
               <div className="h3 money" style={{ marginTop: 3, fontSize: 18 }}>{displayMoney(r.grossAmount)}</div>
+              {r.advanceRequired && (
+                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                  Advance: {displayMoney(r.advanceRequired)}
+                </div>
+              )}
             </div>
           </div>
           <hr className="hairline" style={{ margin: "12px 0" }} />
@@ -102,10 +107,12 @@ export default async function ReservationDetailPage({
         <PaymentsPanel
           reservationId={r.id}
           gross={r.grossAmount ? Number(r.grossAmount) : 0}
+          advanceRequired={r.advanceRequired ? Number(r.advanceRequired) : 0}
           payments={r.payments.map((p) => ({
             id: p.id,
             amount: Number(p.amount),
             mode: p.mode,
+            isAdvance: p.isAdvance,
             paidAt: p.paidAt.toISOString(),
             note: p.note,
           }))}

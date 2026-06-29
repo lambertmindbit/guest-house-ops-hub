@@ -24,6 +24,7 @@ export default async function NewReservationPage({
     arrivalTime: "",
     specialRequests: "",
     grossAmount: "",
+    advanceRequired: "",
     guestName: "",
     guestPhone: "",
   };

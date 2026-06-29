@@ -150,6 +150,9 @@ model Reservation {
   arrivalTime     String?                  @map("arrival_time")
   specialRequests String?                  @map("special_requests")
   grossAmount     Decimal?                 @map("gross_amount") @db.Decimal(10, 2)
+  // Amount expected upfront to hold the room. Separate from grossAmount so the
+  // owner can track whether the deposit has arrived before check-in.
+  advanceRequired Decimal?                 @map("advance_required") @db.Decimal(10, 2)
   createdAt       DateTime                 @default(now()) @map("created_at")
 
   room     Room      @relation(fields: [roomId], references: [id])
@@ -169,6 +172,8 @@ model Payment {
   reservationId String      @map("reservation_id")
   amount        Decimal     @db.Decimal(10, 2)
   mode          PaymentMode
+  // True when this payment is the advance/deposit (not the final balance).
+  isAdvance     Boolean     @default(false) @map("is_advance")
   paidAt        DateTime    @default(now()) @map("paid_at")
   note          String?
   createdAt     DateTime    @default(now()) @map("created_at")

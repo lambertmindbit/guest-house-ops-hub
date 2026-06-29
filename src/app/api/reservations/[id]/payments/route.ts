@@ -6,6 +6,7 @@ import { dateOnly, parseDateOnly } from "@/lib/dates";
 const schema = z.object({
   amount: z.number().positive(),
   mode: z.enum(["cash", "upi", "card", "bank", "ota_collect"]),
+  isAdvance: z.boolean().optional(),
   paidAt: dateOnly.optional(),
   note: z.string().optional(),
 });
@@ -27,6 +28,7 @@ export async function POST(
       reservationId: id,
       amount: parsed.data.amount,
       mode: parsed.data.mode,
+      isAdvance: parsed.data.isAdvance ?? false,
       note: parsed.data.note,
       ...(parsed.data.paidAt ? { paidAt: parseDateOnly(parsed.data.paidAt) } : {}),
     },

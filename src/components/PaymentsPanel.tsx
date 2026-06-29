@@ -9,6 +9,7 @@ export type PaymentRow = {
   id: string;
   amount: number;
   mode: string;
+  isAdvance: boolean;
   paidAt: string;
   note: string | null;
 };
@@ -27,15 +28,18 @@ const VERIFY_ITEMS = [
 export function PaymentsPanel({
   reservationId,
   gross,
+  advanceRequired,
   payments,
 }: {
   reservationId: string;
   gross: number;
+  advanceRequired: number;
   payments: PaymentRow[];
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<string>("cash");
+  const [isAdvance, setIsAdvance] = useState(false);
   const [note, setNote] = useState("");
   const [checklist, setChecklist] = useState<boolean[]>(VERIFY_ITEMS.map(() => false));
   const [busy, setBusy] = useState(false);
@@ -49,15 +53,17 @@ export function PaymentsPanel({
     setChecklist((prev) => prev.map((v, idx) => (idx === i ? !v : v)));
   }
 
-  // Reset checklist when mode changes away from upi/bank
   function changeMode(m: string) {
     setMode(m);
     setChecklist(VERIFY_ITEMS.map(() => false));
   }
 
   const collected = payments.reduce((s, p) => s + p.amount, 0);
+  const advancePaid = payments.filter((p) => p.isAdvance).reduce((s, p) => s + p.amount, 0);
   const balance = gross - collected;
   const pct = gross > 0 ? Math.min(100, (collected / gross) * 100) : 0;
+  const advanceOk = advanceRequired > 0 && advancePaid >= advanceRequired;
+  const advancePending = advanceRequired > 0 && !advanceOk;
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -67,7 +73,12 @@ export function PaymentsPanel({
       const res = await fetch(`/api/reservations/${reservationId}/payments`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ amount: Number(amount), mode, note: note.trim() || undefined }),
+        body: JSON.stringify({
+          amount: Number(amount),
+          mode,
+          isAdvance,
+          note: note.trim() || undefined,
+        }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -76,6 +87,7 @@ export function PaymentsPanel({
       }
       setAmount("");
       setNote("");
+      setIsAdvance(false);
       setChecklist(VERIFY_ITEMS.map(() => false));
       router.refresh();
     } finally {
@@ -101,6 +113,27 @@ export function PaymentsPanel({
         </div>
       </div>
       <div className="card-body">
+        {/* Advance status row — only shown when an advance is configured */}
+        {advanceRequired > 0 && (
+          <div
+            className="spread"
+            style={{
+              padding: "8px 10px",
+              borderRadius: 7,
+              marginBottom: 10,
+              background: advanceOk ? "var(--good-fill, #f0fdf4)" : "var(--warn-fill, #fffbeb)",
+              fontSize: "var(--fs-small)",
+            }}
+          >
+            <span style={{ color: advanceOk ? "var(--good-text, #15803d)" : "var(--warn-text, #b45309)", fontWeight: 600 }}>
+              {advanceOk ? "Advance received ✓" : "Advance pending"}
+            </span>
+            <span className="muted">
+              {displayINR(advancePaid)} / {displayINR(advanceRequired)} required
+            </span>
+          </div>
+        )}
+
         <div className="spread" style={{ marginBottom: 7, fontSize: "var(--fs-meta)" }}>
           <span className="muted">Collected {displayINR(collected)} of {displayINR(gross)}</span>
           <span className="money">{Math.round(pct)}%</span>
@@ -112,7 +145,9 @@ export function PaymentsPanel({
         {payments.map((p, i) => (
           <div key={p.id} className="spread" style={{ padding: "8px 0", borderTop: i ? "1px solid var(--border-subtle)" : 0 }}>
             <span style={{ fontSize: "var(--fs-small)" }}>
-              <b className="num" style={{ color: "var(--ink)" }}>{displayINR(p.amount)}</b> · {PAYMENT_MODE_LABELS[p.mode] ?? p.mode}
+              <b className="num" style={{ color: "var(--ink)" }}>{displayINR(p.amount)}</b>
+              {" · "}{PAYMENT_MODE_LABELS[p.mode] ?? p.mode}
+              {p.isAdvance && <span className="pill pill--tint" style={{ marginLeft: 6, fontSize: 11 }}>Advance</span>}
               {p.note && <span className="muted"> · {p.note}</span>}
             </span>
             <span className="row" style={{ gap: 8 }}>
@@ -134,6 +169,14 @@ export function PaymentsPanel({
               ))}
             </select>
           </div>
+
+          {/* Mark as advance checkbox */}
+          {advancePending && (
+            <label className="row" style={{ gap: 8, fontSize: 13, cursor: "pointer", marginTop: 8 }}>
+              <input type="checkbox" checked={isAdvance} onChange={(e) => setIsAdvance(e.target.checked)} />
+              <span>Mark as advance deposit</span>
+            </label>
+          )}
 
           {/* UTR / reference field for UPI and bank transfers */}
           {needsVerify && (
