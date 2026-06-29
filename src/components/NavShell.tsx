@@ -7,13 +7,14 @@ import { Icon } from "@/components/ui";
 
 // One config drives BOTH the phone tabs/sheet and the desktop sidebar.
 type NavId =
-  | "today" | "calendar" | "guests" | "housekeeping" | "pricing"
+  | "today" | "calendar" | "reservations" | "guests" | "housekeeping" | "pricing"
   | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "escalations" | "messages" | "settings" | "help"
   | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
   today: { label: "Today", icon: "today", href: "/" },
   calendar: { label: "Calendar", icon: "calendar", href: "/calendar" },
+  reservations: { label: "Reservations", icon: "bed", href: "/reservations" },
   guests: { label: "Guests", icon: "guests", href: "/guests" },
   // Kept the owner's earlier "Housekeeping" rename (the redesign guide says "Cleaning").
   housekeeping: { label: "Housekeeping", icon: "clean", href: "/housekeeping" },
@@ -36,11 +37,11 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   "set-blocks": { label: "Blocked dates", icon: "alert", href: "/settings/blocks" },
 };
 
-const PRIMARY: NavId[] = ["today", "calendar", "guests"];
+const PRIMARY: NavId[] = ["today", "calendar", "reservations"];
 
 // Desktop sidebar: Settings' modules are listed directly under "Setup".
 const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
-  { label: "Operate", items: ["today", "calendar", "guests", "housekeeping"] },
+  { label: "Operate", items: ["today", "calendar", "reservations", "guests", "housekeeping"] },
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics", "conflicts"] },
   { label: "Data", items: ["inbox", "feeds", "escalations", "messages"] },
@@ -50,7 +51,7 @@ const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
 
 // Phone "More" sheet: keep one Settings entry → the hub (don't bloat the sheet).
 const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
-  { label: "Operations", items: ["housekeeping", "conflicts"] },
+  { label: "Operations", items: ["reservations", "housekeeping", "conflicts"] },
   { label: "Money", items: ["pricing", "finance"] },
   { label: "Insights", items: ["analytics"] },
   { label: "Data & channels", items: ["inbox", "feeds", "escalations", "messages"] },
