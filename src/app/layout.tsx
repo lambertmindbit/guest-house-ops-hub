@@ -87,7 +87,7 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`}>
+    <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <NavShell conflictCount={conflictCount} escalationCount={escalationCount} />
