@@ -51,16 +51,16 @@ export default function HelpPage() {
       <div className="card card--pad" style={{ marginBottom: 16 }}>
         <p className="help-a" style={{ marginTop: 0 }}>On a phone, the bar at the bottom is your main menu:</p>
         <div className="navmock">
-          <i>Today</i><i>Calendar</i>
+          <i>Today</i><i>Calendar</i><i>Bookings</i>
           <span className="fabm">+</span>
-          <i>Guests</i><i>More</i>
+          <i>More</i>
         </div>
         <p className="help-a" style={{ marginBottom: 0 }}>
-          The big <b>+</b> in the middle starts a <b>new booking</b> from anywhere. <b>More</b>
-          {" "}opens Finance, Pricing, Inbox, Analytics, Conflicts, Feeds, Settings and
-          Preferences. On a computer, the same list is a sidebar on the left. Tap the
-          sun/moon to switch <b>dark / light</b>; open <b>Preferences</b> to change the accent
-          colour and density.
+          The big <b>+</b> starts a <b>new booking</b> from anywhere. <b>More</b>
+          {" "}opens Guests, Housekeeping, Finance, Pricing, Inbox, Analytics, Conflicts,
+          Feeds, Escalations, Messages, Settings and Preferences. On a computer, the same
+          list is a sidebar on the left. Tap the sun/moon to switch <b>dark / light</b>;
+          open <b>Preferences</b> to change the accent colour and density.
         </p>
       </div>
 
@@ -81,12 +81,15 @@ export default function HelpPage() {
       <div className="card card--pad" style={{ marginBottom: 16 }}>
         <div style={{ paddingTop: 2 }} />
         <Q q="Take a new booking">Tap the <b>+</b> button (or <Link href="/reservations/new">New booking</Link>).</Q>
+        <Q q="Find any booking fast"><Link href="/reservations">Reservations</Link> → search by name, phone, room or reference, or filter by status.</Q>
         <Q q="Add a new room">Go to <Link href="/settings/rooms">Settings → Rooms → Add room</Link>. The calendar updates automatically.</Q>
         <Q q="Block a room for repairs">Calendar → <b>Block a room</b>, or <Link href="/settings/blocks">Settings → Blocked dates</Link>.</Q>
         <Q q="See who owes money"><Link href="/finance">Finance → Balances due</Link>.</Q>
         <Q q="Give a guest a bill">Open the booking → <b>Invoice</b> → Print / Save PDF.</Q>
         <Q q="Find a past guest"><Link href="/guests">Guests</Link> → search by name or phone.</Q>
         <Q q="Stop a problem guest re-booking">Open the guest → turn on <b>Blacklist</b> with a reason.</Q>
+        <Q q="Flag a scam phone number"><Link href="/settings/flagged-numbers">Settings → Scam numbers</Link> → add it with a reason. You&rsquo;ll be warned next time it&rsquo;s used on a booking.</Q>
+        <Q q="Record a foreign guest's passport / visa (Form C)">Open the guest → the <b>Foreign-national details</b> section.</Q>
       </div>
 
       {/* Key workflows */}
@@ -115,9 +118,10 @@ export default function HelpPage() {
       <div className="card card--pad" style={{ marginBottom: 12 }}>
         <p className="h3" style={{ margin: "0 0 4px" }}>Payments &amp; invoice</p>
         <Flow>
-          <Step n={1} title="Open the booking" sub="The payments panel shows collected vs balance due." />
-          <Step n={2} title="Add payment" sub="Record an amount + how it was paid (cash / UPI / card / bank / OTA)." />
-          <Step n={3} title="Invoice → Print / Save PDF" sub="Uses your property name, address and GST from Settings → Property." last />
+          <Step n={1} title="Open the booking" sub="The payments panel shows collected vs balance due (and advance status, if an advance is set)." />
+          <Step n={2} title="Add payment" sub="Record an amount + how it was paid. Tick 'advance deposit' if it's the advance." />
+          <Step n={3} title="Verify UPI / bank" sub="For UPI or bank, enter the UTR/reference and tick the checklist — guards against fake-payment scams." />
+          <Step n={4} title="Invoice → Print / Save PDF" sub="Uses your property name, address and GST from Settings → Property." last />
         </Flow>
       </div>
 
@@ -127,6 +131,19 @@ export default function HelpPage() {
           <Step n={1} title={<>Paste the email into <Link href="/inbox">Inbox</Link></>} sub="Or it arrives automatically if your tech setup is wired up." />
           <Step n={2} title="Review the details" sub="It fills what it can; correct anything and pick the room." />
           <Step n={3} title="Create booking" sub="Added to the calendar and conflict-checked like any booking. Nothing is ever auto-booked." last />
+        </Flow>
+      </div>
+
+      <div className="card card--pad" style={{ marginBottom: 16 }}>
+        <p className="h3" style={{ margin: "0 0 4px" }}>AI assistant (Escalations &amp; Messages)</p>
+        <p className="help-a" style={{ marginTop: 0 }}>
+          Two screens that light up once your tech team connects the <b>AI assistant</b>
+          {" "}(it can chat with guests, coordinate cabs, and help at the front desk). Until
+          then they sit empty.
+        </p>
+        <Flow>
+          <Step n={1} title={<><Link href="/escalations">Escalations</Link> — your to-do queue</>} sub="When the assistant can't decide something (special request, complaint, an action needing your approval), it files it here instead of acting. Open one, act, and mark it resolved." />
+          <Step n={2} title={<><Link href="/messages">Messages</Link> — the outbox</>} sub="A log of every message sent or queued to guests (WhatsApp / SMS / email), so you have a record of what went out." last />
         </Flow>
       </div>
 
