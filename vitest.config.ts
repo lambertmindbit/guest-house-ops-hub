@@ -14,5 +14,9 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["dotenv/config", "./tests/setup.ts"],
     fileParallelism: false,
+    // Integration tests hit a real (remote Supabase) Postgres; per-op latency
+    // can run a few seconds, so give them headroom over the 5s default.
+    testTimeout: 20000,
+    hookTimeout: 20000,
   },
 });
