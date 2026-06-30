@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
 import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
+import { prisma } from "@/lib/prisma";
 import { ChannelBadge, Icon } from "@/components/ui";
 import { Collapsible } from "@/components/Collapsible";
 import { displayDate, displayShortDate, displayINR } from "@/lib/format";
@@ -22,14 +23,21 @@ function PayBadge({ r }: { r: SummaryReservation }) {
 }
 
 export default async function DashboardPage() {
-  const [s, conflicts, housekeeping] = await Promise.all([
+  const [s, conflicts, housekeeping, openEscalations] = await Promise.all([
     getTodaySummary(),
     getConflicts(),
     getHousekeeping(),
+    prisma.escalation.count({ where: { status: "open" } }),
   ]);
   const heading = displayDate(parseDateOnly(s.date));
   const conflictN = conflicts.length;
-  const cleanN = housekeeping.toCleanCount;
+  // One merged "Needs you" signal: booking conflicts + open agent approvals.
+  const needsN = conflictN + openEscalations;
+  const needsParts = [
+    conflictN > 0 ? `${conflictN} booking conflict${conflictN === 1 ? "" : "s"}` : null,
+    openEscalations > 0 ? `${openEscalations} approval${openEscalations === 1 ? "" : "s"}` : null,
+  ].filter(Boolean).join(", ");
+  const toClean = housekeeping.rooms.filter((r) => r.needsCleaning);
 
   return (
     <main className="app-main">
@@ -39,21 +47,11 @@ export default async function DashboardPage() {
           <div className="pagehead__sub">{heading}</div>
         </div>
 
-        {conflictN > 0 && (
-          <Link href="/conflicts" className="banner banner--danger">
+        {needsN > 0 && (
+          <Link href="/needs-you" className="banner banner--danger">
             <span className="banner__icon"><Icon name="alert" size={18} /></span>
             <span className="banner__txt">
-              <b>{conflictN} booking conflict{conflictN === 1 ? "" : "s"}</b>{" "}
-              {conflictN === 1 ? "needs" : "need"} attention
-            </span>
-            <span className="banner__arrow"><Icon name="arrowR" size={17} /></span>
-          </Link>
-        )}
-        {cleanN > 0 && (
-          <Link href="/housekeeping" className="banner banner--warn">
-            <span className="banner__icon"><Icon name="clean" size={18} /></span>
-            <span className="banner__txt">
-              <b>{cleanN} room{cleanN === 1 ? "" : "s"}</b> to clean
+              <b>{needsN} thing{needsN === 1 ? "" : "s"} need{needsN === 1 ? "s" : ""} you</b> — {needsParts}
             </span>
             <span className="banner__arrow"><Icon name="arrowR" size={17} /></span>
           </Link>
@@ -61,33 +59,54 @@ export default async function DashboardPage() {
 
         <div style={{ height: 16 }} />
 
-        {/* Verdict-first KPI strip: one container, hairline panels, navy occupancy. */}
-        <div className="kpi-strip">
+        {/* Verdict-first 3-up: Occupancy (navy) · Arrivals · Departures. The day's
+            to-do (arrivals + cleaning) wins the screen below, not four KPI blocks. */}
+        <div className="kpi-strip kpi-strip--3">
           <div className="kpi-panel kpi-panel--verdict">
             <div className="kpi-eyebrow">Occupancy</div>
             <div className="kpi-num">{s.occupancyPct}%</div>
             <div className="kpi-ctx">{s.occupiedRooms} of {s.totalRooms} rooms</div>
           </div>
           <div className="kpi-panel">
-            <div className="kpi-eyebrow">In-house</div>
-            <div className="kpi-num">{s.inHouse.length}</div>
-            <div className="kpi-ctx">guests tonight</div>
-          </div>
-          <div className="kpi-panel">
-            <div className="kpi-eyebrow">Check-ins</div>
+            <div className="kpi-eyebrow">Arrivals</div>
             <div className="kpi-num">{s.checkInsToday.length}</div>
-            <div className="kpi-ctx">expected today</div>
+            <div className="kpi-ctx">today</div>
           </div>
           <div className="kpi-panel">
-            <div className="kpi-eyebrow">Check-outs</div>
+            <div className="kpi-eyebrow">Departures</div>
             <div className="kpi-num">{s.checkOutsToday.length}</div>
-            <div className="kpi-ctx">leaving today</div>
+            <div className="kpi-ctx">today</div>
           </div>
         </div>
 
         {/* Arrivals / Departures are the day's to-do. */}
         <SectionHead title="Arrivals today" count={s.checkInsToday.length} />
         <List items={s.checkInsToday} empty="No arrivals today." showTime showArrived showPayment />
+
+        {/* Promoted housekeeping — the morning routine belongs on the dashboard. */}
+        <SectionHead
+          title="To clean"
+          count={housekeeping.toCleanCount}
+          action={<Link href="/housekeeping" className="section-label__a">Housekeeping <Icon name="arrowR" size={13} /></Link>}
+        />
+        {toClean.length === 0 ? (
+          <div className="empty">All rooms clean.</div>
+        ) : (
+          <div className="card card--pad clean-card">
+            <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)" }}>Clean before tonight’s arrivals.</div>
+            <div className="room-chips">
+              {toClean.map((r) => (
+                <div key={r.id} className={`room-chip${r.highPriority ? " room-chip--prio" : ""}`}>
+                  <b>{r.label}</b>
+                  <small>{r.highPriority ? "Arriving soon" : "Checked out"}</small>
+                </div>
+              ))}
+            </div>
+            <Link href="/housekeeping" className="btn btn--primary btn--block" style={{ marginTop: 12 }}>
+              <Icon name="check" size={16} /> Mark a room clean
+            </Link>
+          </div>
+        )}
 
         <SectionHead title="Departures today" count={s.checkOutsToday.length} />
         <List items={s.checkOutsToday} empty="No departures today." showDeparted showPayment />
