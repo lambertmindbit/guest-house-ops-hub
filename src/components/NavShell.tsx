@@ -5,59 +5,40 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
 
-// One config drives BOTH the phone tabs/sheet and the desktop sidebar.
+// One config drives BOTH the phone tabs and the desktop sidebar.
+// Round-2 IA consolidation: ~24 destinations → a small primary set + shallow
+// grouped secondary areas. Conflicts+Escalations merge into "Needs you"; the
+// 8 setup modules collapse behind one "Property setup" door (the /settings hub);
+// "More" is a real /more hub screen on phone (no bottom sheet).
 type NavId =
-  | "today" | "calendar" | "reservations" | "guests" | "housekeeping" | "pricing"
-  | "finance" | "analytics" | "conflicts" | "inbox" | "feeds" | "escalations" | "messages" | "settings" | "help"
-  | "set-property" | "set-room-types" | "set-rooms" | "set-channels" | "set-pricing" | "set-blocks" | "set-flagged";
+  | "today" | "calendar" | "bookings" | "guests" | "housekeeping" | "needsyou"
+  | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "settings" | "help";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
   today: { label: "Today", icon: "today", href: "/" },
   calendar: { label: "Calendar", icon: "calendar", href: "/calendar" },
-  reservations: { label: "Reservations", icon: "bed", href: "/reservations" },
+  bookings: { label: "Bookings", icon: "bed", href: "/reservations" },
   guests: { label: "Guests", icon: "guests", href: "/guests" },
-  // Kept the owner's earlier "Housekeeping" rename (the redesign guide says "Cleaning").
+  // Owner previously kept "Housekeeping" over the guide's "Cleaning" — preserved.
   housekeeping: { label: "Housekeeping", icon: "clean", href: "/housekeeping" },
-  pricing: { label: "Pricing", icon: "tag", href: "/pricing" },
+  needsyou: { label: "Needs you", icon: "alert", href: "/needs-you" },
   finance: { label: "Finance", icon: "wallet", href: "/finance" },
+  pricing: { label: "Pricing", icon: "tag", href: "/pricing" },
   analytics: { label: "Analytics", icon: "chart", href: "/analytics" },
-  conflicts: { label: "Conflicts", icon: "alert", href: "/conflicts" },
   inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
-  feeds: { label: "Feeds", icon: "link", href: "/feeds" },
-  escalations: { label: "Escalations", icon: "alert", href: "/escalations" },
   messages: { label: "Messages", icon: "inbox", href: "/messages" },
-  settings: { label: "Settings", icon: "settings", href: "/settings" },
+  settings: { label: "Property setup", icon: "settings", href: "/settings" },
   help: { label: "Help", icon: "help", href: "/help" },
-  // Settings sub-modules — surfaced directly in the desktop sidebar.
-  "set-property": { label: "Property", icon: "settings", href: "/settings/property" },
-  "set-room-types": { label: "Room types", icon: "bed", href: "/settings/room-types" },
-  "set-rooms": { label: "Rooms", icon: "door", href: "/settings/rooms" },
-  "set-channels": { label: "Channels", icon: "link", href: "/settings/channels" },
-  "set-pricing": { label: "Pricing rules", icon: "tag", href: "/settings/pricing" },
-  "set-blocks": { label: "Blocked dates", icon: "alert", href: "/settings/blocks" },
-  "set-flagged": { label: "Scam numbers", icon: "alert", href: "/settings/flagged-numbers" },
 };
 
-const PRIMARY: NavId[] = ["today", "calendar", "reservations"];
+const PRIMARY: NavId[] = ["today", "calendar", "bookings"];
 
-// Desktop sidebar: Settings' modules are listed directly under "Setup".
+// Desktop sidebar — grouped; Setup is one entry (the /settings hub owns the rest).
 const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
-  { label: "Operate", items: ["today", "calendar", "reservations", "guests", "housekeeping"] },
-  { label: "Money", items: ["pricing", "finance"] },
-  { label: "Insights", items: ["analytics", "conflicts"] },
-  { label: "Data", items: ["inbox", "feeds", "escalations", "messages"] },
-  { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks", "set-flagged"] },
-  { label: "Help", items: ["help"] },
-];
-
-// Phone "More" sheet: keep one Settings entry → the hub (don't bloat the sheet).
-const SHEET_GROUPS: { label: string; items: NavId[] }[] = [
-  { label: "Operations", items: ["reservations", "housekeeping", "conflicts"] },
-  { label: "Money", items: ["pricing", "finance"] },
-  { label: "Insights", items: ["analytics"] },
-  { label: "Data & channels", items: ["inbox", "feeds", "escalations", "messages"] },
-  { label: "Setup", items: ["set-property", "set-room-types", "set-rooms", "set-channels", "set-pricing", "set-blocks", "set-flagged"] },
-  { label: "System", items: ["help"] },
+  { label: "Operate", items: ["today", "calendar", "bookings", "guests", "housekeeping", "needsyou"] },
+  { label: "Business", items: ["finance", "pricing", "analytics"] },
+  { label: "Review", items: ["inbox", "messages"] },
+  { label: "Setup", items: ["settings"] },
 ];
 
 const TINTS = [
@@ -74,17 +55,22 @@ const STORE: Record<keyof Prefs, string> = {
   density: "ops-density",
 };
 
-// Which nav id "owns" the current route. Reservation routes map to Calendar.
-// Longest matching href wins so /settings/rooms picks "set-rooms", not "settings".
+// Which nav id "owns" the current route. Deep-link routes that no longer have a
+// standing nav entry fold onto their consolidated owner:
+//   /reservations*           → bookings
+//   /needs-you /conflicts /escalations → needsyou
+//   /settings* /feeds        → settings (the "Property setup" door)
 function activeId(pathname: string): NavId {
   if (pathname === "/") return "today";
-  if (pathname.startsWith("/reservations")) return "calendar";
+  if (pathname.startsWith("/reservations")) return "bookings";
+  if (pathname.startsWith("/needs-you") || pathname.startsWith("/conflicts") || pathname.startsWith("/escalations")) return "needsyou";
+  if (pathname.startsWith("/settings") || pathname.startsWith("/feeds")) return "settings";
   let best: NavId = "today";
   let bestLen = -1;
   for (const id of Object.keys(META) as NavId[]) {
     const href = META[id].href;
     if (href === "/") continue;
-    if ((pathname === href || pathname.startsWith(`${href}/`) || pathname.startsWith(href)) && href.length > bestLen) {
+    if ((pathname === href || pathname.startsWith(`${href}/`)) && href.length > bestLen) {
       best = id;
       bestLen = href.length;
     }
@@ -94,14 +80,14 @@ function activeId(pathname: string): NavId {
 
 function toolbarTitle(pathname: string): string {
   if (pathname === "/reservations/new") return "New booking";
-  if (pathname.startsWith("/reservations")) return "Reservation";
+  if (pathname.startsWith("/reservations/")) return "Reservation";
+  if (pathname.startsWith("/more")) return "More";
   return META[activeId(pathname)].label;
 }
 
 export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictCount?: number; escalationCount?: number }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [sheet, setSheet] = useState(false);
   const [panel, setPanel] = useState(false);
   const [prefs, setPrefs] = useState<Prefs>({ appearance: "system", tint: "teal", density: "comfortable" });
   const [effDark, setEffDark] = useState(false);
@@ -141,11 +127,12 @@ export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictC
   if (pathname === "/login") return null;
 
   const active = activeId(pathname);
-  const moreActive = !PRIMARY.includes(active);
+  const onMore = pathname.startsWith("/more");
+  const moreActive = onMore || !PRIMARY.includes(active);
+  const needsYouCount = conflictCount + escalationCount;
   const toggleAppearance = () => setPref("appearance", effDark ? "light" : "dark");
 
   async function logout() {
-    setSheet(false);
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
@@ -160,9 +147,14 @@ export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictC
             <span className="brandmark"><Icon name="door" size={17} /></span>
             <span className="rd-appbar__name"><b>Ops Hub</b><span>Guest House</span></span>
           </Link>
-          <button className="iconbtn" onClick={toggleAppearance} aria-label="Toggle dark mode">
-            <Icon name={effDark ? "sun" : "moon"} size={18} />
-          </button>
+          <div className="row" style={{ gap: 2 }}>
+            <button className="iconbtn" onClick={() => setPanel(true)} aria-label="Preferences">
+              <Icon name="settings" size={18} />
+            </button>
+            <button className="iconbtn" onClick={toggleAppearance} aria-label="Toggle dark mode">
+              <Icon name={effDark ? "sun" : "moon"} size={18} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -179,48 +171,11 @@ export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictC
             <Icon name="plus" size={24} />
           </Link>
         </div>
-        <button className={`tab${moreActive || sheet ? " on" : ""}`} onClick={() => setSheet(true)}>
+        <Link href="/more" className={`tab${moreActive ? " on" : ""}`}>
           <Icon name="more" size={22} />
           More
-        </button>
+        </Link>
       </nav>
-
-      {/* ---------- mobile: More sheet ---------- */}
-      {sheet && (
-        <div className="sheet-backdrop rd-m" onClick={() => setSheet(false)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="sheet__handle" />
-            {SHEET_GROUPS.map((g) => (
-              <div key={g.label}>
-                <div className="sheet__group">{g.label}</div>
-                {g.items.map((id) => (
-                  <Link key={id} href={META[id].href} className="sheet__row" onClick={() => setSheet(false)}>
-                    <span className="sheet__ic"><Icon name={META[id].icon} size={17} /></span>
-                    {META[id].label}
-                    {id === "conflicts" && conflictCount > 0 && (
-                      <span className="navitem__badge" style={{ marginLeft: "auto" }}>{conflictCount}</span>
-                    )}
-                    {id === "escalations" && escalationCount > 0 && (
-                      <span className="navitem__badge" style={{ marginLeft: "auto" }}>{escalationCount}</span>
-                    )}
-                    <Icon name="chevronR" size={16} className="sheet__chev" />
-                  </Link>
-                ))}
-              </div>
-            ))}
-            <div className="sheet__group">Account</div>
-            <button className="sheet__row" onClick={() => { setSheet(false); setPanel(true); }}>
-              <span className="sheet__ic"><Icon name="settings" size={17} /></span>
-              Preferences
-            </button>
-            <button className="sheet__row" onClick={logout}>
-              <span className="sheet__ic"><Icon name="logout" size={17} /></span>
-              Log out
-            </button>
-          </div>
-          <button className="sheet__cancel" onClick={() => setSheet(false)}>Close</button>
-        </div>
-      )}
 
       {/* ---------- desktop: sidebar ---------- */}
       <aside className="sidebar rd-d">
@@ -235,13 +190,16 @@ export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictC
               <Link key={id} href={META[id].href} className={`navitem${active === id ? " on" : ""}`}>
                 <span className="navitem__ic"><Icon name={META[id].icon} size={17} /></span>
                 {META[id].label}
-                {id === "conflicts" && conflictCount > 0 && <span className="navitem__badge">{conflictCount}</span>}
-                {id === "escalations" && escalationCount > 0 && <span className="navitem__badge">{escalationCount}</span>}
+                {id === "needsyou" && needsYouCount > 0 && <span className="navitem__badge">{needsYouCount}</span>}
               </Link>
             ))}
           </div>
         ))}
         <div className="sidebar__spacer" />
+        <Link href="/help" className={`navitem${active === "help" ? " on" : ""}`}>
+          <span className="navitem__ic"><Icon name="help" size={17} /></span>
+          Help
+        </Link>
         <button className="navitem" onClick={() => setPanel(true)}>
           <span className="navitem__ic"><Icon name="settings" size={17} /></span>
           Preferences

@@ -535,6 +535,9 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 /* =========================================================================
    REDESIGN SETTINGS (slice 7) — hub list → focused sub-pages.
    ========================================================================= */
+/* Back-chevron link (sub-pages, Needs you) — ported from redesign/shell.css. */
+.backlink { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-meta); font-weight: 600;
+  color: var(--accent); text-decoration: none; margin-bottom: 12px; }
 .setgroup { margin-bottom: 18px; }
 .setgroup__label { font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); padding: 0 4px 7px; }
 .setlist { border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; background: var(--surface); }
