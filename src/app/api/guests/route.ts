@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
+import { syncBlacklistToScamList } from "@/lib/blacklist-sync";
 
 const schema = z.object({ q: z.string().optional() });
 
@@ -89,6 +90,8 @@ export async function POST(request: Request) {
     const guest = await prisma.guest.create({
       data: { ...rest, ...parseCformDates({ passportIssueDate, passportExpiry, visaIssueDate, visaExpiry, arrivalInIndia }) },
     });
+    // A guest created already blacklisted goes onto the scam list too.
+    if (guest.blocked) await syncBlacklistToScamList(guest);
     return ok(guest, 201);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

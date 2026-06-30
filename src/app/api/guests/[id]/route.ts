@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
+import { syncBlacklistToScamList } from "@/lib/blacklist-sync";
 
 const optDate = dateOnly.nullable().optional();
 
@@ -70,5 +71,11 @@ export async function PATCH(
   };
 
   const guest = await prisma.guest.update({ where: { id }, data: { ...rest, ...parsedDates } });
+
+  // Sync the scam list when the blacklist state (or its reason) changed.
+  if (parsed.data.blocked !== undefined || parsed.data.blockReason !== undefined) {
+    await syncBlacklistToScamList(guest);
+  }
+
   return ok(guest);
 }

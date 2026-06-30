@@ -227,7 +227,9 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
           <span className="banner__txt">{error}</span>
         </div>
       )}
-      {blockedWarn && (
+      {/* A blacklisted guest is now auto-added to the scam list, so the scam
+          banner (which blocks Save) supersedes this advisory one — show only one. */}
+      {blockedWarn && !scamWarn && (
         <div className="banner banner--danger" style={{ marginBottom: 14 }}>
           <span className="banner__icon"><Icon name="alert" size={18} /></span>
           <span className="banner__txt"><b>Blacklisted guest:</b> {blockedWarn}</span>
