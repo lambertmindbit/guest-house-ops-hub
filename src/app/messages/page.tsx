@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listMessages } from "@/lib/messaging";
+import { displayDate } from "@/lib/format";
 import { PageHead, SectionLabel, EmptyState } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,7 @@ export default async function MessagesPage() {
                     </Link>
                   )}
                   <span className="faint" style={{ fontSize: 12 }}>
-                    {new Date(m.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                    {displayDate(new Date(m.createdAt))} · {new Date(m.createdAt).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
                   </span>
                 </div>
               </div>

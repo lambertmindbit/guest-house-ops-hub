@@ -107,7 +107,7 @@ export default async function ReservationsPage({
 
         {/* List */}
         {reservations.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--text-subtle)", fontSize: 14 }}>
+          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--text-subtle)", fontSize: "var(--fs-body)" }}>
             No reservations found.
           </div>
         ) : (
@@ -122,13 +122,13 @@ export default async function ReservationsPage({
                   </div>
                   <div className="rowcard__meta">{r.room.label} · {stayDates(r)}</div>
                   <div className="row" style={{ gap: 10, flexWrap: "wrap", marginTop: 2 }}>
-                    <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>{displayMoney(r.grossAmount)}</span>
-                    {r.otaRef && <span style={{ fontSize: 12, color: "var(--text-subtle)" }}>Ref: {r.otaRef}</span>}
+                    <span style={{ fontSize: "var(--fs-small)", color: "var(--ink)", fontWeight: 500 }}>{displayMoney(r.grossAmount)}</span>
+                    {r.otaRef && <span style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)" }}>Ref: {r.otaRef}</span>}
                   </div>
                 </div>
                 <div className="rowcard__right">
                   <StatusPill kind={STATUS_KIND[r.status] ?? "ink"}>{STATUS_LABEL[r.status] ?? r.status}</StatusPill>
-                  <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{r.guest.phone}</span>
+                  <span style={{ fontSize: "var(--fs-meta)", color: "var(--text-faint)" }}>{r.guest.phone}</span>
                 </div>
               </Link>
             ))}
