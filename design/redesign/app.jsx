@@ -1,72 +1,73 @@
-/* redesign/app.jsx — prototype shell: phone + desktop frames, one nav model,
-   router, More sheet, Preferences (appearance / accent / density). */
+/* redesign/app.jsx — prototype shell: phone + desktop frames, consolidated IA.
+   Phone bar: Today · Calendar · ＋New · Bookings · More(hub screen).
+   "Needs you" merges conflicts+escalations. Setup is one door. */
 var { useState, useEffect } = React;
 
 const TITLES = {
-  today: "Today", calendar: "Calendar", guests: "Guests", housekeeping: "Cleaning",
-  pricing: "Pricing", finance: "Finance", analytics: "Analytics", conflicts: "Conflicts",
-  inbox: "Inbox", feeds: "Feeds", settings: "Settings", reservation: "Reservation", new: "New booking",
+  today: "Today", calendar: "Calendar", bookings: "Bookings", guests: "Guests", housekeeping: "Cleaning",
+  pricing: "Pricing", finance: "Finance", analytics: "Analytics", needsyou: "Needs you",
+  inbox: "Inbox", messages: "Messages", settings: "Settings", more: "More",
+  reservation: "Reservation", new: "New booking",
 };
 
-// One nav config drives BOTH phone tabs/sheet and desktop sidebar (keep all 11 visible)
+// Phone bottom bar (FAB + More handled separately)
 const PRIMARY = [
   { id: "today", label: "Today", icon: "today" },
   { id: "calendar", label: "Calendar", icon: "calendar" },
-  { id: "guests", label: "Guests", icon: "guests" },
+  { id: "bookings", label: "Bookings", icon: "bed" },
 ];
+
+// Desktop sidebar — grouped; Setup collapses to one entry.
 const SIDEBAR_GROUPS = [
-  { label: "Operate", items: ["today", "calendar", "guests", "housekeeping"] },
-  { label: "Money", items: ["pricing", "finance"] },
-  { label: "Insights", items: ["analytics", "conflicts"] },
-  { label: "Data", items: ["inbox", "feeds"] },
-  { label: "System", items: ["settings"] },
+  { label: "Operate", items: ["today", "calendar", "bookings", "guests", "housekeeping", "needsyou"] },
+  { label: "Business", items: ["finance", "pricing", "analytics"] },
+  { label: "Review", items: ["inbox", "messages"] },
+  { label: "Setup", items: ["settings"] },
 ];
-const SHEET_GROUPS = [
-  { label: "Operations", items: ["housekeeping", "conflicts"] },
-  { label: "Money", items: ["pricing", "finance"] },
-  { label: "Insights", items: ["analytics"] },
-  { label: "Data & channels", items: ["inbox", "feeds"] },
-  { label: "System", items: ["settings"] },
-];
+
 const META = {
   today: { label: "Today", icon: "today" }, calendar: { label: "Calendar", icon: "calendar" },
-  guests: { label: "Guests", icon: "guests" }, housekeeping: { label: "Cleaning", icon: "clean" },
+  bookings: { label: "Bookings", icon: "bed" }, guests: { label: "Guests", icon: "guests" },
+  housekeeping: { label: "Cleaning", icon: "clean" }, needsyou: { label: "Needs you", icon: "alert" },
   pricing: { label: "Pricing", icon: "tag" }, finance: { label: "Finance", icon: "wallet" },
-  analytics: { label: "Analytics", icon: "chart" }, conflicts: { label: "Conflicts", icon: "alert" },
-  inbox: { label: "Inbox", icon: "inbox" }, feeds: { label: "Feeds", icon: "link" }, settings: { label: "Settings", icon: "settings" },
+  analytics: { label: "Analytics", icon: "chart" }, inbox: { label: "Inbox", icon: "inbox" },
+  messages: { label: "Messages", icon: "inbox" }, settings: { label: "Property setup", icon: "settings" },
 };
 
 let go = () => {}; // bound inside App
 
-function renderScreen(screen, nav) {
+function renderScreen(screen, nav, desktop) {
   switch (screen) {
     case "today": return <Today go={nav} />;
     case "calendar": return <Calendar go={nav} defaultView="day" />;
     case "calendar-grid": return <Calendar go={nav} defaultView="grid" />;
+    case "bookings": return <Bookings go={nav} />;
+    case "more": return <MoreHub go={nav} />;
     case "guests": return <Guests go={nav} />;
     case "housekeeping": return <Housekeeping go={nav} />;
-    case "conflicts": return <Conflicts go={nav} />;
+    case "needsyou": return <NeedsYou go={nav} />;
+    case "messages": return <Messages go={nav} />;
+    case "inbox": return <Inbox go={nav} />;
     case "finance": return <Finance go={nav} />;
-    case "settings": return <Settings go={nav} />;
+    case "settings": return <Settings go={nav} desktop={desktop} />;
     case "new": return <NewReservation go={nav} />;
     case "reservation": return <ReservationDetail go={nav} />;
-    case "pricing": return <GenericScreen title="Pricing" sub="Advisory rate calendar" icon="tag" />;
-    case "analytics": return <GenericScreen title="Analytics" sub="Occupancy · ADR · RevPAR · source mix" icon="chart" />;
-    case "inbox": return <GenericScreen title="Inbox" sub="Paste an OTA confirmation to create a booking" icon="inbox" />;
-    case "feeds": return <GenericScreen title="Feeds" sub="iCal import / export" icon="link" />;
+    case "pricing": return <Pricing go={nav} />;
+    case "analytics": return <Analytics go={nav} />;
     default: return <Today go={nav} />;
   }
 }
 
-const PRIMARY_IDS = ["today", "calendar", "guests"];
+const PRIMARY_IDS = ["today", "calendar", "bookings"];
 function activeTab(screen) {
   if (PRIMARY_IDS.includes(screen)) return screen;
-  if (screen === "new" || screen === "reservation") return "calendar";
+  if (screen === "new" || screen === "reservation") return "bookings";
   return "more";
 }
 
-function PhoneFrame({ screen, nav, prefs, setPref, sheet, openSheet, closeSheet }) {
+function PhoneFrame({ screen, nav, prefs, setPref }) {
   const dark = prefs.appearance === "dark";
+  const active = activeTab(screen);
   return (
     <div className="phone">
       <div className="phone__notch" />
@@ -80,7 +81,7 @@ function PhoneFrame({ screen, nav, prefs, setPref, sheet, openSheet, closeSheet 
         <div className="appbar__nav">
           <a className="appbar__brand" onClick={() => nav("today")} style={{ cursor: "pointer" }}>
             <span className="brandmark"><RDIcon name="door" size={17} /></span>
-            <span className="appbar__name"><b>Ops Hub</b><span>Pinewood Guest House</span></span>
+            <span className="appbar__name"><b>Ops Hub</b><span>Hillview Guest House</span></span>
           </a>
           <div className="appbar__actions">
             <button className="iconbtn" onClick={() => setPref("appearance", dark ? "light" : "dark")} aria-label="Toggle dark"><RDIcon name={dark ? "sun" : "moon"} size={18} /></button>
@@ -92,65 +93,41 @@ function PhoneFrame({ screen, nav, prefs, setPref, sheet, openSheet, closeSheet 
 
       <nav className="tabbar">
         {PRIMARY.map((t) => (
-          <a key={t.id} className={"tab" + (activeTab(screen) === t.id ? " on" : "")} onClick={() => nav(t.id)}>
+          <a key={t.id} className={"tab" + (active === t.id ? " on" : "")} onClick={() => nav(t.id)}>
             <RDIcon name={t.icon} size={22} /> {t.label}
           </a>
         ))}
         <div className="tab__slot"><button className="fab" onClick={() => nav("new")} aria-label="New booking"><RDIcon name="plus" size={24} /></button></div>
-        <button className={"tab" + (activeTab(screen) === "more" ? " on" : "")} onClick={openSheet}>
+        <a className={"tab" + (active === "more" ? " on" : "")} onClick={() => nav("more")}>
           <RDIcon name="more" size={22} /> More
-        </button>
+        </a>
       </nav>
-
-      {sheet && <MoreSheet nav={nav} close={closeSheet} />}
-    </div>
-  );
-}
-
-function MoreSheet({ nav, close }) {
-  return (
-    <div className="sheet-backdrop" onClick={close}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__handle" />
-        {SHEET_GROUPS.map((g) => (
-          <div key={g.label}>
-            <div className="sheet__group">{g.label}</div>
-            {g.items.map((id) => (
-              <a key={id} className="sheet__row" onClick={() => { close(); nav(id); }}>
-                <span className="sheet__ic"><RDIcon name={META[id].icon} size={17} /></span>
-                {META[id].label}
-                <RDIcon name="chevronR" size={16} className="sheet__chev" style={{ marginLeft: "auto", color: "var(--text-faint)" }} />
-              </a>
-            ))}
-          </div>
-        ))}
-      </div>
-      <button className="sheet__cancel" onClick={close}>Close</button>
     </div>
   );
 }
 
 function DesktopFrame({ screen, nav, prefs, setPref, openPrefs }) {
   const dark = prefs.appearance === "dark";
+  const active = activeTab(screen);
   return (
     <div className="desktop">
       <div className="dtopbar">
         <span className="dot" style={{ background: "#ff5f57" }} /><span className="dot" style={{ background: "#febc2e" }} /><span className="dot" style={{ background: "#28c840" }} />
-        <span className="muted" style={{ marginLeft: 10, fontSize: "var(--fs-meta)" }}>Ops Hub — Pinewood Guest House</span>
+        <span className="muted" style={{ marginLeft: 10, fontSize: "var(--fs-meta)" }}>Ops Hub — Hillview Guest House</span>
       </div>
       <div className="dbody">
         <aside className="sidebar">
           <div className="sidebar__brand">
             <span className="brandmark"><RDIcon name="door" size={17} /></span>
-            <span className="appbar__name"><b style={{ fontFamily: "var(--font-display)", fontSize: 15, color: "var(--ink)" }}>Ops Hub</b><span style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-faint)", fontWeight: 600 }}>Pinewood</span></span>
+            <span className="appbar__name"><b style={{ fontFamily: "var(--font-display)", fontSize: 15, color: "var(--ink)" }}>Ops Hub</b><span style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-faint)", fontWeight: 600 }}>Hillview</span></span>
           </div>
           {SIDEBAR_GROUPS.map((g) => (
             <div key={g.label}>
               <div className="sidebar__group">{g.label}</div>
               {g.items.map((id) => (
-                <a key={id} className={"navitem" + (screen === id || (activeTab(screen) === id) ? " on" : "")} onClick={() => nav(id)}>
+                <a key={id} className={"navitem" + (screen === id || active === id ? " on" : "")} onClick={() => nav(id)}>
                   <span className="navitem__ic"><RDIcon name={META[id].icon} size={17} /></span>{META[id].label}
-                  {id === "conflicts" && <span className="navitem__badge">1</span>}
+                  {id === "needsyou" && <span className="navitem__badge">2</span>}
                 </a>
               ))}
             </div>
@@ -162,11 +139,11 @@ function DesktopFrame({ screen, nav, prefs, setPref, openPrefs }) {
           <div className="dtoolbar">
             <span className="display" style={{ fontSize: 17 }}>{TITLES[screen] || "Today"}</span>
             <div style={{ flex: 1 }} />
-            <div className="dsearch"><RDIcon name="search" size={15} /><input placeholder="Search guests, rooms…" /></div>
+            <div className="dsearch"><RDIcon name="search" size={15} /><input placeholder="Search guests & bookings…" /></div>
             <button className="iconbtn" onClick={() => setPref("appearance", dark ? "light" : "dark")}><RDIcon name={dark ? "sun" : "moon"} size={17} /></button>
             <button className="btn btn--primary btn--sm" onClick={() => nav("new")}><RDIcon name="plus" size={15} /> New booking</button>
           </div>
-          <div className="dcontent" key={screen}>{renderScreen(screen === "calendar" ? "calendar-grid" : screen, nav)}</div>
+          <div className="dcontent" key={screen}>{renderScreen(screen === "calendar" ? "calendar-grid" : screen, nav, true)}</div>
         </div>
       </div>
     </div>
@@ -209,11 +186,10 @@ function Prefs({ prefs, setPref, close }) {
 function App() {
   const [platform, setPlatform] = useState("phone");
   const [screen, setScreen] = useState("today");
-  const [sheet, setSheet] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [prefs, setPrefs] = useState({ appearance: "light", tint: "teal", density: "comfortable" });
 
-  const nav = (s) => { setScreen(s); setSheet(false); };
+  const nav = (s) => { setScreen(s); };
   go = nav;
 
   function setPref(key, value) {
@@ -246,7 +222,7 @@ function App() {
       </div>
 
       {platform === "phone"
-        ? <PhoneFrame screen={screen} nav={nav} prefs={prefs} setPref={setPref} sheet={sheet} openSheet={() => setSheet(true)} closeSheet={() => setSheet(false)} />
+        ? <PhoneFrame screen={screen} nav={nav} prefs={prefs} setPref={setPref} />
         : <DesktopFrame screen={screen} nav={nav} prefs={prefs} setPref={setPref} openPrefs={() => setPrefsOpen(true)} />}
 
       {prefsOpen && <Prefs prefs={prefs} setPref={setPref} close={() => setPrefsOpen(false)} />}

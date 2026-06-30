@@ -7,40 +7,66 @@ function NewReservation({ go }) {
   const [channel, setChannel] = useStateRes("Direct");
   const [room, setRoom] = useStateRes("101");
   const [mode, setMode] = useStateRes("UPI");
-  // rooms free for 1→3 Jun (102 has the conflict, 103/301 booked across these dates)
-  const freeRooms = { "101": false, "102": true, "103": true, "201": false, "202": false, "301": true };
+  const [phone, setPhone] = useStateRes("");
+  const [checkin, setCheckin] = useStateRes("2026-06-30");
+  const [checkout, setCheckout] = useStateRes("2026-07-02");
+  const [foreign, setForeign] = useStateRes(false);
+  // rooms free for the selected dates (102 has the conflict, 103/301 booked across these dates)
+  const freeRooms = { "101": true, "102": false, "103": true, "201": true, "202": false, "301": true };
+  const nights = Math.max(1, Math.round((new Date(checkout) - new Date(checkin)) / 86400000)) || 1;
+  const digits = (s) => s.replace(/\D/g, "");
+  const flagged = digits(phone).length >= 6 && DATA.flaggedNumbers.find((f) => digits(f.phone).endsWith(digits(phone).slice(-7)) || digits(phone).endsWith(digits(f.phone).slice(-7)));
 
   return (
     <div className="entrance">
-      <a className="backlink" onClick={() => go("calendar")}><RDIcon name="chevronL" size={15} /> Cancel</a>
+      <a className="backlink" onClick={() => go("bookings")}><RDIcon name="chevronL" size={15} /> Cancel</a>
       <div className="display" style={{ marginBottom: 16 }}>New booking</div>
 
       <div className="eyebrow eyebrow--accent" style={{ marginBottom: 8 }}>Guest</div>
       <div className="card card--pad" style={{ marginBottom: 18 }}>
         <div className="field">
           <label className="field-label">Phone <span className="req">*</span></label>
-          <input className="input" placeholder="+91 …" defaultValue="" />
-          <div className="field-hint">We’ll match an existing guest as you type.</div>
+          <input className="input" placeholder="+91 …" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          {flagged
+            ? <div className="field-error" style={{ display: "flex", alignItems: "center", gap: 5 }}><RDIcon name="ban" size={13} /> On the scam list — {flagged.reason}.</div>
+            : <div className="field-hint">We’ll match an existing guest as you type.</div>}
         </div>
         <div className="field" style={{ marginBottom: 0 }}>
           <label className="field-label">Full name <span className="req">*</span></label>
           <input className="input" placeholder="e.g. Priya Nair" defaultValue="" />
         </div>
+        <div className="row" style={{ justifyContent: "space-between", gap: 12, marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border-subtle)" }}>
+          <div><div style={{ fontWeight: 600, color: "var(--ink)", fontSize: "var(--fs-small)" }}>Foreign national</div><div className="field-hint" style={{ marginTop: 1 }}>Collect C-Form registration details</div></div>
+          <button className={"switch" + (foreign ? " on" : "")} onClick={() => setForeign(!foreign)} aria-label="Foreign national"><span /></button>
+        </div>
       </div>
+
+      {foreign && (
+        <div className="card card--pad" style={{ marginBottom: 18, borderColor: "var(--accent)" }}>
+          <div className="eyebrow eyebrow--accent" style={{ marginBottom: 10 }}>C-Form · foreign-national registration</div>
+          <div className="form-grid">
+            <div className="field"><label className="field-label">Nationality</label><input className="input" placeholder="e.g. British" /></div>
+            <div className="field"><label className="field-label">Passport no.</label><input className="input" placeholder="—" /></div>
+            <div className="field"><label className="field-label">Date of entry</label><input className="input" type="date" /></div>
+            <div className="field"><label className="field-label">Port of entry</label><input className="input" placeholder="e.g. Delhi" /></div>
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}><label className="field-label">Purpose of visit</label><input className="input" placeholder="Tourism" /></div>
+        </div>
+      )}
 
       <div className="eyebrow eyebrow--accent" style={{ marginBottom: 8 }}>Stay</div>
       <div className="card card--pad" style={{ marginBottom: 18 }}>
         <div className="form-grid">
           <div className="field" style={{ marginBottom: 0 }}>
             <label className="field-label">Check-in</label>
-            <input className="input" type="date" defaultValue="2026-06-01" />
+            <input className="input" type="date" value={checkin} onChange={(e) => setCheckin(e.target.value)} />
           </div>
           <div className="field" style={{ marginBottom: 0 }}>
             <label className="field-label">Check-out</label>
-            <input className="input" type="date" defaultValue="2026-06-03" />
+            <input className="input" type="date" value={checkout} onChange={(e) => setCheckout(e.target.value)} />
           </div>
         </div>
-        <div className="field-hint" style={{ marginBottom: 14 }}>2 nights</div>
+        <div className="field-hint" style={{ marginBottom: 14 }}>{nights} night{nights === 1 ? "" : "s"}</div>
         <label className="field-label">Room <span className="req">*</span></label>
         <div className="chips">
           {DATA.rooms.map((r) => {
@@ -88,6 +114,9 @@ function NewReservation({ go }) {
           <textarea className="textarea" placeholder="Late check-in, extra bed…"></textarea>
         </div>
       </div>
+
+      <button className="btn btn--primary btn--block" disabled={!!flagged} style={{ marginBottom: 6 }}><RDIcon name="check" size={16} /> Save booking</button>
+      <div className="field-hint" style={{ textAlign: "center" }}>{flagged ? "Resolve the scam-list warning to continue." : nights + " night" + (nights === 1 ? "" : "s") + " · Room " + room + " · " + channel}</div>
     </div>
   );
 }
@@ -127,10 +156,16 @@ function ReservationDetail({ go }) {
           <div><div className="eyebrow">Arrival</div><div style={{ fontWeight: 600, color: "var(--ink)", marginTop: 3 }}>{r.arrival}</div></div>
         </div>
         {r.requests && <><hr className="hairline" style={{ margin: "12px 0" }} /><div className="eyebrow">Special requests</div><div style={{ fontSize: "var(--fs-small)", marginTop: 4 }}>{r.requests}</div></>}
+        <hr className="hairline" style={{ margin: "12px 0" }} />
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <div className="eyebrow">Registration</div>
+          <StatusBadge kind="good"><RDIcon name="check" size={11} /> ID on file</StatusBadge>
+        </div>
       </div>
 
       {/* contextual hero action */}
-      <button className="btn btn--primary btn--block" style={{ marginBottom: 14 }}><RDIcon name="arrowDown" size={17} /> Check in guest</button>
+      <button className="btn btn--primary btn--block" style={{ marginBottom: 10 }}><RDIcon name="arrowDown" size={17} /> Check in guest</button>
+      <button className="btn btn--ghost btn--block" style={{ marginBottom: 14 }} onClick={() => go("messages")}><RDIcon name="inbox" size={16} /> Message guest</button>
 
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-hdr"><div className="spread"><h3>Payments</h3>

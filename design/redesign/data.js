@@ -137,9 +137,61 @@ window.DATA = (function () {
     { room: "102", from: "2 Jun", to: "3 Jun", reason: "Plumbing repair" },
   ];
 
+  // ROOT-agent staged items — what "Needs you" and "Review" surface.
+  const escalations = [
+    { id: "e1", title: "Approve cancellation — Asha Menon (101)", cat: "Cancellation",
+      severity: "high", from: "Booking assistant", note: "Guest requested cancel + refund of ₹4,000 advance.", resId: "r-asha" },
+  ];
+  const messages = [
+    { id: "m1", to: "Rohan Gupta", channel: "WhatsApp", when: "Today 09:12", status: "Logged",
+      body: "Hi Rohan, your room 301 is confirmed for 1–4 Jun. Reach out anytime." },
+    { id: "m2", to: "Priya Nair", channel: "WhatsApp", when: "Yesterday", status: "Logged",
+      body: "Looking forward to hosting you on the 30th. Check-in from 14:00." },
+    { id: "m3", to: "Meera Iyer", channel: "SMS", when: "28 Jun", status: "Logged",
+      body: "Balance ₹10,500 due at check-in. See you soon!" },
+  ];
+  const inbox = [
+    { id: "i1", channel: "Booking.com", guest: "Karan Shah", dates: "2–4 Jun", room: "Deluxe", ref: "BDC-91183" },
+    { id: "i2", channel: "Agoda", guest: "Meera Iyer", dates: "3–4 Jun", room: "Standard Double", ref: "AGD-55012" },
+  ];
+  // Flat bookings list for the searchable Bookings screen.
+  const bookings = [
+    ...checkins.map((r) => ({ ...r, when: "Today", status: "Arrives" })),
+    ...inhouse.filter((r) => !checkins.find((c) => c.id === r.id)).map((r) => ({ ...r, when: "In-house", status: "Staying" })),
+    ...upcoming.map((r) => ({ ...r, when: r.date, status: "Upcoming" })),
+    ...checkouts.map((r) => ({ ...r, when: "Today", status: "Departs" })),
+  ];
+
+  const analytics = {
+    occupancy: 68, occDelta: 6, adr: 3450, adrDelta: -2, revpar: 2346, revenue: 142000,
+    range: "Last 30 days",
+    trend: [55, 60, 48, 52, 71, 83, 77, 64, 58, 62, 70, 85, 80, 68],
+    sourceMix: [
+      { ch: "Direct", pct: 34 }, { ch: "Booking.com", pct: 24 }, { ch: "WhatsApp", pct: 18 },
+      { ch: "Agoda", pct: 14 }, { ch: "MakeMyTrip", pct: 10 },
+    ],
+    topTypes: [
+      { name: "Deluxe", occ: 82 }, { name: "Standard Double", occ: 64 }, { name: "Family Suite", occ: 51 },
+    ],
+  };
+
+  const flaggedNumbers = [
+    { phone: "+91 99999 00001", reason: "Repeated chargebacks via Booking.com", added: "12 May" },
+    { phone: "+91 90000 12345", reason: "No-show, abusive on arrival", added: "3 Apr" },
+  ];
+  const guestList = [
+    { id: "r-tara", name: "Tara Joshi", phone: "+91 70219 88410", channel: "WhatsApp", visits: 5 },
+    { id: "r-rohan", name: "Rohan Gupta", phone: "+91 98220 41100", channel: "Direct", visits: 3, balance: 10000 },
+    { id: "r-asha", name: "Asha Menon", phone: "+91 99580 22117", channel: "Booking.com", visits: 1 },
+    { id: "r-vikram", name: "Vikram Singh", phone: "+91 90071 55243", channel: "Agoda", visits: 2 },
+    { id: "r-meera", name: "Meera Iyer", phone: "+44 7700 900812", channel: "Agoda", visits: 1, foreign: true, balance: 10500 },
+    { id: "r-priya", name: "Priya Nair", phone: "+91 98451 77329", channel: "WhatsApp", visits: 2 },
+    { id: "r-karan", name: "Karan Shah", phone: "+91 99999 00001", channel: "Booking.com", visits: 1, blocked: true, blockReason: "On scam / flagged list" },
+  ];
+
   return {
     CH, rooms, checkins, checkouts, inhouse, upcoming, toClean, grid, days, dows, conflict, reservation, finance, channels,
-    property, roomTypes, roomList, pricing, seasons, blocks,
+    property, roomTypes, roomList, pricing, seasons, blocks, escalations, messages, inbox, bookings, analytics, guestList, flaggedNumbers,
     kpis: { occupancy: 83, occRooms: "5 / 6 rooms", inhouse: 5, checkins: 3, checkouts: 2 },
     money: (n) => "₹" + n.toLocaleString("en-IN"),
   };
