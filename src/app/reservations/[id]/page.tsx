@@ -23,6 +23,14 @@ function initials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
+// WhatsApp deep link — international digits, no "+". Bare 10-digit numbers are
+// assumed Indian (+91), matching the property's market.
+function waLink(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  const intl = digits.length === 10 ? `91${digits}` : digits;
+  return `https://wa.me/${intl}`;
+}
+
 export default async function ReservationDetailPage({
   params,
 }: {
@@ -93,6 +101,24 @@ export default async function ReservationDetailPage({
           <div style={{ fontSize: "var(--fs-small)", marginTop: 4 }}>
             {r.specialRequests || <span className="muted">None</span>}
           </div>
+
+          {/* Registration: ID status + (for foreign guests) a C-Form badge. */}
+          <hr className="hairline" style={{ margin: "12px 0" }} />
+          <div className="spread">
+            <div>
+              <div className="eyebrow">Registration</div>
+              <div style={{ fontSize: "var(--fs-small)", marginTop: 4 }}>
+                {r.guest.idDocumentPath
+                  ? "ID document on file"
+                  : r.guest.idNumber
+                  ? `ID: ${r.guest.idNumber}`
+                  : <span className="muted">No ID on file</span>}
+              </div>
+            </div>
+            {r.guest.nationality && (
+              <span className="badge badge--neutral">C-Form · {r.guest.nationality}</span>
+            )}
+          </div>
         </div>
 
         {/* contextual hero action */}
@@ -103,6 +129,17 @@ export default async function ReservationDetailPage({
             checkedOutAt={r.checkedOutAt ? r.checkedOutAt.toISOString() : null}
           />
         )}
+
+        {/* secondary action: message the guest on WhatsApp */}
+        <a
+          href={waLink(r.guest.phone)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn--ghost btn--block"
+          style={{ marginTop: 12 }}
+        >
+          <Icon name="phone" size={16} /> Message guest on WhatsApp
+        </a>
 
         <PaymentsPanel
           reservationId={r.id}
