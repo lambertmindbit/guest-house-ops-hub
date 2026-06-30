@@ -74,12 +74,12 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
   return (
     <section style={{ marginTop: 32 }}>
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
-        <span style={{ fontWeight: 700, fontSize: 17 }}>Import from OTAs</span>
+        <span style={{ fontWeight: 700, fontSize: "var(--fs-h3)" }}>Import from OTAs</span>
         <button onClick={syncNow} disabled={busy} className="btn btn--primary btn--sm">
           {busy ? "Working…" : "Sync now"}
         </button>
       </div>
-      <p style={{ fontSize: 13.5, color: "var(--text-subtle)", marginBottom: 14, lineHeight: 1.5 }}>
+      <p style={{ fontSize: "var(--fs-body)", color: "var(--text-subtle)", marginBottom: 14, lineHeight: 1.5 }}>
         Paste the iCal link each OTA gives you for a room. Imported dates show as blocks on the calendar so they can&apos;t be double-booked.
       </p>
 
@@ -91,7 +91,7 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
       )}
 
       <form onSubmit={addFeed} className="card" style={{ padding: 16, marginBottom: 16 }}>
-        {error && <p style={{ color: "var(--red-text)", fontSize: 13.5, marginBottom: 10 }}>{error}</p>}
+        {error && <p style={{ color: "var(--red-text)", fontSize: "var(--fs-body)", marginBottom: 10 }}>{error}</p>}
         <div className="form-grid" style={{ marginBottom: 10 }}>
           <div>
             <label className="field-label">Room</label>
@@ -120,11 +120,11 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
             <div key={f.id} className="card" style={{ padding: 14 }}>
               <div className="row" style={{ justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 600 }}>
+                  <div style={{ fontSize: "var(--fs-body)", fontWeight: 600 }}>
                     {f.label} <span style={{ color: "var(--text-subtle)", fontWeight: 500 }}>· Room {f.roomLabel}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--text-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.url}</div>
-                  <div style={{ marginTop: 4, fontSize: 12 }}>
+                  <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.url}</div>
+                  <div style={{ marginTop: 4, fontSize: "var(--fs-meta)" }}>
                     {f.lastError ? (
                       <span style={{ color: "var(--red-text)" }}>Error: {f.lastError}</span>
                     ) : f.lastSyncedAt ? (

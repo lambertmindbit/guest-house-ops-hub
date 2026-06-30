@@ -61,7 +61,7 @@ export default async function ReservationDetailPage({
           <span className="avatar">{initials(r.guest.name)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-              <span className="h2" style={{ fontSize: 20 }}>{r.guest.name}</span>
+              <span className="h2" style={{ fontSize: "var(--fs-h2)" }}>{r.guest.name}</span>
               <span className={`badge ${status.cls}`}>{status.cls === "badge--good" && <span className="dot" />}{status.label}</span>
             </div>
             <div className="row" style={{ gap: 8, marginTop: 4, flexWrap: "wrap" }}>
@@ -80,9 +80,9 @@ export default async function ReservationDetailPage({
             </div>
             <div style={{ textAlign: "right" }}>
               <div className="eyebrow">Amount</div>
-              <div className="h3 money" style={{ marginTop: 3, fontSize: 18 }}>{displayMoney(r.grossAmount)}</div>
+              <div className="h3 money" style={{ marginTop: 3, fontSize: "var(--fs-h2)" }}>{displayMoney(r.grossAmount)}</div>
               {r.advanceRequired && (
-                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>
                   Advance: {displayMoney(r.advanceRequired)}
                 </div>
               )}

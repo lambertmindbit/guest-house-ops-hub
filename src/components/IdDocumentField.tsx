@@ -23,8 +23,8 @@ export function IdDocumentField({
   if (!configured) {
     return (
       <div className="card" style={{ padding: 14, marginTop: 12, background: "var(--surface-2)" }}>
-        <div style={{ fontWeight: 600, fontSize: 13.5 }}>ID document upload</div>
-        <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3, lineHeight: 1.5 }}>
+        <div style={{ fontWeight: 600, fontSize: "var(--fs-body)" }}>ID document upload</div>
+        <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 3, lineHeight: 1.5 }}>
           Not configured. Create a private Supabase Storage bucket and set the storage env vars to enable scanned-ID uploads. See <code>docs/SETUP.md</code>.
         </div>
       </div>
@@ -62,11 +62,11 @@ export function IdDocumentField({
     <div className="card" style={{ padding: 14, marginTop: 12 }}>
       <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
         <div>
-          <div style={{ fontWeight: 600, fontSize: 13.5 }}>ID document</div>
-          <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3 }}>
+          <div style={{ fontWeight: 600, fontSize: "var(--fs-body)" }}>ID document</div>
+          <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 3 }}>
             {hasDocument ? "On file (private)" : "JPG, PNG, WEBP or PDF · max 5 MB"}
           </div>
-          {error && <div style={{ color: "var(--red-text)", fontSize: 12.5, marginTop: 4 }}>{error}</div>}
+          {error && <div style={{ color: "var(--red-text)", fontSize: "var(--fs-small)", marginTop: 4 }}>{error}</div>}
         </div>
         <div className="row" style={{ gap: 6, flex: "none" }}>
           {hasDocument && (

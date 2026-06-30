@@ -23,7 +23,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   return (
     <div className="set-md">
       <div className="set-md__list rd-d">
-        <div className="display" style={{ fontSize: 22, marginBottom: 12 }}>Settings</div>
+        <div className="display" style={{ fontSize: "var(--fs-h2)", marginBottom: 12 }}>Settings</div>
         {RAIL.map((g) => (
           <div key={g.group} className="setgroup">
             <div className="setgroup__label">{g.group}</div>

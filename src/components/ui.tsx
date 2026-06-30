@@ -106,7 +106,7 @@ export function KPI({ value, label, sub, tone, icon }: { value: ReactNode; label
   return (
     <div className="card" style={{ padding: 18, background: tone ? TONE_BG[tone] : "var(--surface)", borderColor: tone ? "transparent" : "var(--border)" }}>
       {icon && <div style={{ color: tone ? TONE_FG[tone] : "var(--accent-text)", marginBottom: 8 }}><Icon name={icon} size={20} /></div>}
-      <div className="num" style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1, color: tone ? TONE_FG[tone] : "var(--ink)" }}>{value}</div>
+      <div className="num" style={{ fontSize: "var(--fs-display)", fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1, color: tone ? TONE_FG[tone] : "var(--ink)" }}>{value}</div>
       <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 6 }}>{label}</div>
       {sub && <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-faint)", marginTop: 2 }}>{sub}</div>}
     </div>
@@ -152,12 +152,12 @@ export function GuestRow({ name, meta, channel, right, href }: { name: string; m
   const inner = (
     <>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 15.5 }}>{name}</div>
-        {meta && <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 3 }}>{meta}</div>}
+        <div style={{ fontWeight: 600, fontSize: "var(--fs-h3)" }}>{name}</div>
+        {meta && <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 3 }}>{meta}</div>}
       </div>
       <div className="col" style={{ alignItems: "flex-end", gap: 5 }}>
         {channel && <ChannelBadge name={channel} />}
-        {right && <span style={{ fontSize: 12.5, color: "var(--text-subtle)", fontWeight: 600 }}>{right}</span>}
+        {right && <span style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", fontWeight: 600 }}>{right}</span>}
       </div>
     </>
   );

@@ -64,7 +64,7 @@ export default async function NeedsYouPage() {
                   className="card card--pad"
                   style={{ background: "var(--red-bg)", borderColor: "var(--red-border)" }}
                 >
-                  <div className="row" style={{ gap: 8, color: "var(--red-text)", fontWeight: 700, fontSize: 15 }}>
+                  <div className="row" style={{ gap: 8, color: "var(--red-text)", fontWeight: 700, fontSize: "var(--fs-h3)" }}>
                     <Icon name="alert" size={18} /> Room {c.roomLabel} · overlap{" "}
                     {displayDate(parseDateOnly(c.overlapStart))} – {displayDate(parseDateOnly(c.overlapEnd))}
                   </div>

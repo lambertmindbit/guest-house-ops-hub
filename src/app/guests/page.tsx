@@ -76,12 +76,12 @@ export default async function GuestsPage({
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="row" style={{ gap: 7, flexWrap: "wrap" }}>
-                    <span style={{ fontWeight: 600, fontSize: 15.5 }}>{g.name}</span>
+                    <span style={{ fontWeight: 600, fontSize: "var(--fs-h3)" }}>{g.name}</span>
                     {g._count.reservations >= 2 && <span className="badge badge--paid">Repeat</span>}
                     {g.blocked && <span className="badge badge--danger">Flagged</span>}
                     {g.nationality && <span className="badge badge--neutral">Foreign · C-Form</span>}
                   </div>
-                  <div style={{ fontSize: 12.5, color: "var(--text-subtle)" }}>
+                  <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>
                     {g.phone}{g.email ? ` · ${g.email}` : ""}
                   </div>
                 </div>
