@@ -563,23 +563,24 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 /* Back-chevron link (sub-pages, Needs you) — ported from redesign/shell.css. */
 .backlink { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-meta); font-weight: 600;
   color: var(--accent); text-decoration: none; margin-bottom: 12px; }
-/* Settings master/detail (desktop): sticky section rail + detail pane. The
-   layout wraps each sub-page's own `.app-main`; on desktop we move the global
-   sidebar offset onto `.set-md` and neutralise the inner app-main so it doesn't
-   double-offset (no need to restructure the sub-pages). On phone the rail is
-   hidden (rd-d) and the sub-page renders as the usual full-screen drill-in. */
+/* Settings master/detail (desktop): a sticky card list (left) + detail pane
+   (right), ported from the redesign prototype's .set-md. The layout wraps each
+   sub-page's own `.app-main`; on desktop we move the global sidebar offset onto
+   `.set-md` and neutralise the inner app-main so it doesn't double-offset (no
+   need to restructure the sub-pages). On phone the list is hidden (rd-d) and
+   the sub-page renders as the usual full-screen drill-in. */
 .set-md__detail { min-width: 0; }
 @media (min-width: 900px) {
-  .set-md { display: grid; grid-template-columns: 224px 1fr; gap: 30px; align-items: start;
+  .set-md { display: flex; gap: 26px; align-items: flex-start;
     margin-left: 230px; max-width: 1230px; padding: 76px 40px 56px; }
   .set-md .app-main { margin: 0; max-width: none; padding: 0; }
-  .set-md__nav { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 2px; }
-  .set-md__row { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--r-md);
-    color: var(--text-muted); font-size: var(--fs-small); font-weight: 500; text-decoration: none; }
-  .set-md__row:hover { background: var(--surface-2); color: var(--ink); }
-  .set-md__row.on { background: var(--accent-bg); color: var(--accent-text); font-weight: 600; }
-  .set-md__row .setrow__ic { width: 26px; height: 26px; background: transparent; }
-  /* The rail is the nav on desktop — drop the per-page back-chevron. */
+  .set-md__list { width: 280px; flex: none; position: sticky; top: 76px; }
+  .set-md__detail { flex: 1; min-width: 0; }
+  /* Active section card — same as the prototype. */
+  .setrow--on { background: var(--accent-bg); }
+  .setrow--on .setrow__t { color: var(--accent-text); }
+  .setrow--on .setrow__ic { background: var(--accent); color: #fff; }
+  /* The card list is the nav on desktop — drop the per-page back-chevron. */
   .set-md__detail .backlink { display: none; }
 }
 .setgroup { margin-bottom: 18px; }
