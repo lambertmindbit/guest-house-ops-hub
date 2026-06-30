@@ -3,9 +3,12 @@ import { Icon } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-// The Settings hub: a grouped list of categories → each opens a focused
-// sub-page (real route, so Back and deep-links work).
-const GROUPS = [
+// The Settings hub ("Property setup") — the single Setup door. A grouped list of
+// categories → each opens a focused sub-page (real route, so Back and deep-links
+// work). `href` overrides the default `/settings/<key>` (used for iCal feeds,
+// which lives at /feeds).
+type SetItem = { key: string; title: string; sub: string; icon: string; href?: string };
+const GROUPS: { group: string; items: SetItem[] }[] = [
   { group: "Property", items: [{ key: "property", title: "Property details", sub: "Name, address, GST, check-in/out times", icon: "settings" }] },
   {
     group: "Inventory",
@@ -14,7 +17,13 @@ const GROUPS = [
       { key: "rooms", title: "Rooms", sub: "Add, archive, remove rooms", icon: "door" },
     ],
   },
-  { group: "Channels", items: [{ key: "channels", title: "Channels", sub: "Booking sources & commission", icon: "link" }] },
+  {
+    group: "Channels & sync",
+    items: [
+      { key: "channels", title: "Channels", sub: "Booking sources & commission", icon: "link" },
+      { key: "feeds", title: "iCal feeds", sub: "Sync availability with OTAs", icon: "link", href: "/feeds" },
+    ],
+  },
   { group: "Pricing", items: [{ key: "pricing", title: "Pricing rules", sub: "Weekend, season, lead-time, occupancy", icon: "tag" }] },
   { group: "Maintenance", items: [{ key: "blocks", title: "Blocked dates", sub: "Hold rooms out of service", icon: "alert" }] },
   { group: "Safety", items: [{ key: "flagged-numbers", title: "Scam / flagged numbers", sub: "Warn at booking if a phone is known bad", icon: "alert" }] },
@@ -33,7 +42,7 @@ export default function SettingsPage() {
             <div className="setgroup__label">{g.group}</div>
             <div className="setlist">
               {g.items.map((it) => (
-                <Link key={it.key} href={`/settings/${it.key}`} className="setrow">
+                <Link key={it.key} href={it.href ?? `/settings/${it.key}`} className="setrow">
                   <span className="setrow__ic"><Icon name={it.icon} size={17} /></span>
                   <span className="setrow__main">
                     <span className="setrow__t">{it.title}</span>
