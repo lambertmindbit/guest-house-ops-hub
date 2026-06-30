@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { parseDateOnly } from "@/lib/dates";
+import { parseDateOnly, formatDateOnly } from "@/lib/dates";
 
 const DAY_MS = 86_400_000;
 
@@ -18,6 +18,15 @@ export type SourceRow = {
   sharePct: number;
 };
 
+export type TrendPoint = { date: string; occupancyPct: number };
+
+export type RoomTypeRow = {
+  name: string;
+  soldRoomNights: number;
+  availableRoomNights: number;
+  occupancyPct: number;
+};
+
 export type Analytics = {
   from: string;
   to: string;
@@ -32,6 +41,8 @@ export type Analytics = {
   cancellationPct: number;
   bookingsArriving: number;
   sourceMix: SourceRow[];
+  trend: TrendPoint[];
+  byRoomType: RoomTypeRow[];
 };
 
 // All metrics are over the nights in [from, to). A stay contributes only the
@@ -42,12 +53,12 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
   const toDate = parseDateOnly(to);
   const nights = nightsBetween(fromDate, toDate);
 
-  const [rooms, overlapping, arriving] = await Promise.all([
-    prisma.room.count(),
+  const [roomList, overlapping, arriving] = await Promise.all([
+    prisma.room.findMany({ include: { roomType: true } }),
     // Confirmed stays overlapping the window drive occupancy/ADR/RevPAR/mix.
     prisma.reservation.findMany({
       where: { status: "confirmed", checkIn: { lt: toDate }, checkOut: { gt: fromDate } },
-      include: { channel: true },
+      include: { channel: true, room: { include: { roomType: true } } },
     }),
     // Everything arriving in the window drives cancellation rate + avg LOS.
     prisma.reservation.findMany({
@@ -56,10 +67,14 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
     }),
   ]);
 
+  const rooms = roomList.length;
   const availableRoomNights = rooms * nights;
   let soldRoomNights = 0;
   let revenue = 0;
   const sourceMap = new Map<string, { bookings: number; roomNights: number }>();
+  // Per-night occupied-room count (for the trend) and per-room-type sold nights.
+  const dayCount = new Array<number>(Math.max(0, nights)).fill(0);
+  const typeSold = new Map<string, number>();
 
   for (const r of overlapping) {
     const stayStart = r.checkIn > fromDate ? r.checkIn : fromDate;
@@ -75,7 +90,29 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
     row.bookings += 1;
     row.roomNights += nightsInWindow;
     sourceMap.set(r.channel.name, row);
+
+    typeSold.set(r.room.roomType.name, (typeSold.get(r.room.roomType.name) ?? 0) + nightsInWindow);
+
+    const startIdx = Math.round((stayStart.getTime() - fromDate.getTime()) / DAY_MS);
+    const endIdx = Math.round((stayEnd.getTime() - fromDate.getTime()) / DAY_MS);
+    for (let i = Math.max(0, startIdx); i < Math.min(nights, endIdx); i++) dayCount[i] += 1;
   }
+
+  const trend: TrendPoint[] = dayCount.map((c, i) => ({
+    date: formatDateOnly(new Date(fromDate.getTime() + i * DAY_MS)),
+    occupancyPct: rooms === 0 ? 0 : (c / rooms) * 100,
+  }));
+
+  // Rooms grouped by type → per-type available + sold room-nights.
+  const typeRoomCount = new Map<string, number>();
+  for (const rm of roomList) typeRoomCount.set(rm.roomType.name, (typeRoomCount.get(rm.roomType.name) ?? 0) + 1);
+  const byRoomType: RoomTypeRow[] = [...typeRoomCount.entries()]
+    .map(([name, roomCount]) => {
+      const avail = roomCount * nights;
+      const sold = typeSold.get(name) ?? 0;
+      return { name, soldRoomNights: sold, availableRoomNights: avail, occupancyPct: avail === 0 ? 0 : (sold / avail) * 100 };
+    })
+    .sort((a, b) => b.occupancyPct - a.occupancyPct);
 
   const confirmedArriving = arriving.filter((r) => r.status === "confirmed");
   const cancelledArriving = arriving.filter((r) => r.status === "cancelled").length;
@@ -104,5 +141,7 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
     cancellationPct: arriving.length === 0 ? 0 : (cancelledArriving / arriving.length) * 100,
     bookingsArriving: arriving.length,
     sourceMix,
+    trend,
+    byRoomType,
   };
 }
