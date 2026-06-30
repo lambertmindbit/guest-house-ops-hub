@@ -33,10 +33,13 @@ export default function SettingsPage() {
   return (
     <main className="app-main" style={{ maxWidth: 760 }}>
       <div className="entrance">
-        <div className="pagehead">
+        <div className="pagehead rd-m">
           <div className="display">Settings</div>
           <div className="pagehead__sub">Manage your property, rooms, channels and pricing.</div>
         </div>
+        {/* Desktop: the master/detail rail (left) is the menu — show a hint here. */}
+        <div className="rd-d empty" style={{ marginTop: 8 }}>Select a section from the left to manage it.</div>
+        <div className="rd-m">
         {GROUPS.map((g) => (
           <div key={g.group} className="setgroup">
             <div className="setgroup__label">{g.group}</div>
@@ -54,6 +57,7 @@ export default function SettingsPage() {
             </div>
           </div>
         ))}
+        </div>
       </div>
     </main>
   );
