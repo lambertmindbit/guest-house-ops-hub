@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { PageHead, EmptyState, Icon } from "@/components/ui";
 import { AddGuest } from "@/components/AddGuest";
+import { displayINR } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,23 @@ export default async function GuestsPage({
   const guests = await prisma.guest.findMany({
     where,
     orderBy: { name: "asc" },
-    include: { _count: { select: { reservations: true } } },
+    include: {
+      _count: { select: { reservations: true } },
+      // For the outstanding-balance badge: confirmed stays + their payments.
+      reservations: {
+        where: { status: "confirmed" },
+        select: { grossAmount: true, payments: { select: { amount: true } } },
+      },
+    },
   });
+
+  // Per-guest outstanding balance = Σ gross − Σ payments across confirmed stays.
+  const balanceOf = (g: (typeof guests)[number]) =>
+    g.reservations.reduce((sum, r) => {
+      const gross = Number(r.grossAmount ?? 0);
+      const paid = r.payments.reduce((s, p) => s + Number(p.amount), 0);
+      return sum + (gross - paid);
+    }, 0);
 
   return (
     <main className="app-main">
@@ -59,16 +75,20 @@ export default async function GuestsPage({
                   {initials(g.name)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="row" style={{ gap: 7 }}>
+                  <div className="row" style={{ gap: 7, flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 600, fontSize: 15.5 }}>{g.name}</span>
                     {g._count.reservations >= 2 && <span className="badge badge--paid">Repeat</span>}
-                    {g.blocked && <span className="badge badge--danger">Blocked</span>}
+                    {g.blocked && <span className="badge badge--danger">Flagged</span>}
+                    {g.nationality && <span className="badge badge--neutral">Foreign · C-Form</span>}
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--text-subtle)" }}>
                     {g.phone}{g.email ? ` · ${g.email}` : ""}
                   </div>
                 </div>
-                <span className="badge badge--neutral">{g._count.reservations} {g._count.reservations === 1 ? "stay" : "stays"}</span>
+                <div className="rowcard__right">
+                  {balanceOf(g) > 0 && <span className="badge badge--warn">{displayINR(balanceOf(g))} due</span>}
+                  <span className="badge badge--neutral">{g._count.reservations} {g._count.reservations === 1 ? "stay" : "stays"}</span>
+                </div>
               </Link>
             ))
           )}
