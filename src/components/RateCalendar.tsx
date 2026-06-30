@@ -76,7 +76,7 @@ export function RateCalendar({
           <div style={{ minWidth: ROOMW + COLW * dates.length }}>
             {/* header */}
             <div style={{ display: "grid", gridTemplateColumns: cols, position: "sticky", top: 0 }}>
-              <div style={{ position: "sticky", left: 0, zIndex: 3, background: "var(--surface-2)", padding: "11px 12px", fontWeight: 700, fontSize: 12.5, borderBottom: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>
+              <div style={{ position: "sticky", left: 0, zIndex: 3, background: "var(--surface-2)", padding: "11px 12px", fontWeight: 700, fontSize: "var(--fs-small)", borderBottom: "1px solid var(--border)", borderRight: "1px solid var(--border)" }}>
                 Room type
               </div>
               {dates.map((d, i) => {
@@ -84,8 +84,8 @@ export function RateCalendar({
                 const { dow, day } = parts(d);
                 return (
                   <div key={d} style={{ padding: "9px 6px", textAlign: "center", borderBottom: "1px solid var(--border)", borderRight: i < dates.length - 1 ? "1px solid var(--border)" : 0, background: isToday ? "var(--accent-bg)" : "var(--surface-2)" }}>
-                    <div className="eyebrow" style={{ fontSize: 9.5, color: isToday ? "var(--accent-text)" : "var(--text-subtle)" }}>{dow}</div>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: isToday ? "var(--accent-text)" : "var(--ink)" }}>{day}</div>
+                    <div className="eyebrow" style={{ fontSize: "var(--fs-eyebrow)", color: isToday ? "var(--accent-text)" : "var(--text-subtle)" }}>{dow}</div>
+                    <div style={{ fontWeight: 700, fontSize: "var(--fs-small)", color: isToday ? "var(--accent-text)" : "var(--ink)" }}>{day}</div>
                   </div>
                 );
               })}
@@ -93,7 +93,7 @@ export function RateCalendar({
             {/* rows */}
             {rows.map((row, ri) => (
               <div key={row.id} style={{ display: "grid", gridTemplateColumns: cols }}>
-                <div style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--surface)", padding: "10px 12px", borderRight: "1px solid var(--border)", borderBottom: ri < rows.length - 1 ? "1px solid var(--border)" : 0, fontWeight: 700, fontSize: 13.5 }}>
+                <div style={{ position: "sticky", left: 0, zIndex: 2, background: "var(--surface)", padding: "10px 12px", borderRight: "1px solid var(--border)", borderBottom: ri < rows.length - 1 ? "1px solid var(--border)" : 0, fontWeight: 700, fontSize: "var(--fs-body)" }}>
                   {row.name}
                 </div>
                 {row.nights.map((n, di) => (
@@ -103,7 +103,7 @@ export function RateCalendar({
                     style={{
                       padding: "10px 4px",
                       textAlign: "center",
-                      fontSize: 12.5,
+                      fontSize: "var(--fs-small)",
                       fontWeight: n.isOverride ? 700 : 500,
                       fontStyle: n.hasAdjust ? "italic" : "normal",
                       color: n.isOverride ? "var(--accent-text)" : "var(--ink)",
@@ -141,7 +141,7 @@ export function RateCalendar({
                 onChange={(e) => setDraft(e.target.value)}
                 autoFocus
               />
-              <p style={{ fontSize: 12.5, color: "var(--text-subtle)", margin: "8px 0 0", lineHeight: 1.5 }}>
+              <p style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", margin: "8px 0 0", lineHeight: 1.5 }}>
                 Pinning a rate overrides the pricing rules for this date. Clear it to fall back to the calculated rate.
               </p>
               <div className="row" style={{ gap: 10, marginTop: 16 }}>

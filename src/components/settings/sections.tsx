@@ -77,7 +77,7 @@ function ListItem({ title, meta, actions }: { title: string; meta: string; actio
     <div className="card card--pad" style={{ padding: 14 }}>
       <div className="spread" style={{ alignItems: "flex-start" }}>
         <div style={{ minWidth: 0 }}>
-          <div className="h3" style={{ fontSize: 15 }}>{title}</div>
+          <div className="h3" style={{ fontSize: "var(--fs-h3)" }}>{title}</div>
           <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 3 }}>{meta}</div>
         </div>
         {actions}
@@ -301,7 +301,7 @@ export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[
           <div key={room.id} className="card card--pad" style={{ padding: 14, opacity: room.archived ? 0.65 : 1 }}>
             <div className="spread">
               <div className="row" style={{ gap: 8 }}>
-                <span className="h3" style={{ fontSize: 15 }}>Room {room.label}</span>
+                <span className="h3" style={{ fontSize: "var(--fs-h3)" }}>Room {room.label}</span>
                 <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{room.roomTypeName}</span>
                 {room.archived && <span className="badge badge--neutral">Archived</span>}
               </div>

@@ -40,9 +40,9 @@ export default function LoginPage() {
       <div className="card entrance" style={{ width: "100%", maxWidth: 380, padding: 28 }}>
         <div className="row" style={{ gap: 10, marginBottom: 4 }}>
           <span className="brandmark"><Icon name="door" size={18} /></span>
-          <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: "-0.01em" }}>Ops Hub</span>
+          <span style={{ fontWeight: 700, fontSize: "var(--fs-h2)", letterSpacing: "-0.01em" }}>Ops Hub</span>
         </div>
-        <p style={{ fontSize: 13.5, color: "var(--text-subtle)", margin: "0 0 22px" }}>Sign in to continue.</p>
+        <p style={{ fontSize: "var(--fs-body)", color: "var(--text-subtle)", margin: "0 0 22px" }}>Sign in to continue.</p>
 
         <form onSubmit={onSubmit} className="col" style={{ gap: 14 }}>
           {error && (

@@ -44,7 +44,7 @@ export function FlaggedNumbersSection({ numbers }: { numbers: FlaggedEntry[] }) 
   return (
     <div>
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-        <p style={{ fontSize: 13, color: "var(--text-subtle)", margin: "0 0 14px" }}>
+        <p style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", margin: "0 0 14px" }}>
           Numbers added here trigger a warning banner when a booking is made with that phone number. They also appear on the guest&apos;s profile if they have booked before.
         </p>
 
@@ -79,16 +79,16 @@ export function FlaggedNumbersSection({ numbers }: { numbers: FlaggedEntry[] }) 
       </div>
 
       {numbers.length === 0 ? (
-        <p className="muted" style={{ fontSize: 13, textAlign: "center", padding: 24 }}>No flagged numbers yet.</p>
+        <p className="muted" style={{ fontSize: "var(--fs-small)", textAlign: "center", padding: 24 }}>No flagged numbers yet.</p>
       ) : (
         <div className="col" style={{ gap: 1 }}>
           {numbers.map((n) => (
             <div key={n.id} className="card" style={{ padding: "11px 14px", display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{n.phone}</div>
-                {n.reason && <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 2 }}>{n.reason}</div>}
+                <div style={{ fontWeight: 600, fontSize: "var(--fs-body)" }}>{n.phone}</div>
+                {n.reason && <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 2 }}>{n.reason}</div>}
               </div>
-              <span style={{ fontSize: 12, color: "var(--text-subtle)", flexShrink: 0 }}>{n.createdAt}</span>
+              <span style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)", flexShrink: 0 }}>{n.createdAt}</span>
               <button
                 className="btn btn--quiet btn--icon btn--sm"
                 onClick={() => remove(n.id)}

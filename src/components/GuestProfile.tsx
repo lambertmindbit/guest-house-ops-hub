@@ -91,7 +91,7 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
 
   return (
     <div className="card" style={{ padding: 16, marginTop: 16 }}>
-      {error && <p style={{ color: "var(--red-text)", fontSize: 13, margin: "0 0 10px" }}>{error}</p>}
+      {error && <p style={{ color: "var(--red-text)", fontSize: "var(--fs-small)", margin: "0 0 10px" }}>{error}</p>}
 
       <div className="form-grid" style={{ gap: 12 }}>
         <div style={{ gridColumn: "1 / -1" }}>
@@ -125,7 +125,7 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
         ) : (
           <div>
             <div className="spread" style={{ marginBottom: 10 }}>
-              <span style={{ fontWeight: 600, fontSize: 13 }}>C-Form — Foreign national</span>
+              <span style={{ fontWeight: 600, fontSize: "var(--fs-small)" }}>C-Form — Foreign national</span>
               {!hasCformData(v) && (
                 <button type="button" className="btn btn--ghost btn--sm" onClick={() => setShowCform(false)}>Hide</button>
               )}
@@ -205,7 +205,7 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
 
       <div className="row" style={{ gap: 10, marginTop: 16 }}>
         <button onClick={save} disabled={busy} className="btn btn--primary btn--sm">{busy ? "Saving…" : "Save guest"}</button>
-        {saved && <span style={{ fontSize: 13, color: "var(--green-text)" }}>Saved ✓</span>}
+        {saved && <span style={{ fontSize: "var(--fs-small)", color: "var(--green-text)" }}>Saved ✓</span>}
       </div>
     </div>
   );

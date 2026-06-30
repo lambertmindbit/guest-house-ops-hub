@@ -51,12 +51,12 @@ export default async function PricingPage({
           <Link href="/pricing" className="btn btn--ghost btn--sm">Today</Link>
           <Link href="/settings/pricing" className="btn btn--ghost btn--sm">Pricing rules</Link>
           <form method="get" className="row" style={{ gap: 6, marginLeft: "auto" }}>
-            <input type="date" name="start" defaultValue={start} className="input" style={{ width: 152, padding: "8px 11px", fontSize: 14 }} />
+            <input type="date" name="start" defaultValue={start} className="input" style={{ width: 152, padding: "8px 11px", fontSize: "var(--fs-body)" }} />
             <button className="btn btn--ghost btn--sm">Go</button>
           </form>
         </div>
 
-        <p style={{ fontSize: 13, color: "var(--text-subtle)", margin: "12px 0", lineHeight: 1.5 }}>
+        <p style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", margin: "12px 0", lineHeight: 1.5 }}>
           These are advisory rates from your pricing rules. Tap any cell to pin a manual rate (an override) for that date.
           A <span style={{ color: "var(--accent-text)", fontWeight: 600 }}>dot</span> marks an override; italics mark a rule adjustment.
         </p>

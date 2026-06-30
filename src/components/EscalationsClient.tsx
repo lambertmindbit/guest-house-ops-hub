@@ -38,7 +38,7 @@ const SOURCE_LABEL: Record<string, string> = {
 
 function Pill({ tone, children }: { tone: { bg: string; fg: string }; children: React.ReactNode }) {
   return (
-    <span className="pill" style={{ background: tone.bg, color: tone.fg }}>
+    <span className="badge" style={{ background: tone.bg, color: tone.fg }}>
       {children}
     </span>
   );
@@ -103,8 +103,8 @@ export default function EscalationsClient({
   return (
     <main className="app-main">
       <header style={{ marginBottom: 14 }}>
-        <h1 style={{ margin: 0, fontSize: 22 }}>Escalations</h1>
-        <p style={{ margin: "4px 0 0", color: "var(--sys-label-2)", fontSize: 14 }}>
+        <h1 style={{ margin: 0, fontSize: "var(--fs-h2)" }}>Escalations</h1>
+        <p style={{ margin: "4px 0 0", color: "var(--sys-label-2)", fontSize: "var(--fs-body)" }}>
           Requests the AI agents handed to a human, plus anything you raise by hand.
         </p>
       </header>
@@ -155,7 +155,7 @@ export default function EscalationsClient({
             </button>
           ))}
         </div>
-        <label style={{ marginLeft: "auto", display: "flex", gap: 7, alignItems: "center", fontSize: 13.5 }}>
+        <label style={{ marginLeft: "auto", display: "flex", gap: 7, alignItems: "center", fontSize: "var(--fs-body)" }}>
           <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} />
           Show resolved
         </label>
@@ -188,18 +188,18 @@ export default function EscalationsClient({
                     <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
                       <Pill tone={SEVERITY_TONE[e.severity]}>{e.severity}</Pill>
                       <Pill tone={STATUS_TONE[e.status]}>{STATUS_LABEL[e.status]}</Pill>
-                      <span style={{ fontSize: 11.5, color: "var(--sys-label-3)", fontWeight: 600 }}>
+                      <span style={{ fontSize: "var(--fs-meta)", color: "var(--sys-label-3)", fontWeight: 600 }}>
                         {SOURCE_LABEL[e.source]}
                       </span>
                     </div>
-                    <div style={{ fontWeight: 600, fontSize: 14.5, marginTop: 4 }}>{e.title}</div>
-                    <div style={{ fontSize: 13, color: "var(--sys-label-2)", marginTop: 2 }}>
+                    <div style={{ fontWeight: 600, fontSize: "var(--fs-body)", marginTop: 4 }}>{e.title}</div>
+                    <div style={{ fontSize: "var(--fs-small)", color: "var(--sys-label-2)", marginTop: 2 }}>
                       {e.raisedByName || "Unknown"}
                       {e.raisedByContact ? ` · ${e.raisedByContact}` : ""}
                       {e.raisedByLang && e.raisedByLang !== "en" ? ` · ${e.raisedByLang.toUpperCase()}` : ""}
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--sys-label-3)", whiteSpace: "nowrap" }}>
+                  <div style={{ fontSize: "var(--fs-meta)", color: "var(--sys-label-3)", whiteSpace: "nowrap" }}>
                     {timeAgo(e.createdAt)}
                   </div>
                 </button>
@@ -207,12 +207,12 @@ export default function EscalationsClient({
                 {/* detail + actions */}
                 {open && (
                   <div style={{ padding: "0 14px 14px", display: "grid", gap: 10 }}>
-                    <div style={{ fontSize: 14, lineHeight: 1.5 }}>{e.summary}</div>
+                    <div style={{ fontSize: "var(--fs-body)", lineHeight: 1.5 }}>{e.summary}</div>
 
                     {e.reason && (
                       <div
                         className="banner"
-                        style={{ fontSize: 13, background: "var(--warn-fill)", color: "var(--warn-text)" }}
+                        style={{ fontSize: "var(--fs-small)", background: "var(--warn-fill)", color: "var(--warn-text)" }}
                       >
                         <strong>Why escalated:</strong> {e.reason}
                       </div>
@@ -221,7 +221,7 @@ export default function EscalationsClient({
                     {(e.originalText || e.translatedText) && (
                       <div
                         style={{
-                          fontSize: 13,
+                          fontSize: "var(--fs-small)",
                           border: "1px solid var(--line)",
                           borderRadius: "var(--r-md, 10px)",
                           padding: "10px 12px",
@@ -286,13 +286,13 @@ function TriageActions({
   return (
     <div style={{ display: "grid", gap: 8 }}>
       <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-        <label style={{ fontSize: 12.5, color: "var(--sys-label-3)" }}>Severity</label>
+        <label style={{ fontSize: "var(--fs-small)", color: "var(--sys-label-3)" }}>Severity</label>
         <select
           className="select"
           value={e.severity}
           disabled={busy}
           onChange={(ev) => onPatch({ severity: ev.target.value })}
-          style={{ width: "auto", padding: "5px 8px", fontSize: 13 }}
+          style={{ width: "auto", padding: "5px 8px", fontSize: "var(--fs-small)" }}
         >
           {["low", "medium", "high", "critical"].map((s) => (
             <option key={s} value={s}>
@@ -343,7 +343,7 @@ function TriageActions({
       )}
 
       {terminal && e.resolutionNote && (
-        <div style={{ fontSize: 13, color: "var(--sys-label-2)" }}>
+        <div style={{ fontSize: "var(--fs-small)", color: "var(--sys-label-2)" }}>
           <strong>Resolution:</strong> {e.resolutionNote}
         </div>
       )}

@@ -147,7 +147,7 @@ export function PaymentsPanel({
             <span style={{ fontSize: "var(--fs-small)" }}>
               <b className="num" style={{ color: "var(--ink)" }}>{displayINR(p.amount)}</b>
               {" · "}{PAYMENT_MODE_LABELS[p.mode] ?? p.mode}
-              {p.isAdvance && <span className="pill pill--tint" style={{ marginLeft: 6, fontSize: 11 }}>Advance</span>}
+              {p.isAdvance && <span className="badge badge--paid" style={{ marginLeft: 6 }}>Advance</span>}
               {p.note && <span className="muted"> · {p.note}</span>}
             </span>
             <span className="row" style={{ gap: 8 }}>
@@ -172,7 +172,7 @@ export function PaymentsPanel({
 
           {/* Mark as advance checkbox */}
           {advancePending && (
-            <label className="row" style={{ gap: 8, fontSize: 13, cursor: "pointer", marginTop: 8 }}>
+            <label className="row" style={{ gap: 8, fontSize: "var(--fs-small)", cursor: "pointer", marginTop: 8 }}>
               <input type="checkbox" checked={isAdvance} onChange={(e) => setIsAdvance(e.target.checked)} />
               <span>Mark as advance deposit</span>
             </label>
@@ -192,11 +192,11 @@ export function PaymentsPanel({
           {/* Verification checklist — prevents accepting fake screenshots */}
           {needsVerify && (
             <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--warn-fill, #fffbeb)", borderRadius: 8, border: "1px solid var(--warn-text, #b45309)" }}>
-              <div style={{ fontWeight: 600, fontSize: 12.5, color: "var(--warn-text, #b45309)", marginBottom: 8 }}>
+              <div style={{ fontWeight: 600, fontSize: "var(--fs-small)", color: "var(--warn-text, #b45309)", marginBottom: 8 }}>
                 Verify before recording
               </div>
               {VERIFY_ITEMS.map((item, i) => (
-                <label key={i} className="row" style={{ gap: 8, fontSize: 13, cursor: "pointer", marginBottom: i < VERIFY_ITEMS.length - 1 ? 6 : 0 }}>
+                <label key={i} className="row" style={{ gap: 8, fontSize: "var(--fs-small)", cursor: "pointer", marginBottom: i < VERIFY_ITEMS.length - 1 ? 6 : 0 }}>
                   <input
                     type="checkbox"
                     checked={checklist[i]}
@@ -214,7 +214,7 @@ export function PaymentsPanel({
               {busy ? "…" : "Add payment"}
             </button>
             {needsVerify && !allChecked && (
-              <span style={{ fontSize: 12, color: "var(--text-subtle)", alignSelf: "center" }}>
+              <span style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)", alignSelf: "center" }}>
                 Tick all items above to enable
               </span>
             )}

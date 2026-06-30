@@ -50,7 +50,7 @@ export function InboxReview({ data }: { data: { items: Item[]; rooms: Room[]; ch
           onChange={(e) => setRaw(e.target.value)}
           placeholder="Copy the whole OTA confirmation email and paste it here…"
         />
-        <p style={{ fontSize: 12, color: "var(--text-subtle)", margin: "8px 0 0", lineHeight: 1.5 }}>
+        <p style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)", margin: "8px 0 0", lineHeight: 1.5 }}>
           Parsing is best-effort — you&apos;ll confirm every field before a booking is created. Nothing is booked automatically.
         </p>
         <div style={{ marginTop: 12 }}>
@@ -61,7 +61,7 @@ export function InboxReview({ data }: { data: { items: Item[]; rooms: Room[]; ch
       </form>
 
       <div className="row" style={{ justifyContent: "space-between", margin: "28px 0 14px" }}>
-        <span style={{ fontWeight: 700, fontSize: 15 }}>Pending review <span style={{ color: "var(--text-subtle)", fontWeight: 600 }}>({data.items.length})</span></span>
+        <span style={{ fontWeight: 700, fontSize: "var(--fs-h3)" }}>Pending review <span style={{ color: "var(--text-subtle)", fontWeight: 600 }}>({data.items.length})</span></span>
       </div>
 
       {data.items.length === 0 ? (
@@ -149,12 +149,12 @@ function ReviewCard({ item, rooms, channels }: { item: Item; rooms: Room[]; chan
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
         <div className="row" style={{ gap: 8 }}>
           <ChannelBadge name={item.source} />
-          {item.otaRef && <span style={{ fontSize: 12.5, color: "var(--text-subtle)" }}>Ref {item.otaRef}</span>}
+          {item.otaRef && <span style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>Ref {item.otaRef}</span>}
         </div>
-        {item.roomTypeHint && <span style={{ fontSize: 12, color: "var(--text-subtle)" }}>“{item.roomTypeHint}”</span>}
+        {item.roomTypeHint && <span style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)" }}>“{item.roomTypeHint}”</span>}
       </div>
 
-      {error && <p style={{ color: "var(--red-text)", fontSize: 13, margin: "0 0 10px" }}>{error}</p>}
+      {error && <p style={{ color: "var(--red-text)", fontSize: "var(--fs-small)", margin: "0 0 10px" }}>{error}</p>}
 
       <div className="form-grid" style={{ gap: 12 }}>
         <div>
@@ -204,7 +204,7 @@ function ReviewCard({ item, rooms, channels }: { item: Item; rooms: Room[]; chan
       </div>
 
       {showRaw && (
-        <pre style={{ marginTop: 12, padding: 12, background: "var(--surface-2)", borderRadius: 8, fontSize: 12, whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>{item.rawText}</pre>
+        <pre style={{ marginTop: 12, padding: 12, background: "var(--surface-2)", borderRadius: 8, fontSize: "var(--fs-meta)", whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>{item.rawText}</pre>
       )}
     </div>
   );

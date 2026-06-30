@@ -74,7 +74,7 @@ export default async function HousekeepingPage() {
 
 function RoomTitle({ room }: { room: HousekeepingRoom }) {
   return (
-    <div className="h3" style={{ fontSize: 16 }}>
+    <div className="h3" style={{ fontSize: "var(--fs-h3)" }}>
       Room {room.label} <span className="muted" style={{ fontWeight: 500 }}>· {room.roomTypeName}</span>
     </div>
   );

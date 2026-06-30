@@ -38,7 +38,7 @@ export default async function FinancePage({
         {/* Net-to-you verdict first. */}
         <div className="kpi-strip" style={{ marginTop: 14 }}>
           <div className="kpi-panel kpi-panel--verdict">
-            <div className="kpi-eyebrow">Net profit</div>
+            <div className="kpi-eyebrow">Net to you</div>
             <div className="kpi-num">{displayINR(summary.netProfit)}</div>
             <div className="kpi-ctx">after commission &amp; expenses</div>
           </div>

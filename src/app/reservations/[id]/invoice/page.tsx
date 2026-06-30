@@ -41,14 +41,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           {/* Header */}
           <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em" }}>{propName}</div>
-              {property?.address && <div style={{ fontSize: 13, color: "var(--text-subtle)", marginTop: 4, whiteSpace: "pre-line" }}>{property.address}</div>}
-              {property?.gstNumber && <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 2 }}>GSTIN: {property.gstNumber}</div>}
+              <div style={{ fontSize: "var(--fs-h2)", fontWeight: 800, letterSpacing: "-0.02em" }}>{propName}</div>
+              {property?.address && <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 4, whiteSpace: "pre-line" }}>{property.address}</div>}
+              {property?.gstNumber && <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 2 }}>GSTIN: {property.gstNumber}</div>}
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "0.04em", color: "var(--accent-text)" }}>INVOICE</div>
-              <div style={{ fontSize: 12.5, color: "var(--text-subtle)", marginTop: 4 }}>{invoiceNo}</div>
-              {r.otaRef && <div style={{ fontSize: 12.5, color: "var(--text-subtle)" }}>Ref: {r.otaRef}</div>}
+              <div style={{ fontSize: "var(--fs-h2)", fontWeight: 800, letterSpacing: "0.04em", color: "var(--accent-text)" }}>INVOICE</div>
+              <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)", marginTop: 4 }}>{invoiceNo}</div>
+              {r.otaRef && <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>Ref: {r.otaRef}</div>}
             </div>
           </div>
 
@@ -57,16 +57,16 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           {/* Bill to + stay */}
           <div className="invoice-cols" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-subtle)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Billed to</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginTop: 6 }}>{r.guest.name}</div>
-              <div style={{ fontSize: 13, color: "var(--text-subtle)" }}>{r.guest.phone}</div>
-              {r.guest.email && <div style={{ fontSize: 13, color: "var(--text-subtle)" }}>{r.guest.email}</div>}
+              <div style={{ fontSize: "var(--fs-micro)", fontWeight: 700, color: "var(--text-subtle)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Billed to</div>
+              <div style={{ fontWeight: 700, fontSize: "var(--fs-h3)", marginTop: 6 }}>{r.guest.name}</div>
+              <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>{r.guest.phone}</div>
+              {r.guest.email && <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>{r.guest.email}</div>}
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-subtle)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Stay</div>
-              <div style={{ fontSize: 13.5, marginTop: 6 }}>{displayDate(r.checkIn)} → {displayDate(r.checkOut)}</div>
-              <div style={{ fontSize: 13, color: "var(--text-subtle)" }}>{nights} night{nights === 1 ? "" : "s"} · Room {r.room.label} · {r.room.roomType.name}</div>
-              <div style={{ fontSize: 13, color: "var(--text-subtle)" }}>Booked via {r.channel.name}</div>
+              <div style={{ fontSize: "var(--fs-micro)", fontWeight: 700, color: "var(--text-subtle)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Stay</div>
+              <div style={{ fontSize: "var(--fs-body)", marginTop: 6 }}>{displayDate(r.checkIn)} → {displayDate(r.checkOut)}</div>
+              <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>{nights} night{nights === 1 ? "" : "s"} · Room {r.room.label} · {r.room.roomType.name}</div>
+              <div style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>Booked via {r.channel.name}</div>
             </div>
           </div>
 
@@ -95,9 +95,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           {/* Payments breakdown */}
           {r.payments.length > 0 && (
             <div style={{ marginTop: 22 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Payments received</div>
+              <div style={{ fontSize: "var(--fs-micro)", fontWeight: 700, color: "var(--text-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Payments received</div>
               {r.payments.map((p) => (
-                <div key={p.id} className="row" style={{ justifyContent: "space-between", fontSize: 13, padding: "4px 0", color: "var(--text-subtle)" }}>
+                <div key={p.id} className="row" style={{ justifyContent: "space-between", fontSize: "var(--fs-small)", padding: "4px 0", color: "var(--text-subtle)" }}>
                   <span>{p.paidAt.toISOString().slice(0, 10)} · {PAYMENT_MODE_LABELS[p.mode] ?? p.mode}{p.note ? ` · ${p.note}` : ""}</span>
                   <span className="num">{displayINR(Number(p.amount))}</span>
                 </div>
@@ -106,7 +106,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           )}
 
           <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "22px 0 14px" }} />
-          <div style={{ fontSize: 12, color: "var(--text-subtle)", lineHeight: 1.6 }}>
+          <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)", lineHeight: 1.6 }}>
             Check-in from {property?.checkInTime ?? "14:00"} · Check-out by {property?.checkOutTime ?? "11:00"}.<br />
             Thank you for staying with {propName}.
           </div>
