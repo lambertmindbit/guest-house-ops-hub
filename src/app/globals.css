@@ -359,6 +359,15 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .daybook { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-micro); font-weight: 700;
   color: var(--accent-text); background: var(--accent-bg); padding: 4px 9px; border-radius: var(--r-sm); flex: none; }
 
+/* Analytics: occupancy trend sparkline + labelled mix/occupancy bars. */
+.trend { display: flex; align-items: flex-end; gap: 3px; height: 92px; }
+.trend__bar { flex: 1; min-width: 2px; background: var(--accent); border-radius: 2px 2px 0 0; opacity: 0.85; min-height: 2px; }
+.mixrow { display: flex; align-items: center; gap: 10px; padding: 7px 2px; }
+.mixrow__l { width: 100px; flex: none; font-size: var(--fs-small); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mixrow__track { flex: 1; height: 8px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+.mixrow__fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.mixrow__v { width: 46px; flex: none; text-align: right; font-weight: 600; font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+
 /* ---------------- Avatar ---------------- */
 .avatar { width: 44px; height: 44px; border-radius: var(--r-round); background: var(--navy); color: var(--mint);
   display: grid; place-items: center; font-weight: 700; font-size: var(--fs-h3); flex: none; font-family: var(--font-ui), system-ui, sans-serif; }

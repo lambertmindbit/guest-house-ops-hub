@@ -1,6 +1,7 @@
 import { getAnalytics } from "@/lib/analytics";
 import { currentMonthRange } from "@/lib/finance";
-import { displayINR } from "@/lib/format";
+import { displayINR, displayShortDate } from "@/lib/format";
+import { parseDateOnly } from "@/lib/dates";
 import { PageHead, SectionLabel, RangeForm, ChannelBadge } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -84,6 +85,50 @@ export default async function AnalyticsPage({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* 14-day-style occupancy trend across the period. */}
+        <SectionLabel>Occupancy trend</SectionLabel>
+        <div className="card card--pad">
+          {a.trend.length === 0 ? (
+            <div className="empty">No nights in this period.</div>
+          ) : (
+            <>
+              <div className="trend">
+                {(() => {
+                  const maxT = Math.max(1, ...a.trend.map((t) => t.occupancyPct));
+                  return a.trend.map((t) => (
+                    <div
+                      key={t.date}
+                      className="trend__bar"
+                      style={{ height: `${Math.round((t.occupancyPct / maxT) * 100)}%` }}
+                      title={`${displayShortDate(parseDateOnly(t.date))} · ${pct(t.occupancyPct)}`}
+                    />
+                  ));
+                })()}
+              </div>
+              <div className="spread" style={{ marginTop: 8, color: "var(--text-subtle)", fontSize: "var(--fs-meta)" }}>
+                <span>{displayShortDate(parseDateOnly(a.trend[0].date))}</span>
+                <span>{displayShortDate(parseDateOnly(a.trend[a.trend.length - 1].date))}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Occupancy by room type. */}
+        <SectionLabel>Occupancy by room type</SectionLabel>
+        <div className="card card--pad">
+          {a.byRoomType.length === 0 ? (
+            <div className="empty">No room types yet.</div>
+          ) : (
+            a.byRoomType.map((t) => (
+              <div key={t.name} className="mixrow">
+                <span className="mixrow__l">{t.name}</span>
+                <span className="mixrow__track"><span className="mixrow__fill" style={{ width: `${Math.min(100, Math.round(t.occupancyPct))}%` }} /></span>
+                <span className="mixrow__v">{pct(t.occupancyPct)}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </main>
