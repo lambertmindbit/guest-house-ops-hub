@@ -100,21 +100,33 @@ function Finance({ go }) {
 }
 
 function Guests({ go }) {
-  const all = [...new Map([...DATA.checkins, ...DATA.inhouse, ...DATA.upcoming, ...DATA.checkouts].map((g) => [g.name, g])).values()];
+  const [q, setQ] = React.useState("");
+  const list = DATA.guestList.filter((g) => {
+    const s = q.trim().toLowerCase();
+    if (!s) return true;
+    return g.name.toLowerCase().includes(s) || g.phone.replace(/\s/g, "").includes(s.replace(/\s/g, ""));
+  });
   return (
     <div className="entrance">
-      <div className="display" style={{ marginBottom: 12 }}>Guests</div>
-      <div className="dsearch" style={{ marginBottom: 16, background: "var(--surface)" }}>
-        <RDIcon name="search" size={16} /><input placeholder="Search by name or phone" />
+      <div className="display" style={{ marginBottom: 6 }}>Guests</div>
+      <div className="pagehead__sub" style={{ marginBottom: 12 }}>{DATA.guestList.length} guests · search by name or phone</div>
+      <div className="dsearch" style={{ marginBottom: 14, background: "var(--surface)" }}>
+        <RDIcon name="search" size={16} /><input placeholder="Search name or phone" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
-      {all.map((g, i) => (
-        <a key={i} className="rowcard" onClick={() => go("reservation", { id: g.id })}>
-          <span className="rowcard__lead">{g.name.split(" ").map((w) => w[0]).join("")}</span>
+      {list.length === 0 && <div className="empty">No guests match “{q}”.</div>}
+      {list.map((g) => (
+        <a key={g.id} className="rowcard" onClick={() => go("reservation", { id: g.id })}>
+          <span className="rowcard__lead" style={g.blocked ? { background: "var(--red-bg)", color: "var(--red-text)" } : null}>{g.name.split(" ").map((w) => w[0]).join("")}</span>
           <div className="rowcard__main">
             <div className="rowcard__name">{g.name}</div>
-            <div className="rowcard__meta">Room {g.room} · {g.type}</div>
+            <div className="rowcard__meta">{g.phone} · {g.visits} stay{g.visits === 1 ? "" : "s"}</div>
+            <div className="row" style={{ gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+              {g.blocked && <StatusBadge kind="danger"><RDIcon name="ban" size={11} /> Flagged</StatusBadge>}
+              {g.foreign && <StatusBadge kind="neutral">Foreign · C-Form</StatusBadge>}
+              {g.balance && <StatusBadge kind="warn">{DATA.money(g.balance)} due</StatusBadge>}
+            </div>
           </div>
-          <RDIcon name="chevronR" size={16} style={{ color: "var(--text-faint)" }} />
+          <RDIcon name="chevronR" size={16} style={{ color: "var(--text-faint)", flex: "none" }} />
         </a>
       ))}
     </div>

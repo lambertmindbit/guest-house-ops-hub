@@ -104,6 +104,47 @@ a.rowcard:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
    (Scoped to .desktop, NOT a viewport media query — the phone frame is
    narrow even when the browser window is wide.) */
 .desktop .kpi-strip { grid-template-columns: repeat(4, 1fr); }
+.kpi-strip--3, .desktop .kpi-strip--3 { grid-template-columns: 1.25fr 1fr 1fr; }
+
+/* Promoted housekeeping card on Today */
+.clean-card .room-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
+.room-chip { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface-2); min-width: 76px; }
+.room-chip b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.room-chip small { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; color: var(--text-subtle); }
+.room-chip--prio { background: var(--red-bg); border-color: var(--red-border); }
+.room-chip--prio b, .room-chip--prio small { color: var(--red-text); }
+
+/* Analytics — trend bars + mix rows */
+.trend { display: flex; align-items: flex-end; gap: 5px; height: 96px; }
+.trend__bar { flex: 1; background: var(--accent); border-radius: 4px 4px 2px 2px; opacity: 0.85; min-height: 4px; }
+.mixrow { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+.mixrow__l { width: 100px; font-size: var(--fs-small); color: var(--ink); font-weight: 600; flex: none; }
+.mixrow__track { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.mixrow__fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.mixrow__v { width: 42px; text-align: right; font-size: var(--fs-meta); font-weight: 700; color: var(--text-muted); flex: none; }
+
+/* Pricing — 7-night advisory rate strip */
+.rate-strip { display: flex; gap: 6px; }
+.rate-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 3px;
+  border-radius: var(--r-sm); background: var(--surface-2); border: 1px solid var(--border); }
+.rate-cell--we { background: var(--accent-bg); border-color: transparent; }
+.rate-cell__d { font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; color: var(--text-faint); }
+.rate-cell__r { font-size: 13px; font-weight: 700; color: var(--ink); }
+.rate-cell--we .rate-cell__r { color: var(--accent-text); }
+.rate-cell__tag { font-size: 8px; font-weight: 700; color: var(--accent-text); }
+
+/* Settings desktop master/detail */
+.set-md { display: flex; gap: 26px; align-items: flex-start; }
+.set-md__list { width: 280px; flex: none; }
+.set-md__detail { flex: 1; min-width: 0; }
+.set-md__detail .backlink { display: none; }
+.setrow--on { background: var(--accent-bg); }
+.setrow--on .setrow__t { color: var(--accent-text); }
+
+/* Calendar day-view "book" affordance on vacant rows */
+.daybook { display: inline-flex; align-items: center; gap: 3px; font-size: var(--fs-micro); font-weight: 700;
+  color: var(--accent-text); background: var(--accent-bg); padding: 4px 9px; border-radius: var(--r-sm); flex: none; }
 
 /* ---------------- Inputs ---------------- */
 .field { margin-bottom: 14px; }

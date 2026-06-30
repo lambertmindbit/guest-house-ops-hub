@@ -104,43 +104,73 @@ Port the `.btn*`, `.card*`, `.ch*` (channel), `.badge*`, `.kpi-strip/.kpi-panel`
 
 ## 2. Information architecture & navigation → `NavShell.tsx`
 
-**Keep all 11 destinations visible** (user decision), but stop treating them as one flat list. Drive
-**both** the phone and desktop navs from **one config object** (today they're two hand-maintained
-lists — collapse to one):
+> **This section was rewritten for the round-2 consolidation.** The app grew to ~24 visible
+> destinations (15 top-level in `META` + 7 setup modules promoted inline in the desktop sidebar +
+> Preferences/Log out). The goal is to collapse that to a small primary set + shallow grouped
+> secondary areas. Reference: direction-A column of `Ops Hub - Directions.html` and the live
+> prototype `Ops Hub - Redesign.html` (`redesign/app.jsx` + `redesign/screen-more.jsx`).
 
+**Principle — three tiers:** *Do* (daily, ≤1 tap from Today) · *Find* (Calendar, Bookings, Guests) ·
+*Manage* (one grouped "More"/sidebar area). Keep driving **both** phone and desktop from **one config**.
+
+### 2.1 The two consolidations that do the work
+1. **"Needs you" = Conflicts + Escalations merged.** Both are "a decision only you can make." One
+   destination, one count badge (`conflicts + escalations`), surfaced as the Today banner. New route
+   **`/needs-you`** renders two sections — *Booking conflicts* (from `getConflicts()`) and *Approvals*
+   (from `escalations.ts` `listEscalations`). Keep `/conflicts` and `/escalations` as working deep
+   links if you like, but **remove them from nav** — only `/needs-you` appears.
+2. **"Setup" = one door.** The 7–8 setup modules (Property, Room types, Rooms, Channels, Pricing
+   rules, Blocked dates, **Feeds** = iCal config, **Scam numbers** = `/settings/flagged-numbers`)
+   collapse behind a single **"Property setup"** entry → the `/settings` hub (the master/detail hub
+   from §3.5). They must **not** be listed inline in the sidebar or the phone hub anymore.
+
+### 2.2 Phone (`< 900px`) — bottom bar + raised New
+Five slots: **Today · Calendar · ＋New · Bookings · More**.
+- **Bookings** (`/reservations`, nav-labelled "Bookings", icon `bed`) — the **searchable** reservation
+  list (search by guest/room/channel). Kept as a primary tab per owner's request.
+- **＋New** = raised round navy FAB → `/reservations/new`.
+- **More** is a **full grouped hub _screen_** (new route **`/more`**), NOT a bottom sheet. Groups:
+  - **Operate:** Guests · Cleaning · Needs you `(badge)`
+  - **Business:** Finance · Pricing · Analytics
+  - **Review:** Inbox · Messages
+  - **Setup:** one row → "Property setup" (`/settings`)
+  - **System:** Help · Preferences · Log out
+  Rows use the `.setlist/.setrow` pattern (icon tile + title + one-line summary + chevron). See
+  `MoreHub` in `redesign/screen-more.jsx`.
+- **Guests** moves off the bar into the More hub **and** is reachable from the header/global search
+  (search covers guests + bookings). Replace the old horizontally-scrolling top tabs entirely.
+- Safe-area: `padding-bottom: env(safe-area-inset-bottom)` on the bar; bottom padding on scrollers.
+
+### 2.3 Desktop (`≥ 900px`) — left sidebar, same config, regrouped
 ```ts
-const META = { today:{label:"Today",icon:"today"}, calendar:{…}, guests:{…}, housekeeping:{label:"Cleaning",…},
-  pricing:{…}, finance:{…}, analytics:{…}, conflicts:{…}, inbox:{…}, feeds:{…}, settings:{…} };
-
 const SIDEBAR_GROUPS = [
-  { label:"Operate",  items:["today","calendar","guests","housekeeping"] },
-  { label:"Money",    items:["pricing","finance"] },
-  { label:"Insights", items:["analytics","conflicts"] },
-  { label:"Data",     items:["inbox","feeds"] },
-  { label:"System",   items:["settings"] },
+  { label:"Operate",  items:["today","calendar","bookings","guests","housekeeping","needsyou"] },
+  { label:"Business", items:["finance","pricing","analytics"] },
+  { label:"Review",   items:["inbox","messages"] },
+  { label:"Setup",    items:["settings"] },            // single "Property setup" entry
 ];
+// bottom of sidebar: Preferences, Log out
 ```
+- `needsyou` shows a red badge = `conflictCount + escalationCount`.
+- There is **no "More"** on desktop — the sidebar already shows everything; `/more` is phone-only.
+- Top toolbar: page title (Fraunces) + global search (guests + bookings) + appearance toggle +
+  primary "New booking".
+- This removes ~12 inline links from the sidebar (the 7 setup modules + conflicts/escalations/feeds
+  folded away). Net visible: ~12 + 3 system, down from ~24.
 
-### 2.1 Phone (`< 900px`) — bottom tab bar + raised New
-- Fixed bottom bar, 5 slots: **Today · Calendar · ＋ · Guests · More**.
-- Centre **＋** = raised round navy FAB → `/reservations/new` (the highest-value write, thumb-zone).
-- **More** opens a **grouped bottom sheet** (not a flat list): Operations (Cleaning, Conflicts),
-  Money (Pricing, Finance), Insights (Analytics), Data & channels (Inbox, Feeds), System (Settings).
-- Replace the current **horizontally-scrolling top tabs entirely.** They're the #1 mobile failure.
-- Respect safe-area: `padding-bottom: env(safe-area-inset-bottom)` on the bar; add bottom padding to
-  scroll containers so content clears the bar.
-- Markup/classes: see `.tabbar/.tab/.fab/.sheet*` in `redesign/shell.css` and `PhoneFrame`/`MoreSheet`
-  in `redesign/app.jsx`.
+### 2.4 Active-route logic
+`activeId(pathname)`: `today`/`calendar`/`bookings` map to themselves; `/reservations/new` and
+`/reservations/[id]` → **`bookings`**; `/needs-you`, `/conflicts`, `/escalations` → **`needsyou`**;
+`/settings/*` → `settings`; everything else → its own sidebar item (desktop) or **`more`** (phone).
 
-### 2.2 Desktop (`≥ 900px`) — left sidebar, same config
-- Same items, **same grouping/labels** rendered as a grouped left sidebar (`.sidebar/.navitem`).
-- Active state: highlight the item matching the current route; for `/reservations/*` highlight
-  Calendar. Conflicts shows a red count badge when `conflicts > 0`.
-- Top toolbar: page title (Fraunces) + search + appearance toggle + primary "New booking" button.
-
-### 2.3 Active-route logic
-`activeTab(pathname)`: primary routes map to themselves; `/reservations/new` and
-`/reservations/[id]` → `calendar`; everything else → `more` (phone) / its own item (desktop).
+### 2.5 Route changes summary
+- **Add:** `/needs-you` (merged conflicts + approvals), `/more` (phone hub screen).
+- **Relabel in nav:** `/reservations` → "Bookings"; `/settings` → "Property setup".
+- **Remove from nav (keep routes as deep links):** `/conflicts`, `/escalations`, `/feeds`,
+  `/messages`* and the 7 `/settings/*` modules — all reachable via Needs you / Review / Setup, not as
+  standing top-level links. (*Messages stays nav-visible under Review.)
+- **No API/data-model changes** — `/needs-you` and `/more` are new *pages* composing existing
+  `src/lib/*` reads (`getConflicts`, `listEscalations`); `/reservations` already exists.
 
 ---
 
@@ -148,16 +178,45 @@ const SIDEBAR_GROUPS = [
 
 For each, the mockup screen file is the reference implementation.
 
-### 3.1 Today — `app/page.tsx` (+ extract a client island for the collapsible) — ref `screen-today.jsx`
-- **Order:** page title (Fraunces "Today" + "Monday, 1 June 2026") → alert banners → KPI strip →
-  Arrivals today → Departures today → **In-house now (collapsed)** → Next 7 days (peek, 3 rows).
-- **De-duplicate:** In-house must be collapsed by default and is the *only* place the full in-house
-  list lives — Arrivals/Departures are the day's to-do. Today currently lists arrivals AND repeats
-  them under in-house; stop that.
-- **KPI strip:** one bordered container, hairline-split panels, the **first panel is the navy
-  "verdict"** = Occupancy `83%` / `5 of 6 rooms`. Others: In-house, Check-ins, Check-outs. (`.kpi-strip`.)
-- Alert banners are **links** to `/conflicts` and `/housekeeping`, stroke icon in a tinted tile,
-  chevron at the end. Fix copy: "1 booking conflict **needs** attention" (was "need"). No emoji.
+### 3.1 Today — `app/page.tsx` (+ client island for the collapsible) — ref `screen-today.jsx`
+- **Order (actions-first):** title → **"Needs you" banner** → compact 3-up stat strip → Arrivals
+  today → **To clean (promoted card)** → Departures today → In-house (collapsed) → Next 7 days (peek).
+- **One merged banner:** "**N things need you** — X booking conflict, Y approval" → `/needs-you`,
+  where N = `conflictCount + escalationCount`. Replaces the separate conflict banner. Keep the copy
+  grammatical ("needs"). No emoji.
+- **Compact 3-up stat strip** (`.kpi-strip.kpi-strip--3`): navy **Occupancy verdict** (`83%` /
+  `5 of 6 rooms`) + **Arrivals** (today) + **Departures** (today). KPIs no longer lead with four
+  stacked blocks — the day's to-do wins the top of the screen.
+- **Housekeeping promoted to a card on Today** (not just a banner): a `.clean-card` with a "To clean"
+  section header (+ link to `/housekeeping`), `.room-chip`s (priority/arriving rooms in red), and a
+  "Mark a room clean" primary button. This is the morning routine — it belongs on the dashboard.
+- **De-duplicate:** In-house stays collapsed and is the only full in-house list; Arrivals/Departures
+  are the to-do. Don't repeat arrivals inside in-house.
+- Data: compose `getTodaySummary()` + `getConflicts()` + `getHousekeeping()` + escalation count
+  (already a 60s `unstable_cache` join in the layout) — no new queries.
+
+### 3.1a Bookings — `app/reservations/page.tsx` — ref `Bookings` in `screen-more.jsx`
+- The reservations list, now a **primary tab labelled "Bookings"**, **searchable** by guest / room /
+  channel (client-filter over the server-rendered list, or a `?q=` server filter — either; keep it
+  instant on phone). Row = avatar initials + name + room/type + channel badge + when/status. Tap →
+  `/reservations/[id]`. Empty state: "No bookings match '…'."
+
+### 3.1b Needs you — `app/needs-you/page.tsx` (new) — ref `NeedsYou` in `screen-more.jsx`
+- Two labelled sections: **Booking conflicts** (`getConflicts()`) — the loud red conflict card with
+  "Open reservation" / "Remove block"; and **Approvals** (`listEscalations`) — per item: title,
+  severity badge, source ("From … assistant"), note, "Review & approve" / "Dismiss". Count badge in
+  nav = sum of both. Back-chevron → Today.
+
+### 3.1c More hub — `app/more/page.tsx` (new, phone-only) — ref `MoreHub` in `screen-more.jsx`
+- Global search field (guests + bookings) + the grouped `.setlist` rows from §2.2 (Operate /
+  Business / Review / Setup / System). Needs-you row carries the count badge. Setup is one row.
+- Desktop never routes here (redirect `/more` → `/` on `≥900px`, or just let the sidebar own it).
+
+### 3.1d Review surfaces — `app/inbox/page.tsx`, `app/messages/page.tsx` — ref `Inbox`/`Messages`
+- **Inbox** (`InboundBooking`): staged OTA emails as cards (guest, channel badge, room · dates, ref)
+  with "Confirm booking" (→ `/reservations/new` prefilled) / "Dismiss". Unchanged data path (§ARCH
+  OTA ingestion). **Messages** (`OutboundMessage`): logged-send cards (to, channel, status, body,
+  when). Both live under the "Review" group; restyle to the system, no behaviour change.
 
 ### 3.2 Calendar — `app/calendar/page.tsx` + `RateCalendar.tsx` sibling — ref `screen-calendar.jsx`
 - **Segmented Day / Grid toggle.** **Phone defaults to Day; desktop defaults to Grid.**
@@ -179,6 +238,13 @@ For each, the mockup screen file is the reference implementation.
   can't be picked. Keep the server-side conflict guard as a backstop, surfaced as an inline banner —
   but it should now be the rare exception.
 - Channel = chips with colour dots. Sticky "Save booking" action at the bottom (thumb-reach) on phone.
+- **Live nights:** compute and show "{n} nights" from the two dates as they change (ref `NewReservation`).
+- **Foreign-national C-Form:** a toggle in the Guest section ("Collect C-Form registration details")
+  reveals a registration card — **Nationality, Passport no., Date of entry, Port of entry, Purpose**
+  (maps to the `Guest` C-Form fields in the schema). Only persist these when the toggle is on.
+- **Scam-list guard:** as the phone is typed, match against `FlaggedNumber` (`/api/.../flagged`); on a
+  hit show a red inline `field-error` ("On the scam list — {reason}") **and disable Save** until
+  resolved. This is the booking-time warning the `FlaggedNumber` model exists for.
 
 ### 3.4 Reservation detail — `app/reservations/[id]/page.tsx` + `StayActions.tsx` — ref `ReservationDetail`
 - Header: avatar (initials, navy/mint) + name + **status badge** + phone + channel badge.
@@ -188,18 +254,24 @@ For each, the mockup screen file is the reference implementation.
 - Payments card: progress bar + ledger + "Add payment".
 - Footer row: **Edit · Invoice · ⋯** — put destructive **Cancel** inside the overflow/secondary,
   never a peer of Edit (`CancelReservationButton` moves into the overflow menu).
+- **Registration row** in the info card: "ID on file" status (and, for foreign guests, a C-Form
+  badge) so the owner can see at a glance whether registration is complete.
+- **Message guest** secondary action (full-width ghost) → logs/sends via the messaging seam and shows
+  in `/messages` (ref `ReservationDetail`).
 
 ### 3.5 Settings — `app/settings/page.tsx` + `SettingsClient.tsx` — ref `screen-settings.jsx`
 - **Kill the single-open accordion.** Replace with a **grouped hub list → focused sub-page** (one
   thing on screen, back-chevron returns). Groups: Property (**one** Property details page — name,
   address, currency, GST **and** check-in/out times together, matching the existing single Property
   section in `SettingsClient`; do NOT split times into its own row), Inventory (Room types, Rooms),
-  Channels, Pricing (Pricing rules), Maintenance (Blocked dates).
+  Channels, Pricing (Pricing rules), Maintenance (Blocked dates), **Safety (Scam numbers)**.
 - Each row = icon tile + title + one-line summary + chevron (`.setlist/.setrow`). Each opens its own
   route (`/settings/channels`, `/settings/rooms`, …) — convert `SettingsClient`'s accordion sections
   into sub-pages (or a `?section=` focused panel if you must keep one route, but real routes are
   better for back-button + deep-link).
 - Desktop: render the hub as a left column + detail pane (master/detail) — same drill-in widened.
+  Mocked in `screen-settings.jsx` as `.set-md` (sticky section list left, active sub-page right;
+  pass a `desktop` flag); phone keeps the full-screen drill-in.
 - The **Channels** sub-page is fully specced in the mockup (commission + "collects payment" per
   channel) — build that one in full; stub the rest to match.
 - **CRUD actions per sub-page** (all mocked — each manage row carries the right controls):
@@ -274,6 +346,13 @@ focused route under `/settings/*`, hub row → drill in → back-chevron returns
 - If a block overlaps a live reservation it becomes a **conflict** — surface a link to `/conflicts`
   (the mockup shows this hint on the Room 102 block).
 
+**`/settings/flagged-numbers` — Scam numbers** (`POST` / `DELETE /api/flagged-numbers` — `FlaggedNumber` model)
+- Intro: "Phones on this list trigger a warning when you start a booking — so a known bad actor can't
+  slip through." Lives under a **Safety** group in the hub.
+- Row: red `ban` tile + `{phone}` (mono) + `{reason} · added {date}`. Action: **Remove**.
+- Add form: **Phone** (text, required, unique) + **Reason** (text). Consumed by the booking-form
+  scam-list guard in §3.3.
+
 ---
 
 ## 4. Channel badges (shared) → `ui.tsx`
@@ -292,18 +371,34 @@ Grid view uses the solid dot colours (`CH_DOT` map in `redesign/screen-calendar.
 
 ---
 
-## 5. Secondary screens (re-skin to the system, no IA change)
+## 5. Secondary screens — full specs (ref files in parens)
 
-`housekeeping`, `conflicts`, `finance`, `analytics`, `guests`, `pricing`, `inbox`, `feeds`: apply the
-new tokens/components. Specific fixes:
-- **Finance** (`app/finance/page.tsx`): the "By channel" table **clips on mobile** today — wrap in
-  `.tbl-wrap` with horizontal scroll, or on phone collapse to stacked rows; show only Channel/Bookings/
-  Gross/Net. Add the navy "Net to you" verdict KPI; Outstanding in amber. ref `screen-misc.jsx`.
-- **Analytics**: KPI cards have ragged heights — use the `.kpi-strip` grid (equal heights).
-- **Conflicts**: drop the unicode "→"; use the red conflict card with "Open reservation" / "Remove
-  block" actions. ref `Conflicts` in `screen-misc.jsx`.
-- **Housekeeping**: the "arriving — clean first" priority uses red **only** for genuine urgency; keep
-  the room's "occupied tonight" as a neutral/blue badge so red stays meaningful.
+Apply the new tokens/components throughout. The screens below were stubs/low-fidelity and now have
+full mockups.
+
+- **Finance** (`app/finance/page.tsx`, ref `screen-misc.jsx`): navy "Net to you" verdict KPI +
+  Gross / Commission / Outstanding (amber). "By channel" table **must scroll** on mobile — wrap in
+  `.tbl-wrap` (`overflow-x:auto`); never clip the Net column. Balances-due list links to reservations.
+- **Analytics** (`app/analytics/page.tsx`, ref `Analytics` in `screen-insights.jsx`): real dashboard,
+  not a stub. KPI strip = navy **Occupancy** verdict (with ▲/▼ delta vs prior) + **ADR** (delta) +
+  **RevPAR** + **Revenue**. Then a **14-day occupancy trend** (CSS bar row, `.trend`), a **source-mix**
+  breakdown (`.mixrow` labelled bars, % per channel), and **occupancy by room type**. Source data:
+  `analytics.ts` (occupancy/ADR/RevPAR/source mix). Equal-height panels via `.kpi-strip`.
+- **Pricing page** (`app/pricing/page.tsx`, ref `Pricing` in `screen-insights.jsx`): the **advisory
+  rate view** (distinct from `/settings/pricing` which edits the *rules*). A rules summary banner
+  (→ `/settings/pricing`), then **per-room-type cards** each showing base rate, floor–ceiling, and a
+  **7-night rate strip** (`.rate-strip`/`.rate-cell`) with weekend nights highlighted and the +% tag;
+  rates come from `pricing.ts` `quoteRoomType` (clamped to floor/ceiling). Seasons-in-effect list below.
+- **Guests** (`app/guests/page.tsx`, ref `Guests` in `screen-misc.jsx`): real directory — live search
+  by name/phone, stay count, and badges from the `Guest` model: **Flagged** (red, `blocked`/scam),
+  **Foreign · C-Form** (`nationality` present), **₹ balance due**. Blocked guests get a red avatar.
+- **Calendar Day view** (`app/calendar/page.tsx`, ref `screen-calendar.jsx`): above the room list show
+  an **availability summary** ("{booked} of {total} booked · {free} free") + an occupancy `.progress`
+  bar. **Vacant rows are tappable** with a "+ Book" chip → `/reservations/new` (prefill room+date);
+  occupied → detail, conflict → `/needs-you`. Footer: New booking + Block a room.
+- **Conflicts**: folded into **Needs you** (§3.1b) — no standalone screen needed; drop the unicode "→".
+- **Housekeeping**: "arriving — clean first" uses red **only** for genuine urgency; "occupied tonight"
+  stays a neutral/blue badge so red keeps meaning.
 
 ---
 
@@ -330,12 +425,14 @@ new tokens/components. Specific fixes:
 1. `feat(theme): port redesign tokens + fonts into globals.css; add data-density` (no visual wiring yet)
 2. `feat(nav): single-config NavShell — phone bottom tabs + FAB + grouped More sheet; desktop grouped sidebar`
 3. `feat(today): trim + de-dup, navy verdict KPI strip, banner links`
-4. `feat(calendar): Day/Grid toggle, mobile Day agenda, loud red conflicts`
-5. `feat(reservation-form): availability-filtered room chips (error prevention)`
-6. `feat(reservation-detail): contextual hero action, destructive in overflow`
-7. `refactor(settings): accordion → grouped hub + sub-pages`
-8. `style(secondary): re-skin finance/analytics/conflicts/housekeeping/guests; fix finance table clip`
-9. `chore: unify date format; remove inline magic numbers; a11y + print audit`
+4. `feat(calendar): Day/Grid toggle, mobile Day agenda + availability bar + vacant→book, loud red conflicts`
+5. `feat(reservation-form): availability-filtered rooms + live nights + C-Form toggle + scam-list guard`
+6. `feat(reservation-detail): contextual hero action, registration row, message guest, destructive in overflow`
+7. `refactor(settings): accordion → grouped hub + sub-pages (incl. Scam numbers) + desktop master/detail`
+8. `feat(bookings|needs-you|more): searchable Bookings, merged Needs you, phone More hub`
+9. `feat(insights): real Analytics (trend + source mix) and advisory Pricing page; Guests directory badges`
+10. `style(secondary): re-skin finance (fix table clip), housekeeping, inbox, messages`
+11. `chore: unify date format; remove inline magic numbers; a11y + print audit`
 
 Each slice: keep TS strict, run the dev server, verify against the matching mockup screen, commit.
 
@@ -343,5 +440,6 @@ Each slice: keep TS strict, run the dev server, verify against the matching mock
 
 ## 9. What NOT to change
 - Domain logic, Prisma schema, API routes, auth — untouched. This is a UI/IA redesign.
-- The 11 destinations stay (user decision) — we regroup, we don't remove.
+- The destinations stay available (owner decision) — we **regroup and consolidate** (Bookings,
+  Needs you, one Setup door), we don't delete features. See §2 for the full IA.
 - No new dependencies. If you think one is needed, **stop and ask** (project rule).

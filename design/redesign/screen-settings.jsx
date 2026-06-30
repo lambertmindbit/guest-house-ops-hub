@@ -20,6 +20,9 @@ const SET_GROUPS = [
   { label: "Maintenance", items: [
     { id: "blocks", icon: "ban", t: "Blocked dates", d: "1 active block" },
   ]},
+  { label: "Safety", items: [
+    { id: "flagged", icon: "ban", t: "Scam numbers", d: "2 flagged numbers · warn at booking" },
+  ]},
 ];
 const SET_FLAT = SET_GROUPS.flatMap((g) => g.items);
 
@@ -292,14 +295,63 @@ function Blocks({ back }) {
   );
 }
 
+/* ---------- Scam / flagged numbers ---------- */
+function FlaggedNumbers({ back }) {
+  return (
+    <div className="entrance">
+      <SubHead back={back} title="Scam numbers" sub="Phones on this list trigger a warning when you start a booking — so a known bad actor can't slip through." action={<AddBtn>Add number</AddBtn>} />
+      <div className="col" style={{ gap: 8 }}>
+        {DATA.flaggedNumbers.map((f, i) => (
+          <div key={i} className="rowcard" style={{ marginTop: 0 }}>
+            <span className="rowcard__lead" style={{ background: "var(--red-bg)", color: "var(--red-text)" }}><RDIcon name="ban" size={16} /></span>
+            <div className="rowcard__main">
+              <div className="rowcard__name num">{f.phone}</div>
+              <div className="rowcard__meta">{f.reason} · added {f.added}</div>
+            </div>
+            <RowActions showEdit={false} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const SUB_PAGES = {
   property: PropertyDetails, roomtypes: RoomTypes,
-  rooms: Rooms, channels: ChannelsSubpage, pricing: Pricing, blocks: Blocks,
+  rooms: Rooms, channels: ChannelsSubpage, pricing: Pricing, blocks: Blocks, flagged: FlaggedNumbers,
 };
 
-function Settings() {
-  const [sub, setSub] = useStateSet(null);
+function Settings({ desktop }) {
+  const [sub, setSub] = useStateSet(desktop ? "property" : null);
   const back = () => setSub(null);
+
+  if (desktop) {
+    const cur = sub || "property";
+    const Page = SUB_PAGES[cur];
+    return (
+      <div className="entrance set-md">
+        <div className="set-md__list">
+          <div className="display" style={{ fontSize: 22, marginBottom: 12 }}>Settings</div>
+          {SET_GROUPS.map((g) => (
+            <div key={g.label} className="setgroup">
+              <div className="setgroup__label">{g.label}</div>
+              <div className="setlist">
+                {g.items.map((it) => (
+                  <a key={it.id} className={"setrow" + (cur === it.id ? " setrow--on" : "")} onClick={() => setSub(it.id)}>
+                    <span className="setrow__ic"><RDIcon name={it.icon} size={17} /></span>
+                    <span className="setrow__main"><span className="setrow__t">{it.t}</span></span>
+                    <RDIcon name="chevronR" size={16} className="setrow__chev" style={{ color: "var(--text-faint)" }} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="set-md__detail"><Page back={back} /></div>
+      </div>
+    );
+  }
+
   const Page = sub ? SUB_PAGES[sub] : null;
   if (Page) return <Page back={back} />;
   return <SettingsHub openSub={setSub} />;

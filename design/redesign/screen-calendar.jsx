@@ -5,6 +5,7 @@ var CH_DOT = window.CH_DOT;
 
 function DayView({ sel, setSel, go }) {
   const booked = DATA.rooms.filter((r) => DATA.grid[r.id][sel].s === "occ").length;
+  const pct = Math.round((booked / DATA.rooms.length) * 100);
   return (
     <>
       <div className="daystrip">
@@ -16,16 +17,19 @@ function DayView({ sel, setSel, go }) {
           </a>
         ))}
       </div>
-      <div className="row" style={{ justifyContent: "space-between", margin: "4px 2px 12px" }}>
-        <span className="h3">{DATA.dows[sel]} {DATA.days[sel]} Jun</span>
-        <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{booked} of {DATA.rooms.length} rooms booked</span>
+      <div style={{ margin: "6px 2px 12px" }}>
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
+          <span className="h3">{DATA.dows[sel]} {DATA.days[sel]} Jun</span>
+          <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{booked} of {DATA.rooms.length} booked · {DATA.rooms.length - booked} free</span>
+        </div>
+        <div className="progress"><div className="progress__fill" style={{ width: pct + "%" }} /></div>
       </div>
 
       {DATA.rooms.map((r) => {
         const c = DATA.grid[r.id][sel];
         const cls = c.s === "conflict" ? " dayrow--conflict" : c.s === "blocked" ? " dayrow--blocked" : c.s === "vacant" ? " dayrow--vacant" : "";
         return (
-          <a key={r.id} className={"dayrow" + cls} onClick={() => c.s === "conflict" ? go("conflicts") : c.s === "occ" ? go("reservation", { id: r.id }) : null}>
+          <a key={r.id} className={"dayrow" + cls} onClick={() => c.s === "conflict" ? go("conflicts") : c.s === "occ" ? go("reservation", { id: r.id }) : c.s === "vacant" ? go("new") : null}>
             <div className="dayrow__room">
               <div className="dayrow__num">{r.label}</div>
               <div className="dayrow__type">{r.type.split(" ")[0]}</div>
@@ -46,6 +50,7 @@ function DayView({ sel, setSel, go }) {
               )}
             </div>
             {(c.s === "occ" || c.s === "conflict") && <RDIcon name="chevronR" size={16} style={{ color: "var(--text-faint)", flex: "none" }} />}
+            {c.s === "vacant" && <span className="daybook"><RDIcon name="plus" size={13} /> Book</span>}
           </a>
         );
       })}
@@ -116,7 +121,10 @@ function Calendar({ go, defaultView }) {
       </div>
       {view === "day" ? <DayView sel={sel} setSel={setSel} go={go} /> : <GridView go={go} />}
       <div style={{ height: 14 }} />
-      <button className="btn btn--ghost btn--block" onClick={() => go("new")}><RDIcon name="tag" size={16} /> Block a room</button>
+      <div className="row" style={{ gap: 8 }}>
+        <button className="btn btn--primary" style={{ flex: 1 }} onClick={() => go("new")}><RDIcon name="plus" size={16} /> New booking</button>
+        <button className="btn btn--ghost" style={{ flex: 1 }} onClick={() => go("settings")}><RDIcon name="ban" size={16} /> Block a room</button>
+      </div>
     </div>
   );
 }
