@@ -45,6 +45,7 @@ export default async function MorePage() {
       rows: [
         { href: "/inbox", icon: "inbox", title: "Inbox", sub: inboxCount > 0 ? `${inboxCount} OTA email${inboxCount === 1 ? "" : "s"} to confirm` : "OTA confirmations" },
         { href: "/messages", icon: "inbox", title: "Messages", sub: "Guest message log" },
+        { href: "/escalations", icon: "alert", title: "Escalations", sub: "Assistant approvals queue", badge: esc.openTotal },
       ],
     },
     {

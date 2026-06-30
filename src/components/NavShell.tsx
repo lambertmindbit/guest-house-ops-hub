@@ -12,7 +12,7 @@ import { Icon } from "@/components/ui";
 // "More" is a real /more hub screen on phone (no bottom sheet).
 type NavId =
   | "today" | "calendar" | "bookings" | "guests" | "housekeeping" | "needsyou"
-  | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "settings" | "help";
+  | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "escalations" | "settings" | "help";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
   today: { label: "Today", icon: "today", href: "/" },
@@ -27,6 +27,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   analytics: { label: "Analytics", icon: "chart", href: "/analytics" },
   inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
   messages: { label: "Messages", icon: "inbox", href: "/messages" },
+  escalations: { label: "Escalations", icon: "alert", href: "/escalations" },
   settings: { label: "Property setup", icon: "settings", href: "/settings" },
   help: { label: "Help", icon: "help", href: "/help" },
 };
@@ -37,7 +38,7 @@ const PRIMARY: NavId[] = ["today", "calendar", "bookings"];
 const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operate", items: ["today", "calendar", "bookings", "guests", "housekeeping", "needsyou"] },
   { label: "Business", items: ["finance", "pricing", "analytics"] },
-  { label: "Review", items: ["inbox", "messages"] },
+  { label: "Review", items: ["inbox", "messages", "escalations"] },
   { label: "Setup", items: ["settings"] },
 ];
 
@@ -63,7 +64,7 @@ const STORE: Record<keyof Prefs, string> = {
 function activeId(pathname: string): NavId {
   if (pathname === "/") return "today";
   if (pathname.startsWith("/reservations")) return "bookings";
-  if (pathname.startsWith("/needs-you") || pathname.startsWith("/conflicts") || pathname.startsWith("/escalations")) return "needsyou";
+  if (pathname.startsWith("/needs-you") || pathname.startsWith("/conflicts")) return "needsyou";
   if (pathname.startsWith("/settings") || pathname.startsWith("/feeds")) return "settings";
   let best: NavId = "today";
   let bestLen = -1;
@@ -191,6 +192,7 @@ export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictC
                 <span className="navitem__ic"><Icon name={META[id].icon} size={17} /></span>
                 {META[id].label}
                 {id === "needsyou" && needsYouCount > 0 && <span className="navitem__badge">{needsYouCount}</span>}
+                {id === "escalations" && escalationCount > 0 && <span className="navitem__badge">{escalationCount}</span>}
               </Link>
             ))}
           </div>
