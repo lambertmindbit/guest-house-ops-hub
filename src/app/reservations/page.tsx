@@ -12,6 +12,10 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled",
   no_show: "No-show",
 };
+
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+}
 import { displayDate, displayMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -109,31 +113,22 @@ export default async function ReservationsPage({
         ) : (
           <div className="col" style={{ gap: 6 }}>
             {reservations.map((r) => (
-              <Link key={r.id} href={`/reservations/${r.id}`} className="card card--link" style={{ padding: "12px 14px" }}>
-                <div className="spread" style={{ marginBottom: 4 }}>
-                  <div className="row" style={{ gap: 8, flexWrap: "wrap", minWidth: 0 }}>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: "var(--ink)" }}>
-                      {r.guest.name}
-                    </span>
+              <Link key={r.id} href={`/reservations/${r.id}`} className="rowcard">
+                <span className="rowcard__lead">{initials(r.guest.name)}</span>
+                <div className="rowcard__main">
+                  <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                    <span className="rowcard__name">{r.guest.name}</span>
                     <ChannelBadge name={r.channel.name} />
                   </div>
+                  <div className="rowcard__meta">{r.room.label} · {stayDates(r)}</div>
+                  <div className="row" style={{ gap: 10, flexWrap: "wrap", marginTop: 2 }}>
+                    <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>{displayMoney(r.grossAmount)}</span>
+                    {r.otaRef && <span style={{ fontSize: 12, color: "var(--text-subtle)" }}>Ref: {r.otaRef}</span>}
+                  </div>
+                </div>
+                <div className="rowcard__right">
                   <StatusPill kind={STATUS_KIND[r.status] ?? "ink"}>{STATUS_LABEL[r.status] ?? r.status}</StatusPill>
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text-subtle)", marginBottom: 3 }}>
-                  {r.room.label} · {stayDates(r)}
-                </div>
-                <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>
-                    {displayMoney(r.grossAmount)}
-                  </span>
-                  {r.otaRef && (
-                    <span style={{ fontSize: 12, color: "var(--text-subtle)" }}>
-                      Ref: {r.otaRef}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 12, color: "var(--text-faint)", marginLeft: "auto" }}>
-                    {r.guest.phone}
-                  </span>
+                  <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{r.guest.phone}</span>
                 </div>
               </Link>
             ))}
