@@ -99,6 +99,8 @@ function DayView({ dates, rows, today }: { dates: string[]; rows: Row[]; today: 
 
   const booked = rows.filter((r) => r.cells[sel]?.state === "occupied").length;
   const blocked = rows.filter((r) => r.cells[sel]?.state === "blocked").length;
+  const free = rows.length - booked - blocked;
+  const pct = rows.length > 0 ? Math.round((booked / rows.length) * 100) : 0;
   const { dow, day, mon } = dParts(selDate);
 
   return (
@@ -124,9 +126,15 @@ function DayView({ dates, rows, today }: { dates: string[]; rows: Row[]; today: 
         })}
       </div>
 
-      <div className="row" style={{ justifyContent: "space-between", margin: "4px 2px 12px" }}>
+      {/* Availability summary + occupancy bar for the selected day. */}
+      <div className="row" style={{ justifyContent: "space-between", margin: "4px 2px 6px" }}>
         <span className="h3">{dow} {day} {mon}</span>
-        <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{booked} of {rows.length} booked{blocked > 0 ? ` · ${blocked} blocked` : ""}</span>
+        <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>
+          {booked} of {rows.length} booked · {free} free{blocked > 0 ? ` · ${blocked} blocked` : ""}
+        </span>
+      </div>
+      <div className="progress" style={{ margin: "0 2px 14px" }}>
+        <div className="progress__fill" style={{ width: `${pct}%` }} />
       </div>
 
       {rows.map((r) => {
@@ -167,7 +175,7 @@ function DayView({ dates, rows, today }: { dates: string[]; rows: Row[]; today: 
 
         if (state === "conflict") {
           return (
-            <Link key={r.id} href="/conflicts" className="dayrow dayrow--conflict">
+            <Link key={r.id} href="/needs-you" className="dayrow dayrow--conflict">
               {room}{body}
               <Icon name="chevronR" size={16} style={{ color: "var(--red-text)", flex: "none" }} />
             </Link>
@@ -178,6 +186,19 @@ function DayView({ dates, rows, today }: { dates: string[]; rows: Row[]; today: 
             <Link key={r.id} href={`/reservations/${c.reservation.id}`} className="dayrow">
               {room}{body}
               <Icon name="chevronR" size={16} style={{ color: "var(--text-faint)", flex: "none" }} />
+            </Link>
+          );
+        }
+        // Vacant → tap to book that room on this date (room + date prefill).
+        if (state === "vacant") {
+          return (
+            <Link
+              key={r.id}
+              href={`/reservations/new?roomId=${r.id}&date=${selDate}`}
+              className="dayrow dayrow--vacant"
+            >
+              {room}{body}
+              <span className="daybook"><Icon name="plus" size={13} /> Book</span>
             </Link>
           );
         }
@@ -236,7 +257,7 @@ function GridView({ dates, rows, today }: { dates: string[]; rows: Row[]; today:
                   if (c.state === "conflict") {
                     return (
                       <td key={i} className={`calcell ${cls}`}>
-                        <Link href="/conflicts" style={{ position: "absolute", inset: 0, padding: "6px 7px" }}>{inner}</Link>
+                        <Link href="/needs-you" style={{ position: "absolute", inset: 0, padding: "6px 7px" }}>{inner}</Link>
                       </td>
                     );
                   }
