@@ -52,6 +52,13 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
   const [quote, setQuote] = useState<Quote | null>(null);
   // null = dates incomplete (availability unknown → all rooms enabled).
   const [freeMap, setFreeMap] = useState<Record<string, boolean> | null>(null);
+  // C-Form (foreign-national registration) — create mode, toggle-gated. Persisted
+  // to the upserted guest via the existing PATCH /api/guests/[id] (no API change).
+  const [showCform, setShowCform] = useState(false);
+  const [cform, setCform] = useState({ nationality: "", passportNumber: "", arrivalInIndia: "", portOfEntry: "", purposeOfVisit: "" });
+  function setCf(key: keyof typeof cform, value: string) {
+    setCform((c) => ({ ...c, [key]: value }));
+  }
 
   function set<K extends keyof ReservationFormValues>(key: K, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -158,6 +165,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
     setError(null);
     if (!values.roomId) return setError("Pick a room for these dates.");
     if (!values.channelId) return setError("Choose a booking channel.");
+    if (mode === "create" && scamWarn) return setError("This number is on your scam list — resolve before saving.");
     setSaving(true);
     try {
       const amount = values.grossAmount.trim();
@@ -192,6 +200,16 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         return;
       }
       const id = mode === "create" ? json.data.id : values.id;
+      // Persist C-Form to the (upserted) guest via the existing guest API.
+      if (mode === "create" && showCform && json.data?.guest?.id) {
+        const payload: Record<string, string | null> = {};
+        for (const [k, v] of Object.entries(cform)) payload[k] = v.trim() ? v.trim() : null;
+        await fetch(`/api/guests/${json.data.guest.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+      }
       router.push(`/reservations/${id}`);
       router.refresh();
     } catch {
@@ -216,9 +234,9 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         </div>
       )}
       {scamWarn && (
-        <div className="banner banner--warn" style={{ marginBottom: 14 }}>
+        <div className="banner banner--danger" style={{ marginBottom: 14 }}>
           <span className="banner__icon"><Icon name="alert" size={18} /></span>
-          <span className="banner__txt"><b>Scam list:</b> {scamWarn}</span>
+          <span className="banner__txt"><b>Scam list:</b> {scamWarn} — saving is blocked until you resolve this.</span>
         </div>
       )}
 
@@ -232,10 +250,43 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
               <input className="input" required value={values.guestPhone} onChange={(e) => set("guestPhone", e.target.value)} placeholder="98xxxxxxxx" inputMode="tel" />
               <div className="field-hint">We’ll match an existing guest as you type.</div>
             </div>
-            <div className="field" style={{ marginBottom: 0 }}>
+            <div className="field">
               <label className="field-label">Full name <span className="req">*</span></label>
               <input className="input" required value={values.guestName} onChange={(e) => set("guestName", e.target.value)} placeholder="e.g. Priya Nair" />
             </div>
+
+            {/* C-Form: collect foreign-national registration at booking time. */}
+            <div className="row" style={{ justifyContent: "space-between", gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div className="field-label" style={{ marginBottom: 2 }}>Foreign-national (C-Form)</div>
+                <div className="field-hint" style={{ margin: 0 }}>Collect passport & entry details for registration.</div>
+              </div>
+              <button type="button" className={`switch${showCform ? " on" : ""}`} onClick={() => setShowCform((s) => !s)} aria-label="Collect C-Form details"><span /></button>
+            </div>
+            {showCform && (
+              <div className="form-grid" style={{ marginTop: 14 }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label className="field-label">Nationality</label>
+                  <input className="input" value={cform.nationality} onChange={(e) => setCf("nationality", e.target.value)} placeholder="e.g. British" />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label className="field-label">Passport no.</label>
+                  <input className="input" value={cform.passportNumber} onChange={(e) => setCf("passportNumber", e.target.value)} />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label className="field-label">Date of entry</label>
+                  <input className="input" type="date" value={cform.arrivalInIndia} onChange={(e) => setCf("arrivalInIndia", e.target.value)} />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label className="field-label">Port of entry</label>
+                  <input className="input" value={cform.portOfEntry} onChange={(e) => setCf("portOfEntry", e.target.value)} placeholder="e.g. Delhi (DEL)" />
+                </div>
+                <div className="field" style={{ marginBottom: 0, gridColumn: "1 / -1" }}>
+                  <label className="field-label">Purpose of visit</label>
+                  <input className="input" value={cform.purposeOfVisit} onChange={(e) => setCf("purposeOfVisit", e.target.value)} placeholder="Tourism, business…" />
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="field" style={{ marginBottom: 0 }}>
@@ -331,7 +382,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
       </div>
 
       <div className="form-save">
-        <button type="submit" disabled={saving} className="btn btn--primary btn--block">
+        <button type="submit" disabled={saving || (mode === "create" && !!scamWarn)} className="btn btn--primary btn--block">
           <Icon name="check" size={18} /> {saving ? "Saving…" : mode === "create" ? "Save booking" : "Save changes"}
         </button>
       </div>
