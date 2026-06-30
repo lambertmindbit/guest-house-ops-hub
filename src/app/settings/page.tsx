@@ -21,7 +21,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
     group: "Channels & sync",
     items: [
       { key: "channels", title: "Channels", sub: "Booking sources & commission", icon: "link" },
-      { key: "feeds", title: "iCal feeds", sub: "Sync availability with OTAs", icon: "link", href: "/feeds" },
+      { key: "feeds", title: "iCal feeds", sub: "Sync availability with OTAs", icon: "link" },
     ],
   },
   { group: "Pricing", items: [{ key: "pricing", title: "Pricing rules", sub: "Weekend, season, lead-time, occupancy", icon: "tag" }] },
