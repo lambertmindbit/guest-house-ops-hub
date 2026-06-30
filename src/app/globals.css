@@ -279,6 +279,19 @@ a.rowcard:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
 .kpi-panel--verdict .kpi-ctx { color: rgba(255,255,255,0.6); }
 .kpi-ctx b { color: var(--accent); font-weight: 600; }
 @media (min-width: 900px) { .kpi-strip { grid-template-columns: repeat(4, 1fr); } }
+/* 3-up verdict strip (Today: Occupancy · Arrivals · Departures) — holds at every
+   width, so it overrides the desktop 4-up rule above. */
+.kpi-strip--3 { grid-template-columns: 1.25fr 1fr 1fr; }
+@media (min-width: 900px) { .kpi-strip--3 { grid-template-columns: 1.25fr 1fr 1fr; } }
+
+/* Promoted housekeeping card on Today — ported from redesign/components.css. */
+.clean-card .room-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
+.room-chip { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--surface-2); min-width: 76px; }
+.room-chip b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.room-chip small { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; color: var(--text-subtle); }
+.room-chip--prio { background: var(--red-bg); border-color: var(--red-border); }
+.room-chip--prio b, .room-chip--prio small { color: var(--red-text); }
 
 /* ---------------- Inputs ---------------- */
 .field { margin-bottom: 14px; }
