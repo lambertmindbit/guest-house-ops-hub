@@ -3,9 +3,11 @@ import type { Prisma } from "@prisma/client";
 
 // DATE columns come back from Prisma as Date objects at UTC midnight. Build a
 // local Date from the UTC parts so display never shifts across the day boundary.
+// The one full date format across the app (guide §6): "Mon, 1 Jun 2026".
+// Compact contexts use displayShortDate ("1 Jun").
 export function displayDate(date: Date): string {
   const local = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  return format(local, "EEE d MMM");
+  return format(local, "EEE, d MMM yyyy");
 }
 
 export function displayShortDate(date: Date): string {
