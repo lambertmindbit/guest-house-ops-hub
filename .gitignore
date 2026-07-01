@@ -33,3 +33,7 @@ npm-debug.log*
 # local scratch / handoff drops — not part of the app
 /_dropbox/
 /docs/HANDOFF.html
+
+# Editor lock files + local planning drops
+~$*
+ROOT_Lawei_Gap_Analysis*
