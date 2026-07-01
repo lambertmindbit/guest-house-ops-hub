@@ -4,6 +4,7 @@ import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { isOverlapError } from "@/lib/db-errors";
 import { agentTokenOk } from "@/lib/agent-auth";
+import { notifyBookingConfirmation } from "@/lib/messaging";
 
 // POST /api/agent/reservations
 //
@@ -98,6 +99,8 @@ export async function POST(req: Request) {
       where: { id: reservation.id },
       include: reservationInclude,
     });
+    // Log a booking confirmation (best-effort — never fail the booking on this).
+    await notifyBookingConfirmation(reservation.id).catch(() => {});
     return ok(full, 201);
   } catch (error) {
     if (error instanceof MissingGuestError) return fail("provide guestId or guest details", 422);

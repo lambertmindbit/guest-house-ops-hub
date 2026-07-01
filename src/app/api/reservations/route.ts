@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { isOverlapError } from "@/lib/db-errors";
+import { notifyBookingConfirmation } from "@/lib/messaging";
 
 // Thrown inside the create transaction when neither a guestId nor guest details
 // resolved to a guest — surfaced as a 422.
@@ -86,6 +87,8 @@ export async function POST(request: Request) {
       where: { id: reservation.id },
       include: reservationInclude,
     });
+    // Log a booking confirmation (best-effort — never fail the booking on this).
+    await notifyBookingConfirmation(reservation.id).catch(() => {});
     return ok(full, 201);
   } catch (error) {
     if (error instanceof MissingGuestError) return fail("provide guestId or guest details", 422);
