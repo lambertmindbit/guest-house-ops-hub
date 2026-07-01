@@ -46,8 +46,14 @@ git-driven: merging to <code>main</code> ships to production.</p>
 </code></pre>
 <h2>Vercel</h2>
 <ul>
-<li><strong>Framework preset:</strong> Next.js (auto-detected). Build command is the default
-(<code>npm run build</code>, which runs <code>prisma generate &amp;&amp; next build</code>).</li>
+<li><strong>Framework preset:</strong> Next.js (auto-detected). Build command is
+<a href="../scripts/vercel-build.sh"><code>scripts/vercel-build.sh</code></a> (set via <code>vercel.json</code>),
+which <strong>applies pending DB migrations on production deploys</strong> (<code>prisma migrate deploy</code>), then <code>prisma generate &amp;&amp; next build</code>.</li>
+<li><strong>Migrations apply on deploy.</strong> On a <strong>production</strong> deploy (<code>VERCEL_ENV=production</code>,
+i.e. a push to <code>main</code>) the build runs <code>prisma migrate deploy</code> first, so merging a
+migration ships it to the database. <strong>Preview</strong> deploys skip this — a PR can never
+migrate production. This needs <code>DIRECT_URL</code> in the Vercel Production env (below).
+A local <code>npm run build</code> never migrates (it stays <code>prisma generate &amp;&amp; next build</code>).</li>
 <li><strong>Production branch:</strong> <code>main</code>. Every push to <code>main</code> triggers a production deploy;
 every PR gets a <strong>preview deployment</strong> with its own URL.</li>
 <li><strong>Node:</strong> 22.</li>
