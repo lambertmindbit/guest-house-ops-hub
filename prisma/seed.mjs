@@ -46,31 +46,39 @@ const ROOM_TYPES = [
   },
 ];
 
-// findFirst-then-create keeps the seed idempotent without adding unique
-// constraints the schema doesn't call for: re-running changes nothing.
-async function ensureChannel(channel) {
-  const existing = await prisma.channel.findFirst({ where: { name: channel.name } });
-  if (existing) return existing;
-  return prisma.channel.create({ data: channel });
+// The single property (tenant root). Multi-tenancy scopes data by this id.
+async function ensureProperty() {
+  const existing = await prisma.propertySettings.findFirst();
+  return existing ?? prisma.propertySettings.create({ data: { name: "My Guest House" } });
 }
 
-async function ensureRoomType({ rooms, ...data }) {
+// findFirst-then-create keeps the seed idempotent without adding unique
+// constraints the schema doesn't call for: re-running changes nothing.
+async function ensureChannel(channel, propertyId) {
+  const existing = await prisma.channel.findFirst({ where: { name: channel.name } });
+  if (existing) return existing;
+  return prisma.channel.create({ data: { ...channel, propertyId } });
+}
+
+async function ensureRoomType({ rooms, ...data }, propertyId) {
   let roomType = await prisma.roomType.findFirst({ where: { name: data.name } });
-  if (!roomType) roomType = await prisma.roomType.create({ data });
+  if (!roomType) roomType = await prisma.roomType.create({ data: { ...data, propertyId } });
   for (const label of rooms) {
     const room = await prisma.room.findFirst({
       where: { label, roomTypeId: roomType.id },
     });
     if (!room) {
-      await prisma.room.create({ data: { label, roomTypeId: roomType.id } });
+      await prisma.room.create({ data: { label, roomTypeId: roomType.id, propertyId } });
     }
   }
   return roomType;
 }
 
 async function main() {
-  for (const channel of CHANNELS) await ensureChannel(channel);
-  for (const roomType of ROOM_TYPES) await ensureRoomType(roomType);
+  // The seed uses the raw client (no tenant extension), so stamp propertyId itself.
+  const property = await ensureProperty();
+  for (const channel of CHANNELS) await ensureChannel(channel, property.id);
+  for (const roomType of ROOM_TYPES) await ensureRoomType(roomType, property.id);
 
   const [channels, roomTypes, rooms] = await Promise.all([
     prisma.channel.count(),
