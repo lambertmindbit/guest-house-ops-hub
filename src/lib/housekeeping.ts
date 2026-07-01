@@ -72,3 +72,82 @@ export async function getHousekeeping(): Promise<Housekeeping> {
 
   return { rooms: result, toCleanCount: result.filter((r) => r.needsCleaning).length };
 }
+
+// ── Cleaning tasks (assignment + checklist + accountability) ─────────────────
+import type { HkTaskStatus } from "@prisma/client";
+
+export const DEFAULT_CHECKLIST = ["Bathroom", "Bed & linen", "Towels", "Restock supplies", "Trash out", "Floor & dusting"];
+export type ChecklistItem = { label: string; done: boolean };
+
+// Pure helpers (testable).
+export function checklistProgress(items: ChecklistItem[]): { done: number; total: number } {
+  return { done: items.filter((i) => i.done).length, total: items.length };
+}
+export function allDone(items: ChecklistItem[]): boolean {
+  return items.length > 0 && items.every((i) => i.done);
+}
+
+export type HkTaskView = {
+  assigneeStaffId: string | null;
+  status: HkTaskStatus;
+  checklist: ChecklistItem[];
+  completedByStaffId: string | null;
+  completedAt: string | null;
+};
+
+// Today's tasks keyed by roomId.
+export async function getTodayTasks(): Promise<Record<string, HkTaskView>> {
+  const date = parseDateOnly(todayDateOnly());
+  const rows = await prisma.housekeepingTask.findMany({ where: { date } });
+  const out: Record<string, HkTaskView> = {};
+  for (const r of rows) {
+    out[r.roomId] = {
+      assigneeStaffId: r.assigneeStaffId,
+      status: r.status,
+      checklist: Array.isArray(r.checklist) ? (r.checklist as unknown as ChecklistItem[]) : [],
+      completedByStaffId: r.completedByStaffId,
+      completedAt: r.completedAt ? r.completedAt.toISOString() : null,
+    };
+  }
+  return out;
+}
+
+type UpsertTaskInput = {
+  roomId: string;
+  assigneeStaffId?: string | null;
+  checklist?: ChecklistItem[];
+  complete?: boolean;
+  completedByStaffId?: string | null;
+};
+
+// Assign / update checklist / complete today's task for a room. Completing also
+// marks the room clean (the existing derived-cleaning flow) and stamps who did it.
+export async function upsertHousekeepingTask(input: UpsertTaskInput) {
+  const date = parseDateOnly(todayDateOnly());
+  const existing = await prisma.housekeepingTask.findFirst({ where: { roomId: input.roomId, date } });
+  const checklist =
+    input.checklist ??
+    (existing?.checklist as unknown as ChecklistItem[] | undefined) ??
+    DEFAULT_CHECKLIST.map((label) => ({ label, done: false }));
+
+  const data: Record<string, unknown> = {
+    assigneeStaffId: input.assigneeStaffId !== undefined ? input.assigneeStaffId : (existing?.assigneeStaffId ?? null),
+    checklist: checklist as unknown as object,
+  };
+  if (input.complete) {
+    data.status = "done";
+    data.completedAt = new Date();
+    data.completedByStaffId = input.completedByStaffId ?? input.assigneeStaffId ?? existing?.assigneeStaffId ?? null;
+  } else {
+    data.status = checklist.some((c) => c.done) ? "in_progress" : "pending";
+  }
+
+  const task = existing
+    ? await prisma.housekeepingTask.update({ where: { id: existing.id }, data })
+    : await prisma.housekeepingTask.create({ data: { roomId: input.roomId, date, ...data } });
+
+  if (input.complete) {
+    await prisma.room.update({ where: { id: input.roomId }, data: { lastCleanedAt: new Date(), needsCleaningFlag: false } });
+  }
+  return task;
+}

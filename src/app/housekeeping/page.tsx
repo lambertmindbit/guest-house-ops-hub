@@ -1,13 +1,22 @@
-import { getHousekeeping, type HousekeepingRoom } from "@/lib/housekeeping";
+import { getHousekeeping, getTodayTasks, DEFAULT_CHECKLIST, type HousekeepingRoom } from "@/lib/housekeeping";
+import { listStaff } from "@/lib/staff";
 import { CleaningButton } from "@/components/CleaningButton";
+import { HousekeepingTaskCard } from "@/components/HousekeepingTaskCard";
 import { PageHead, SectionLabel, EmptyState } from "@/components/ui";
 import { displayShortDate } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
+const blankChecklist = () => DEFAULT_CHECKLIST.map((label) => ({ label, done: false }));
+
 export default async function HousekeepingPage() {
-  const { rooms, toCleanCount } = await getHousekeeping();
+  const [{ rooms, toCleanCount }, tasks, staff] = await Promise.all([
+    getHousekeeping(),
+    getTodayTasks(),
+    listStaff(),
+  ]);
+  const activeStaff = staff.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name }));
   const toClean = rooms
     .filter((r) => r.needsCleaning)
     .sort((a, b) => Number(b.highPriority) - Number(a.highPriority));
@@ -42,7 +51,12 @@ export default async function HousekeepingPage() {
                       </div>
                     )}
                   </div>
-                  <CleaningButton roomId={room.id} markCleaned />
+                  <HousekeepingTaskCard
+                    roomId={room.id}
+                    staff={activeStaff}
+                    assigneeStaffId={tasks[room.id]?.assigneeStaffId ?? null}
+                    checklist={tasks[room.id]?.checklist?.length ? tasks[room.id].checklist : blankChecklist()}
+                  />
                 </div>
               </div>
             ))}
