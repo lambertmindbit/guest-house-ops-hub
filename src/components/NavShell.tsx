@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
+import { canSeeNav, type Role } from "@/lib/authz";
 
 // One config drives BOTH the phone tabs and the desktop sidebar.
 // Round-2 IA consolidation: ~24 destinations → a small primary set + shallow
@@ -87,7 +88,7 @@ function toolbarTitle(pathname: string): string {
   return META[activeId(pathname)].label;
 }
 
-export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictCount?: number; escalationCount?: number }) {
+export function NavShell({ conflictCount = 0, escalationCount = 0, role = "owner" }: { conflictCount?: number; escalationCount?: number; role?: Role }) {
   const pathname = usePathname();
   const router = useRouter();
   const [panel, setPanel] = useState(false);
@@ -185,7 +186,9 @@ export function NavShell({ conflictCount = 0, escalationCount = 0 }: { conflictC
           <span className="brandmark"><Icon name="door" size={17} /></span>
           <span><b>Ops Hub</b><span>Guest House</span></span>
         </Link>
-        {SIDEBAR_GROUPS.map((g) => (
+        {SIDEBAR_GROUPS.map((g) => ({ ...g, items: g.items.filter((id) => canSeeNav(role, id)) }))
+          .filter((g) => g.items.length > 0)
+          .map((g) => (
           <div key={g.label}>
             <div className="sidebar__group">{g.label}</div>
             {g.items.map((id) => (

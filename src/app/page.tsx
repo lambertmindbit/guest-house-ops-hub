@@ -4,6 +4,8 @@ import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
 import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
 import { getPendingPayments } from "@/lib/finance";
+import { currentRole } from "@/lib/session";
+import { canSeeMoney } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { ChannelBadge, Icon } from "@/components/ui";
 import { Collapsible } from "@/components/Collapsible";
@@ -31,6 +33,7 @@ export default async function DashboardPage() {
     prisma.escalation.count({ where: { status: "open" } }),
     getPendingPayments(),
   ]);
+  const showMoney = canSeeMoney(await currentRole());
   const heading = displayDate(parseDateOnly(s.date));
   const conflictN = conflicts.length;
   // One merged "Needs you" signal: booking conflicts + open agent approvals.
@@ -81,8 +84,8 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Payments pending — money still owed across confirmed bookings. */}
-        {pending.count > 0 && (
+        {/* Payments pending — money still owed across confirmed bookings. Owner only. */}
+        {showMoney && pending.count > 0 && (
           <Link href="/finance" className="banner banner--warn" style={{ marginTop: 12 }}>
             <span className="banner__icon"><Icon name="wallet" size={18} /></span>
             <span className="banner__txt">

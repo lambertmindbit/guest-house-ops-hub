@@ -4,6 +4,8 @@
 // Node route handlers. Credentials live in .env (OWNER_EMAIL/OWNER_PASSWORD);
 // the cookie is signed with AUTH_SECRET.
 
+import type { Role } from "@/lib/authz";
+
 export const SESSION_COOKIE = "ota_session";
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -36,16 +38,24 @@ async function hmacKey(): Promise<CryptoKey> {
   );
 }
 
-export async function createSessionToken(email: string): Promise<string> {
-  const payload = toBase64Url(encoder.encode(JSON.stringify({ sub: email, exp: Date.now() + MAX_AGE_MS })));
+// Signed session claims. role/propertyId ride in the token so the Edge
+// middleware can gate by role with no DB lookup (tamper-proof via the HMAC).
+export type SessionClaims = { sub: string; role: Role; propertyId: string | null };
+
+export async function createSessionToken(claims: SessionClaims): Promise<string> {
+  const payload = toBase64Url(
+    encoder.encode(JSON.stringify({ ...claims, exp: Date.now() + MAX_AGE_MS })),
+  );
   const signature = await crypto.subtle.sign("HMAC", await hmacKey(), encoder.encode(payload));
   return `${payload}.${toBase64Url(new Uint8Array(signature))}`;
 }
 
-export async function verifySessionToken(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+// Verify signature + expiry, return claims or null. Legacy tokens (pre-roles)
+// carried only { sub, exp } — those were the single owner, so default owner.
+export async function readSession(token: string | undefined): Promise<SessionClaims | null> {
+  if (!token) return null;
   const [payload, signature] = token.split(".");
-  if (!payload || !signature) return false;
+  if (!payload || !signature) return null;
 
   const valid = await crypto.subtle.verify(
     "HMAC",
@@ -53,14 +63,24 @@ export async function verifySessionToken(token: string | undefined): Promise<boo
     fromBase64Url(signature),
     encoder.encode(payload),
   );
-  if (!valid) return false;
+  if (!valid) return null;
 
   try {
-    const { exp } = JSON.parse(decoder.decode(fromBase64Url(payload)));
-    return typeof exp === "number" && exp > Date.now();
+    const data = JSON.parse(decoder.decode(fromBase64Url(payload)));
+    if (typeof data.exp !== "number" || data.exp <= Date.now()) return null;
+    return {
+      sub: String(data.sub ?? ""),
+      role: (data.role as Role) ?? "owner",
+      propertyId: data.propertyId ?? null,
+    };
   } catch {
-    return false;
+    return null;
   }
+}
+
+// Boolean gate kept for callers that only need validity.
+export async function verifySessionToken(token: string | undefined): Promise<boolean> {
+  return (await readSession(token)) !== null;
 }
 
 // Constant-time string comparison to avoid leaking length/contents via timing.
