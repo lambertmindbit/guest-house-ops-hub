@@ -5,7 +5,10 @@ import { ChannelBadge, Icon } from "@/components/ui";
 import { PaymentsPanel } from "@/components/PaymentsPanel";
 import { StayActions } from "@/components/StayActions";
 import { ReservationOverflow } from "@/components/ReservationOverflow";
+import { RefundPanel } from "@/components/RefundPanel";
 import { displayDate, displayMoney } from "@/lib/format";
+import { formatDateOnly, todayDateOnly } from "@/lib/dates";
+import { getCancellationPolicy, isPeakDate, daysUntil, assessRefund, type SeasonWindow } from "@/lib/cancellation";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +47,40 @@ export default async function ReservationDetailPage({
       channel: true,
       room: { include: { roomType: true } },
       payments: { orderBy: { paidAt: "asc" } },
+      refunds: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!r) notFound();
 
   const status = STATUS[r.status] ?? STATUS.confirmed;
   const nights = nightsBetween(r.checkIn, r.checkOut);
+
+  // Cancellation refund assessment (only needed once a booking is cancelled).
+  let refundView: {
+    collected: number;
+    suggestedRefund: number;
+    freeWindowDays: number;
+    withinFreeWindow: boolean;
+  } | null = null;
+  if (r.status === "cancelled") {
+    const [policy, seasons] = await Promise.all([
+      getCancellationPolicy(),
+      prisma.season.findMany(),
+    ]);
+    const seasonWindows: SeasonWindow[] = seasons.map((s) => ({
+      startDate: formatDateOnly(s.startDate),
+      endDate: formatDateOnly(s.endDate),
+      adjustPct: Number(s.adjustPct),
+    }));
+    const collected = r.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const assessment = assessRefund({
+      policy,
+      isPeak: isPeakDate(seasonWindows, formatDateOnly(r.checkIn)),
+      daysUntilCheckIn: daysUntil(todayDateOnly(), formatDateOnly(r.checkIn)),
+      collected,
+    });
+    refundView = { collected, ...assessment };
+  }
 
   return (
     <main className="app-main" style={{ maxWidth: 620 }}>
@@ -154,6 +185,25 @@ export default async function ReservationDetailPage({
             note: p.note,
           }))}
         />
+
+        {/* Cancellation & refund — appears once the booking is cancelled. */}
+        {refundView && (
+          <RefundPanel
+            reservationId={r.id}
+            collected={refundView.collected}
+            suggestedRefund={refundView.suggestedRefund}
+            freeWindowDays={refundView.freeWindowDays}
+            withinFreeWindow={refundView.withinFreeWindow}
+            refunds={r.refunds.map((rf) => ({
+              id: rf.id,
+              amount: Number(rf.amount),
+              status: rf.status,
+              reason: rf.reason,
+              approvedAt: rf.approvedAt ? rf.approvedAt.toISOString() : null,
+              createdAt: rf.createdAt.toISOString(),
+            }))}
+          />
+        )}
 
         {/* footer: Edit · Invoice · ⋯ (Cancel inside the overflow) */}
         <div className="row" style={{ gap: 8, marginTop: 16 }}>
