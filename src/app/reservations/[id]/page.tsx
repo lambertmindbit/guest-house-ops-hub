@@ -40,16 +40,19 @@ export default async function ReservationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const r = await prisma.reservation.findUnique({
-    where: { id },
-    include: {
-      guest: true,
-      channel: true,
-      room: { include: { roomType: true } },
-      payments: { orderBy: { paidAt: "asc" } },
-      refunds: { orderBy: { createdAt: "desc" } },
-    },
-  });
+  const [r, property] = await Promise.all([
+    prisma.reservation.findUnique({
+      where: { id },
+      include: {
+        guest: true,
+        channel: true,
+        room: { include: { roomType: true } },
+        payments: { orderBy: { paidAt: "asc" } },
+        refunds: { orderBy: { createdAt: "desc" } },
+      },
+    }),
+    prisma.propertySettings.findFirst(),
+  ]);
   if (!r) notFound();
 
   const status = STATUS[r.status] ?? STATUS.confirmed;
@@ -176,6 +179,7 @@ export default async function ReservationDetailPage({
           reservationId={r.id}
           gross={r.grossAmount ? Number(r.grossAmount) : 0}
           advanceRequired={r.advanceRequired ? Number(r.advanceRequired) : 0}
+          upi={property?.upiVpa ? { vpa: property.upiVpa, payeeName: property.name } : undefined}
           payments={r.payments.map((p) => ({
             id: p.id,
             amount: Number(p.amount),

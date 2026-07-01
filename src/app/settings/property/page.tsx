@@ -14,6 +14,7 @@ export default async function Page() {
     timezone: s.timezone,
     address: s.address,
     gstNumber: s.gstNumber,
+    upiVpa: s.upiVpa,
   };
 
   return (

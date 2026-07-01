@@ -320,6 +320,8 @@ model PropertySettings {
   timezone     String   @default("Asia/Kolkata")
   address      String?
   gstNumber    String?  @map("gst_number")
+  // UPI VPA (e.g. name@bank) used to build a pay-to-me UPI link/QR for guests.
+  upiVpa       String?  @map("upi_vpa")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("property_settings")
