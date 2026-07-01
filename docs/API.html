@@ -123,9 +123,9 @@ guarded delete), <code>422</code> Zod validation failure.</p>
 </tbody></table>
 <p><code>POST</code>/<code>PATCH</code> accept an optional <code>advanceRequired</code> (the deposit the booking
 expects); advance status is <strong>derived</strong> at render time from advance-tagged
-payments vs that figure — never stored as a paid/unpaid flag. The
-all-reservations list page (<code>/reservations</code>) reads <code>GET /api/reservations</code> with
-<code>?status</code> and <code>?q</code> filters.</p>
+payments vs that figure — never stored as a paid/unpaid flag. The Bookings list
+page (<code>/reservations</code>) renders server-side via Prisma and does its search (guest,
+phone, room or channel) and stay-state filtering client-side.</p>
 <h2>Availability &amp; dashboard</h2>
 <table>
 <thead>

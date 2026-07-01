@@ -4,8 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChannelBadge, StatusPill, Icon } from "@/components/ui";
 
-// One reservation row, with its stay-state computed server-side so the chips can
-// filter instantly client-side (per the redesign Bookings spec).
+// One reservation row, computed server-side. `bucket` is the coarse timeline used
+// by the filter chips (Upcoming → In-house → Past, plus a Cancelled exceptions
+// bucket); `state` is the finer label shown on the row badge (e.g. "Arrives today").
+export type BookingBucket = "upcoming" | "in_house" | "past" | "cancelled";
+export type BookingState = "arrives" | "departs" | "staying" | "upcoming" | "past" | "cancelled" | "no_show";
+
 export type BookingRow = {
   id: string;
   name: string;
@@ -14,11 +18,12 @@ export type BookingRow = {
   roomType: string;
   channel: string;
   dates: string;
-  state: "arrives" | "departs" | "staying" | "upcoming" | "past" | "cancelled" | "no_show";
+  bucket: BookingBucket;
+  state: BookingState;
   when: string;
 };
 
-const STATE_LABEL: Record<BookingRow["state"], string> = {
+const STATE_LABEL: Record<BookingState, string> = {
   arrives: "Arrives",
   departs: "Departs",
   staying: "In-house",
@@ -27,7 +32,7 @@ const STATE_LABEL: Record<BookingRow["state"], string> = {
   cancelled: "Cancelled",
   no_show: "No-show",
 };
-const STATE_KIND: Record<BookingRow["state"], "good" | "warn" | "danger" | "ink" | "teal"> = {
+const STATE_KIND: Record<BookingState, "good" | "warn" | "danger" | "ink" | "teal"> = {
   arrives: "good",
   departs: "warn",
   staying: "teal",
@@ -37,13 +42,15 @@ const STATE_KIND: Record<BookingRow["state"], "good" | "warn" | "danger" | "ink"
   no_show: "danger",
 };
 
-// Stay-state filters, matching the redesign prototype (not lifecycle status).
-const FILTERS: { key: string; label: string; match?: BookingRow["state"] }[] = [
+// One coherent timeline (Upcoming → In-house → Past) plus a Cancelled exceptions
+// bucket (cancelled + no-show). Arrivals/departures stay on Today; here we favour
+// a findable archive over transient today-only buckets.
+const FILTERS: { key: string; label: string; match?: BookingBucket }[] = [
   { key: "all", label: "All" },
-  { key: "arrives", label: "Arrivals", match: "arrives" },
-  { key: "staying", label: "In-house", match: "staying" },
   { key: "upcoming", label: "Upcoming", match: "upcoming" },
-  { key: "departs", label: "Departures", match: "departs" },
+  { key: "in_house", label: "In-house", match: "in_house" },
+  { key: "past", label: "Past", match: "past" },
+  { key: "cancelled", label: "Cancelled", match: "cancelled" },
 ];
 
 function initials(name: string) {
@@ -55,14 +62,14 @@ export function BookingsList({ rows }: { rows: BookingRow[] }) {
   const [filter, setFilter] = useState("all");
 
   const counts = rows.reduce<Record<string, number>>((m, r) => {
-    m[r.state] = (m[r.state] ?? 0) + 1;
+    m[r.bucket] = (m[r.bucket] ?? 0) + 1;
     return m;
   }, {});
 
   const term = q.trim().toLowerCase();
   const list = rows.filter((r) => {
     const f = FILTERS.find((x) => x.key === filter);
-    if (f?.match && r.state !== f.match) return false;
+    if (f?.match && r.bucket !== f.match) return false;
     if (!term) return true;
     return (
       r.name.toLowerCase().includes(term) ||

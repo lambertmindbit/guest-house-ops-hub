@@ -156,7 +156,7 @@
           <li><strong>E · Advance-payment tracking</strong> — <code>advanceRequired</code> on a booking + <code>isAdvance</code> on a payment; advance status is derived, never stored.</li>
           <li><strong>F · Messaging outbox</strong> — a LogAdapter (<code>src/lib/messaging.ts</code>) + <code>/messages</code> screen; agents queue via <code>POST /api/agent/messages</code> (<code>status=logged</code> until a provider is wired).</li>
         </ul>
-        <p>Plus an all-bookings <strong>Reservations</strong> list (<code>/reservations</code>) — search and status-filter — alongside the calendar and Today board. Full agent contract: <code>docs/INTEGRATION.md</code>.</p>
+        <p>Plus an all-bookings <strong>Bookings</strong> list (<code>/reservations</code>) — instant search and timeline filter (Upcoming / In-house / Past / Cancelled) — alongside the calendar and Today board. Full agent contract: <code>docs/INTEGRATION.md</code>.</p>
       </div>
     </div>
   </div>

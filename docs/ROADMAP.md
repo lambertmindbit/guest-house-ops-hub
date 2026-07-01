@@ -75,9 +75,11 @@ without ever getting direct write access to money or bookings. See
   until a provider is wired). This is the groundwork the deferred messaging
   automation will plug a provider into.
 
-## Reservations list
-An all-bookings view at `/reservations` — search by guest/phone/room/OTA ref and
-filter by status — added alongside the calendar and Today board.
+## Bookings list
+A searchable all-bookings view at `/reservations` (labelled **Bookings** in nav)
+— instant client-side search by guest, phone, room or channel, plus timeline
+filter chips (Upcoming · In-house · Past · Cancelled, no-show folded into
+Cancelled) — added alongside the calendar and Today board.
 
 ## Deferred — by design
 

@@ -57,10 +57,10 @@ export default function HelpPage() {
         </div>
         <p className="help-a" style={{ marginBottom: 0 }}>
           The big <b>+</b> starts a <b>new booking</b> from anywhere. <b>More</b>
-          {" "}opens Guests, Housekeeping, Finance, Pricing, Inbox, Analytics, Conflicts,
-          Feeds, Escalations, Messages, Settings and Preferences. On a computer, the same
-          list is a sidebar on the left. Tap the sun/moon to switch <b>dark / light</b>;
-          open <b>Preferences</b> to change the accent colour and density.
+          {" "}opens Guests, Housekeeping, Needs you, Finance, Pricing, Analytics, Inbox,
+          Messages, Escalations, Property setup and Help. On a computer, the same list is a
+          sidebar on the left. Tap the sun/moon to switch <b>dark / light</b>; open
+          {" "}<b>Preferences</b> (the gear, top-right) to change the accent colour and density.
         </p>
       </div>
 
@@ -81,7 +81,7 @@ export default function HelpPage() {
       <div className="card card--pad" style={{ marginBottom: 16 }}>
         <div style={{ paddingTop: 2 }} />
         <Q q="Take a new booking">Tap the <b>+</b> button (or <Link href="/reservations/new">New booking</Link>).</Q>
-        <Q q="Find any booking fast"><Link href="/reservations">Reservations</Link> → search by name, phone, room or reference, or filter by status.</Q>
+        <Q q="Find any booking fast"><Link href="/reservations">Bookings</Link> → search by name, phone, room or channel, or filter by timeline (upcoming, in-house, past, cancelled).</Q>
         <Q q="Add a new room">Go to <Link href="/settings/rooms">Settings → Rooms → Add room</Link>. The calendar updates automatically.</Q>
         <Q q="Block a room for repairs">Calendar → <b>Block a room</b>, or <Link href="/settings/blocks">Settings → Blocked dates</Link>.</Q>
         <Q q="See who owes money"><Link href="/finance">Finance → Balances due</Link>.</Q>
