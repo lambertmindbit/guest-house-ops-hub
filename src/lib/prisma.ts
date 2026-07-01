@@ -30,7 +30,11 @@ const TENANT_MODELS = new Set<string>([
   "Escalation", "OutboundMessage", "Complaint", "Refund", "CancellationPolicy",
 ]);
 
-async function resolvePropertyId(): Promise<string | null> {
+// Resolves the active property for the DEFAULT client: explicit context if set,
+// else the sole property. Reading ALS from inside the extension is unreliable
+// across the Prisma dispatch boundary, so per-tenant work uses prismaForTenant()
+// (id closed over) rather than depending on this for isolation.
+async function resolveDefaultPropertyId(): Promise<string | null> {
   const ctx = tenantFromContext();
   if (ctx) return ctx;
   if (globalForPrisma.solePropertyId !== undefined) return globalForPrisma.solePropertyId ?? null;
@@ -44,49 +48,58 @@ export function __resetTenantResolution() {
   globalForPrisma.solePropertyId = undefined;
 }
 
-function extend(client: PrismaClient) {
-  return client.$extends({
-    query: {
-      $allModels: {
-        async $allOperations({ model, operation, args, query }) {
-          if (!model || !TENANT_MODELS.has(model)) return query(args);
-          const pid = await resolvePropertyId();
-          if (!pid) return query(args); // no tenant → passthrough
-          const a = args as Record<string, unknown>;
-          switch (operation) {
-            case "findMany": case "findFirst": case "findFirstOrThrow":
-            case "count": case "aggregate": case "groupBy":
-            case "updateMany": case "deleteMany":
-              a.where = { AND: [(a.where ?? {}) as object, { propertyId: pid }] };
-              break;
-            case "findUnique": case "findUniqueOrThrow":
-            case "update": case "delete":
-              // extendedWhereUnique (Prisma 5+): a unique field is already present,
-              // propertyId is an additional filter.
-              a.where = { ...(a.where as object), propertyId: pid };
-              break;
-            case "create":
-              a.data = { propertyId: pid, ...(a.data as object) };
-              break;
-            case "createMany":
-              a.data = Array.isArray(a.data)
-                ? (a.data as object[]).map((d) => ({ propertyId: pid, ...d }))
-                : { propertyId: pid, ...(a.data as object) };
-              break;
-            case "upsert":
-              a.where = { ...(a.where as object), propertyId: pid };
-              a.create = { propertyId: pid, ...(a.create as object) };
-              break;
-          }
-          return query(a);
+type PidResolver = () => string | null | Promise<string | null>;
+
+// Inject the resolved property into every read/write on tenant-scoped models.
+function extendWith(resolve: PidResolver) {
+  return (client: PrismaClient) =>
+    client.$extends({
+      query: {
+        $allModels: {
+          async $allOperations({ model, operation, args, query }) {
+            if (!model || !TENANT_MODELS.has(model)) return query(args);
+            const pid = await resolve();
+            if (!pid) return query(args); // no tenant → passthrough
+            const a = args as Record<string, unknown>;
+            switch (operation) {
+              case "findMany": case "findFirst": case "findFirstOrThrow":
+              case "count": case "aggregate": case "groupBy":
+              case "updateMany": case "deleteMany":
+                a.where = { AND: [(a.where ?? {}) as object, { propertyId: pid }] };
+                break;
+              case "findUnique": case "findUniqueOrThrow":
+              case "update": case "delete":
+                // extendedWhereUnique (Prisma 5+): a unique field is already
+                // present; propertyId is an additional filter.
+                a.where = { ...(a.where as object), propertyId: pid };
+                break;
+              case "create":
+                a.data = { propertyId: pid, ...(a.data as object) };
+                break;
+              case "createMany":
+                a.data = Array.isArray(a.data)
+                  ? (a.data as object[]).map((d) => ({ propertyId: pid, ...d }))
+                  : { propertyId: pid, ...(a.data as object) };
+                break;
+              case "upsert":
+                a.where = { ...(a.where as object), propertyId: pid };
+                a.create = { propertyId: pid, ...(a.create as object) };
+                break;
+            }
+            return query(a);
+          },
         },
       },
-    },
-  });
+    });
 }
 
-// The extended client keeps the same model API, so the rest of the codebase is
-// unchanged; cast so callers still see the familiar PrismaClient type.
+// A client hard-bound to one property — the reliable per-tenant path (no ALS).
+// Used by tests today; slice (b) will bind one per request from the session.
+export function prismaForTenant(propertyId: string): PrismaClient {
+  return extendWith(() => propertyId)(base) as unknown as PrismaClient;
+}
+
+// The default app client: scopes to the sole property (single-property today).
 export const prisma =
-  globalForPrisma.prisma ?? (extend(base) as unknown as PrismaClient);
+  globalForPrisma.prisma ?? (extendWith(resolveDefaultPropertyId)(base) as unknown as PrismaClient);
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
