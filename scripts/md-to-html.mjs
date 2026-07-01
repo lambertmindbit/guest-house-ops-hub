@@ -24,6 +24,7 @@ const FILES = [
   "docs/DESIGN-HANDOFF.md",
   "docs/ROADMAP.md",
   "docs/SETUP.md",
+  "docs/PHASE-1-GAP-STATUS.md",
 ];
 const CONVERTED = new Set(FILES.map((f) => basename(f, ".md")));
 
