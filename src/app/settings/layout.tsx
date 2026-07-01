@@ -14,6 +14,7 @@ const RAIL: { group: string; items: [string, string, string][] }[] = [
   { group: "Inventory", items: [["/settings/room-types", "Room types", "bed"], ["/settings/rooms", "Rooms", "door"]] },
   { group: "Channels & sync", items: [["/settings/channels", "Channels", "link"], ["/settings/feeds", "iCal feeds", "link"]] },
   { group: "Pricing", items: [["/settings/pricing", "Pricing rules", "tag"]] },
+  { group: "Bookings", items: [["/settings/cancellation", "Cancellation & refunds", "receipt"]] },
   { group: "Maintenance", items: [["/settings/blocks", "Blocked dates", "alert"]] },
   { group: "Safety", items: [["/settings/flagged-numbers", "Scam numbers", "alert"]] },
 ];

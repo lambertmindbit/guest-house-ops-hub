@@ -25,6 +25,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
     ],
   },
   { group: "Pricing", items: [{ key: "pricing", title: "Pricing rules", sub: "Weekend, season, lead-time, occupancy", icon: "tag" }] },
+  { group: "Bookings", items: [{ key: "cancellation", title: "Cancellation & refunds", sub: "Free-cancellation windows (normal / peak)", icon: "receipt" }] },
   { group: "Maintenance", items: [{ key: "blocks", title: "Blocked dates", sub: "Hold rooms out of service", icon: "alert" }] },
   { group: "Safety", items: [{ key: "flagged-numbers", title: "Scam / flagged numbers", sub: "Warn at booking if a phone is known bad", icon: "alert" }] },
 ];
