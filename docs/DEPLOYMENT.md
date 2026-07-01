@@ -15,8 +15,15 @@ GitHub (main)  ──push──►  Vercel build & deploy  ──►  https://gu
 
 ## Vercel
 
-- **Framework preset:** Next.js (auto-detected). Build command is the default
-  (`npm run build`, which runs `prisma generate && next build`).
+- **Framework preset:** Next.js (auto-detected). Build command is
+  [`scripts/vercel-build.sh`](../scripts/vercel-build.sh) (set via `vercel.json`),
+  which **applies pending DB migrations on production deploys** (`prisma migrate
+  deploy`), then `prisma generate && next build`.
+- **Migrations apply on deploy.** On a **production** deploy (`VERCEL_ENV=production`,
+  i.e. a push to `main`) the build runs `prisma migrate deploy` first, so merging a
+  migration ships it to the database. **Preview** deploys skip this — a PR can never
+  migrate production. This needs `DIRECT_URL` in the Vercel Production env (below).
+  A local `npm run build` never migrates (it stays `prisma generate && next build`).
 - **Production branch:** `main`. Every push to `main` triggers a production deploy;
   every PR gets a **preview deployment** with its own URL.
 - **Node:** 22.
