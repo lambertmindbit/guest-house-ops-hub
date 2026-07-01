@@ -45,9 +45,13 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
         <div className="row" style={{ gap: 8, alignItems: "center" }}>
           <PageHead title={guest.name} sub={`${guest.phone}${guest.email ? ` · ${guest.email}` : ""}`} />
         </div>
-        <div className="row" style={{ gap: 6, marginTop: 4 }}>
+        <div className="row" style={{ gap: 6, marginTop: 4, flexWrap: "wrap" }}>
           {isRepeat && <StatusPill kind="teal">Repeat guest</StatusPill>}
           {guest.blocked && <StatusPill kind="danger">Blacklisted</StatusPill>}
+          {guest.nationality && <StatusPill kind="ink">Foreign · C-Form</StatusPill>}
+          <Link href={`/guests/${guest.id}/registration`} className="btn btn--ghost btn--sm" style={{ marginLeft: "auto" }}>
+            <Icon name="receipt" size={15} /> Registration card
+          </Link>
         </div>
 
         {guest.blocked && guest.blockReason && (
@@ -77,6 +81,14 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
             email: guest.email ?? "",
             idNumber: guest.idNumber ?? "",
             notes: guest.notes ?? "",
+            address: guest.address ?? "",
+            vehicleNumber: guest.vehicleNumber ?? "",
+            emergencyContactName: guest.emergencyContactName ?? "",
+            emergencyContactPhone: guest.emergencyContactPhone ?? "",
+            preferences: guest.preferences.join(", "),
+            idChecked: guest.idChecked,
+            idPhotocopied: guest.idPhotocopied,
+            idVerificationCompleted: guest.idVerificationCompleted,
             blocked: guest.blocked,
             blockReason: guest.blockReason ?? "",
             nationality: guest.nationality ?? "",
