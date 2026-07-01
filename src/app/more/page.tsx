@@ -35,6 +35,12 @@ export default async function MorePage() {
       ],
     },
     {
+      label: "Facilities",
+      rows: [
+        { href: "/maintenance", icon: "wrench", title: "Maintenance", sub: "Requests, assets & service" },
+      ],
+    },
+    {
       label: "Business",
       rows: [
         { href: "/finance", icon: "wallet", title: "Finance", sub: "Revenue & balances" },
