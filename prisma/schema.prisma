@@ -115,6 +115,34 @@ model Attendance {
   @@map("attendance")
 }
 
+enum HkTaskStatus {
+  pending
+  in_progress
+  done
+}
+
+// A cleaning task for a room on a date — the assignment + checklist + completion
+// accountability layered over the derived "needs cleaning" signal. assignee/
+// completedBy are plain staff ids (nullable). One task per room per day.
+model HousekeepingTask {
+  id                 String       @id @default(cuid())
+  roomId             String       @map("room_id")
+  date               DateTime     @db.Date
+  assigneeStaffId    String?      @map("assignee_staff_id")
+  status             HkTaskStatus @default(pending)
+  checklist          Json         @default("[]")
+  completedByStaffId String?      @map("completed_by_staff_id")
+  completedAt        DateTime?    @map("completed_at")
+  note               String?
+  propertyId         String?      @map("property_id")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  room               Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, date])
+  @@index([date])
+  @@map("housekeeping_tasks")
+}
+
 enum PaymentMode {
   cash
   upi
@@ -147,23 +175,24 @@ model RoomType {
 }
 
 model Room {
-  id                String        @id @default(cuid())
-  roomTypeId        String        @map("room_type_id")
+  id                String             @id @default(cuid())
+  roomTypeId        String             @map("room_type_id")
   label             String
   // Housekeeping: a room "needs cleaning" when a guest has checked out since
   // this timestamp. Marking a room clean sets it to now.
-  lastCleanedAt     DateTime?     @map("last_cleaned_at")
+  lastCleanedAt     DateTime?          @map("last_cleaned_at")
   // Manual override: lets the owner flag a room dirty when there's no checkout
   // to derive from (dust, maintenance, own use). Cleared on "mark clean".
-  needsCleaningFlag Boolean       @default(false) @map("needs_cleaning_flag")
+  needsCleaningFlag Boolean            @default(false) @map("needs_cleaning_flag")
   // Retiring a room: archived rooms drop off the calendar, availability,
   // housekeeping, and the new-booking picker, but their history is preserved
   // (FKs are RESTRICT — a used room can never be hard-deleted, only archived).
-  archivedAt        DateTime?     @map("archived_at")
-  roomType          RoomType      @relation(fields: [roomTypeId], references: [id])
+  archivedAt        DateTime?          @map("archived_at")
+  roomType          RoomType           @relation(fields: [roomTypeId], references: [id])
   reservations      Reservation[]
   blocks            Block[]
   icalFeeds         IcalFeed[]
+  housekeepingTasks HousekeepingTask[]
 
   // Tenant (multi-property). Single-property today; backfilled + scoped by the
   // Prisma tenant extension. See src/lib/tenant.ts.
