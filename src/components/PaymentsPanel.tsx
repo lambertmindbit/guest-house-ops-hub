@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { displayINR, PAYMENT_MODE_LABELS } from "@/lib/format";
 import { Icon } from "@/components/ui";
+import { buildUpiLink } from "@/lib/upi";
 
 export type PaymentRow = {
   id: string;
@@ -30,11 +31,13 @@ export function PaymentsPanel({
   gross,
   advanceRequired,
   payments,
+  upi,
 }: {
   reservationId: string;
   gross: number;
   advanceRequired: number;
   payments: PaymentRow[];
+  upi?: { vpa: string; payeeName: string };
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
@@ -141,6 +144,17 @@ export function PaymentsPanel({
         <div className="progress" style={{ marginBottom: 14 }}>
           <div className={`progress__fill${balance > 0 ? " progress__fill--warn" : ""}`} style={{ width: `${pct}%` }} />
         </div>
+
+        {/* Tap-to-pay UPI link for the outstanding balance (no SDK — standard UPI URL). */}
+        {upi && balance > 0 && (
+          <a
+            className="btn btn--ghost btn--block"
+            style={{ marginBottom: 12 }}
+            href={buildUpiLink({ vpa: upi.vpa, payeeName: upi.payeeName, amount: balance, note: "Booking payment" })}
+          >
+            <Icon name="wallet" size={16} /> Request {displayINR(balance)} via UPI
+          </a>
+        )}
 
         {payments.map((p, i) => (
           <div key={p.id} className="spread" style={{ padding: "8px 0", borderTop: i ? "1px solid var(--border-subtle)" : 0 }}>

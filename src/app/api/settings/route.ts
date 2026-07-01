@@ -22,6 +22,7 @@ const updateSchema = z
     timezone: z.string().trim().min(1).optional(),
     address: z.string().nullable().optional(),
     gstNumber: z.string().nullable().optional(),
+    upiVpa: z.string().trim().nullable().optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "no fields to update",

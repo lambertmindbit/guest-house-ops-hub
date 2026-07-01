@@ -30,6 +30,7 @@ export type Settings = {
   timezone: string;
   address: string | null;
   gstNumber: string | null;
+  upiVpa: string | null;
 } | null;
 export type Policy = {
   enabled: boolean;
@@ -101,6 +102,7 @@ export function PropertySection({ settings }: { settings: Settings }) {
     name: settings?.name ?? "My Guest House",
     address: settings?.address ?? "",
     gstNumber: settings?.gstNumber ?? "",
+    upiVpa: settings?.upiVpa ?? "",
     checkInTime: settings?.checkInTime ?? "14:00",
     checkOutTime: settings?.checkOutTime ?? "11:00",
     currency: settings?.currency ?? "INR",
@@ -115,7 +117,7 @@ export function PropertySection({ settings }: { settings: Settings }) {
     setBusy(true);
     setError(null);
     setSaved(false);
-    const r = await send("PATCH", "/api/settings", { ...f, address: f.address || null, gstNumber: f.gstNumber || null });
+    const r = await send("PATCH", "/api/settings", { ...f, address: f.address || null, gstNumber: f.gstNumber || null, upiVpa: f.upiVpa || null });
     setBusy(false);
     if (!r.ok) return setError(r.error!);
     setSaved(true);
@@ -149,6 +151,11 @@ export function PropertySection({ settings }: { settings: Settings }) {
         <div>
           <label className="field-label">GST number</label>
           <input className="input" value={f.gstNumber} onChange={(e) => setF({ ...f, gstNumber: e.target.value })} placeholder="Optional" />
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label className="field-label">UPI ID (VPA)</label>
+          <input className="input" value={f.upiVpa} onChange={(e) => setF({ ...f, upiVpa: e.target.value })} placeholder="e.g. lawei@okhdfcbank" />
+          <div className="field-hint">Used to offer guests a tap-to-pay UPI link for the balance. Leave blank to hide it.</div>
         </div>
       </div>
       <div className="field-hint" style={{ marginTop: 10 }}>Timezone: {f.timezone} — drives “today”, arrivals and the calendar.</div>
