@@ -143,6 +143,56 @@ model HousekeepingTask {
   @@map("housekeeping_tasks")
 }
 
+enum MaintenanceStatus {
+  open
+  in_progress
+  done
+}
+
+enum MaintenancePriority {
+  low
+  medium
+  high
+}
+
+// A tracked asset/equipment (geyser, generator, vehicle…). preventiveEveryDays +
+// lastServicedAt drive the "service due" list.
+model Asset {
+  id                  String    @id @default(cuid())
+  name                String
+  category            String?
+  roomId              String?   @map("room_id")
+  preventiveEveryDays Int?      @map("preventive_every_days")
+  lastServicedAt      DateTime? @map("last_serviced_at") @db.Date
+  propertyId          String?   @map("property_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@map("assets")
+}
+
+// A repair/maintenance request. assignee/vendor/asset/room are plain nullable ids
+// (vendor is linked in slice g). Photos reuse the existing Supabase Storage seam.
+model MaintenanceRequest {
+  id              String              @id @default(cuid())
+  title           String
+  description     String?
+  assetId         String?             @map("asset_id")
+  roomId          String?             @map("room_id")
+  status          MaintenanceStatus   @default(open)
+  priority        MaintenancePriority @default(medium)
+  assigneeStaffId String?             @map("assignee_staff_id")
+  vendorId        String?             @map("vendor_id")
+  cost            Decimal?            @db.Decimal(10, 2)
+  photoPaths      String[]            @default([]) @map("photo_paths")
+  note            String?
+  propertyId      String?             @map("property_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  resolvedAt      DateTime?           @map("resolved_at")
+
+  @@index([status, priority, createdAt])
+  @@map("maintenance_requests")
+}
+
 enum PaymentMode {
   cash
   upi
