@@ -10,6 +10,12 @@ const CHANNELS = [
   { name: "Booking.com", commissionPct: 15, collectsPayment: false },
   { name: "Agoda", commissionPct: 18, collectsPayment: true },
   { name: "MakeMyTrip", commissionPct: 18, collectsPayment: true },
+  // Direct-ish sources the owner uses (Lawei): no commission, owner collects.
+  { name: "Instagram", commissionPct: 0, collectsPayment: false },
+  { name: "Facebook", commissionPct: 0, collectsPayment: false },
+  { name: "Travel agent", commissionPct: 10, collectsPayment: false },
+  { name: "Walk-in", commissionPct: 0, collectsPayment: false },
+  { name: "Word-of-mouth", commissionPct: 0, collectsPayment: false },
 ];
 
 // A small sample property: 3 room types, 6 physical rooms.
