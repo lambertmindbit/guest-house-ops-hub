@@ -128,6 +128,7 @@ model Guest {
   purposeOfVisit    String?   @map("purpose_of_visit")
   reservations      Reservation[]
   outboundMessages  OutboundMessage[]
+  complaints        Complaint[]
 
   @@map("guests")
 }
@@ -161,6 +162,7 @@ model Reservation {
   channel          Channel           @relation(fields: [channelId], references: [id])
   payments         Payment[]
   outboundMessages OutboundMessage[]
+  complaints       Complaint[]
 
   @@index([roomId])
   @@index([guestId])
@@ -496,4 +498,54 @@ model FlaggedNumber {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("flagged_numbers")
+}
+
+enum ComplaintCategory {
+  maintenance
+  cleanliness
+  food
+  noise
+  staff
+  billing
+  other
+}
+
+enum ComplaintPriority {
+  low
+  medium
+  high
+}
+
+enum ComplaintStatus {
+  open
+  in_progress
+  resolved
+}
+
+// A logged guest complaint/issue the owner tracks to resolution. Urgent (high)
+// complaints also file an Escalation into the shared HITL queue so they surface
+// on /needs-you. Optional links to the guest/reservation they concern.
+model Complaint {
+  id             String            @id @default(cuid())
+  guestId        String?           @map("guest_id")
+  reservationId  String?           @map("reservation_id")
+  category       ComplaintCategory @default(other)
+  priority       ComplaintPriority @default(medium)
+  status         ComplaintStatus   @default(open)
+  assignee       String?           // free-text until roles land (Phase 2)
+  description    String
+  resolutionNote String?           @map("resolution_note")
+  satisfaction   Int?              // 1–5 guest satisfaction, captured on resolution
+  escalationId   String?           @map("escalation_id") // set when an urgent one is escalated
+  resolvedAt     DateTime?         @map("resolved_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @default(now()) @updatedAt @map("updated_at")
+  // Forward-compatible tenancy (single-property today; unused).
+  propertyId     String?           @map("property_id")
+
+  guest       Guest?       @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@index([status, priority, createdAt])
+  @@map("complaints")
 }
