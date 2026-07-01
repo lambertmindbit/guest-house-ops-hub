@@ -109,6 +109,19 @@ model Guest {
   // Path to a scanned ID document in object storage (Supabase Storage). Null
   // until uploaded; storage is optional and configured via env (see docs).
   idDocumentPath String?     @map("id_document_path")
+  // Compliance trail for guest ID capture (police/registration expectations).
+  // idUploaded is set by the ID-document upload route; the rest are owner-ticked.
+  idChecked               Boolean @default(false) @map("id_checked")
+  idPhotocopied           Boolean @default(false) @map("id_photocopied")
+  idUploaded              Boolean @default(false) @map("id_uploaded")
+  idVerificationCompleted Boolean @default(false) @map("id_verification_completed")
+  // Fields recorded on paper today but never in the DB.
+  address               String?  @map("address")
+  vehicleNumber         String?  @map("vehicle_number")
+  emergencyContactName  String?  @map("emergency_contact_name")
+  emergencyContactPhone String?  @map("emergency_contact_phone")
+  // Free-form preference tags (room/food/allergy/pet, etc.).
+  preferences           String[] @default([]) @map("preferences")
   blocked      Boolean       @default(false)
   blockReason  String?       @map("block_reason")
   // C-Form (Form C under Registration of Foreigners Rules, 1992).

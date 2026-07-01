@@ -75,6 +75,12 @@ const createSchema = z.object({
   notes: z.string().trim().min(1).nullable().optional(),
   blocked: z.boolean().optional(),
   blockReason: z.string().trim().min(1).nullable().optional(),
+  // Guest-record completion (recorded on paper today)
+  address: z.string().trim().min(1).nullable().optional(),
+  vehicleNumber: z.string().trim().min(1).nullable().optional(),
+  emergencyContactName: z.string().trim().min(1).nullable().optional(),
+  emergencyContactPhone: z.string().trim().min(1).nullable().optional(),
+  preferences: z.array(z.string().trim().min(1)).optional(),
   ...cformFields,
 });
 

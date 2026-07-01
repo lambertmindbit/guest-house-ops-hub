@@ -9,6 +9,14 @@ export type GuestProfileValues = {
   email: string;
   idNumber: string;
   notes: string;
+  address: string;
+  vehicleNumber: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  preferences: string; // comma-separated in the form; stored as a string[]
+  idChecked: boolean;
+  idPhotocopied: boolean;
+  idVerificationCompleted: boolean;
   blocked: boolean;
   blockReason: string;
   // C-Form
@@ -61,6 +69,14 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
         email: v.email || null,
         idNumber: v.idNumber || null,
         notes: v.notes || null,
+        address: v.address || null,
+        vehicleNumber: v.vehicleNumber || null,
+        emergencyContactName: v.emergencyContactName || null,
+        emergencyContactPhone: v.emergencyContactPhone || null,
+        preferences: v.preferences.split(",").map((s) => s.trim()).filter(Boolean),
+        idChecked: v.idChecked,
+        idPhotocopied: v.idPhotocopied,
+        idVerificationCompleted: v.idVerificationCompleted,
         blocked: v.blocked,
         blockReason: v.blocked ? v.blockReason || null : null,
         // C-Form — send nulls for empty strings so the DB is cleaned up
@@ -107,8 +123,48 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
           <input className="input" value={v.idNumber} onChange={(e) => set("idNumber", e.target.value)} placeholder="Passport / Aadhaar / etc." />
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
+          <label className="field-label">Address</label>
+          <textarea className="textarea" value={v.address} onChange={(e) => set("address", e.target.value)} placeholder="Street, town, state" style={{ minHeight: 56 }} />
+        </div>
+        <div>
+          <label className="field-label">Vehicle number</label>
+          <input className="input" value={v.vehicleNumber} onChange={(e) => set("vehicleNumber", e.target.value)} placeholder="e.g. ML05 1234" />
+        </div>
+        <div>
+          <label className="field-label">Preferences</label>
+          <input className="input" value={v.preferences} onChange={(e) => set("preferences", e.target.value)} placeholder="ground floor, no pets (comma-separated)" />
+        </div>
+        <div>
+          <label className="field-label">Emergency contact name</label>
+          <input className="input" value={v.emergencyContactName} onChange={(e) => set("emergencyContactName", e.target.value)} placeholder="Optional" />
+        </div>
+        <div>
+          <label className="field-label">Emergency contact phone</label>
+          <input className="input" value={v.emergencyContactPhone} onChange={(e) => set("emergencyContactPhone", e.target.value)} placeholder="Optional" />
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
           <label className="field-label">Notes</label>
-          <textarea className="textarea" value={v.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Preferences, allergies, history…" />
+          <textarea className="textarea" value={v.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Allergies, history…" />
+        </div>
+      </div>
+
+      {/* ID & verification — the compliance trail an inspection expects. */}
+      <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+        <div style={{ fontWeight: 600, fontSize: "var(--fs-small)", marginBottom: 8 }}>ID &amp; verification</div>
+        <div className="col" style={{ gap: 8 }}>
+          {([
+            ["idChecked", "ID checked against the guest"],
+            ["idPhotocopied", "ID photocopied / scanned"],
+            ["idVerificationCompleted", "Verification completed"],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="row" style={{ gap: 8, cursor: "pointer", fontSize: "var(--fs-small)" }}>
+              <input type="checkbox" checked={v[key]} onChange={(e) => set(key, e.target.checked)} />
+              <span>{label}</span>
+            </label>
+          ))}
+          <div className="faint" style={{ fontSize: "var(--fs-meta)" }}>
+            “ID uploaded” is set automatically when a document is attached below.
+          </div>
         </div>
       </div>
 

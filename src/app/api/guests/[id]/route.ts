@@ -14,6 +14,16 @@ const updateSchema = z
     notes: z.string().nullable().optional(),
     blocked: z.boolean().optional(),
     blockReason: z.string().nullable().optional(),
+    // Guest-record completion
+    address: z.string().trim().nullable().optional(),
+    vehicleNumber: z.string().trim().nullable().optional(),
+    emergencyContactName: z.string().trim().nullable().optional(),
+    emergencyContactPhone: z.string().trim().nullable().optional(),
+    preferences: z.array(z.string().trim().min(1)).optional(),
+    idChecked: z.boolean().optional(),
+    idPhotocopied: z.boolean().optional(),
+    idUploaded: z.boolean().optional(),
+    idVerificationCompleted: z.boolean().optional(),
     // C-Form fields
     nationality: z.string().trim().nullable().optional(),
     passportNumber: z.string().trim().nullable().optional(),
