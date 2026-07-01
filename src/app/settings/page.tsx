@@ -28,6 +28,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
   { group: "Bookings", items: [{ key: "cancellation", title: "Cancellation & refunds", sub: "Free-cancellation windows (normal / peak)", icon: "receipt" }] },
   { group: "Maintenance", items: [{ key: "blocks", title: "Blocked dates", sub: "Hold rooms out of service", icon: "alert" }] },
   { group: "Safety", items: [{ key: "flagged-numbers", title: "Scam / flagged numbers", sub: "Warn at booking if a phone is known bad", icon: "alert" }] },
+  { group: "Data", items: [{ key: "import", title: "Import data", sub: "Bring guests & bookings over from CSV", icon: "inbox" }] },
 ];
 
 export default function SettingsPage() {
