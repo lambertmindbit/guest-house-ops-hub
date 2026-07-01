@@ -30,8 +30,9 @@ All six planned milestones are built and in production:
 | 6 | **Invoices / export** | Printable invoices, Bookings/Payments CSV export |
 | A–F | **ROOT agent integration** | Token-gated agent seam (availability / quote / book / escalate / message), HITL escalation queue, C-Form guest fields, scam-number warnings + payment verification, advance-payment tracking, messaging outbox |
 
-Plus an all-bookings **Reservations** list (`/reservations`) — search and
-status-filter — alongside the calendar and Today board.
+Plus an all-bookings **Bookings** list (`/reservations`) — instant search and
+timeline filter (Upcoming / In-house / Past / Cancelled) — alongside the
+calendar and Today board.
 
 **Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
 - **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).

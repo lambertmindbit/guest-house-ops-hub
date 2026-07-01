@@ -44,9 +44,9 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 
 `POST`/`PATCH` accept an optional `advanceRequired` (the deposit the booking
 expects); advance status is **derived** at render time from advance-tagged
-payments vs that figure — never stored as a paid/unpaid flag. The
-all-reservations list page (`/reservations`) reads `GET /api/reservations` with
-`?status` and `?q` filters.
+payments vs that figure — never stored as a paid/unpaid flag. The Bookings list
+page (`/reservations`) renders server-side via Prisma and does its search (guest,
+phone, room or channel) and stay-state filtering client-side.
 
 ## Availability & dashboard
 

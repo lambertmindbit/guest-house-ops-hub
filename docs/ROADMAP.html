@@ -102,9 +102,11 @@ outbox; agents queue messages via <code>POST /api/agent/messages</code> (<code>s
 until a provider is wired). This is the groundwork the deferred messaging
 automation will plug a provider into.</li>
 </ul>
-<h2>Reservations list</h2>
-<p>An all-bookings view at <code>/reservations</code> — search by guest/phone/room/OTA ref and
-filter by status — added alongside the calendar and Today board.</p>
+<h2>Bookings list</h2>
+<p>A searchable all-bookings view at <code>/reservations</code> (labelled <strong>Bookings</strong> in nav)
+— instant client-side search by guest, phone, room or channel, plus timeline
+filter chips (Upcoming · In-house · Past · Cancelled, no-show folded into
+Cancelled) — added alongside the calendar and Today board.</p>
 <h2>Deferred — by design</h2>
 <p>These were intentionally left out (see <a href="../CLAUDE.html">CLAUDE.md</a> &quot;do NOT&quot; rules and
 phase scoping). They are <strong>not</strong> bugs:</p>
