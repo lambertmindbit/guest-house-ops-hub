@@ -31,6 +31,30 @@ enum ReservationStatus {
   no_show
 }
 
+// Access roles. owner sees everything; reception is blocked from money
+// (finance/analytics/pricing) and setup; housekeeping is limited to today +
+// cleaning. Extensible later (e.g. manager).
+enum UserRole {
+  owner
+  reception
+  housekeeping
+}
+
+// A login account. NOT tenant-scoped (login looks up by email before a tenant is
+// known); each user belongs to one property via propertyId. Owner is seeded from
+// OWNER_EMAIL/OWNER_PASSWORD on first login.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(reception)
+  active       Boolean  @default(true)
+  propertyId   String?  @map("property_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
 // How a block came to exist: created by the owner, or imported from an OTA's
 // iCal feed. Imported blocks are owned by the sync and replaced on each run.
 enum BlockSource {

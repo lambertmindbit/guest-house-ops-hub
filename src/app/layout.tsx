@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavShell } from "@/components/NavShell";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
+import { currentRole } from "@/lib/session";
 import { unstable_cache } from "next/cache";
 import { getConflicts } from "@/lib/conflicts";
 import { prisma } from "@/lib/prisma";
@@ -85,12 +86,13 @@ export default async function RootLayout({
     conflictCount = 0;
     escalationCount = 0;
   }
+  const role = await currentRole();
 
   return (
     <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <NavShell conflictCount={conflictCount} escalationCount={escalationCount} />
+        <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} />
         <ConfirmProvider>{children}</ConfirmProvider>
       </body>
     </html>

@@ -17,6 +17,7 @@ const RAIL: { group: string; items: [string, string, string][] }[] = [
   { group: "Bookings", items: [["/settings/cancellation", "Cancellation & refunds", "receipt"]] },
   { group: "Maintenance", items: [["/settings/blocks", "Blocked dates", "alert"]] },
   { group: "Safety", items: [["/settings/flagged-numbers", "Scam numbers", "alert"]] },
+  { group: "Team", items: [["/settings/users", "Users & roles", "guests"]] },
   { group: "Data", items: [["/settings/import", "Import data", "inbox"]] },
 ];
 
