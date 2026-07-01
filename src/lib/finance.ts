@@ -140,3 +140,37 @@ export async function getFinanceSummary(from: string, to: string): Promise<Finan
     netProfit: totals.net - expensesTotal,
   };
 }
+
+// ── Pending payments (all-time outstanding across confirmed bookings) ────────
+export type PendingPayments = { total: number; count: number };
+
+// Pure: sum positive balances over confirmed bookings. Derived, never stored.
+export function sumOutstanding(
+  rows: { grossAmount: number; collected: number; status: string }[],
+): PendingPayments {
+  let total = 0;
+  let count = 0;
+  for (const r of rows) {
+    if (r.status !== "confirmed") continue;
+    const balance = r.grossAmount - r.collected;
+    if (balance > 0) {
+      total += balance;
+      count += 1;
+    }
+  }
+  return { total, count };
+}
+
+export async function getPendingPayments(): Promise<PendingPayments> {
+  const rows = await prisma.reservation.findMany({
+    where: { status: "confirmed" },
+    select: { grossAmount: true, payments: { select: { amount: true } } },
+  });
+  return sumOutstanding(
+    rows.map((r) => ({
+      grossAmount: num(r.grossAmount),
+      collected: r.payments.reduce((s, p) => s + num(p.amount), 0),
+      status: "confirmed",
+    })),
+  );
+}

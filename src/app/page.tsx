@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
 import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
+import { getPendingPayments } from "@/lib/finance";
 import { prisma } from "@/lib/prisma";
 import { ChannelBadge, Icon } from "@/components/ui";
 import { Collapsible } from "@/components/Collapsible";
@@ -23,11 +24,12 @@ function PayBadge({ r }: { r: SummaryReservation }) {
 }
 
 export default async function DashboardPage() {
-  const [s, conflicts, housekeeping, openEscalations] = await Promise.all([
+  const [s, conflicts, housekeeping, openEscalations, pending] = await Promise.all([
     getTodaySummary(),
     getConflicts(),
     getHousekeeping(),
     prisma.escalation.count({ where: { status: "open" } }),
+    getPendingPayments(),
   ]);
   const heading = displayDate(parseDateOnly(s.date));
   const conflictN = conflicts.length;
@@ -78,6 +80,17 @@ export default async function DashboardPage() {
             <div className="kpi-ctx">today</div>
           </div>
         </div>
+
+        {/* Payments pending — money still owed across confirmed bookings. */}
+        {pending.count > 0 && (
+          <Link href="/finance" className="banner banner--warn" style={{ marginTop: 12 }}>
+            <span className="banner__icon"><Icon name="wallet" size={18} /></span>
+            <span className="banner__txt">
+              <b>{displayINR(pending.total)} pending</b> across {pending.count} booking{pending.count === 1 ? "" : "s"}
+            </span>
+            <span className="banner__arrow"><Icon name="arrowR" size={17} /></span>
+          </Link>
+        )}
 
         {/* Arrivals / Departures are the day's to-do. */}
         <SectionHead title="Arrivals today" count={s.checkInsToday.length} />
