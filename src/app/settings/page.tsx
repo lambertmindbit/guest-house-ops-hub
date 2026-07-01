@@ -27,6 +27,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
   { group: "Pricing", items: [{ key: "pricing", title: "Pricing rules", sub: "Weekend, season, lead-time, occupancy", icon: "tag" }] },
   { group: "Maintenance", items: [{ key: "blocks", title: "Blocked dates", sub: "Hold rooms out of service", icon: "alert" }] },
   { group: "Safety", items: [{ key: "flagged-numbers", title: "Scam / flagged numbers", sub: "Warn at booking if a phone is known bad", icon: "alert" }] },
+  { group: "Data", items: [{ key: "import", title: "Import data", sub: "Bring guests & bookings over from CSV", icon: "inbox" }] },
 ];
 
 export default function SettingsPage() {

@@ -16,6 +16,7 @@ const RAIL: { group: string; items: [string, string, string][] }[] = [
   { group: "Pricing", items: [["/settings/pricing", "Pricing rules", "tag"]] },
   { group: "Maintenance", items: [["/settings/blocks", "Blocked dates", "alert"]] },
   { group: "Safety", items: [["/settings/flagged-numbers", "Scam numbers", "alert"]] },
+  { group: "Data", items: [["/settings/import", "Import data", "inbox"]] },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
