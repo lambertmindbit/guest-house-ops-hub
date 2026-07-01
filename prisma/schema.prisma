@@ -62,6 +62,10 @@ model RoomType {
   rateCeiling  Decimal @map("rate_ceiling") @db.Decimal(10, 2)
   rooms        Room[]
 
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
+
   @@map("room_types")
 }
 
@@ -84,6 +88,10 @@ model Room {
   blocks            Block[]
   icalFeeds         IcalFeed[]
 
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
+
   @@map("rooms")
 }
 
@@ -93,6 +101,10 @@ model Channel {
   commissionPct   Decimal       @map("commission_pct") @db.Decimal(5, 2)
   collectsPayment Boolean       @map("collects_payment")
   reservations    Reservation[]
+
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
 
   @@map("channels")
 }
@@ -143,6 +155,10 @@ model Guest {
   outboundMessages        OutboundMessage[]
   complaints              Complaint[]
 
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
+
   @@map("guests")
 }
 
@@ -177,6 +193,9 @@ model Reservation {
   outboundMessages OutboundMessage[]
   refunds          Refund[]
   complaints       Complaint[]
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId       String?           @map("property_id")
 
   @@index([roomId])
   @@index([guestId])
@@ -196,6 +215,9 @@ model Payment {
   note          String?
   createdAt     DateTime    @default(now()) @map("created_at")
   reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId    String?     @map("property_id")
 
   @@index([reservationId])
   @@map("payments")
@@ -215,6 +237,9 @@ model Block {
   externalUid String?                   @map("external_uid")
   room        Room                      @relation(fields: [roomId], references: [id])
   feed        IcalFeed?                 @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId  String?                   @map("property_id")
 
   @@index([roomId])
   @@index([feedId])
@@ -239,6 +264,9 @@ model InboundBooking {
   status        InboundStatus @default(pending)
   reservationId String?       @map("reservation_id") // set once imported
   createdAt     DateTime      @default(now()) @map("created_at")
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId    String?       @map("property_id")
 
   @@index([status])
   @@map("inbound_bookings")
@@ -254,6 +282,9 @@ model Expense {
   note        String?
   paymentMode PaymentMode? @map("payment_mode")
   createdAt   DateTime     @default(now()) @map("created_at")
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId  String?      @map("property_id")
 
   @@index([date])
   @@map("expenses")
@@ -281,6 +312,10 @@ model PricingPolicy {
   occupancyAdjustPct    Decimal? @map("occupancy_adjust_pct") @db.Decimal(6, 2)
   updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
 
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
+
   @@map("pricing_policy")
 }
 
@@ -293,6 +328,10 @@ model Season {
   endDate   DateTime @map("end_date") @db.Date
   adjustPct Decimal  @map("adjust_pct") @db.Decimal(6, 2)
 
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
+
   @@map("seasons")
 }
 
@@ -303,6 +342,9 @@ model RateOverride {
   roomTypeId String   @map("room_type_id")
   date       DateTime @db.Date
   rate       Decimal  @db.Decimal(10, 2)
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String?  @map("property_id")
 
   @@unique([roomTypeId, date])
   @@map("rate_overrides")
@@ -340,6 +382,9 @@ model IcalFeed {
   createdAt    DateTime  @default(now()) @map("created_at")
   room         Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
   blocks       Block[]
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId   String?   @map("property_id")
 
   @@index([roomId])
   @@map("ical_feeds")
@@ -512,6 +557,10 @@ model FlaggedNumber {
   phone     String   @unique
   reason    String?
   createdAt DateTime @default(now()) @map("created_at")
+
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
 
   @@map("flagged_numbers")
 }
