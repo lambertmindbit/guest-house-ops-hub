@@ -66,108 +66,109 @@ model RoomType {
 }
 
 model Room {
-  id           String        @id @default(cuid())
-  roomTypeId   String        @map("room_type_id")
-  label        String
+  id                String        @id @default(cuid())
+  roomTypeId        String        @map("room_type_id")
+  label             String
   // Housekeeping: a room "needs cleaning" when a guest has checked out since
   // this timestamp. Marking a room clean sets it to now.
-  lastCleanedAt DateTime?    @map("last_cleaned_at")
+  lastCleanedAt     DateTime?     @map("last_cleaned_at")
   // Manual override: lets the owner flag a room dirty when there's no checkout
   // to derive from (dust, maintenance, own use). Cleared on "mark clean".
-  needsCleaningFlag Boolean  @default(false) @map("needs_cleaning_flag")
+  needsCleaningFlag Boolean       @default(false) @map("needs_cleaning_flag")
   // Retiring a room: archived rooms drop off the calendar, availability,
   // housekeeping, and the new-booking picker, but their history is preserved
   // (FKs are RESTRICT — a used room can never be hard-deleted, only archived).
-  archivedAt   DateTime?     @map("archived_at")
-  roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
-  reservations Reservation[]
-  blocks       Block[]
-  icalFeeds    IcalFeed[]
+  archivedAt        DateTime?     @map("archived_at")
+  roomType          RoomType      @relation(fields: [roomTypeId], references: [id])
+  reservations      Reservation[]
+  blocks            Block[]
+  icalFeeds         IcalFeed[]
 
   @@map("rooms")
 }
 
 model Channel {
-  id             String        @id @default(cuid())
-  name           String
-  commissionPct  Decimal       @map("commission_pct") @db.Decimal(5, 2)
-  collectsPayment Boolean      @map("collects_payment")
-  reservations   Reservation[]
+  id              String        @id @default(cuid())
+  name            String
+  commissionPct   Decimal       @map("commission_pct") @db.Decimal(5, 2)
+  collectsPayment Boolean       @map("collects_payment")
+  reservations    Reservation[]
 
   @@map("channels")
 }
 
 model Guest {
-  id           String        @id @default(cuid())
-  name         String
-  phone        String        @unique
-  email        String?
-  notes        String?
+  id                      String            @id @default(cuid())
+  name                    String
+  phone                   String            @unique
+  email                   String?
+  notes                   String?
   // Government ID reference (text only — no document/photo upload, which would
   // need object storage). Blacklist flag warns the owner at booking time.
-  idNumber     String?       @map("id_number")
+  idNumber                String?           @map("id_number")
   // Path to a scanned ID document in object storage (Supabase Storage). Null
   // until uploaded; storage is optional and configured via env (see docs).
-  idDocumentPath String?     @map("id_document_path")
+  idDocumentPath          String?           @map("id_document_path")
   // Compliance trail for guest ID capture (police/registration expectations).
   // idUploaded is set by the ID-document upload route; the rest are owner-ticked.
-  idChecked               Boolean @default(false) @map("id_checked")
-  idPhotocopied           Boolean @default(false) @map("id_photocopied")
-  idUploaded              Boolean @default(false) @map("id_uploaded")
-  idVerificationCompleted Boolean @default(false) @map("id_verification_completed")
+  idChecked               Boolean           @default(false) @map("id_checked")
+  idPhotocopied           Boolean           @default(false) @map("id_photocopied")
+  idUploaded              Boolean           @default(false) @map("id_uploaded")
+  idVerificationCompleted Boolean           @default(false) @map("id_verification_completed")
   // Fields recorded on paper today but never in the DB.
-  address               String?  @map("address")
-  vehicleNumber         String?  @map("vehicle_number")
-  emergencyContactName  String?  @map("emergency_contact_name")
-  emergencyContactPhone String?  @map("emergency_contact_phone")
+  address                 String?           @map("address")
+  vehicleNumber           String?           @map("vehicle_number")
+  emergencyContactName    String?           @map("emergency_contact_name")
+  emergencyContactPhone   String?           @map("emergency_contact_phone")
   // Free-form preference tags (room/food/allergy/pet, etc.).
-  preferences           String[] @default([]) @map("preferences")
-  blocked      Boolean       @default(false)
-  blockReason  String?       @map("block_reason")
+  preferences             String[]          @default([]) @map("preferences")
+  blocked                 Boolean           @default(false)
+  blockReason             String?           @map("block_reason")
   // C-Form (Form C under Registration of Foreigners Rules, 1992).
   // All nullable — only populated for foreign national guests.
-  nationality       String?   @map("nationality")
-  passportNumber    String?   @map("passport_number")
-  passportIssueDate DateTime? @map("passport_issue_date") @db.Date
-  passportIssuePlace String?  @map("passport_issue_place")
-  passportExpiry    DateTime? @map("passport_expiry") @db.Date
-  visaNumber        String?   @map("visa_number")
-  visaType          String?   @map("visa_type")
-  visaIssueDate     DateTime? @map("visa_issue_date") @db.Date
-  visaIssuePlace    String?   @map("visa_issue_place")
-  visaExpiry        DateTime? @map("visa_expiry") @db.Date
-  portOfEntry       String?   @map("port_of_entry")
-  arrivalInIndia    DateTime? @map("arrival_in_india") @db.Date
-  purposeOfVisit    String?   @map("purpose_of_visit")
-  reservations      Reservation[]
-  outboundMessages  OutboundMessage[]
+  nationality             String?           @map("nationality")
+  passportNumber          String?           @map("passport_number")
+  passportIssueDate       DateTime?         @map("passport_issue_date") @db.Date
+  passportIssuePlace      String?           @map("passport_issue_place")
+  passportExpiry          DateTime?         @map("passport_expiry") @db.Date
+  visaNumber              String?           @map("visa_number")
+  visaType                String?           @map("visa_type")
+  visaIssueDate           DateTime?         @map("visa_issue_date") @db.Date
+  visaIssuePlace          String?           @map("visa_issue_place")
+  visaExpiry              DateTime?         @map("visa_expiry") @db.Date
+  portOfEntry             String?           @map("port_of_entry")
+  arrivalInIndia          DateTime?         @map("arrival_in_india") @db.Date
+  purposeOfVisit          String?           @map("purpose_of_visit")
+  reservations            Reservation[]
+  outboundMessages        OutboundMessage[]
+  complaints              Complaint[]
 
   @@map("guests")
 }
 
 model Reservation {
-  id              String                   @id @default(cuid())
-  roomId          String                   @map("room_id")
-  guestId         String                   @map("guest_id")
-  channelId       String                   @map("channel_id")
-  otaRef          String?                  @map("ota_ref")
-  checkIn         DateTime                 @map("check_in") @db.Date
-  checkOut        DateTime                 @map("check_out") @db.Date
+  id              String                    @id @default(cuid())
+  roomId          String                    @map("room_id")
+  guestId         String                    @map("guest_id")
+  channelId       String                    @map("channel_id")
+  otaRef          String?                   @map("ota_ref")
+  checkIn         DateTime                  @map("check_in") @db.Date
+  checkOut        DateTime                  @map("check_out") @db.Date
   // Generated in the DB from check_in/check_out as a half-open [) daterange.
   stay            Unsupported("daterange")? @map("stay")
-  status          ReservationStatus        @default(confirmed)
+  status          ReservationStatus         @default(confirmed)
   // Live arrival/departure stamps. Orthogonal to `status` (a confirmed booking
   // may or may not be in-house yet) and to `stay`, so the exclusion constraint
   // is untouched. Drive the Today board's in-house view + housekeeping handoff.
-  checkedInAt     DateTime?                @map("checked_in_at")
-  checkedOutAt    DateTime?                @map("checked_out_at")
-  arrivalTime     String?                  @map("arrival_time")
-  specialRequests String?                  @map("special_requests")
-  grossAmount     Decimal?                 @map("gross_amount") @db.Decimal(10, 2)
+  checkedInAt     DateTime?                 @map("checked_in_at")
+  checkedOutAt    DateTime?                 @map("checked_out_at")
+  arrivalTime     String?                   @map("arrival_time")
+  specialRequests String?                   @map("special_requests")
+  grossAmount     Decimal?                  @map("gross_amount") @db.Decimal(10, 2)
   // Amount expected upfront to hold the room. Separate from grossAmount so the
   // owner can track whether the deposit has arrived before check-in.
-  advanceRequired Decimal?                 @map("advance_required") @db.Decimal(10, 2)
-  createdAt       DateTime                 @default(now()) @map("created_at")
+  advanceRequired Decimal?                  @map("advance_required") @db.Decimal(10, 2)
+  createdAt       DateTime                  @default(now()) @map("created_at")
 
   room             Room              @relation(fields: [roomId], references: [id])
   guest            Guest             @relation(fields: [guestId], references: [id])
@@ -175,6 +176,7 @@ model Reservation {
   payments         Payment[]
   outboundMessages OutboundMessage[]
   refunds          Refund[]
+  complaints       Complaint[]
 
   @@index([roomId])
   @@index([guestId])
@@ -200,19 +202,19 @@ model Payment {
 }
 
 model Block {
-  id        String                   @id @default(cuid())
-  roomId    String                   @map("room_id")
-  startDate DateTime                 @map("start_date") @db.Date
-  endDate   DateTime                 @map("end_date") @db.Date
+  id          String                    @id @default(cuid())
+  roomId      String                    @map("room_id")
+  startDate   DateTime                  @map("start_date") @db.Date
+  endDate     DateTime                  @map("end_date") @db.Date
   // Generated in the DB from start_date/end_date as a half-open [) daterange.
-  period    Unsupported("daterange")? @map("period")
-  reason    String?
-  source    BlockSource              @default(manual)
+  period      Unsupported("daterange")? @map("period")
+  reason      String?
+  source      BlockSource               @default(manual)
   // Set for imported blocks: which feed they came from and the source event UID.
-  feedId      String?                @map("feed_id")
-  externalUid String?                @map("external_uid")
-  room      Room                     @relation(fields: [roomId], references: [id])
-  feed      IcalFeed?                @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  feedId      String?                   @map("feed_id")
+  externalUid String?                   @map("external_uid")
+  room        Room                      @relation(fields: [roomId], references: [id])
+  feed        IcalFeed?                 @relation(fields: [feedId], references: [id], onDelete: Cascade)
 
   @@index([roomId])
   @@index([feedId])
@@ -225,7 +227,7 @@ model Block {
 // Parsed fields are best-effort and nullable — the owner corrects on review.
 model InboundBooking {
   id            String        @id @default(cuid())
-  source        String        // detected channel, e.g. "Booking.com" / "Agoda" / "Unknown"
+  source        String // detected channel, e.g. "Booking.com" / "Agoda" / "Unknown"
   otaRef        String?       @map("ota_ref") // used to dedupe re-sent emails
   rawText       String        @map("raw_text")
   guestName     String?       @map("guest_name")
@@ -352,17 +354,17 @@ model IcalFeed {
 /// `manual` = an owner/staff member created it by hand in the queue.
 enum EscalationSource {
   assistant // AI Tourism & Guesthouse Assistant (Module 4.1)
-  cab       // Multi-Agent Cab Coordination (Module 4.2)
-  console   // AI Workplace Console (Module 4.3)
-  manual    // raised by hand in the Escalations queue
+  cab // Multi-Agent Cab Coordination (Module 4.2)
+  console // AI Workplace Console (Module 4.3)
+  manual // raised by hand in the Escalations queue
 }
 
 /// Coarse routing bucket. Drives the Customer / Driver tabs in the queue UI.
 enum EscalationCategory {
-  customer    // a guest-facing issue (allergy, complaint, special request)
-  driver      // a transport/driver issue (cancellation, no-show driver)
-  booking     // booking changes the agent could not complete confidently
-  payment     // payment / refund / suspected-scam needing a human
+  customer // a guest-facing issue (allergy, complaint, special request)
+  driver // a transport/driver issue (cancellation, no-show driver)
+  booking // booking changes the agent could not complete confidently
+  payment // payment / refund / suspected-scam needing a human
   maintenance // a property/maintenance issue surfaced via chat
   other
 }
@@ -402,18 +404,18 @@ model Escalation {
   id String @id @default(cuid())
 
   source   EscalationSource
-  category EscalationCategory  @default(other)
-  severity EscalationSeverity  @default(medium)
-  status   EscalationStatus    @default(open)
+  category EscalationCategory @default(other)
+  severity EscalationSeverity @default(medium)
+  status   EscalationStatus   @default(open)
 
-  title   String  // short one-line summary shown in the queue
-  summary String  // the agent's plain-language summary of the request/issue
+  title   String // short one-line summary shown in the queue
+  summary String // the agent's plain-language summary of the request/issue
   reason  String? // why the agent escalated (low confidence, sensitive action, …)
 
   // Who the escalation is about (the guest / driver), as the agent saw them.
   raisedByName    String? @map("raised_by_name")
   raisedByContact String? @map("raised_by_contact") // phone / email / handle
-  raisedByLang    String? @map("raised_by_lang")    // BCP-47-ish: "kha", "hi", "en"
+  raisedByLang    String? @map("raised_by_lang") // BCP-47-ish: "kha", "hi", "en"
 
   // Preserve the original message (often Khasi/Hindi) AND the translation, so a
   // human can verify the agent's understanding — central to the local-language moat.
@@ -551,4 +553,54 @@ model Refund {
 
   @@index([reservationId])
   @@map("refunds")
+}
+
+enum ComplaintCategory {
+  maintenance
+  cleanliness
+  food
+  noise
+  staff
+  billing
+  other
+}
+
+enum ComplaintPriority {
+  low
+  medium
+  high
+}
+
+enum ComplaintStatus {
+  open
+  in_progress
+  resolved
+}
+
+// A logged guest complaint/issue the owner tracks to resolution. Urgent (high)
+// complaints also file an Escalation into the shared HITL queue so they surface
+// on /needs-you. Optional links to the guest/reservation they concern.
+model Complaint {
+  id             String            @id @default(cuid())
+  guestId        String?           @map("guest_id")
+  reservationId  String?           @map("reservation_id")
+  category       ComplaintCategory @default(other)
+  priority       ComplaintPriority @default(medium)
+  status         ComplaintStatus   @default(open)
+  assignee       String? // free-text until roles land (Phase 2)
+  description    String
+  resolutionNote String?           @map("resolution_note")
+  satisfaction   Int? // 1–5 guest satisfaction, captured on resolution
+  escalationId   String?           @map("escalation_id") // set when an urgent one is escalated
+  resolvedAt     DateTime?         @map("resolved_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @default(now()) @updatedAt @map("updated_at")
+  // Forward-compatible tenancy (single-property today; unused).
+  propertyId     String?           @map("property_id")
+
+  guest       Guest?       @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  reservation Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@index([status, priority, createdAt])
+  @@map("complaints")
 }

@@ -29,6 +29,7 @@ export default async function MorePage() {
       rows: [
         { href: "/guests", icon: "guests", title: "Guests", sub: "Directory & lookup" },
         { href: "/housekeeping", icon: "clean", title: "Housekeeping", sub: hk.toCleanCount > 0 ? `${hk.toCleanCount} room${hk.toCleanCount === 1 ? "" : "s"} to clean` : "All rooms clean" },
+        { href: "/complaints", icon: "alertCircle", title: "Complaints", sub: "Log & resolve guest issues" },
         { href: "/needs-you", icon: "alert", title: "Needs you", sub: "Conflicts & approvals", badge: needsYou },
       ],
     },
