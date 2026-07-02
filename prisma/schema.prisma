@@ -234,6 +234,31 @@ enum TripStatus {
   cancelled
 }
 
+enum ReviewStatus {
+  pending
+  sent
+  received
+  responded
+}
+
+// A review request/tracker. ROOT sends the actual request (messaging seam); the
+// OTA tracks status + drafts a response. guest/reservation are plain nullable ids.
+model ReviewRequest {
+  id            String       @id @default(cuid())
+  guestId       String?      @map("guest_id")
+  reservationId String?      @map("reservation_id")
+  channel       String       @default("Google")
+  status        ReviewStatus @default(pending)
+  rating        Int? // 1–5, once received
+  link          String?
+  responseDraft String?      @map("response_draft")
+  propertyId    String?      @map("property_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@map("review_requests")
+}
+
 // Property amenity catalog (Wi-Fi, parking, meals, pets, wheelchair, pickup…).
 // Existence = the property offers it. Room-type coverage is the join below. Seeds
 // the Phase-3 searchable directory (not built here).
