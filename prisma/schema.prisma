@@ -861,6 +861,36 @@ model ReferralCreditEntry {
   @@map("referral_credit_entries")
 }
 
+enum ScamReportStatus {
+  submitted
+  verified
+  disputed
+  rejected
+}
+
+/// A moderated, opt-in shared scam-number report. Cross-tenant. Data minimisation:
+/// the phone is stored HASHED (matched by hash), never raw — only the last 4
+/// digits are kept for human recognition. Sharing is gated by the SCAM grant;
+/// only `verified`, unexpired reports are shown to peers. `expiresAt` enforces a
+/// retention limit. The private per-property FlaggedNumber list is unchanged.
+model SharedScamReport {
+  id                 String           @id @default(cuid())
+  reporterPropertyId String           @map("reporter_property_id")
+  phoneHash          String           @map("phone_hash")
+  phoneLast4         String?          @map("phone_last4")
+  reason             String
+  evidenceNote       String?          @map("evidence_note")
+  status             ScamReportStatus @default(submitted)
+  createdByUserId    String?          @map("created_by_user_id")
+  verifiedAt         DateTime?        @map("verified_at")
+  expiresAt          DateTime?        @map("expires_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  @@index([phoneHash])
+  @@index([reporterPropertyId])
+  @@map("shared_scam_reports")
+}
+
 // An external iCal URL the owner pastes in (one per room per OTA). The sync
 // fetches each active feed and turns its busy events into `ical` blocks.
 model IcalFeed {
