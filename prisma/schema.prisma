@@ -738,7 +738,77 @@ model PropertySettings {
   upiVpa       String?  @map("upi_vpa")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
+  // Community directory profile (Phase 3). Opt-in; blank/false until the owner
+  // fills them in. `isDiscoverable` is the master switch to appear in the peer
+  // directory at all (used by slice b). PropertySettings is the tenant ROOT, so
+  // these live here rather than on a scoped table.
+  publicName     String?  @map("public_name")
+  bio            String?
+  locality       String?
+  contactPhone   String?  @map("contact_phone")
+  photoPaths     String[] @map("photo_paths")
+  priceBand      String?  @map("price_band")
+  lat            Float?
+  lng            Float?
+  isDiscoverable Boolean  @default(false) @map("is_discoverable")
+
   @@map("property_settings")
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// COMMUNITY NETWORK (Phase 3) — "Rapido for homestays"
+// Cross-tenant tables: each references TWO properties, so they are deliberately
+// NOT in TENANT_MODELS (src/lib/prisma.ts) — the tenant extension would inject a
+// single propertyId and break them. ALL access goes through src/lib/community/*,
+// which requires an accepted NetworkConnection AND an enabled SharingGrant before
+// reading any peer data (default-deny). Nothing is shared unless opted in.
+// ───────────────────────────────────────────────────────────────────────────
+
+enum ConnectionStatus {
+  pending
+  accepted
+  declined
+  revoked
+}
+
+/// A data type a property can choose to share with a specific peer.
+enum ShareType {
+  availability
+  referrals
+  scam
+  bad_guest
+  vendors
+  transport
+}
+
+/// A trust edge between two properties. Symmetric once accepted; either side may
+/// revoke. The (requester, addressee) pair is unique.
+model NetworkConnection {
+  id                  String           @id @default(cuid())
+  requesterPropertyId String           @map("requester_property_id")
+  addresseePropertyId String           @map("addressee_property_id")
+  status              ConnectionStatus @default(pending)
+  createdAt           DateTime         @default(now()) @map("created_at")
+  respondedAt         DateTime?        @map("responded_at")
+
+  @@unique([requesterPropertyId, addresseePropertyId])
+  @@index([addresseePropertyId])
+  @@map("network_connections")
+}
+
+/// What `grantor` shares with `grantee`, per data type. Directional: a grant is
+/// one-way. Absence of an enabled row = not shared.
+model SharingGrant {
+  id                String    @id @default(cuid())
+  grantorPropertyId String    @map("grantor_property_id")
+  granteePropertyId String    @map("grantee_property_id")
+  dataType          ShareType @map("data_type")
+  enabled           Boolean   @default(true)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([grantorPropertyId, granteePropertyId, dataType])
+  @@index([granteePropertyId])
+  @@map("sharing_grants")
 }
 
 // An external iCal URL the owner pastes in (one per room per OTA). The sync

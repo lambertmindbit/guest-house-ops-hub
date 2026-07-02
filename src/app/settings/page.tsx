@@ -30,6 +30,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
   { group: "Maintenance", items: [{ key: "blocks", title: "Blocked dates", sub: "Hold rooms out of service", icon: "alert" }] },
   { group: "Safety", items: [{ key: "flagged-numbers", title: "Scam / flagged numbers", sub: "Warn at booking if a phone is known bad", icon: "alert" }] },
   { group: "Team", items: [{ key: "users", title: "Users & roles", sub: "Logins for owner / reception / housekeeping", icon: "guests" }] },
+  { group: "Community", items: [{ key: "network", title: "Trusted network", sub: "Connect with nearby properties & choose what to share", icon: "link" }] },
   { group: "Data", items: [{ key: "import", title: "Import data", sub: "Bring guests & bookings over from CSV", icon: "inbox" }] },
   { group: "Security", items: [{ key: "audit", title: "Audit log", sub: "Who did what — sensitive actions", icon: "alert" }] },
 ];

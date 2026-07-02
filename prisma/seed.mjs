@@ -1,6 +1,14 @@
 import { PrismaClient } from "@prisma/client";
+import { scryptSync, randomBytes } from "node:crypto";
 
 const prisma = new PrismaClient();
+
+// Mirrors src/lib/password.ts (scrypt$salt$hash). Inlined because the seed is
+// plain .mjs and can't import the TS helper.
+function hashPassword(password) {
+  const salt = randomBytes(16);
+  return `scrypt$${salt.toString("hex")}$${scryptSync(password, salt, 64).toString("hex")}`;
+}
 
 // The 5 booking sources for Phase 1. Commission/collects_payment are sensible
 // starting values the owner can adjust later; they don't drive any logic yet.
@@ -74,6 +82,51 @@ async function ensureRoomType({ rooms, ...data }, propertyId) {
   return roomType;
 }
 
+// A SECOND demo property so the community network (Phase 3) is demonstrable.
+// Opt-in via SEED_PEER=1 so single-property deployments never gain a phantom
+// property. Idempotent by name. Login for the peer owner: the email below +
+// SEED_PEER_PASSWORD (default "peer-demo-1234", demo only — change for real use).
+async function seedPeerProperty() {
+  const name = "Orchid Homestay";
+  const existing = await prisma.propertySettings.findFirst({ where: { name } });
+  const property =
+    existing ??
+    (await prisma.propertySettings.create({
+      data: {
+        name,
+        publicName: name,
+        locality: "Laitkor, Shillong",
+        bio: "Quiet 3-room homestay with parking and airport pickup.",
+        isDiscoverable: true,
+        priceBand: "budget",
+      },
+    }));
+
+  const rt =
+    (await prisma.roomType.findFirst({ where: { name: "Peer Standard", propertyId: property.id } })) ??
+    (await prisma.roomType.create({
+      data: { name: "Peer Standard", baseRate: 2000, maxOccupancy: 2, rateFloor: 1500, rateCeiling: 3500, propertyId: property.id },
+    }));
+  for (const label of ["A1", "A2", "A3"]) {
+    const room = await prisma.room.findFirst({ where: { label, roomTypeId: rt.id } });
+    if (!room) await prisma.room.create({ data: { label, roomTypeId: rt.id, propertyId: property.id } });
+  }
+
+  const email = "peer@demo.local";
+  const peerUser = await prisma.user.findUnique({ where: { email } });
+  if (!peerUser) {
+    await prisma.user.create({
+      data: {
+        email,
+        passwordHash: hashPassword(process.env.SEED_PEER_PASSWORD ?? "peer-demo-1234"),
+        role: "owner",
+        propertyId: property.id,
+      },
+    });
+  }
+  console.log(`Peer property ready: ${name} (${property.id}); login ${email}.`);
+}
+
 async function main() {
   // The seed uses the raw client (no tenant extension), so stamp propertyId itself.
   const property = await ensureProperty();
@@ -86,6 +139,8 @@ async function main() {
     prisma.room.count(),
   ]);
   console.log(`Seed complete: ${channels} channels, ${roomTypes} room types, ${rooms} rooms.`);
+
+  if (process.env.SEED_PEER === "1") await seedPeerProperty();
 }
 
 main()
