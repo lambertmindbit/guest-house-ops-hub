@@ -28,7 +28,7 @@ const TENANT_MODELS = new Set<string>([
   "RoomType", "Room", "Channel", "Guest", "Reservation", "Payment", "Block", "Expense",
   "PricingPolicy", "Season", "RateOverride", "IcalFeed", "InboundBooking", "FlaggedNumber",
   "Escalation", "OutboundMessage", "Complaint", "Refund", "CancellationPolicy",
-  "Staff", "Shift", "Attendance", "HousekeepingTask", "Asset", "MaintenanceRequest",
+  "Staff", "Shift", "Attendance", "HousekeepingTask", "Asset", "MaintenanceRequest", "InventoryItem", "StockMovement",
 ]);
 
 // Resolves the active property for the DEFAULT client: explicit context if set,
