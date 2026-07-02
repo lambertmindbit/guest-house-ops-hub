@@ -82,7 +82,17 @@ occupancy and pricing-occupancy signals.
 
 ## Data model
 
-17 models in [`prisma/schema.prisma`](../prisma/schema.prisma):
+The schema has grown to **46 models** across three gap-analysis phases (see the
+[PHASE-1](PHASE-1-GAP-STATUS.md) / [PHASE-2](PHASE-2-STATUS.md) /
+[PHASE-3](PHASE-3-STATUS.md) status notes and
+[`prisma/schema.prisma`](../prisma/schema.prisma)). The **Phase 1 operations
+core** below is the correctness heart; later phases layered on team/ops modules
+(staff, housekeeping tasks, maintenance, inventory, vendors, transport, groups,
+amenities, reviews, complaints, refunds, audit) and the **community network**
+(cross-tenant `NetworkConnection` / `SharingGrant` / `Referral` /
+`ReferralCreditEntry` / `SharedScamReport` / `SharedGuestAlert`).
+
+Phase 1 operations core:
 
 | Model | Purpose |
 |-------|---------|
@@ -152,7 +162,17 @@ both Server Components and API routes:
 | `storage.ts` | Supabase Storage REST adapter for guest ID documents (optional) |
 | `api.ts` | `ok` / `fail` / `zodFail` response helpers |
 | `db-errors.ts` | Maps Postgres `23P01` overlap → friendly 409 |
-| `prisma.ts` | Singleton Prisma client |
+| `prisma.ts` | Tenant-scoped Prisma client (auto-scoping extension) + `prismaForTenant` / `unscopedPrisma` |
+
+The table above is the Phase 1 core. Later phases added domain modules under the
+same convention — `authz.ts` / `session.ts` / `password.ts` / `tenant.ts`
+(auth + tenancy), `staff.ts` / `housekeeping.ts` / `maintenance.ts` /
+`inventory.ts` / `vendors.ts` / `transport.ts` / `groups.ts` / `amenities.ts` /
+`reviews.ts` / `complaints.ts` / `cancellation.ts` / `audit.ts` / `properties.ts`
+(team & ops), and the cross-tenant community seam in
+[`src/lib/community/`](../src/lib/community/) (`network.ts`, `directory.ts`,
+`availability.ts`, `referrals.ts`, `scam.ts`, `badguest.ts`, `reliability.ts`,
+`directories.ts`).
 
 ## Pricing engine (advisory)
 
@@ -219,14 +239,45 @@ action is **filed for a human**, not performed:
   (ignored today, single property). When multi-tenancy lands, start persisting it
   without changing the agent contract.
 
+## Multi-tenancy & the community seam
+
+The app is **tenant-scoped** (Phase 2), with a deliberately narrow **cross-tenant
+seam** for the community network (Phase 3).
+
+- **Auto-scoping client.** [`src/lib/prisma.ts`](../src/lib/prisma.ts) wraps Prisma
+  in a client extension that injects the active `propertyId` into every read/write
+  on tenant-scoped models (the `TENANT_MODELS` set), so domain code never writes
+  `where: { propertyId }`. `PropertySettings` is the tenant **root** (not scoped).
+- **Per-request binding.** The active property comes from the `x-ota-tenant`
+  header the Edge middleware stamps from the HMAC-verified session (tamper-proof:
+  `set` overwrites any client value). The extension reads it via Next's request
+  store; absent (scripts/tests/public routes) it falls back to the sole property.
+  `prismaForTenant(id)` is the explicit per-tenant client (tests, and any
+  server-side work that must bind a specific tenant).
+- **The community seam.** Cross-tenant reads are confined to
+  [`src/lib/community/*`](../src/lib/community/), which use the **unscoped** client
+  (`unscopedPrisma`) and only after checking an accepted `NetworkConnection` **+**
+  an enabled `SharingGrant` (`canRead`, default-deny), returning a whitelisted
+  public projection — never guest PII, occupancy internals, or finance — and
+  audit-logging the access. Everything else stays on the auto-scoped `prisma` and
+  is fully isolated; a cross-tenant leakage test guards the boundary.
+
 ## Auth & request gating
 
 - [`src/middleware.ts`](../src/middleware.ts) (Edge) gates the whole app behind a
-  valid session cookie. The matcher excludes `/login`, `/api/auth`, `/api/ical`,
-  `/api/cron`, `/api/ingest`, `/api/agent`, and static assets.
-- Session = an HMAC-SHA256-signed, httpOnly cookie ([`src/lib/auth.ts`](../src/lib/auth.ts)),
-  derived from `AUTH_SECRET`; credentials compared in constant time against
-  `OWNER_EMAIL`/`OWNER_PASSWORD`.
+  valid session cookie, **enforces roles** from the signed token claims, and stamps
+  the tenant header. The matcher excludes `/login`, `/api/auth`, `/api/ical`,
+  `/api/cron`, `/api/ingest`, `/api/agent`, `offline.html`, and static assets.
+- **RBAC.** Roles are `owner` / `reception` / `housekeeping`
+  ([`src/lib/authz.ts`](../src/lib/authz.ts), the pure single source of truth):
+  "money only for owners" — non-owners are blocked from finance/analytics/pricing/
+  settings + owner-only APIs; housekeeping is limited to Today + Cleaning.
+- Session = an HMAC-SHA256-signed, httpOnly cookie ([`src/lib/auth.ts`](../src/lib/auth.ts))
+  carrying `{ sub, role, propertyId }`, derived from `AUTH_SECRET`. Logins resolve
+  against the `User` table (scrypt password hashes,
+  [`src/lib/password.ts`](../src/lib/password.ts)); the first owner is seeded from
+  `OWNER_EMAIL`/`OWNER_PASSWORD` on first sign-in. Multi-location owners can switch
+  the acting property (`UserProperty` + `POST /api/session/property`).
 - Public token-gated routes carry their own shared-secret checks since they must be
   reachable without the owner cookie: `/api/ical/[token]/[room]` (`ICAL_FEED_TOKEN`),
   `/api/cron/sync` (`CRON_SECRET`), `/api/ingest/email` (`INGEST_TOKEN`), and the
