@@ -6,8 +6,13 @@
 
 ## Where we are
 
-The app shipped its planned scope across six milestones — all in production on
-`main`. The original product brief and rationale live in [CLAUDE.md](../CLAUDE.md).
+The app shipped its original scope across six product milestones, then a large
+**gap-analysis programme** (against MindBit's ROOT/Lawei review) added three more
+phases — **all in production on `main`**. The original product brief lives in
+[CLAUDE.md](../CLAUDE.md); the gap-analysis phases are summarised in their status
+notes: [Phase 1](PHASE-1-GAP-STATUS.md) (close the core), [Phase 2](PHASE-2-STATUS.md)
+(complete the PMS & team — multi-tenancy, RBAC, staff/ops modules), and
+[Phase 3](PHASE-3-STATUS.md) (the regional community network).
 
 Two cross-cutting passes followed the feature work:
 
@@ -81,6 +86,32 @@ A searchable all-bookings view at `/reservations` (labelled **Bookings** in nav)
 filter chips (Upcoming · In-house · Past · Cancelled, no-show folded into
 Cancelled) — added alongside the calendar and Today board.
 
+## Delivered — Lawei gap-analysis (Phases 1–3)
+
+Built after the original milestones, plan-first, one PR per slice, CI-gated.
+Full detail in the status notes; in brief:
+
+- **Gap Phase 1 — close the core.** Structured guest fields (address, vehicle,
+  preferences) + ID-verification flags; configurable cancellation policy + refund
+  workflow; complaints module; UPI/pay-link + pending-payments card; CSV import;
+  booking-confirmation trigger.
+- **Gap Phase 2 — complete the PMS & team.** **Multi-tenancy** (auto-scoping
+  Prisma extension) + **real auth & RBAC** (owner/reception/housekeeping, "money
+  only for owners"); staff directory/roster/attendance; housekeeping assignment +
+  checklist; maintenance + assets; inventory; vendors + procurement; transport
+  records (dispatch stays in ROOT); group/long-stay bookings; amenities; reviews
+  tracker; audit log + guest consent. Deploys now run `prisma migrate deploy`.
+- **Gap Phase 3 — regional community network.** Trusted-network connections +
+  per-peer sharing grants; searchable property directory; shared (derived)
+  availability; **overflow referral marketplace** with a derived reciprocal-credit
+  ledger; opt-in verified scam + bad-guest networks (hashed signals, evidence,
+  moderation, appeal, retention); no-show reliability score → shared flag; shared
+  vendor/driver directories; multi-location property switcher + offline tolerance.
+
+The community network is inherently cross-tenant: all peer access goes through a
+single audited, grant-gated seam that never exposes guest PII, occupancy, or
+finance. See [ARCHITECTURE.md → Multi-tenancy](ARCHITECTURE.md#multi-tenancy--the-community-seam).
+
 ## Deferred — by design
 
 These were intentionally left out (see [CLAUDE.md](../CLAUDE.md) "do NOT" rules and
@@ -91,7 +122,7 @@ phase scoping). They are **not** bugs:
 | **OTA email ingestion** | Parse the owner's confirmation emails into bookings. | 🟡 **Groundwork built** — parser, staging model, **Inbox** paste/review/create flow, and a token-gated webhook seam (`POST /api/ingest/email`) all exist. Usable today via paste. Two **ready-to-deploy forwarders** now ship in [`integrations/`](../integrations/) (Gmail Apps Script — no domain; Cloudflare Worker — optional, for a branded domain instead of a personal Gmail); only setting the token + tuning the parser against real OTA emails remains. |
 | **Messaging automation** | WhatsApp/email/SMS templates + triggers. Needs a messaging provider. | 🟡 **Groundwork built** — a LogAdapter outbox (`src/lib/messaging.ts`), `/messages` review screen, and the agent `POST /api/agent/messages` seam all exist and log every message. Wiring a provider (and flipping `status` to sent/failed) is all that remains; callers don't change. |
 | **Dynamic pricing → OTAs** | Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal. | ○ Won't do (external limit) |
-| **Multi-role auth + prod hardening** | Currently single-owner; would need accounts, roles, lockout. | 🟡 **Login rate-limiting done** (`src/lib/rate-limit.ts`); roles still deferred |
+| **Multi-role auth** | Accounts, roles, lockout. | ✅ **Done** (gap Phase 2) — `User` table, scrypt, owner/reception/housekeeping RBAC, login rate-limiting (`src/lib/rate-limit.ts`) |
 | **Guest ID document/photo upload** | Needs object storage. | 🟡 **Groundwork built** — Supabase Storage adapter, upload/view/delete endpoints, and guest-profile UI. Activate by creating a private bucket + setting the storage env vars (see [SETUP.md](SETUP.md#optional-integrations-leave-unset-to-keep-them-off)). |
 | **Server-side PDF invoices** | Would need a PDF library. Today uses the browser's Print → Save as PDF. | ○ Deferred |
 

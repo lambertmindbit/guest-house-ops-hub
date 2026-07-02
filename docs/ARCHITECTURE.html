@@ -99,7 +99,16 @@ does this in one raw SQL query using the daterange <code>@&gt;</code> containmen
 (archived rooms excluded). This prevents drift and is the source of truth for
 occupancy and pricing-occupancy signals.</p>
 <h2>Data model</h2>
-<p>17 models in <a href="../prisma/schema.prisma"><code>prisma/schema.prisma</code></a>:</p>
+<p>The schema has grown to <strong>46 models</strong> across three gap-analysis phases (see the
+<a href="PHASE-1-GAP-STATUS.html">PHASE-1</a> / <a href="PHASE-2-STATUS.html">PHASE-2</a> /
+<a href="PHASE-3-STATUS.html">PHASE-3</a> status notes and
+<a href="../prisma/schema.prisma"><code>prisma/schema.prisma</code></a>). The <strong>Phase 1 operations
+core</strong> below is the correctness heart; later phases layered on team/ops modules
+(staff, housekeeping tasks, maintenance, inventory, vendors, transport, groups,
+amenities, reviews, complaints, refunds, audit) and the <strong>community network</strong>
+(cross-tenant <code>NetworkConnection</code> / <code>SharingGrant</code> / <code>Referral</code> /
+<code>ReferralCreditEntry</code> / <code>SharedScamReport</code> / <code>SharedGuestAlert</code>).</p>
+<p>Phase 1 operations core:</p>
 <table>
 <thead>
 <tr>
@@ -297,9 +306,18 @@ both Server Components and API routes:</p>
 </tr>
 <tr>
 <td><code>prisma.ts</code></td>
-<td>Singleton Prisma client</td>
+<td>Tenant-scoped Prisma client (auto-scoping extension) + <code>prismaForTenant</code> / <code>unscopedPrisma</code></td>
 </tr>
 </tbody></table>
+<p>The table above is the Phase 1 core. Later phases added domain modules under the
+same convention — <code>authz.ts</code> / <code>session.ts</code> / <code>password.ts</code> / <code>tenant.ts</code>
+(auth + tenancy), <code>staff.ts</code> / <code>housekeeping.ts</code> / <code>maintenance.ts</code> /
+<code>inventory.ts</code> / <code>vendors.ts</code> / <code>transport.ts</code> / <code>groups.ts</code> / <code>amenities.ts</code> /
+<code>reviews.ts</code> / <code>complaints.ts</code> / <code>cancellation.ts</code> / <code>audit.ts</code> / <code>properties.ts</code>
+(team &amp; ops), and the cross-tenant community seam in
+<a href="../src/lib/community/"><code>src/lib/community/</code></a> (<code>network.ts</code>, <code>directory.ts</code>,
+<code>availability.ts</code>, <code>referrals.ts</code>, <code>scam.ts</code>, <code>badguest.ts</code>, <code>reliability.ts</code>,
+<code>directories.ts</code>).</p>
 <h2>Pricing engine (advisory)</h2>
 <p><a href="../src/lib/pricing.ts"><code>src/lib/pricing.ts</code></a> is split into a <strong>pure</strong> calculator
 and a <strong>data</strong> wrapper for testability:</p>
@@ -360,14 +378,44 @@ any caller. The owner reviews everything at <code>/messages</code>.</li>
 (ignored today, single property). When multi-tenancy lands, start persisting it
 without changing the agent contract.</li>
 </ul>
+<h2>Multi-tenancy &amp; the community seam</h2>
+<p>The app is <strong>tenant-scoped</strong> (Phase 2), with a deliberately narrow <strong>cross-tenant
+seam</strong> for the community network (Phase 3).</p>
+<ul>
+<li><strong>Auto-scoping client.</strong> <a href="../src/lib/prisma.ts"><code>src/lib/prisma.ts</code></a> wraps Prisma
+in a client extension that injects the active <code>propertyId</code> into every read/write
+on tenant-scoped models (the <code>TENANT_MODELS</code> set), so domain code never writes
+<code>where: { propertyId }</code>. <code>PropertySettings</code> is the tenant <strong>root</strong> (not scoped).</li>
+<li><strong>Per-request binding.</strong> The active property comes from the <code>x-ota-tenant</code>
+header the Edge middleware stamps from the HMAC-verified session (tamper-proof:
+<code>set</code> overwrites any client value). The extension reads it via Next&#39;s request
+store; absent (scripts/tests/public routes) it falls back to the sole property.
+<code>prismaForTenant(id)</code> is the explicit per-tenant client (tests, and any
+server-side work that must bind a specific tenant).</li>
+<li><strong>The community seam.</strong> Cross-tenant reads are confined to
+<a href="../src/lib/community/"><code>src/lib/community/*</code></a>, which use the <strong>unscoped</strong> client
+(<code>unscopedPrisma</code>) and only after checking an accepted <code>NetworkConnection</code> <strong>+</strong>
+an enabled <code>SharingGrant</code> (<code>canRead</code>, default-deny), returning a whitelisted
+public projection — never guest PII, occupancy internals, or finance — and
+audit-logging the access. Everything else stays on the auto-scoped <code>prisma</code> and
+is fully isolated; a cross-tenant leakage test guards the boundary.</li>
+</ul>
 <h2>Auth &amp; request gating</h2>
 <ul>
 <li><a href="../src/middleware.ts"><code>src/middleware.ts</code></a> (Edge) gates the whole app behind a
-valid session cookie. The matcher excludes <code>/login</code>, <code>/api/auth</code>, <code>/api/ical</code>,
-<code>/api/cron</code>, <code>/api/ingest</code>, <code>/api/agent</code>, and static assets.</li>
-<li>Session = an HMAC-SHA256-signed, httpOnly cookie (<a href="../src/lib/auth.ts"><code>src/lib/auth.ts</code></a>),
-derived from <code>AUTH_SECRET</code>; credentials compared in constant time against
-<code>OWNER_EMAIL</code>/<code>OWNER_PASSWORD</code>.</li>
+valid session cookie, <strong>enforces roles</strong> from the signed token claims, and stamps
+the tenant header. The matcher excludes <code>/login</code>, <code>/api/auth</code>, <code>/api/ical</code>,
+<code>/api/cron</code>, <code>/api/ingest</code>, <code>/api/agent</code>, <code>offline.html</code>, and static assets.</li>
+<li><strong>RBAC.</strong> Roles are <code>owner</code> / <code>reception</code> / <code>housekeeping</code>
+(<a href="../src/lib/authz.ts"><code>src/lib/authz.ts</code></a>, the pure single source of truth):
+&quot;money only for owners&quot; — non-owners are blocked from finance/analytics/pricing/
+settings + owner-only APIs; housekeeping is limited to Today + Cleaning.</li>
+<li>Session = an HMAC-SHA256-signed, httpOnly cookie (<a href="../src/lib/auth.ts"><code>src/lib/auth.ts</code></a>)
+carrying <code>{ sub, role, propertyId }</code>, derived from <code>AUTH_SECRET</code>. Logins resolve
+against the <code>User</code> table (scrypt password hashes,
+<a href="../src/lib/password.ts"><code>src/lib/password.ts</code></a>); the first owner is seeded from
+<code>OWNER_EMAIL</code>/<code>OWNER_PASSWORD</code> on first sign-in. Multi-location owners can switch
+the acting property (<code>UserProperty</code> + <code>POST /api/session/property</code>).</li>
 <li>Public token-gated routes carry their own shared-secret checks since they must be
 reachable without the owner cookie: <code>/api/ical/[token]/[room]</code> (<code>ICAL_FEED_TOKEN</code>),
 <code>/api/cron/sync</code> (<code>CRON_SECRET</code>), <code>/api/ingest/email</code> (<code>INGEST_TOKEN</code>), and the

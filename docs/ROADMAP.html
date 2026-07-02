@@ -41,8 +41,13 @@ guide to enabling the not-yet-wired features</strong>, open
 <a href="STATUS.html">docs/STATUS.html</a> in a browser.</p>
 </blockquote>
 <h2>Where we are</h2>
-<p>The app shipped its planned scope across six milestones — all in production on
-<code>main</code>. The original product brief and rationale live in <a href="../CLAUDE.html">CLAUDE.md</a>.</p>
+<p>The app shipped its original scope across six product milestones, then a large
+<strong>gap-analysis programme</strong> (against MindBit&#39;s ROOT/Lawei review) added three more
+phases — <strong>all in production on <code>main</code></strong>. The original product brief lives in
+<a href="../CLAUDE.html">CLAUDE.md</a>; the gap-analysis phases are summarised in their status
+notes: <a href="PHASE-1-GAP-STATUS.html">Phase 1</a> (close the core), <a href="PHASE-2-STATUS.html">Phase 2</a>
+(complete the PMS &amp; team — multi-tenancy, RBAC, staff/ops modules), and
+<a href="PHASE-3-STATUS.html">Phase 3</a> (the regional community network).</p>
 <p>Two cross-cutting passes followed the feature work:</p>
 <ul>
 <li><strong>UI/UX redesign</strong> (shipped 2026-06-05) — a warmer navy/teal/mint design system
@@ -107,6 +112,30 @@ automation will plug a provider into.</li>
 — instant client-side search by guest, phone, room or channel, plus timeline
 filter chips (Upcoming · In-house · Past · Cancelled, no-show folded into
 Cancelled) — added alongside the calendar and Today board.</p>
+<h2>Delivered — Lawei gap-analysis (Phases 1–3)</h2>
+<p>Built after the original milestones, plan-first, one PR per slice, CI-gated.
+Full detail in the status notes; in brief:</p>
+<ul>
+<li><strong>Gap Phase 1 — close the core.</strong> Structured guest fields (address, vehicle,
+preferences) + ID-verification flags; configurable cancellation policy + refund
+workflow; complaints module; UPI/pay-link + pending-payments card; CSV import;
+booking-confirmation trigger.</li>
+<li><strong>Gap Phase 2 — complete the PMS &amp; team.</strong> <strong>Multi-tenancy</strong> (auto-scoping
+Prisma extension) + <strong>real auth &amp; RBAC</strong> (owner/reception/housekeeping, &quot;money
+only for owners&quot;); staff directory/roster/attendance; housekeeping assignment +
+checklist; maintenance + assets; inventory; vendors + procurement; transport
+records (dispatch stays in ROOT); group/long-stay bookings; amenities; reviews
+tracker; audit log + guest consent. Deploys now run <code>prisma migrate deploy</code>.</li>
+<li><strong>Gap Phase 3 — regional community network.</strong> Trusted-network connections +
+per-peer sharing grants; searchable property directory; shared (derived)
+availability; <strong>overflow referral marketplace</strong> with a derived reciprocal-credit
+ledger; opt-in verified scam + bad-guest networks (hashed signals, evidence,
+moderation, appeal, retention); no-show reliability score → shared flag; shared
+vendor/driver directories; multi-location property switcher + offline tolerance.</li>
+</ul>
+<p>The community network is inherently cross-tenant: all peer access goes through a
+single audited, grant-gated seam that never exposes guest PII, occupancy, or
+finance. See <a href="ARCHITECTURE.html#multi-tenancy--the-community-seam">ARCHITECTURE.md → Multi-tenancy</a>.</p>
 <h2>Deferred — by design</h2>
 <p>These were intentionally left out (see <a href="../CLAUDE.html">CLAUDE.md</a> &quot;do NOT&quot; rules and
 phase scoping). They are <strong>not</strong> bugs:</p>
@@ -134,9 +163,9 @@ phase scoping). They are <strong>not</strong> bugs:</p>
 <td>○ Won&#39;t do (external limit)</td>
 </tr>
 <tr>
-<td><strong>Multi-role auth + prod hardening</strong></td>
-<td>Currently single-owner; would need accounts, roles, lockout.</td>
-<td>🟡 <strong>Login rate-limiting done</strong> (<code>src/lib/rate-limit.ts</code>); roles still deferred</td>
+<td><strong>Multi-role auth</strong></td>
+<td>Accounts, roles, lockout.</td>
+<td>✅ <strong>Done</strong> (gap Phase 2) — <code>User</code> table, scrypt, owner/reception/housekeeping RBAC, login rate-limiting (<code>src/lib/rate-limit.ts</code>)</td>
 </tr>
 <tr>
 <td><strong>Guest ID document/photo upload</strong></td>
