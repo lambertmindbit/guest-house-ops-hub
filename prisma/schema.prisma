@@ -903,6 +903,7 @@ enum GuestAlertCategory {
   disturbance
   rule_breach
   threat
+  no_show
   other
 }
 
