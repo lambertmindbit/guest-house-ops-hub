@@ -31,13 +31,31 @@ const TENANT_MODELS = new Set<string>([
   "Staff", "Shift", "Attendance", "HousekeepingTask", "Asset", "MaintenanceRequest", "InventoryItem", "StockMovement", "Vendor", "PurchaseOrder", "VendorPayment", "Driver", "Trip", "BookingGroup", "Amenity", "RoomTypeAmenity", "ReviewRequest", "AuditEvent",
 ]);
 
-// Resolves the active property for the DEFAULT client: explicit context if set,
-// else the sole property. Reading ALS from inside the extension is unreliable
-// across the Prisma dispatch boundary, so per-tenant work uses prismaForTenant()
-// (id closed over) rather than depending on this for isolation.
+// The acting property for the current request, read from the `x-ota-tenant`
+// header the edge middleware stamps from the HMAC-verified session (tamper-proof:
+// middleware overwrites any client-supplied value). Absent outside a request
+// (scripts, tests, public/token-gated routes) → null, and we fall back to the
+// sole property. Uses Next's request store (reliable) rather than our own ALS.
+async function tenantFromRequestHeader(): Promise<string | null> {
+  try {
+    const { headers } = await import("next/headers");
+    const value = (await headers()).get("x-ota-tenant");
+    return value && value.length > 0 ? value : null;
+  } catch {
+    return null; // not in a request context
+  }
+}
+
+// Resolves the active property for the DEFAULT client: explicit ALS context if
+// set, else the request header, else the sole property (single-property). Reading
+// our own ALS from inside the extension is unreliable across the Prisma dispatch
+// boundary, so per-tenant work uses prismaForTenant() (id closed over) or the
+// request header rather than depending on ALS for isolation.
 async function resolveDefaultPropertyId(): Promise<string | null> {
   const ctx = tenantFromContext();
   if (ctx) return ctx;
+  const fromHeader = await tenantFromRequestHeader();
+  if (fromHeader) return fromHeader;
   if (globalForPrisma.solePropertyId !== undefined) return globalForPrisma.solePropertyId ?? null;
   const rows = await base.propertySettings.findMany({ select: { id: true }, take: 2 });
   globalForPrisma.solePropertyId = rows.length === 1 ? rows[0].id : null;

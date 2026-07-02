@@ -22,7 +22,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(home);
   }
 
-  return NextResponse.next();
+  // Bind the acting property for downstream Prisma queries. The tenant extension
+  // (src/lib/prisma.ts) reads this header to scope every query to the logged-in
+  // owner's property. `set` OVERWRITES any client-supplied value, so it cannot be
+  // spoofed — the value comes only from the HMAC-verified session claims.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-ota-tenant", claims.propertyId ?? "");
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
