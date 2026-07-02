@@ -84,14 +84,25 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Payments pending — money still owed across confirmed bookings. Owner only. */}
-        {showMoney && pending.count > 0 && (
-          <Link href="/finance" className="banner banner--warn" style={{ marginTop: 12 }}>
-            <span className="banner__icon"><Icon name="wallet" size={18} /></span>
-            <span className="banner__txt">
-              <b>{displayINR(pending.total)} pending</b> across {pending.count} booking{pending.count === 1 ? "" : "s"}
+        {/* Pending-payments card — money still owed across confirmed bookings.
+            Owner only (canSeeMoney). Total is derived via sumOutstanding. */}
+        {showMoney && (
+          <Link
+            href="/finance"
+            className="card card--pad"
+            style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: "inherit" }}
+          >
+            <span className="kpi-eyebrow" style={{ display: "grid", placeItems: "center", width: 40, height: 40, borderRadius: 12, background: pending.count > 0 ? "var(--warn-bg)" : "var(--surface-2, #f4f4f5)", color: pending.count > 0 ? "var(--warn-text)" : "var(--text-subtle)" }}>
+              <Icon name="wallet" size={18} />
             </span>
-            <span className="banner__arrow"><Icon name="arrowR" size={17} /></span>
+            <span style={{ flex: 1 }}>
+              <span className="kpi-eyebrow" style={{ display: "block" }}>Pending payments</span>
+              <b style={{ fontSize: "var(--fs-h3, 1.1rem)" }}>{displayINR(pending.total)}</b>
+              <span className="kpi-ctx" style={{ display: "block" }}>
+                {pending.count > 0 ? `across ${pending.count} booking${pending.count === 1 ? "" : "s"}` : "all settled"}
+              </span>
+            </span>
+            <Icon name="arrowR" size={17} />
           </Link>
         )}
 
