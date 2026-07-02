@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
+import { checkInBlockReason } from "@/lib/id-gate";
 
 // Arrival/departure stamps for a confirmed booking. These don't touch `status`
 // or `stay`, so the no-double-booking exclusion constraint is unaffected.
@@ -18,10 +19,17 @@ export async function PATCH(
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
 
-  const existing = await prisma.reservation.findUnique({ where: { id } });
+  const existing = await prisma.reservation.findUnique({ where: { id }, include: { guest: true } });
   if (!existing) return fail("reservation not found", 404);
   if (existing.status !== "confirmed") {
     return fail("Only confirmed bookings can be checked in or out.", 409);
+  }
+
+  // Hard gate: a guest cannot be checked in until their ID is recorded (and, for
+  // foreign nationals, the C-Form is complete). Does not affect advance bookings.
+  if (parsed.data.action === "checkin") {
+    const blocked = checkInBlockReason(existing.guest);
+    if (blocked) return fail(blocked, 422);
   }
 
   const now = new Date();

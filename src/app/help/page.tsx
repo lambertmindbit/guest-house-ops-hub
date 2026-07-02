@@ -107,7 +107,8 @@ export default function HelpPage() {
           <Step n={2} title="Enter guest name & phone" sub="If the phone matches an existing guest, their record is reused." />
           <Step n={3} title="Pick channel, room and dates" sub="Already-booked rooms are greyed out for those dates." />
           <Step n={4} title="Check the amount" sub="If pricing rules are set, a suggested price pre-fills — tap Use or type your own." />
-          <Step n={5} title="Save" sub="If those dates clash, it refuses and tells you — you can never double-book." last />
+          <Step n={5} title="Confirm the ID note" sub="Tick the confirmation that a valid ID will be collected at check-in." />
+          <Step n={6} title="Save" sub="If those dates clash, it refuses and tells you — you can never double-book." last />
         </Flow>
       </div>
 
@@ -115,8 +116,9 @@ export default function HelpPage() {
         <p className="h3" style={{ margin: "0 0 4px" }}>Check-in → check-out</p>
         <Flow>
           <Step n={1} title="Not arrived yet" sub="On the booking, tap Check in when the guest arrives." />
-          <Step n={2} title="In-house" sub="Tap Check out when they leave." />
-          <Step n={3} title="Checked out" sub="The room moves to Housekeeping to be cleaned. (Undo steps back one stage.)" last />
+          <Step n={2} title="Record their ID first" sub="Check-in is blocked until the guest's government ID is on file (foreign guests need the C-Form / passport). If it's missing, tap 'Record ID' on the booking to add it." />
+          <Step n={3} title="In-house" sub="Tap Check out when they leave." />
+          <Step n={4} title="Checked out" sub="The room moves to Housekeeping to be cleaned. (Undo steps back one stage.)" last />
         </Flow>
       </div>
 

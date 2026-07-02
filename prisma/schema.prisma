@@ -608,6 +608,9 @@ model Reservation {
   checkedOutAt    DateTime?                 @map("checked_out_at")
   arrivalTime     String?                   @map("arrival_time")
   specialRequests String?                   @map("special_requests")
+  // When the booker confirmed the guest accepts that a valid ID is collected at
+  // check-in (booking-time acknowledgement). Null for non-manual paths.
+  idAckAt         DateTime?                 @map("id_ack_at")
   grossAmount     Decimal?                  @map("gross_amount") @db.Decimal(10, 2)
   // Amount expected upfront to hold the room. Separate from grossAmount so the
   // owner can track whether the deposit has arrived before check-in.
