@@ -24,6 +24,8 @@ export function StaffBoard({
   const { confirm } = useConfirm();
   const [nStaff, setNStaff] = useState({ name: "", role: "", phone: "" });
   const [nShift, setNShift] = useState({ staffId: "", date: today, start: "09:00", end: "17:00" });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ name: "", role: "", phone: "" });
   const [error, setError] = useState<string | null>(null);
   const attMap = new Map(attendance.map((a) => [a.staffId, a.status]));
 
@@ -49,6 +51,16 @@ export function StaffBoard({
     if (!(await confirm({ title: "Remove staff", message: "Delete this staff member and their shifts?", danger: true, confirmLabel: "Delete" }))) return;
     await post(`/api/staff/${id}`, {}, "DELETE");
   }
+  function startEdit(s: Staff) {
+    setEditId(s.id);
+    setEdit({ name: s.name, role: s.role ?? "", phone: s.phone ?? "" });
+  }
+  async function saveEdit(id: string) {
+    if (!edit.name.trim()) return;
+    if (await post(`/api/staff/${id}`, { name: edit.name.trim(), role: edit.role.trim() || null, phone: edit.phone.trim() || null }, "PATCH")) {
+      setEditId(null);
+    }
+  }
 
   const upcoming = shifts.slice(0, 40);
   const activeStaff = staff.filter((s) => s.active);
@@ -69,16 +81,31 @@ export function StaffBoard({
       </div>
       <div className="col" style={{ gap: 8 }}>
         {staff.map((s) => (
-          <div key={s.id} className="rowcard" style={{ opacity: s.active ? 1 : 0.6 }}>
-            <div className="rowcard__main">
-              <div className="rowcard__name">{s.name}{!s.active && " · inactive"}</div>
-              <div className="rowcard__meta">{[s.role, s.phone].filter(Boolean).join(" · ") || "—"}</div>
+          editId === s.id ? (
+            <div key={s.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="Name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+                <input className="input" placeholder="Role" value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value })} />
+                <input className="input" placeholder="Phone" value={edit.phone} onChange={(e) => setEdit({ ...edit, phone: e.target.value })} />
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => saveEdit(s.id)} disabled={!edit.name.trim()}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditId(null)}>Cancel</button>
+              </div>
             </div>
-            <div className="row" style={{ gap: 6 }}>
-              <button className="btn btn--ghost btn--sm" onClick={() => post(`/api/staff/${s.id}`, { active: !s.active }, "PATCH")}>{s.active ? "Disable" : "Enable"}</button>
-              <button className="btn btn--danger btn--sm" onClick={() => removeStaff(s.id)}>Delete</button>
+          ) : (
+            <div key={s.id} className="rowcard" style={{ opacity: s.active ? 1 : 0.6 }}>
+              <div className="rowcard__main">
+                <div className="rowcard__name">{s.name}{!s.active && " · inactive"}</div>
+                <div className="rowcard__meta">{[s.role, s.phone].filter(Boolean).join(" · ") || "—"}</div>
+              </div>
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn btn--ghost btn--sm" onClick={() => startEdit(s)}>Edit</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => post(`/api/staff/${s.id}`, { active: !s.active }, "PATCH")}>{s.active ? "Disable" : "Enable"}</button>
+                <button className="btn btn--danger btn--sm" onClick={() => removeStaff(s.id)}>Delete</button>
+              </div>
             </div>
-          </div>
+          )
         ))}
       </div>
 
