@@ -56,7 +56,10 @@ export async function logMessage(opts: LogMessageOpts) {
       error: result.error ?? null,
       guestId: opts.guestId,
       reservationId: opts.reservationId,
-      propertyId: opts.propertyId,
+      // Only set propertyId when explicitly given; otherwise leave the key absent
+      // so the tenant extension injects the active property. (Passing an explicit
+      // `undefined` would override the injected value and store NULL.)
+      ...(opts.propertyId ? { propertyId: opts.propertyId } : {}),
     },
   });
 }
