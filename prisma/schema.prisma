@@ -811,6 +811,56 @@ model SharingGrant {
   @@map("sharing_grants")
 }
 
+enum ReferralStatus {
+  proposed
+  accepted
+  declined
+  expired
+  converted
+}
+
+/// An overflow referral: `from` (full) sends a guest to `to` (a peer). Cross-tenant.
+/// The guest phone is withheld from the recipient until they accept (data
+/// minimisation). A resulting booking is made the NORMAL guarded way in the
+/// recipient's property and only LINKED here (resultingReservationId) — this
+/// table never creates a reservation, so the GiST 409 guarantee is untouched.
+model Referral {
+  id                    String         @id @default(cuid())
+  fromPropertyId        String         @map("from_property_id")
+  toPropertyId          String         @map("to_property_id")
+  guestName             String         @map("guest_name")
+  guestPhone            String?        @map("guest_phone")
+  checkIn               DateTime       @map("check_in") @db.Date
+  checkOut              DateTime       @map("check_out") @db.Date
+  roomTypeNeed          String?        @map("room_type_need")
+  note                  String?
+  status                ReferralStatus @default(proposed)
+  resultingReservationId String?       @map("resulting_reservation_id")
+  attributedRevenue     Decimal?       @map("attributed_revenue") @db.Decimal(10, 2)
+  createdAt             DateTime       @default(now()) @map("created_at")
+  respondedAt           DateTime?      @map("responded_at")
+
+  @@index([toPropertyId])
+  @@index([fromPropertyId])
+  @@map("referrals")
+}
+
+/// A reciprocal-credit ledger entry: `from` earned credit from `to` for sending
+/// a booking that converted. The BALANCE between two properties is DERIVED by
+/// summing these — never stored as a mutable counter.
+model ReferralCreditEntry {
+  id             String   @id @default(cuid())
+  fromPropertyId String   @map("from_property_id")
+  toPropertyId   String   @map("to_property_id")
+  referralId     String   @map("referral_id")
+  amount         Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([fromPropertyId])
+  @@index([toPropertyId])
+  @@map("referral_credit_entries")
+}
+
 // An external iCal URL the owner pastes in (one per room per OTA). The sync
 // fetches each active feed and turns its busy events into `ical` blocks.
 model IcalFeed {
