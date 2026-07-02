@@ -14,7 +14,7 @@ import { canSeeNav, type Role } from "@/lib/authz";
 type NavId =
   | "today" | "calendar" | "bookings" | "groups" | "guests" | "housekeeping" | "complaints" | "staff" | "needsyou"
   | "maintenance" | "inventory" | "vendors" | "transport"
-  | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "escalations" | "settings" | "help";
+  | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "escalations" | "reviews" | "settings" | "help";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
   today: { label: "Today", icon: "today", href: "/" },
@@ -37,6 +37,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   inbox: { label: "Inbox", icon: "inbox", href: "/inbox" },
   messages: { label: "Messages", icon: "inbox", href: "/messages" },
   escalations: { label: "Escalations", icon: "alert", href: "/escalations" },
+  reviews: { label: "Reviews", icon: "star", href: "/reviews" },
   settings: { label: "Property setup", icon: "settings", href: "/settings" },
   help: { label: "Help", icon: "help", href: "/help" },
 };
@@ -48,7 +49,7 @@ const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operate", items: ["today", "calendar", "bookings", "groups", "guests", "housekeeping", "complaints", "staff", "needsyou"] },
   { label: "Facilities", items: ["maintenance", "inventory", "vendors", "transport"] },
   { label: "Business", items: ["finance", "pricing", "analytics"] },
-  { label: "Review", items: ["inbox", "messages", "escalations"] },
+  { label: "Review", items: ["inbox", "messages", "escalations", "reviews"] },
   { label: "Setup", items: ["settings"] },
 ];
 
