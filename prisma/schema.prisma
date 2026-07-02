@@ -234,6 +234,33 @@ enum TripStatus {
   cancelled
 }
 
+// Property amenity catalog (Wi-Fi, parking, meals, pets, wheelchair, pickup…).
+// Existence = the property offers it. Room-type coverage is the join below. Seeds
+// the Phase-3 searchable directory (not built here).
+model Amenity {
+  id         String            @id @default(cuid())
+  name       String
+  propertyId String?           @map("property_id")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  roomTypes  RoomTypeAmenity[]
+
+  @@map("amenities")
+}
+
+model RoomTypeAmenity {
+  id         String   @id @default(cuid())
+  roomTypeId String   @map("room_type_id")
+  amenityId  String   @map("amenity_id")
+  propertyId String?  @map("property_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@unique([roomTypeId, amenityId])
+  @@index([amenityId])
+  @@map("room_type_amenities")
+}
+
 // A cab/transport record for history + finance. LIVE dispatch stays in the ROOT
 // CabAgent — this repo only records trips. driver/guest/reservation are plain
 // nullable ids.
@@ -330,13 +357,14 @@ enum InboundStatus {
 }
 
 model RoomType {
-  id           String  @id @default(cuid())
+  id           String            @id @default(cuid())
   name         String
-  baseRate     Decimal @map("base_rate") @db.Decimal(10, 2)
-  maxOccupancy Int     @map("max_occupancy")
-  rateFloor    Decimal @map("rate_floor") @db.Decimal(10, 2)
-  rateCeiling  Decimal @map("rate_ceiling") @db.Decimal(10, 2)
+  baseRate     Decimal           @map("base_rate") @db.Decimal(10, 2)
+  maxOccupancy Int               @map("max_occupancy")
+  rateFloor    Decimal           @map("rate_floor") @db.Decimal(10, 2)
+  rateCeiling  Decimal           @map("rate_ceiling") @db.Decimal(10, 2)
   rooms        Room[]
+  amenities    RoomTypeAmenity[]
 
   // Tenant (multi-property). Single-property today; backfilled + scoped by the
   // Prisma tenant extension. See src/lib/tenant.ts.

@@ -15,6 +15,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
     items: [
       { key: "room-types", title: "Room types", sub: "Categories, rates, occupancy", icon: "bed" },
       { key: "rooms", title: "Rooms", sub: "Add, archive, remove rooms", icon: "door" },
+      { key: "amenities", title: "Amenities", sub: "Facilities on the property & per room type", icon: "box" },
     ],
   },
   {
