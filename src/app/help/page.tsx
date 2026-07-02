@@ -57,10 +57,14 @@ export default function HelpPage() {
         </div>
         <p className="help-a" style={{ marginBottom: 0 }}>
           The big <b>+</b> starts a <b>new booking</b> from anywhere. <b>More</b>
-          {" "}opens Guests, Housekeeping, Needs you, Finance, Pricing, Analytics, Inbox,
-          Messages, Escalations, Property setup and Help. On a computer, the same list is a
-          sidebar on the left. Tap the sun/moon to switch <b>dark / light</b>; open
-          {" "}<b>Preferences</b> (the gear, top-right) to change the accent colour and density.
+          {" "}opens everything else — Guests, Housekeeping, Complaints, Staff, Needs you;
+          the <b>Facilities</b> tools (Maintenance, Inventory, Vendors, Transport,
+          {" "}<b>Tours</b>); Finance, Pricing, Analytics; the <b>Community</b> screens
+          (Directory, Referrals, Trusted lists); Inbox, Messages, Escalations, Reviews;
+          and Property setup and Help. On a computer, the same list is a sidebar on the
+          left. Tap the sun/moon to switch <b>dark / light</b>; open <b>Preferences</b>
+          {" "}(the gear, top-right) to change the accent colour, density, or — if you run
+          more than one property — <b>switch property</b>.
         </p>
       </div>
 
@@ -84,7 +88,8 @@ export default function HelpPage() {
         <Q q="Find any booking fast"><Link href="/reservations">Bookings</Link> → search by name, phone, room or channel, or filter by timeline (upcoming, in-house, past, cancelled).</Q>
         <Q q="Add a new room">Go to <Link href="/settings/rooms">Settings → Rooms → Add room</Link>. The calendar updates automatically.</Q>
         <Q q="Block a room for repairs">Calendar → <b>Block a room</b>, or <Link href="/settings/blocks">Settings → Blocked dates</Link>.</Q>
-        <Q q="See who owes money"><Link href="/finance">Finance → Balances due</Link>.</Q>
+        <Q q="See who owes money">The <Link href="/">Today</Link> screen shows a <b>Pending payments</b> card (owners only) with the total still due; <Link href="/finance">Finance → Balances due</Link> lists each one.</Q>
+        <Q q="Arrange a tour or activity"><Link href="/tours">Tours</Link> → add a partner/guide (with commission), list the tours you offer, and book one for a guest.</Q>
         <Q q="Give a guest a bill">Open the booking → <b>Invoice</b> → Print / Save PDF.</Q>
         <Q q="Find a past guest"><Link href="/guests">Guests</Link> → search by name or phone.</Q>
         <Q q="Stop a problem guest re-booking">Open the guest → turn on <b>Blacklist</b> with a reason.</Q>
@@ -145,6 +150,14 @@ export default function HelpPage() {
           <Step n={1} title={<><Link href="/escalations">Escalations</Link> — your to-do queue</>} sub="When the assistant can't decide something (special request, complaint, an action needing your approval), it files it here instead of acting. Open one, act, and mark it resolved." />
           <Step n={2} title={<><Link href="/messages">Messages</Link> — the outbox</>} sub="A log of every message sent or queued to guests (WhatsApp / SMS / email), so you have a record of what went out." last />
         </Flow>
+        <p className="help-a" style={{ marginBottom: 0 }}>
+          The app already <b>drafts guest messages automatically</b> — a booking
+          confirmation, a pre-arrival note with directions the day before check-in, and
+          payment reminders for balances still due. Today they&rsquo;re written to the
+          {" "}<Link href="/messages">Messages</Link> log (a record, not yet sent); once a
+          WhatsApp provider is connected they&rsquo;ll go out for real, with no change to
+          how you work.
+        </p>
       </div>
 
       {/* Good to know */}
@@ -155,7 +168,9 @@ export default function HelpPage() {
           <li style={{ marginBottom: 6 }}><b>Availability is always live</b> — worked out from your bookings and blocks, never a number that can drift.</li>
           <li style={{ marginBottom: 6 }}><b>Pricing is only a suggestion</b> — it never changes prices on the OTAs by itself.</li>
           <li style={{ marginBottom: 6 }}><b>Cancelled bookings free their dates</b> immediately for re-booking.</li>
-          <li><b>Changes save instantly</b> and show on every device.</li>
+          <li style={{ marginBottom: 6 }}><b>Changes save instantly</b> and show on every device.</li>
+          <li style={{ marginBottom: 6 }}><b>Patchy signal is OK</b> — if you lose connection, changes you make are saved and sync automatically when you&rsquo;re back online. If a booking clashed while you were offline, the app tells you so you can sort it.</li>
+          <li><b>Guest IDs auto-expire</b> — set a retention period in <Link href="/settings/property">Settings → Property</Link> and scanned ID documents older than that are deleted for you (privacy).</li>
         </ul>
       </div>
 
