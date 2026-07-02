@@ -13,7 +13,7 @@ import { canSeeNav, type Role } from "@/lib/authz";
 // "More" is a real /more hub screen on phone (no bottom sheet).
 type NavId =
   | "today" | "calendar" | "bookings" | "guests" | "housekeeping" | "complaints" | "staff" | "needsyou"
-  | "maintenance" | "inventory"
+  | "maintenance" | "inventory" | "vendors"
   | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "escalations" | "settings" | "help";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
@@ -27,6 +27,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   staff: { label: "Staff", icon: "guests", href: "/staff" },
   maintenance: { label: "Maintenance", icon: "wrench", href: "/maintenance" },
   inventory: { label: "Inventory", icon: "box", href: "/inventory" },
+  vendors: { label: "Vendors", icon: "receipt", href: "/vendors" },
   needsyou: { label: "Needs you", icon: "alert", href: "/needs-you" },
   finance: { label: "Finance", icon: "wallet", href: "/finance" },
   pricing: { label: "Pricing", icon: "tag", href: "/pricing" },
@@ -43,7 +44,7 @@ const PRIMARY: NavId[] = ["today", "calendar", "bookings"];
 // Desktop sidebar — grouped; Setup is one entry (the /settings hub owns the rest).
 const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operate", items: ["today", "calendar", "bookings", "guests", "housekeeping", "complaints", "staff", "needsyou"] },
-  { label: "Facilities", items: ["maintenance", "inventory"] },
+  { label: "Facilities", items: ["maintenance", "inventory", "vendors"] },
   { label: "Business", items: ["finance", "pricing", "analytics"] },
   { label: "Review", items: ["inbox", "messages", "escalations"] },
   { label: "Setup", items: ["settings"] },

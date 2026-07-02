@@ -39,6 +39,7 @@ export default async function MorePage() {
       rows: [
         { href: "/maintenance", icon: "wrench", title: "Maintenance", sub: "Requests, assets & service" },
         { href: "/inventory", icon: "box", title: "Inventory", sub: "Supplies & low-stock" },
+        { href: "/vendors", icon: "receipt", title: "Vendors", sub: "Directory, POs & payments" },
       ],
     },
     {
