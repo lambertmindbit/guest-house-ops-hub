@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lawei Gap Analysis — Phase 2 Status</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>PHASE-2-STATUS.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Lawei Gap Analysis — Phase 2 Status</h1>
+<p><em>&quot;Complete the PMS &amp; team&quot; — what shipped vs. what&#39;s deferred, against
+<code>ROOT_Lawei_Gap_Analysis</code> (MindBit). Prepared 2026-07-02.</em></p>
+<p>Phase 2 was built as <strong>twelve single-purpose PRs</strong> (#42–#54), plus one infrastructure
+fix (#46), each additive and CI-verified against a real Postgres. It <strong>starts the
+multi-tenancy + auth epic</strong> the earlier handoff had deferred, then layers the team /
+operations modules on top. The correctness core is untouched: the
+<code>no_overlapping_confirmed_stays</code> GiST constraint and the derived-availability rule
+still hold (verified by CI on every slice).</p>
+<h2>Foundational (gating) slices</h2>
+<table>
+<thead>
+<tr>
+<th>Slice</th>
+<th>PR</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a — Multi-tenancy foundation</td>
+<td>#42</td>
+<td><code>property_id</code> on 22 tables (backfilled to the sole property); a Prisma client extension auto-scopes every read/write; <code>prismaForTenant(id)</code> for explicit per-tenant work; a tenant-isolation test proves A never sees B. <strong>Operates one property today, correct for N.</strong></td>
+</tr>
+<tr>
+<td>b — Real auth + RBAC</td>
+<td>#43</td>
+<td><code>User</code> + roles (owner / reception / housekeeping); passwords via Node <strong>scrypt</strong> (no dep); <strong>signed role+property claims</strong> in the session token, so the edge middleware enforces access with no DB lookup. <strong>&quot;Money only for owners&quot;</strong> — reception/housekeeping blocked from finance/analytics/pricing/settings; housekeeping limited to Today + Cleaning. Owner seeded from <code>OWNER_EMAIL/PASSWORD</code> on first login.</td>
+</tr>
+</tbody></table>
+<h2>Team &amp; operations modules</h2>
+<table>
+<thead>
+<tr>
+<th>Slice</th>
+<th>PR</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>c — Staff</td>
+<td>#44</td>
+<td>Directory + shift roster + attendance (present/absent/leave).</td>
+</tr>
+<tr>
+<td>d — Housekeeping assignment</td>
+<td>#45</td>
+<td>Assign cleaning to a named staff member + per-room checklist + completion accountability, layered over the derived needs-cleaning flow.</td>
+</tr>
+<tr>
+<td>e — Maintenance</td>
+<td>#47</td>
+<td>Repair requests (assignee/vendor/cost/status) + asset register + preventive &quot;service due&quot;.</td>
+</tr>
+<tr>
+<td>f — Inventory</td>
+<td>#48</td>
+<td>Items, stock In/Out movements, low-stock alerts, consumption.</td>
+</tr>
+<tr>
+<td>g — Vendors &amp; procurement</td>
+<td>#49</td>
+<td>Directory + purchase orders (draft→ordered→received) + payments + procurement summary.</td>
+</tr>
+<tr>
+<td>h — Transport</td>
+<td>#50</td>
+<td>Driver + trip <strong>records</strong> for history &amp; fares. <strong>No dispatch</strong> — that stays in the ROOT CabAgent.</td>
+</tr>
+<tr>
+<td>i — Group / long-stay bookings</td>
+<td>#51</td>
+<td>A folio wrapper linking several room bookings. Children are created the normal (guarded) way and only <strong>linked</strong>, so the 409 no-double-booking guarantee is untouched.</td>
+</tr>
+<tr>
+<td>j — Amenities</td>
+<td>#52</td>
+<td>Property amenity catalog + per-room-type coverage. Seeds the Phase-3 searchable directory.</td>
+</tr>
+<tr>
+<td>k — Reviews</td>
+<td>#53</td>
+<td>Request tracker + status + response drafting (ROOT sends; the OTA tracks).</td>
+</tr>
+<tr>
+<td>l — Audit + consent</td>
+<td>#54</td>
+<td>Audit log of sensitive actions (cancel / refund / blacklist / user &amp; consent changes) + guest privacy-consent capture.</td>
+</tr>
+</tbody></table>
+<h2>Infrastructure fix (root cause of the drift)</h2>
+<table>
+<thead>
+<tr>
+<th>PR</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>#46</td>
+<td><strong>Migrations now apply on production deploys.</strong> The build was <code>prisma generate &amp;&amp; next build</code> — no migrate step — so merges never applied migrations and the DB fell behind. <code>vercel.json</code> now runs <code>scripts/vercel-build.sh</code>, which runs <code>prisma migrate deploy</code> on <strong>production</strong> deploys only (preview deploys skip it; local <code>npm run build</code> is unchanged). Requires <code>DIRECT_URL</code> in the Vercel Production env.</td>
+</tr>
+</tbody></table>
+<h2>Deferred (flagged, not started)</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Why</th>
+<th>Gap ref</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Community network</strong> — overflow referrals, shared availability, searchable directory, shared scam/bad-guest, no-show scoring</td>
+<td>Phase 3; builds on the multi-tenancy foundation laid here.</td>
+<td>OV-1/2, PT-1/2, SC-2, BG-1, CY-1, NS-1</td>
+</tr>
+<tr>
+<td><strong>Real WhatsApp/BSP send + conversational LLM agent</strong></td>
+<td>Stay in <strong>ROOT</strong>, not this repo (needs a BSP + the agent service).</td>
+<td>GL-1/2, CM-1, IT-1, AI-1</td>
+</tr>
+</tbody></table>
+<h2>Notes / small follow-ups (within the epic, non-blocking)</h2>
+<ul>
+<li><strong>Per-request tenant binding.</strong> The default <code>prisma</code> auto-scopes to the sole property, so the app is correct today. True multi-property operation should bind <code>prismaForTenant(session.propertyId)</code> per request (the reliable path) — a small change when multiple properties go live.</li>
+<li><strong>Per-tenant guest-phone uniqueness</strong> (<code>@@unique([propertyId, phone])</code>) — kept global <code>@unique</code> for the one-property demo; needed before running multiple real properties.</li>
+<li><strong>Finer per-action API RBAC</strong> for shared endpoints (e.g. housekeeping can reach <code>/api/rooms</code> for mark-clean); the money boundary is enforced, the rest is nav-hidden.</li>
+<li><strong>Maintenance photos</strong> — the <code>photo_paths</code> field ships; the upload UI reuses the existing Supabase Storage seam later.</li>
+<li><strong><code>NOT NULL</code> tightening</strong> of <code>property_id</code> deferred until the backfill is confirmed across environments.</li>
+</ul>
+<p>See <a href="PHASE-1-GAP-STATUS.html">PHASE-1-GAP-STATUS.md</a> for the Phase 1 summary.</p>
+
+</div>
+</body>
+</html>
