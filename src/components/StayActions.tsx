@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
@@ -17,10 +18,14 @@ export function StayActions({
   reservationId,
   checkedInAt,
   checkedOutAt,
+  idBlockReason = null,
+  guestId,
 }: {
   reservationId: string;
   checkedInAt: string | null;
   checkedOutAt: string | null;
+  idBlockReason?: string | null;
+  guestId?: string;
 }) {
   const router = useRouter();
   const { alert } = useConfirm();
@@ -34,11 +39,14 @@ export function StayActions({
       body: JSON.stringify({ action }),
     });
     setBusy(false);
-    if (res.ok) router.refresh();
-    else await alert({ title: "Couldn’t update", message: "Please try again." });
+    if (res.ok) return router.refresh();
+    const j = await res.json().catch(() => ({}));
+    await alert({ title: "Couldn’t update", message: j.error ?? "Please try again." });
   }
 
   const state = checkedOutAt ? "out" : checkedInAt ? "in" : "none";
+  // Hard gate: can't check in until the guest's ID is on file.
+  const checkInBlocked = state === "none" && !!idBlockReason;
 
   if (state === "out") {
     return (
@@ -56,8 +64,18 @@ export function StayActions({
 
   return (
     <div style={{ marginTop: 14 }}>
+      {/* ID required before check-in — explain why the button is disabled + how to fix. */}
+      {checkInBlocked && (
+        <div className="banner banner--warn" style={{ marginBottom: 10, cursor: "default" }}>
+          <span className="banner__icon"><Icon name="alert" size={18} /></span>
+          <span className="banner__txt" style={{ flex: 1 }}>
+            {idBlockReason}{" "}
+            {guestId && <Link href={`/guests/${guestId}`} style={{ fontWeight: 700, textDecoration: "underline" }}>Record ID</Link>}
+          </span>
+        </div>
+      )}
       {state === "none" ? (
-        <button onClick={() => run("checkin")} disabled={busy} className="btn btn--primary btn--block">
+        <button onClick={() => run("checkin")} disabled={busy || checkInBlocked} className="btn btn--primary btn--block">
           <Icon name="arrowDown" size={17} /> Check in guest
         </button>
       ) : (
@@ -67,7 +85,7 @@ export function StayActions({
       )}
       <div className="spread" style={{ marginTop: 8 }}>
         <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>
-          {state === "in" ? `In-house · arrived ${fmt(checkedInAt!)}` : "Tap when the guest arrives"}
+          {state === "in" ? `In-house · arrived ${fmt(checkedInAt!)}` : checkInBlocked ? "Record the guest's ID to enable check-in" : "Tap when the guest arrives"}
         </span>
         {state === "in" && (
           <button onClick={() => run("undo")} disabled={busy} className="btn btn--quiet btn--sm">Undo check-in</button>

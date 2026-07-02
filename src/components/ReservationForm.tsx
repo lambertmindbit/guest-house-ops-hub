@@ -59,6 +59,8 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
   function setCf(key: keyof typeof cform, value: string) {
     setCform((c) => ({ ...c, [key]: value }));
   }
+  // Booking-time acknowledgement that a valid ID will be collected at check-in.
+  const [idAck, setIdAck] = useState(false);
 
   function set<K extends keyof ReservationFormValues>(key: K, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -166,6 +168,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
     if (!values.roomId) return setError("Pick a room for these dates.");
     if (!values.channelId) return setError("Choose a booking channel.");
     if (mode === "create" && scamWarn) return setError("This number is on your scam list — resolve before saving.");
+    if (mode === "create" && !idAck) return setError("Please confirm the guest accepts that a valid ID will be collected at check-in.");
     setSaving(true);
     try {
       const amount = values.grossAmount.trim();
@@ -186,7 +189,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
           ? await fetch("/api/reservations", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ ...common, guest: { name: values.guestName, phone: values.guestPhone } }),
+              body: JSON.stringify({ ...common, guest: { name: values.guestName, phone: values.guestPhone }, idAck }),
             })
           : await fetch(`/api/reservations/${values.id}`, {
               method: "PATCH",
@@ -383,8 +386,21 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         </div>
       </div>
 
+      {mode === "create" && (
+        <div className="card card--pad" style={{ marginBottom: 4, borderColor: "var(--warn-border, var(--border))" }}>
+          <label className="row" style={{ gap: 10, cursor: "pointer", alignItems: "flex-start" }}>
+            <input type="checkbox" checked={idAck} onChange={(e) => setIdAck(e.target.checked)} style={{ marginTop: 3 }} />
+            <span style={{ fontSize: "var(--fs-small)" }}>
+              <b>A valid government ID is required.</b> I confirm the guest has been told
+              their ID (passport / Aadhaar / etc.) will be <b>collected and recorded at
+              check-in</b>. The guest cannot be checked in until it is.
+            </span>
+          </label>
+        </div>
+      )}
+
       <div className="form-save">
-        <button type="submit" disabled={saving || (mode === "create" && !!scamWarn)} className="btn btn--primary btn--block">
+        <button type="submit" disabled={saving || (mode === "create" && (!!scamWarn || !idAck))} className="btn btn--primary btn--block">
           <Icon name="check" size={18} /> {saving ? "Saving…" : mode === "create" ? "Save booking" : "Save changes"}
         </button>
       </div>

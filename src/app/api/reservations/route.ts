@@ -29,6 +29,10 @@ const createSchema = z
     specialRequests: z.string().optional(),
     grossAmount: z.number().nonnegative().optional(),
     advanceRequired: z.number().nonnegative().optional(),
+    // The booker confirmed the guest accepts that a valid ID is collected at
+    // check-in. Recorded (idAckAt) but not required server-side, so OTA/agent/
+    // import paths still work; the manual form enforces the tick client-side.
+    idAck: z.boolean().optional(),
   })
   .refine((d) => d.checkOut > d.checkIn, {
     path: ["checkOut"],
@@ -79,6 +83,7 @@ export async function POST(request: Request) {
           specialRequests: input.specialRequests,
           grossAmount: input.grossAmount,
           advanceRequired: input.advanceRequired,
+          idAckAt: input.idAck ? new Date() : null,
         },
       });
     });

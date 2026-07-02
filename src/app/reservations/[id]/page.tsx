@@ -8,6 +8,7 @@ import { ReservationOverflow } from "@/components/ReservationOverflow";
 import { RefundPanel } from "@/components/RefundPanel";
 import { displayDate, displayMoney } from "@/lib/format";
 import { formatDateOnly, todayDateOnly } from "@/lib/dates";
+import { checkInBlockReason } from "@/lib/id-gate";
 import { getCancellationPolicy, isPeakDate, daysUntil, assessRefund, type SeasonWindow } from "@/lib/cancellation";
 
 export const dynamic = "force-dynamic";
@@ -161,6 +162,8 @@ export default async function ReservationDetailPage({
             reservationId={r.id}
             checkedInAt={r.checkedInAt ? r.checkedInAt.toISOString() : null}
             checkedOutAt={r.checkedOutAt ? r.checkedOutAt.toISOString() : null}
+            idBlockReason={checkInBlockReason(r.guest)}
+            guestId={r.guestId}
           />
         )}
 
