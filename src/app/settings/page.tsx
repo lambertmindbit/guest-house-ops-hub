@@ -33,6 +33,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
     items: [
       { key: "flagged-numbers", title: "Scam / flagged numbers", sub: "Warn at booking if a phone is known bad", icon: "alert" },
       { key: "scam-network", title: "Community scam list", sub: "Verified, shared scam numbers across your network", icon: "alert" },
+      { key: "bad-guests", title: "Bad-guest alerts", sub: "Evidence-backed alerts shared with your network", icon: "alert" },
     ],
   },
   { group: "Team", items: [{ key: "users", title: "Users & roles", sub: "Logins for owner / reception / housekeeping", icon: "guests" }] },

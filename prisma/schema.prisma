@@ -891,6 +891,47 @@ model SharedScamReport {
   @@map("shared_scam_reports")
 }
 
+enum GuestAlertStatus {
+  submitted
+  verified
+  disputed
+  rejected
+}
+
+enum GuestAlertCategory {
+  damage
+  disturbance
+  rule_breach
+  threat
+  other
+}
+
+/// An evidence-backed, opt-in shared bad-guest alert. Cross-tenant. Built on the
+/// per-property Guest blacklist (which is unchanged). Same safeguards as the scam
+/// network: phone stored HASHED (last 4 + first name kept for recognition),
+/// evidence required to verify, only verified+unexpired reach peers (BAD_GUEST
+/// grant), retention via expiresAt, a dispute/appeal path, and audit.
+model SharedGuestAlert {
+  id                 String             @id @default(cuid())
+  reporterPropertyId String             @map("reporter_property_id")
+  guestPhoneHash     String             @map("guest_phone_hash")
+  guestPhoneLast4    String?            @map("guest_phone_last4")
+  guestNameMasked    String?            @map("guest_name_masked")
+  category           GuestAlertCategory @default(other)
+  reason             String
+  evidenceNote       String?            @map("evidence_note")
+  evidencePaths      String[]           @map("evidence_paths")
+  status             GuestAlertStatus   @default(submitted)
+  createdByUserId    String?            @map("created_by_user_id")
+  verifiedAt         DateTime?          @map("verified_at")
+  expiresAt          DateTime?          @map("expires_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+
+  @@index([guestPhoneHash])
+  @@index([reporterPropertyId])
+  @@map("shared_guest_alerts")
+}
+
 // An external iCal URL the owner pastes in (one per room per OTA). The sync
 // fetches each active feed and turns its busy events into `ical` blocks.
 model IcalFeed {
