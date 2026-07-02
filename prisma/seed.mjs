@@ -86,7 +86,7 @@ async function ensureRoomType({ rooms, ...data }, propertyId) {
 // Opt-in via SEED_PEER=1 so single-property deployments never gain a phantom
 // property. Idempotent by name. Login for the peer owner: the email below +
 // SEED_PEER_PASSWORD (default "peer-demo-1234", demo only — change for real use).
-async function seedPeerProperty() {
+async function seedPeerProperty(primaryPropertyId) {
   const name = "Orchid Homestay";
   const existing = await prisma.propertySettings.findFirst({ where: { name } });
   const property =
@@ -113,9 +113,9 @@ async function seedPeerProperty() {
   }
 
   const email = "peer@demo.local";
-  const peerUser = await prisma.user.findUnique({ where: { email } });
+  let peerUser = await prisma.user.findUnique({ where: { email } });
   if (!peerUser) {
-    await prisma.user.create({
+    peerUser = await prisma.user.create({
       data: {
         email,
         passwordHash: hashPassword(process.env.SEED_PEER_PASSWORD ?? "peer-demo-1234"),
@@ -123,6 +123,13 @@ async function seedPeerProperty() {
         propertyId: property.id,
       },
     });
+  }
+
+  // Let the peer owner switch into the primary property too (demos the multi-
+  // location property switcher). Idempotent via the (user, property) unique.
+  if (primaryPropertyId) {
+    const existing = await prisma.userProperty.findFirst({ where: { userId: peerUser.id, propertyId: primaryPropertyId } });
+    if (!existing) await prisma.userProperty.create({ data: { userId: peerUser.id, propertyId: primaryPropertyId } });
   }
   console.log(`Peer property ready: ${name} (${property.id}); login ${email}.`);
 }
@@ -140,7 +147,7 @@ async function main() {
   ]);
   console.log(`Seed complete: ${channels} channels, ${roomTypes} room types, ${rooms} rooms.`);
 
-  if (process.env.SEED_PEER === "1") await seedPeerProperty();
+  if (process.env.SEED_PEER === "1") await seedPeerProperty(property.id);
 }
 
 main()
