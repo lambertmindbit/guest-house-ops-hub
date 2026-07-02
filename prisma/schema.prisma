@@ -380,6 +380,68 @@ model VendorPayment {
   @@map("vendor_payments")
 }
 
+enum TourStatus {
+  planned
+  confirmed
+  completed
+  cancelled
+}
+
+/// A tour/activity partner or guide (with an optional commission %). Mirrors the
+/// Vendor directory. Tenant-scoped.
+model TourPartner {
+  id            String       @id @default(cuid())
+  name          String
+  contact       String?
+  commissionPct Int?         @map("commission_pct")
+  propertyId    String?      @map("property_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  tours         Tour[]
+  bookings      TourBooking[]
+
+  @@map("tour_partners")
+}
+
+/// An activity the property offers (sightseeing, trek, …), optionally run by a
+/// partner. Advisory price only; never touches reservations/availability.
+model Tour {
+  id         String       @id @default(cuid())
+  name       String
+  description String?
+  price      Decimal?     @db.Decimal(10, 2)
+  partnerId  String?      @map("partner_id")
+  active     Boolean      @default(true)
+  propertyId String?      @map("property_id")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  partner    TourPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  bookings   TourBooking[]
+
+  @@map("tours")
+}
+
+/// A guest booking a tour. Plain nullable links to guest/reservation (no FK into
+/// the GiST path — this never creates a reservation). commissionPct is snapshotted
+/// so a later partner-rate change doesn't rewrite history.
+model TourBooking {
+  id            String       @id @default(cuid())
+  tourId        String       @map("tour_id")
+  partnerId     String?      @map("partner_id")
+  guestId       String?      @map("guest_id")
+  reservationId String?      @map("reservation_id")
+  date          DateTime?    @db.Date
+  amount        Decimal?     @db.Decimal(10, 2)
+  commissionPct Int?         @map("commission_pct")
+  status        TourStatus   @default(planned)
+  note          String?
+  propertyId    String?      @map("property_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  tour          Tour         @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  partner       TourPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@index([tourId])
+  @@map("tour_bookings")
+}
+
 // Audit trail for sensitive reads/writes (cancel, refund, blacklist, user &
 // consent changes). actorUserId is the acting login (nullable for system/env).
 model AuditEvent {
