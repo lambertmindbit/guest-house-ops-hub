@@ -10,7 +10,7 @@ export type Role = "owner" | "reception" | "housekeeping";
 const OWNER_ONLY_PREFIXES = [
   "/finance", "/analytics", "/pricing", "/settings", "/users",
   "/api/pricing", "/api/settings", "/api/seasons", "/api/expenses",
-  "/api/flagged-numbers", "/api/users", "/api/import",
+  "/api/flagged-numbers", "/api/users", "/api/import", "/api/id-documents",
   // Community sharing config is the owner's call (later slices may open specific
   // sub-paths like referrals to reception). Scam reporting is owner-only too.
   "/api/community/connections", "/api/community/sharing", "/api/community/scam",

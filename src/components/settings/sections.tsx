@@ -31,6 +31,7 @@ export type Settings = {
   address: string | null;
   gstNumber: string | null;
   upiVpa: string | null;
+  idRetentionDays: number | null;
 } | null;
 export type Policy = {
   enabled: boolean;
@@ -103,6 +104,7 @@ export function PropertySection({ settings }: { settings: Settings }) {
     address: settings?.address ?? "",
     gstNumber: settings?.gstNumber ?? "",
     upiVpa: settings?.upiVpa ?? "",
+    idRetentionDays: settings?.idRetentionDays != null ? String(settings.idRetentionDays) : "",
     checkInTime: settings?.checkInTime ?? "14:00",
     checkOutTime: settings?.checkOutTime ?? "11:00",
     currency: settings?.currency ?? "INR",
@@ -117,7 +119,7 @@ export function PropertySection({ settings }: { settings: Settings }) {
     setBusy(true);
     setError(null);
     setSaved(false);
-    const r = await send("PATCH", "/api/settings", { ...f, address: f.address || null, gstNumber: f.gstNumber || null, upiVpa: f.upiVpa || null });
+    const r = await send("PATCH", "/api/settings", { ...f, address: f.address || null, gstNumber: f.gstNumber || null, upiVpa: f.upiVpa || null, idRetentionDays: f.idRetentionDays ? Number(f.idRetentionDays) : null });
     setBusy(false);
     if (!r.ok) return setError(r.error!);
     setSaved(true);
@@ -156,6 +158,11 @@ export function PropertySection({ settings }: { settings: Settings }) {
           <label className="field-label">UPI ID (VPA)</label>
           <input className="input" value={f.upiVpa} onChange={(e) => setF({ ...f, upiVpa: e.target.value })} placeholder="e.g. lawei@okhdfcbank" />
           <div className="field-hint">Used to offer guests a tap-to-pay UPI link for the balance. Leave blank to hide it.</div>
+        </div>
+        <div>
+          <label className="field-label">ID document retention (days)</label>
+          <input className="input" inputMode="numeric" value={f.idRetentionDays} onChange={(e) => setF({ ...f, idRetentionDays: e.target.value.replace(/\D/g, "") })} placeholder="Blank = keep forever" />
+          <div className="field-hint">Scanned guest IDs older than this are auto-deleted (privacy). Blank keeps them indefinitely.</div>
         </div>
       </div>
       <div className="field-hint" style={{ marginTop: 10 }}>Timezone: {f.timezone} — drives “today”, arrivals and the calendar.</div>

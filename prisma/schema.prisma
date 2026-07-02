@@ -544,6 +544,8 @@ model Guest {
   // Path to a scanned ID document in object storage (Supabase Storage). Null
   // until uploaded; storage is optional and configured via env (see docs).
   idDocumentPath          String?           @map("id_document_path")
+  // When the current ID document was uploaded — drives the retention purge.
+  idUploadedAt            DateTime?         @map("id_uploaded_at")
   // Compliance trail for guest ID capture (police/registration expectations).
   // idUploaded is set by the ID-document upload route; the rest are owner-ticked.
   idChecked               Boolean           @default(false) @map("id_checked")
@@ -812,6 +814,9 @@ model PropertySettings {
   gstNumber    String?  @map("gst_number")
   // UPI VPA (e.g. name@bank) used to build a pay-to-me UPI link/QR for guests.
   upiVpa       String?  @map("upi_vpa")
+  // Days to keep a guest's scanned ID document before the retention purge deletes
+  // it. Null = keep indefinitely (no auto-purge).
+  idRetentionDays Int?  @map("id_retention_days")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Community directory profile (Phase 3). Opt-in; blank/false until the owner

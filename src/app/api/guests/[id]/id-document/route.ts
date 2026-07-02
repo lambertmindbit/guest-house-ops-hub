@@ -29,8 +29,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (guest.idDocumentPath && guest.idDocumentPath !== path) {
     await deleteObject(guest.idDocumentPath).catch(() => {});
   }
-  // A stored document satisfies the "ID uploaded" compliance flag.
-  await prisma.guest.update({ where: { id }, data: { idDocumentPath: path, idUploaded: true } });
+  // A stored document satisfies the "ID uploaded" compliance flag; stamp the
+  // upload time so the retention purge can age it out.
+  await prisma.guest.update({ where: { id }, data: { idDocumentPath: path, idUploaded: true, idUploadedAt: new Date() } });
   return ok({ uploaded: true }, 201);
 }
 
@@ -48,6 +49,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const guest = await prisma.guest.findUnique({ where: { id } });
   if (!guest?.idDocumentPath) return fail("no document on file", 404);
   if (isStorageConfigured()) await deleteObject(guest.idDocumentPath).catch(() => {});
-  await prisma.guest.update({ where: { id }, data: { idDocumentPath: null, idUploaded: false } });
+  await prisma.guest.update({ where: { id }, data: { idDocumentPath: null, idUploaded: false, idUploadedAt: null } });
   return ok({ deleted: true });
 }

@@ -15,6 +15,7 @@ export default async function Page() {
     address: s.address,
     gstNumber: s.gstNumber,
     upiVpa: s.upiVpa,
+    idRetentionDays: s.idRetentionDays,
   };
 
   return (
