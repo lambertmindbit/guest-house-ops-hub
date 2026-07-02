@@ -9,7 +9,7 @@ import type { GuestAlertStatus, GuestAlertCategory } from "@prisma/client";
 // via expiresAt, a dispute/appeal path, attribution + audit.
 
 const DEFAULT_RETENTION_DAYS = 180;
-export const ALERT_CATEGORIES: GuestAlertCategory[] = ["damage", "disturbance", "rule_breach", "threat", "other"];
+export const ALERT_CATEGORIES: GuestAlertCategory[] = ["damage", "disturbance", "rule_breach", "threat", "no_show", "other"];
 
 // Keep only the first name for recognition (data minimisation).
 export function maskName(name: string): string {

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { PageHead, SectionLabel, KPI, StatusPill, ChannelBadge, Icon, EmptyState } from "@/components/ui";
 import { GuestProfile } from "@/components/GuestProfile";
 import { IdDocumentField } from "@/components/IdDocumentField";
+import { ReliabilityFlagButton } from "@/components/ReliabilityFlagButton";
+import { noShowStats, isRepeatOffender } from "@/lib/community/reliability";
 import { isStorageConfigured } from "@/lib/storage";
 import { displayMoney, displayINR, displayShortDate } from "@/lib/format";
 import { formatDateOnly } from "@/lib/dates";
@@ -34,6 +36,8 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
   const realised = stays.filter((r) => r.status !== "cancelled");
   const lifetime = realised.reduce((sum, r) => sum + (r.grossAmount ? Number(r.grossAmount) : 0), 0);
   const isRepeat = realised.length >= 2;
+  const reliability = noShowStats(stays.map((r) => r.status));
+  const repeatNoShow = isRepeatOffender(reliability);
 
   return (
     <main className="app-main" style={{ maxWidth: 720 }}>
@@ -47,6 +51,7 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
         </div>
         <div className="row" style={{ gap: 6, marginTop: 4, flexWrap: "wrap" }}>
           {isRepeat && <StatusPill kind="teal">Repeat guest</StatusPill>}
+          {repeatNoShow && <StatusPill kind="danger">Repeat no-show</StatusPill>}
           {guest.blocked && <StatusPill kind="danger">Blacklisted</StatusPill>}
           {guest.nationality && <StatusPill kind="ink">Foreign · C-Form</StatusPill>}
           <Link href={`/guests/${guest.id}/registration`} className="btn btn--ghost btn--sm" style={{ marginLeft: "auto" }}>
@@ -72,7 +77,18 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
         <div className="kpi-grid" style={{ marginTop: 16 }}>
           <KPI value={realised.length} label="Stays" sub={isRepeat ? "Returning" : "First-timer"} icon="bed" tone="teal" />
           <KPI value={displayINR(lifetime)} label="Lifetime value" icon="wallet" />
+          <KPI value={`${reliability.score}`} label="Reliability" sub={reliability.total ? `${reliability.noShows} no-show${reliability.noShows === 1 ? "" : "s"} / ${reliability.total}` : "No history"} icon="alert" tone={repeatNoShow ? "danger" : undefined} />
         </div>
+
+        {/* Owner can escalate a repeat no-show to a shared, appealable alert. */}
+        {repeatNoShow && (
+          <div className="card card--pad" style={{ marginTop: 12, padding: 12 }}>
+            <div className="spread" style={{ gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{ fontSize: "var(--fs-small)" }}>This guest has repeatedly not shown up.</span>
+              <ReliabilityFlagButton guestId={guest.id} />
+            </div>
+          </div>
+        )}
 
         <GuestProfile
           initial={{

@@ -9,7 +9,7 @@ const STATUS_CLS: Record<string, string> = {
 };
 const CATEGORIES = ["damage", "disturbance", "rule_breach", "threat", "other"] as const;
 const CATEGORY_LABEL: Record<string, string> = {
-  damage: "Property damage", disturbance: "Disturbance", rule_breach: "House-rule breach", threat: "Threat / abuse", other: "Other",
+  damage: "Property damage", disturbance: "Disturbance", rule_breach: "House-rule breach", threat: "Threat / abuse", no_show: "Repeat no-show", other: "Other",
 };
 
 export function BadGuestSection({ mine, shared }: { mine: GuestAlertView[]; shared: GuestAlertView[] }) {
