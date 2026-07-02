@@ -20,6 +20,8 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
   const [nv, setNv] = useState({ name: "", category: "", contact: "", rating: "" });
   const [po, setPo] = useState({ vendorId: "", description: "", amount: "", status: "ordered" as PoStatus });
   const [pay, setPay] = useState({ vendorId: "", amount: "" });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ name: "", category: "", contact: "", rating: "" });
   const [error, setError] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
@@ -28,6 +30,17 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
     if (!res.ok) { const j = await res.json().catch(() => ({})); setError(j.error ?? "Something went wrong."); return false; }
     router.refresh();
     return true;
+  }
+
+  function startEdit(v: Vendor) {
+    setEditId(v.id);
+    setEdit({ name: v.name, category: v.category ?? "", contact: v.contact ?? "", rating: v.rating ? String(v.rating) : "" });
+  }
+  async function saveEdit(id: string) {
+    if (!edit.name.trim()) return;
+    if (await call(`/api/vendors/${id}`, { name: edit.name.trim(), category: edit.category.trim() || null, contact: edit.contact.trim() || null, rating: edit.rating ? Number(edit.rating) : null }, "PATCH")) {
+      setEditId(null);
+    }
   }
 
   return (
@@ -59,13 +72,33 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
       </div>
       <div className="col" style={{ gap: 8 }}>
         {vendors.map((v) => (
-          <div key={v.id} className="rowcard">
-            <div className="rowcard__main">
-              <div className="rowcard__name">{v.name}{v.rating ? ` · ${v.rating}★` : ""}</div>
-              <div className="rowcard__meta">{[v.category, v.contact].filter(Boolean).join(" · ") || "—"}</div>
+          editId === v.id ? (
+            <div key={v.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="Vendor name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+                <input className="input" placeholder="Category" value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} />
+                <input className="input" placeholder="Contact" value={edit.contact} onChange={(e) => setEdit({ ...edit, contact: e.target.value })} />
+                <select className="select" value={edit.rating} onChange={(e) => setEdit({ ...edit, rating: e.target.value })}>
+                  <option value="">Rating…</option>{[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}★</option>)}
+                </select>
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => saveEdit(v.id)} disabled={!edit.name.trim()}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditId(null)}>Cancel</button>
+              </div>
             </div>
-            <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Remove vendor", message: "Delete this vendor and its orders/payments?", danger: true, confirmLabel: "Delete" })) call(`/api/vendors/${v.id}`, {}, "DELETE"); }} aria-label="Delete vendor">✕</button>
-          </div>
+          ) : (
+            <div key={v.id} className="rowcard">
+              <div className="rowcard__main">
+                <div className="rowcard__name">{v.name}{v.rating ? ` · ${v.rating}★` : ""}</div>
+                <div className="rowcard__meta">{[v.category, v.contact].filter(Boolean).join(" · ") || "—"}</div>
+              </div>
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn btn--ghost btn--sm" onClick={() => startEdit(v)}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Remove vendor", message: "Delete this vendor and its orders/payments?", danger: true, confirmLabel: "Delete" })) call(`/api/vendors/${v.id}`, {}, "DELETE"); }} aria-label="Delete vendor">✕</button>
+              </div>
+            </div>
+          )
         ))}
       </div>
 

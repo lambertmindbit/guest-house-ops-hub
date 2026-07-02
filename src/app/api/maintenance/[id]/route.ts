@@ -5,6 +5,7 @@ import { transitionRequest } from "@/lib/maintenance";
 
 const schema = z
   .object({
+    title: z.string().trim().min(1).optional(),
     status: z.enum(["open", "in_progress", "done"]).optional(),
     priority: z.enum(["low", "medium", "high"]).optional(),
     assigneeStaffId: z.string().trim().min(1).nullable().optional(),
