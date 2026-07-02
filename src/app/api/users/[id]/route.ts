@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
+import { recordAudit } from "@/lib/audit";
 
 const schema = z
   .object({
@@ -41,5 +42,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return fail("user not found", 404);
   await prisma.user.delete({ where: { id } });
+  await recordAudit("user.delete", "user", id, `Removed ${existing.email}`).catch(() => {});
   return ok({ deleted: true });
 }

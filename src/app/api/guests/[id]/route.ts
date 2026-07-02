@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { syncBlacklistToScamList } from "@/lib/blacklist-sync";
+import { recordAudit } from "@/lib/audit";
 
 const optDate = dateOnly.nullable().optional();
 
@@ -14,6 +15,8 @@ const updateSchema = z
     notes: z.string().nullable().optional(),
     blocked: z.boolean().optional(),
     blockReason: z.string().nullable().optional(),
+    // Privacy consent to store the guest's details.
+    consentGiven: z.boolean().optional(),
     // Guest-record completion
     address: z.string().trim().nullable().optional(),
     vehicleNumber: z.string().trim().nullable().optional(),
@@ -59,8 +62,17 @@ export async function PATCH(
     visaIssueDate,
     visaExpiry,
     arrivalInIndia,
+    consentGiven,
     ...rest
   } = parsed.data;
+
+  // Translate the consent toggle into a timestamp + channel.
+  const consent =
+    consentGiven === undefined
+      ? {}
+      : consentGiven
+        ? { consentGivenAt: new Date(), consentChannel: "in-person" }
+        : { consentGivenAt: null, consentChannel: null };
 
   const parsedDates = {
     ...(passportIssueDate !== undefined && {
@@ -80,11 +92,14 @@ export async function PATCH(
     }),
   };
 
-  const guest = await prisma.guest.update({ where: { id }, data: { ...rest, ...parsedDates } });
+  const guest = await prisma.guest.update({ where: { id }, data: { ...rest, ...parsedDates, ...consent } });
 
   // Sync the scam list when the blacklist state (or its reason) changed.
   if (parsed.data.blocked !== undefined || parsed.data.blockReason !== undefined) {
     await syncBlacklistToScamList(guest);
+  }
+  if (parsed.data.blocked !== undefined && parsed.data.blocked !== existing.blocked) {
+    await recordAudit(guest.blocked ? "guest.blacklist" : "guest.unblacklist", "guest", id, guest.name).catch(() => {});
   }
 
   return ok(guest);

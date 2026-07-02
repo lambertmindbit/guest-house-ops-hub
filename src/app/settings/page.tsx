@@ -31,6 +31,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
   { group: "Safety", items: [{ key: "flagged-numbers", title: "Scam / flagged numbers", sub: "Warn at booking if a phone is known bad", icon: "alert" }] },
   { group: "Team", items: [{ key: "users", title: "Users & roles", sub: "Logins for owner / reception / housekeeping", icon: "guests" }] },
   { group: "Data", items: [{ key: "import", title: "Import data", sub: "Bring guests & bookings over from CSV", icon: "inbox" }] },
+  { group: "Security", items: [{ key: "audit", title: "Audit log", sub: "Who did what — sensitive actions", icon: "alert" }] },
 ];
 
 export default function SettingsPage() {

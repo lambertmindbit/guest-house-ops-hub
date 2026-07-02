@@ -17,6 +17,7 @@ export type GuestProfileValues = {
   idChecked: boolean;
   idPhotocopied: boolean;
   idVerificationCompleted: boolean;
+  consentGiven: boolean;
   blocked: boolean;
   blockReason: string;
   // C-Form
@@ -77,6 +78,7 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
         idChecked: v.idChecked,
         idPhotocopied: v.idPhotocopied,
         idVerificationCompleted: v.idVerificationCompleted,
+        consentGiven: v.consentGiven,
         blocked: v.blocked,
         blockReason: v.blocked ? v.blockReason || null : null,
         // C-Form — send nulls for empty strings so the DB is cleaned up
@@ -165,6 +167,10 @@ export function GuestProfile({ initial }: { initial: GuestProfileValues }) {
           <div className="faint" style={{ fontSize: "var(--fs-meta)" }}>
             “ID uploaded” is set automatically when a document is attached below.
           </div>
+          <label className="row" style={{ gap: 8, cursor: "pointer", fontSize: "var(--fs-small)", marginTop: 6 }}>
+            <input type="checkbox" checked={v.consentGiven} onChange={(e) => set("consentGiven", e.target.checked)} />
+            <span>Guest consented to storing their details (privacy)</span>
+          </label>
         </div>
       </div>
 

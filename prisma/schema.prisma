@@ -366,6 +366,23 @@ model VendorPayment {
   @@map("vendor_payments")
 }
 
+// Audit trail for sensitive reads/writes (cancel, refund, blacklist, user &
+// consent changes). actorUserId is the acting login (nullable for system/env).
+model AuditEvent {
+  id          String   @id @default(cuid())
+  actorUserId String?  @map("actor_user_id")
+  actorEmail  String?  @map("actor_email")
+  action      String // e.g. "reservation.cancel", "user.create"
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id")
+  summary     String?
+  propertyId  String?  @map("property_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("audit_events")
+}
+
 enum PaymentMode {
   cash
   upi
@@ -466,6 +483,9 @@ model Guest {
   preferences             String[]          @default([]) @map("preferences")
   blocked                 Boolean           @default(false)
   blockReason             String?           @map("block_reason")
+  // Guest consent to store their details (privacy). Set when captured.
+  consentGivenAt          DateTime?         @map("consent_given_at")
+  consentChannel          String?           @map("consent_channel")
   // C-Form (Form C under Registration of Foreigners Rules, 1992).
   // All nullable — only populated for foreign national guests.
   nationality             String?           @map("nationality")
