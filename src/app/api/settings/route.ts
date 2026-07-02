@@ -23,6 +23,7 @@ const updateSchema = z
     address: z.string().nullable().optional(),
     gstNumber: z.string().nullable().optional(),
     upiVpa: z.string().trim().nullable().optional(),
+    idRetentionDays: z.number().int().min(0).max(3650).nullable().optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "no fields to update",
