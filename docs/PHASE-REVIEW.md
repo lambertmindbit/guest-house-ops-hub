@@ -10,10 +10,18 @@ Scored against the 27-item **Gap Register** (each item carries a Phase tag). ⏭
 
 | Phase | ✅ Done | 🟡 Partial | 🔴 Missing | ⏭️ Deferred | Total |
 |---|---|---|---|---|---|
-| Phase 1 | 5 | 3 | 0 | 2 | 10 |
+| Phase 1 | 8 | 0 | 0 | 2 | 10 |
 | Phase 2 | 11 | 0 | 0 | 0 | 11 |
-| Phase 3 | 4 | 1 | 1 | 0 | 6 |
-| **Overall** | **20** | **4** | **1** | **2** | **27** |
+| Phase 3 | 6 | 0 | 0 | 0 | 6 |
+| **Overall** | **25** | **0** | **0** | **2** | **27** |
+
+> **Update (2026-07-02, remediation):** the five open in-repo gaps have since been
+> closed — Gap 7 (tours, #67), Gap 12 (ID retention, #68), Gap 13 internal
+> templates/trigger engine (#69), Gap 16 (pending-payments card, #70), Gap 19
+> (offline write queue, #71). The remaining ⏭️ (2) are the documented external
+> deferrals: Gap 14 (ROOT conversational agent) and Gap 26 (real-time OTA API
+> sync). Gap 13's live *send* also stays external (needs a WhatsApp BSP); its
+> in-repo half — templates + provider-agnostic trigger engine — is done.
 
 _(Phase tags per the Gap Register: Phase 1 = items 1,9,11,12,13,14,15,16,17,26; Phase 2 = 2,3,4,5,6,8,10,18,20,25,27; Phase 3 = 7,19,21,22,23,24. Item 14 is tagged "Live (ROOT)" and bucketed under Phase 1.)_
 
@@ -101,6 +109,8 @@ Critical/High, ranked:
 No compliance-safeguard violations: the sensitive community features (scam / bad-guest sharing) shipped **with** evidence, moderation, appeal, consent, retention, and audit safeguards.
 
 ## 6. Honest Bottom Line
+
+**As of the 2026-07-02 remediation, all in-repo gaps are closed** (see the scoreboard update). The two remaining ⏭️ items are documented external limits (ROOT agent; real-time OTA API sync), plus Gap 13's live WhatsApp *send* which needs a BSP. The assessment below reflects the original audit snapshot.
 
 **"All three phases complete" is not accurate as stated — but it's close, and the shortfalls are concentrated and honestly documented rather than hidden.**
 
