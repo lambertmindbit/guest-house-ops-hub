@@ -44,7 +44,7 @@ export async function createRequest(data: {
   });
 }
 export async function transitionRequest(id: string, patch: {
-  status?: MaintenanceStatus; priority?: MaintenancePriority; assigneeStaffId?: string | null; cost?: number | null; note?: string | null;
+  title?: string; status?: MaintenanceStatus; priority?: MaintenancePriority; assigneeStaffId?: string | null; cost?: number | null; note?: string | null;
 }) {
   const current = await prisma.maintenanceRequest.findUnique({ where: { id } });
   if (!current) return null;

@@ -6,7 +6,7 @@ import { SectionLabel } from "@/components/ui";
 import { displayINR } from "@/lib/format";
 
 type TourStatus = "planned" | "confirmed" | "completed" | "cancelled";
-type Tour = { id: string; name: string; price: number | null; partnerName: string | null; active: boolean };
+type Tour = { id: string; name: string; price: number | null; partnerId: string | null; partnerName: string | null; active: boolean };
 type Partner = { id: string; name: string; contact: string | null; commissionPct: number | null };
 type Booking = { id: string; tourName: string; partnerName: string | null; date: string | null; amount: number | null; status: TourStatus };
 type Summary = { bookings: number; revenue: number; commission: number };
@@ -20,6 +20,10 @@ export function ToursBoard({ tours, partners, bookings, summary }: { tours: Tour
   const [np, setNp] = useState({ name: "", contact: "", commissionPct: "" });
   const [nt, setNt] = useState({ name: "", price: "", partnerId: "" });
   const [nb, setNb] = useState({ tourId: "", date: "", amount: "" });
+  const [editTourId, setEditTourId] = useState<string | null>(null);
+  const [editTour, setEditTour] = useState({ name: "", price: "", partnerId: "" });
+  const [editPartnerId, setEditPartnerId] = useState<string | null>(null);
+  const [editPartner, setEditPartner] = useState({ name: "", contact: "", commissionPct: "" });
 
   async function call(url: string, body: unknown, method = "POST") {
     setError(null);
@@ -27,6 +31,15 @@ export function ToursBoard({ tours, partners, bookings, summary }: { tours: Tour
     if (!res.ok) { const j = await res.json().catch(() => ({})); setError(j.error ?? "Something went wrong."); return false; }
     router.refresh();
     return true;
+  }
+
+  async function saveTour(id: string) {
+    if (!editTour.name.trim()) return;
+    if (await call(`/api/tours/${id}`, { name: editTour.name.trim(), price: editTour.price ? Number(editTour.price) : null, partnerId: editTour.partnerId || null }, "PATCH")) setEditTourId(null);
+  }
+  async function savePartner(id: string) {
+    if (!editPartner.name.trim()) return;
+    if (await call(`/api/tour-partners/${id}`, { name: editPartner.name.trim(), contact: editPartner.contact.trim() || null, commissionPct: editPartner.commissionPct ? Number(editPartner.commissionPct) : null }, "PATCH")) setEditPartnerId(null);
   }
 
   return (
@@ -102,10 +115,31 @@ export function ToursBoard({ tours, partners, bookings, summary }: { tours: Tour
       </div>
       <div className="col" style={{ gap: 6, marginBottom: 14 }}>
         {tours.map((t) => (
-          <div key={t.id} className="spread card card--pad" style={{ padding: 12 }}>
-            <span>{t.name}{t.partnerName ? <span className="muted"> · {t.partnerName}</span> : null}</span>
-            <span className="muted">{t.price != null ? displayINR(t.price) : "—"}</span>
-          </div>
+          editTourId === t.id ? (
+            <div key={t.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="Tour name" value={editTour.name} onChange={(e) => setEditTour({ ...editTour, name: e.target.value })} />
+                <input className="input" inputMode="numeric" placeholder="Price ₹" value={editTour.price} onChange={(e) => setEditTour({ ...editTour, price: e.target.value })} />
+                <select className="select" value={editTour.partnerId} onChange={(e) => setEditTour({ ...editTour, partnerId: e.target.value })}>
+                  <option value="">No partner</option>
+                  {partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => saveTour(t.id)} disabled={!editTour.name.trim()}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditTourId(null)}>Cancel</button>
+                <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={() => call(`/api/tours/${t.id}`, {}, "DELETE")}>Delete</button>
+              </div>
+            </div>
+          ) : (
+            <div key={t.id} className="spread card card--pad" style={{ padding: 12 }}>
+              <span>{t.name}{t.partnerName ? <span className="muted"> · {t.partnerName}</span> : null}</span>
+              <span className="row" style={{ gap: 8, alignItems: "center" }}>
+                <span className="muted">{t.price != null ? displayINR(t.price) : "—"}</span>
+                <button className="btn btn--ghost btn--sm" onClick={() => { setEditTourId(t.id); setEditTour({ name: t.name, price: t.price != null ? String(t.price) : "", partnerId: t.partnerId ?? "" }); }}>Edit</button>
+              </span>
+            </div>
+          )
         ))}
       </div>
 
@@ -124,10 +158,28 @@ export function ToursBoard({ tours, partners, bookings, summary }: { tours: Tour
       </div>
       <div className="col" style={{ gap: 6 }}>
         {partners.map((p) => (
-          <div key={p.id} className="spread card card--pad" style={{ padding: 12 }}>
-            <span>{p.name}{p.contact ? <span className="muted"> · {p.contact}</span> : null}</span>
-            <span className="muted">{p.commissionPct != null ? `${p.commissionPct}%` : "—"}</span>
-          </div>
+          editPartnerId === p.id ? (
+            <div key={p.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="Name" value={editPartner.name} onChange={(e) => setEditPartner({ ...editPartner, name: e.target.value })} />
+                <input className="input" placeholder="Contact" value={editPartner.contact} onChange={(e) => setEditPartner({ ...editPartner, contact: e.target.value })} />
+                <input className="input" inputMode="numeric" placeholder="Commission %" value={editPartner.commissionPct} onChange={(e) => setEditPartner({ ...editPartner, commissionPct: e.target.value })} />
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => savePartner(p.id)} disabled={!editPartner.name.trim()}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditPartnerId(null)}>Cancel</button>
+                <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={() => call(`/api/tour-partners/${p.id}`, {}, "DELETE")}>Delete</button>
+              </div>
+            </div>
+          ) : (
+            <div key={p.id} className="spread card card--pad" style={{ padding: 12 }}>
+              <span>{p.name}{p.contact ? <span className="muted"> · {p.contact}</span> : null}</span>
+              <span className="row" style={{ gap: 8, alignItems: "center" }}>
+                <span className="muted">{p.commissionPct != null ? `${p.commissionPct}%` : "—"}</span>
+                <button className="btn btn--ghost btn--sm" onClick={() => { setEditPartnerId(p.id); setEditPartner({ name: p.name, contact: p.contact ?? "", commissionPct: p.commissionPct != null ? String(p.commissionPct) : "" }); }}>Edit</button>
+              </span>
+            </div>
+          )
         ))}
       </div>
     </div>

@@ -20,6 +20,8 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
   const { confirm } = useConfirm();
   const [req, setReq] = useState({ title: "", priority: "medium" as Priority, assigneeStaffId: "", cost: "" });
   const [asset, setAsset] = useState({ name: "", category: "", preventiveEveryDays: "" });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ title: "", priority: "medium" as Priority, assigneeStaffId: "", cost: "" });
   const [error, setError] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
@@ -43,6 +45,16 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
       name: asset.name, category: asset.category || null,
       preventiveEveryDays: asset.preventiveEveryDays ? Number(asset.preventiveEveryDays) : null,
     })) setAsset({ name: "", category: "", preventiveEveryDays: "" });
+  }
+  function startEdit(r: Request) {
+    setEditId(r.id);
+    setEdit({ title: r.title, priority: r.priority, assigneeStaffId: r.assigneeStaffId ?? "", cost: r.cost != null ? String(r.cost) : "" });
+  }
+  async function saveEdit(id: string) {
+    if (!edit.title.trim()) return;
+    if (await call(`/api/maintenance/${id}`, { title: edit.title.trim(), priority: edit.priority, assigneeStaffId: edit.assigneeStaffId || null, cost: edit.cost ? Number(edit.cost) : null }, "PATCH")) {
+      setEditId(null);
+    }
   }
 
   const dueAssets = assets.filter((a) => a.due);
@@ -69,18 +81,39 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
       </div>
       <div className="col" style={{ gap: 8 }}>
         {requests.length === 0 ? <div className="empty">No maintenance requests.</div> : requests.map((r) => (
-          <div key={r.id} className="rowcard">
-            <div className="rowcard__main">
-              <div className="rowcard__name">{r.title}</div>
-              <div className="rowcard__meta">{r.cost != null ? displayINR(r.cost) : "—"}</div>
+          editId === r.id ? (
+            <div key={r.id} className="card card--pad" style={{ padding: 12 }}>
+              <input className="input" placeholder="What needs fixing?" value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} style={{ marginBottom: 10 }} />
+              <div className="form-grid" style={{ gap: 10 }}>
+                <select className="select" value={edit.priority} onChange={(e) => setEdit({ ...edit, priority: e.target.value as Priority })}>
+                  {(["low", "medium", "high"] as Priority[]).map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <select className="select" value={edit.assigneeStaffId} onChange={(e) => setEdit({ ...edit, assigneeStaffId: e.target.value })}>
+                  <option value="">Assign…</option>
+                  {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <input className="input" inputMode="numeric" placeholder="Cost ₹" value={edit.cost} onChange={(e) => setEdit({ ...edit, cost: e.target.value })} />
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => saveEdit(r.id)} disabled={!edit.title.trim()}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditId(null)}>Cancel</button>
+              </div>
             </div>
-            <div className="row" style={{ gap: 6 }}>
-              <span className={`badge ${PRIORITY_CLS[r.priority]}`}>{r.priority}</span>
-              <select className="select" style={{ width: 130 }} value={r.status} onChange={(e) => call(`/api/maintenance/${r.id}`, { status: e.target.value }, "PATCH")}>
-                {(["open", "in_progress", "done"] as Status[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-              </select>
+          ) : (
+            <div key={r.id} className="rowcard">
+              <div className="rowcard__main">
+                <div className="rowcard__name">{r.title}</div>
+                <div className="rowcard__meta">{r.cost != null ? displayINR(r.cost) : "—"}</div>
+              </div>
+              <div className="row" style={{ gap: 6 }}>
+                <span className={`badge ${PRIORITY_CLS[r.priority]}`}>{r.priority}</span>
+                <button className="btn btn--ghost btn--sm" onClick={() => startEdit(r)}>Edit</button>
+                <select className="select" style={{ width: 130 }} value={r.status} onChange={(e) => call(`/api/maintenance/${r.id}`, { status: e.target.value }, "PATCH")}>
+                  {(["open", "in_progress", "done"] as Status[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                </select>
+              </div>
             </div>
-          </div>
+          )
         ))}
       </div>
 

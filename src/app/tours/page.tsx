@@ -16,7 +16,7 @@ export default async function ToursPage() {
       <div className="entrance">
         <PageHead title="Tours" sub="Activities, partners/guides and guest tour bookings." />
         <ToursBoard
-          tours={tours.map((t) => ({ id: t.id, name: t.name, price: t.price ? Number(t.price) : null, partnerName: t.partner?.name ?? null, active: t.active }))}
+          tours={tours.map((t) => ({ id: t.id, name: t.name, price: t.price ? Number(t.price) : null, partnerId: t.partnerId, partnerName: t.partner?.name ?? null, active: t.active }))}
           partners={partners.map((p) => ({ id: p.id, name: p.name, contact: p.contact, commissionPct: p.commissionPct }))}
           bookings={bookings.map((b) => ({ id: b.id, tourName: b.tour.name, partnerName: b.partner?.name ?? null, date: b.date ? formatDateOnly(b.date) : null, amount: b.amount ? Number(b.amount) : null, status: b.status }))}
           summary={summary}

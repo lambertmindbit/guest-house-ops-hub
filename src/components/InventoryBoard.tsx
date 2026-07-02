@@ -12,6 +12,8 @@ export function InventoryBoard({ items }: { items: Item[] }) {
   const { confirm } = useConfirm();
   const [nItem, setNItem] = useState({ name: "", unit: "", minThreshold: "" });
   const [amt, setAmt] = useState<Record<string, string>>({});
+  const [editId, setEditId] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ name: "", unit: "", minThreshold: "" });
   const [error, setError] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
@@ -32,6 +34,16 @@ export function InventoryBoard({ items }: { items: Item[] }) {
     const n = Number(amt[id] || "1");
     if (!n || n <= 0) return;
     if (await call(`/api/inventory/${id}/movement`, { delta: sign * n })) setAmt((a) => ({ ...a, [id]: "" }));
+  }
+  function startEdit(i: Item) {
+    setEditId(i.id);
+    setEdit({ name: i.name, unit: i.unit ?? "", minThreshold: String(i.minThreshold) });
+  }
+  async function saveEdit(id: string) {
+    if (!edit.name.trim()) return;
+    if (await call(`/api/inventory/${id}`, { name: edit.name.trim(), unit: edit.unit.trim() || null, minThreshold: edit.minThreshold ? Number(edit.minThreshold) : 0 }, "PATCH")) {
+      setEditId(null);
+    }
   }
 
   const low = items.filter((i) => i.low);
@@ -59,18 +71,34 @@ export function InventoryBoard({ items }: { items: Item[] }) {
       <SectionLabel count={items.length}>Stock</SectionLabel>
       <div className="col" style={{ gap: 8 }}>
         {items.length === 0 ? <div className="empty">No items yet.</div> : items.map((i) => (
-          <div key={i.id} className="rowcard" style={i.low ? { borderColor: "var(--amber-border)", background: "var(--amber-bg)" } : undefined}>
-            <div className="rowcard__main">
-              <div className="rowcard__name">{i.name}{i.low && <span className="badge badge--warn" style={{ marginLeft: 8 }}>Low</span>}</div>
-              <div className="rowcard__meta"><b className="num" style={{ color: "var(--ink)" }}>{i.quantity}</b>{i.unit ? ` ${i.unit}` : ""} · min {i.minThreshold}</div>
+          editId === i.id ? (
+            <div key={i.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="Item" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+                <input className="input" placeholder="Unit" value={edit.unit} onChange={(e) => setEdit({ ...edit, unit: e.target.value })} />
+                <input className="input" inputMode="numeric" placeholder="Low-stock threshold" value={edit.minThreshold} onChange={(e) => setEdit({ ...edit, minThreshold: e.target.value.replace(/\D/g, "") })} />
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => saveEdit(i.id)} disabled={!edit.name.trim()}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditId(null)}>Cancel</button>
+                <span className="muted" style={{ fontSize: "var(--fs-meta)", alignSelf: "center" }}>Use In/Out to change quantity</span>
+              </div>
             </div>
-            <div className="row" style={{ gap: 6 }}>
-              <input className="input" inputMode="numeric" placeholder="1" value={amt[i.id] ?? ""} onChange={(e) => setAmt((a) => ({ ...a, [i.id]: e.target.value }))} style={{ width: 56, padding: "6px 8px" }} />
-              <button className="btn btn--success btn--sm" onClick={() => move(i.id, 1)}>In</button>
-              <button className="btn btn--ghost btn--sm" onClick={() => move(i.id, -1)}>Out</button>
-              <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Remove item", message: "Delete this item and its history?", danger: true, confirmLabel: "Delete" })) call(`/api/inventory/${i.id}`, {}, "DELETE"); }} aria-label="Delete item">✕</button>
+          ) : (
+            <div key={i.id} className="rowcard" style={i.low ? { borderColor: "var(--amber-border)", background: "var(--amber-bg)" } : undefined}>
+              <div className="rowcard__main">
+                <div className="rowcard__name">{i.name}{i.low && <span className="badge badge--warn" style={{ marginLeft: 8 }}>Low</span>}</div>
+                <div className="rowcard__meta"><b className="num" style={{ color: "var(--ink)" }}>{i.quantity}</b>{i.unit ? ` ${i.unit}` : ""} · min {i.minThreshold}</div>
+              </div>
+              <div className="row" style={{ gap: 6 }}>
+                <input className="input" inputMode="numeric" placeholder="1" value={amt[i.id] ?? ""} onChange={(e) => setAmt((a) => ({ ...a, [i.id]: e.target.value }))} style={{ width: 56, padding: "6px 8px" }} />
+                <button className="btn btn--success btn--sm" onClick={() => move(i.id, 1)}>In</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => move(i.id, -1)}>Out</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => startEdit(i)}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Remove item", message: "Delete this item and its history?", danger: true, confirmLabel: "Delete" })) call(`/api/inventory/${i.id}`, {}, "DELETE"); }} aria-label="Delete item">✕</button>
+              </div>
             </div>
-          </div>
+          )
         ))}
       </div>
     </div>
