@@ -11,9 +11,10 @@ export default async function NewReservationPage({
   searchParams: Promise<{ roomId?: string; date?: string }>;
 }) {
   const { roomId, date } = await searchParams;
-  const [rooms, channels] = await Promise.all([
+  const [rooms, channels, property] = await Promise.all([
     prisma.room.findMany({ where: { archivedAt: null }, include: { roomType: true }, orderBy: { label: "asc" } }),
     prisma.channel.findMany({ orderBy: { name: "asc" } }),
+    prisma.propertySettings.findFirst({ select: { idPolicy: true, idRequiredAtBooking: true } }),
   ]);
 
   const initial: ReservationFormValues = {
@@ -41,6 +42,8 @@ export default async function NewReservationPage({
           initial={initial}
           rooms={rooms.map((r) => ({ id: r.id, label: r.label, roomTypeName: r.roomType.name }))}
           channels={channels.map((c) => ({ id: c.id, name: c.name }))}
+          idPolicy={(property?.idPolicy as "off" | "warn" | "block") ?? "block"}
+          idRequiredAtBooking={property?.idRequiredAtBooking ?? false}
         />
       </div>
     </main>

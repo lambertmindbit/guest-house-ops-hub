@@ -32,6 +32,8 @@ export type Settings = {
   gstNumber: string | null;
   upiVpa: string | null;
   idRetentionDays: number | null;
+  idPolicy: string;
+  idRequiredAtBooking: boolean;
 } | null;
 export type Policy = {
   enabled: boolean;
@@ -105,6 +107,8 @@ export function PropertySection({ settings }: { settings: Settings }) {
     gstNumber: settings?.gstNumber ?? "",
     upiVpa: settings?.upiVpa ?? "",
     idRetentionDays: settings?.idRetentionDays != null ? String(settings.idRetentionDays) : "",
+    idPolicy: settings?.idPolicy ?? "block",
+    idRequiredAtBooking: settings?.idRequiredAtBooking ?? false,
     checkInTime: settings?.checkInTime ?? "14:00",
     checkOutTime: settings?.checkOutTime ?? "11:00",
     currency: settings?.currency ?? "INR",
@@ -119,7 +123,7 @@ export function PropertySection({ settings }: { settings: Settings }) {
     setBusy(true);
     setError(null);
     setSaved(false);
-    const r = await send("PATCH", "/api/settings", { ...f, address: f.address || null, gstNumber: f.gstNumber || null, upiVpa: f.upiVpa || null, idRetentionDays: f.idRetentionDays ? Number(f.idRetentionDays) : null });
+    const r = await send("PATCH", "/api/settings", { ...f, address: f.address || null, gstNumber: f.gstNumber || null, upiVpa: f.upiVpa || null, idRetentionDays: f.idRetentionDays ? Number(f.idRetentionDays) : null, idPolicy: f.idPolicy, idRequiredAtBooking: f.idRequiredAtBooking });
     setBusy(false);
     if (!r.ok) return setError(r.error!);
     setSaved(true);
@@ -163,6 +167,21 @@ export function PropertySection({ settings }: { settings: Settings }) {
           <label className="field-label">ID document retention (days)</label>
           <input className="input" inputMode="numeric" value={f.idRetentionDays} onChange={(e) => setF({ ...f, idRetentionDays: e.target.value.replace(/\D/g, "") })} placeholder="Blank = keep forever" />
           <div className="field-hint">Scanned guest IDs older than this are auto-deleted (privacy). Blank keeps them indefinitely.</div>
+        </div>
+        <div>
+          <label className="field-label">ID at check-in</label>
+          <select className="select" value={f.idPolicy} onChange={(e) => setF({ ...f, idPolicy: e.target.value })}>
+            <option value="block">Required — block check-in without ID</option>
+            <option value="warn">Warn only — allow check-in, show a reminder</option>
+            <option value="off">Off — no ID check</option>
+          </select>
+          <div className="field-hint">Foreign guests also need the C-Form (passport) unless this is Off.</div>
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label className="row" style={{ gap: 8, cursor: "pointer", fontSize: "var(--fs-small)" }}>
+            <input type="checkbox" checked={f.idRequiredAtBooking} onChange={(e) => setF({ ...f, idRequiredAtBooking: e.target.checked })} />
+            <span>Require an ID number to <b>take a booking</b> (for walk-in-only properties)</span>
+          </label>
         </div>
       </div>
       <div className="field-hint" style={{ marginTop: 10 }}>Timezone: {f.timezone} — drives “today”, arrivals and the calendar.</div>

@@ -8,7 +8,7 @@ import { ReservationOverflow } from "@/components/ReservationOverflow";
 import { RefundPanel } from "@/components/RefundPanel";
 import { displayDate, displayMoney } from "@/lib/format";
 import { formatDateOnly, todayDateOnly } from "@/lib/dates";
-import { checkInBlockReason } from "@/lib/id-gate";
+import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
 import { getCancellationPolicy, isPeakDate, daysUntil, assessRefund, type SeasonWindow } from "@/lib/cancellation";
 
 export const dynamic = "force-dynamic";
@@ -157,15 +157,19 @@ export default async function ReservationDetailPage({
         </div>
 
         {/* contextual hero action */}
-        {r.status === "confirmed" && (
-          <StayActions
-            reservationId={r.id}
-            checkedInAt={r.checkedInAt ? r.checkedInAt.toISOString() : null}
-            checkedOutAt={r.checkedOutAt ? r.checkedOutAt.toISOString() : null}
-            idBlockReason={checkInBlockReason(r.guest)}
-            guestId={r.guestId}
-          />
-        )}
+        {r.status === "confirmed" && (() => {
+          const gate = checkInGate(normalizeIdPolicy(property?.idPolicy), r.guest);
+          return (
+            <StayActions
+              reservationId={r.id}
+              checkedInAt={r.checkedInAt ? r.checkedInAt.toISOString() : null}
+              checkedOutAt={r.checkedOutAt ? r.checkedOutAt.toISOString() : null}
+              idBlockReason={gate.reason}
+              idHardBlock={gate.blocked}
+              guestId={r.guestId}
+            />
+          );
+        })()}
 
         {/* secondary action: message the guest on WhatsApp */}
         <a

@@ -16,6 +16,8 @@ export default async function Page() {
     gstNumber: s.gstNumber,
     upiVpa: s.upiVpa,
     idRetentionDays: s.idRetentionDays,
+    idPolicy: s.idPolicy,
+    idRequiredAtBooking: s.idRequiredAtBooking,
   };
 
   return (
