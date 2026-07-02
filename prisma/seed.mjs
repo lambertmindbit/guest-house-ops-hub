@@ -134,11 +134,59 @@ async function seedPeerProperty(primaryPropertyId) {
   console.log(`Peer property ready: ${name} (${property.id}); login ${email}.`);
 }
 
+// Sample team so the Staff screen (directory, roster, attendance) has data to
+// test with — mirrors Lawei's real mix (reception, housekeeping, cook, delivery).
+const STAFF = [
+  { name: "Ibalari Kharkongor", role: "Reception", phone: "9863000001" },
+  { name: "Wanda Syiem", role: "Housekeeping", phone: "9863000002" },
+  { name: "Balen Marak", role: "Cook", phone: "9863000003" },
+  { name: "Deiwis Marbaniang", role: "Housekeeping", phone: "9863000004" },
+  { name: "Rilang Nongrum", role: "Delivery", phone: "9863000005" },
+  { name: "Phrangsngi Lyngdoh", role: "Reception", phone: "9863000006" },
+];
+
+async function ensureStaff(staff, propertyId) {
+  const existing = await prisma.staff.findFirst({ where: { name: staff.name, propertyId } });
+  return existing ?? prisma.staff.create({ data: { ...staff, propertyId } });
+}
+
+async function seedStaff(propertyId) {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const created = [];
+  for (const s of STAFF) created.push(await ensureStaff(s, propertyId));
+
+  // A few shifts today (idempotent by staff+date).
+  const shifts = [
+    [0, "07:00", "15:00"], // reception — morning
+    [5, "15:00", "23:00"], // reception — evening
+    [1, "08:00", "16:00"], // housekeeping
+    [3, "08:00", "16:00"], // housekeeping
+    [2, "06:00", "14:00"], // cook
+  ];
+  for (const [i, start, end] of shifts) {
+    const staff = created[i];
+    const existing = await prisma.shift.findFirst({ where: { staffId: staff.id, date: today } });
+    if (!existing) await prisma.shift.create({ data: { staffId: staff.id, date: today, start, end, propertyId } });
+  }
+
+  // Today's attendance (unique per staff+date).
+  const attendance = [[0, "present"], [1, "present"], [2, "present"], [3, "leave"], [4, "absent"], [5, "present"]];
+  for (const [i, status] of attendance) {
+    const staff = created[i];
+    const existing = await prisma.attendance.findFirst({ where: { staffId: staff.id, date: today } });
+    if (!existing) await prisma.attendance.create({ data: { staffId: staff.id, date: today, status, propertyId } });
+  }
+  console.log(`Staff ready: ${created.length} staff, ${shifts.length} shifts + today's attendance.`);
+}
+
 async function main() {
   // The seed uses the raw client (no tenant extension), so stamp propertyId itself.
   const property = await ensureProperty();
   for (const channel of CHANNELS) await ensureChannel(channel, property.id);
   for (const roomType of ROOM_TYPES) await ensureRoomType(roomType, property.id);
+  await seedStaff(property.id);
 
   const [channels, roomTypes, rooms] = await Promise.all([
     prisma.channel.count(),
