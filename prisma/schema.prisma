@@ -222,6 +222,57 @@ model StockMovement {
   @@map("stock_movements")
 }
 
+enum PoStatus {
+  draft
+  ordered
+  received
+}
+
+model Vendor {
+  id         String          @id @default(cuid())
+  name       String
+  category   String?
+  contact    String?
+  rating     Int? // 1–5
+  notes      String?
+  propertyId String?         @map("property_id")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  pos        PurchaseOrder[]
+  payments   VendorPayment[]
+
+  @@map("vendors")
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  vendorId    String    @map("vendor_id")
+  description String
+  amount      Decimal   @db.Decimal(10, 2)
+  status      PoStatus  @default(draft)
+  note        String?
+  propertyId  String?   @map("property_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  receivedAt  DateTime? @map("received_at")
+  vendor      Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@map("purchase_orders")
+}
+
+model VendorPayment {
+  id         String       @id @default(cuid())
+  vendorId   String       @map("vendor_id")
+  amount     Decimal      @db.Decimal(10, 2)
+  mode       PaymentMode?
+  note       String?
+  paidAt     DateTime     @default(now()) @map("paid_at")
+  propertyId String?      @map("property_id")
+  vendor     Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([vendorId])
+  @@map("vendor_payments")
+}
+
 enum PaymentMode {
   cash
   upi
