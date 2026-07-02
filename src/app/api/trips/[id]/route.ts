@@ -1,0 +1,24 @@
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { ok, fail, zodFail } from "@/lib/api";
+import { transitionTrip } from "@/lib/transport";
+
+const schema = z.object({ status: z.enum(["planned", "done", "cancelled"]) });
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return zodFail(parsed.error);
+  const updated = await transitionTrip(id, parsed.data.status);
+  if (!updated) return fail("trip not found", 404);
+  return ok(updated);
+}
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const existing = await prisma.trip.findUnique({ where: { id } });
+  if (!existing) return fail("trip not found", 404);
+  await prisma.trip.delete({ where: { id } });
+  return ok({ deleted: true });
+}

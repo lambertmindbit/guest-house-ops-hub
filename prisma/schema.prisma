@@ -228,6 +228,47 @@ enum PoStatus {
   received
 }
 
+enum TripStatus {
+  planned
+  done
+  cancelled
+}
+
+// A cab/transport record for history + finance. LIVE dispatch stays in the ROOT
+// CabAgent — this repo only records trips. driver/guest/reservation are plain
+// nullable ids.
+model Driver {
+  id            String   @id @default(cuid())
+  name          String
+  phone         String?
+  vehicleNumber String?  @map("vehicle_number")
+  active        Boolean  @default(true)
+  propertyId    String?  @map("property_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  trips         Trip[]
+
+  @@map("drivers")
+}
+
+model Trip {
+  id            String     @id @default(cuid())
+  driverId      String?    @map("driver_id")
+  guestId       String?    @map("guest_id")
+  reservationId String?    @map("reservation_id")
+  pickup        String
+  dropoff       String
+  scheduledAt   DateTime?  @map("scheduled_at")
+  status        TripStatus @default(planned)
+  fare          Decimal?   @db.Decimal(10, 2)
+  note          String?
+  propertyId    String?    @map("property_id")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  driver        Driver?    @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  @@index([status, scheduledAt])
+  @@map("trips")
+}
+
 model Vendor {
   id         String          @id @default(cuid())
   name       String
