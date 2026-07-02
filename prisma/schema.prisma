@@ -1178,6 +1178,9 @@ model OutboundMessage {
   channel       MessageChannel
   to            String
   body          String
+  // Which template produced this message (null for free-form/agent messages).
+  // Lets scheduled triggers dedupe by (reservationId, template).
+  template      String?
   status        MessageStatus  @default(logged)
   sentAt        DateTime?      @map("sent_at")
   error         String?

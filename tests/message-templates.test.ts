@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bookingConfirmation } from "@/lib/message-templates";
+import { bookingConfirmation, preArrivalDirections, paymentRequest, paymentReminder } from "@/lib/message-templates";
 
 describe("bookingConfirmation", () => {
   const base = {
@@ -24,5 +24,28 @@ describe("bookingConfirmation", () => {
   it("uses the singular night for a one-night stay", () => {
     expect(bookingConfirmation({ ...base, nights: 1 }).body).toContain("1 night");
     expect(bookingConfirmation({ ...base, nights: 1 }).body).not.toContain("1 nights");
+  });
+});
+
+describe("preArrivalDirections", () => {
+  const base = { guestName: "Riya", propertyName: "Lawei Homestay", checkIn: "Mon, 1 Jun 2026", checkInTime: "14:00" };
+  it("includes the address when provided, and omits it cleanly when not", () => {
+    expect(preArrivalDirections({ ...base, address: "Mawlai, Shillong" }).body).toContain("Mawlai, Shillong");
+    const noAddr = preArrivalDirections(base).body;
+    expect(noAddr).toContain("Riya");
+    expect(noAddr).toContain("from 14:00");
+    expect(noAddr).not.toMatch(/undefined|null|\{\{/);
+  });
+});
+
+describe("payment templates", () => {
+  const base = { guestName: "Riya", propertyName: "Lawei Homestay", amountDue: "₹2,500" };
+  it("request/reminder include the amount and optional UPI", () => {
+    expect(paymentRequest({ ...base, upiVpa: "lawei@okhdfcbank" }).body).toContain("lawei@okhdfcbank");
+    expect(paymentRequest(base).body).toContain("₹2,500");
+    const rem = paymentReminder(base).body;
+    expect(rem).toContain("₹2,500");
+    expect(rem.toLowerCase()).toContain("reminder");
+    expect(rem).not.toMatch(/undefined|null|\{\{/);
   });
 });
