@@ -1,0 +1,18 @@
+import { z } from "zod";
+import { ok, fail, zodFail } from "@/lib/api";
+import { applyMovement } from "@/lib/inventory";
+
+const schema = z.object({
+  delta: z.number().int().refine((n) => n !== 0, "delta can't be zero"),
+  reason: z.string().trim().min(1).nullable().optional(),
+});
+
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) return zodFail(parsed.error);
+  const item = await applyMovement(id, parsed.data.delta, parsed.data.reason);
+  if (!item) return fail("item not found", 404);
+  return ok(item);
+}

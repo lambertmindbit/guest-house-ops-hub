@@ -193,6 +193,35 @@ model MaintenanceRequest {
   @@map("maintenance_requests")
 }
 
+// A supply/stock item. quantity is derived by applying StockMovements; low when
+// quantity <= minThreshold.
+model InventoryItem {
+  id           String          @id @default(cuid())
+  name         String
+  unit         String? // pcs, kg, bottles…
+  quantity     Int             @default(0)
+  minThreshold Int             @default(0) @map("min_threshold")
+  propertyId   String?         @map("property_id")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  movements    StockMovement[]
+
+  @@map("inventory_items")
+}
+
+model StockMovement {
+  id         String        @id @default(cuid())
+  itemId     String        @map("item_id")
+  delta      Int // +in / -out
+  reason     String?
+  byStaffId  String?       @map("by_staff_id")
+  propertyId String?       @map("property_id")
+  createdAt  DateTime      @default(now()) @map("created_at")
+  item       InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("stock_movements")
+}
+
 enum PaymentMode {
   cash
   upi
