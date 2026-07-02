@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lawei Gap Analysis — Phase 3 Status</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>PHASE-3-STATUS.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Lawei Gap Analysis — Phase 3 Status</h1>
+<p><em>&quot;Regional community network&quot; (the client&#39;s &quot;Rapido for homestays&quot; vision) — what
+shipped vs. what&#39;s deferred, against <code>ROOT_Lawei_Gap_Analysis</code> (MindBit).
+Prepared 2026-07-02.</em></p>
+<p>Phase 3 was built as <strong>nine single-purpose PRs</strong> (#56–#64), each additive and
+CI-verified against a real Postgres. It is inherently <strong>cross-tenant</strong> and builds
+on the Phase 2 multi-tenancy + RBAC foundation. The correctness core is untouched:
+the <code>no_overlapping_confirmed_stays</code> GiST constraint was verified intact after
+every migration, and availability stays derived.</p>
+<h2>The central design: the community seam</h2>
+<p>Phase 2&#39;s auto-scoping Prisma client <strong>forbids</strong> cross-tenant reads. Phase 3 does
+not weaken it. Instead, <strong>all</strong> cross-tenant access goes through <code>src/lib/community/*</code>,
+which only ever reads a peer&#39;s data via the <strong>unscoped client</strong> (<code>unscopedPrisma</code>),
+<strong>after</strong> an accepted <code>NetworkConnection</code> + an enabled <code>SharingGrant</code> are checked
+(default-deny), returning a <strong>hard-whitelisted public projection</strong> — never guest
+PII, occupancy internals, or finance — and audit-logging the access.</p>
+<p>Per-request tenant binding was also activated here: the edge middleware stamps a
+tamper-proof <code>x-ota-tenant</code> header from the verified session, which the tenant
+extension reads. This keeps Phase 2 isolation correct once more than one property
+exists (previously ≥2 properties fell back to an unscoped passthrough).</p>
+<h2>Slices</h2>
+<table>
+<thead>
+<tr>
+<th>Slice</th>
+<th>PR</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>a — Trusted-network foundation</td>
+<td>#56</td>
+<td>Per-request tenancy; <code>NetworkConnection</code> + per-peer, per-type <code>SharingGrant</code>; the pure <code>canRead</code> guard; Settings › Trusted network. <strong>Nothing is shared unless opted in.</strong></td>
+</tr>
+<tr>
+<td>b — Searchable directory</td>
+<td>#57</td>
+<td>Read-only discovery over <code>isDiscoverable</code> peers, filtered by amenity/need + price band. Contact phone shown only after connecting.</td>
+</tr>
+<tr>
+<td>c — Shared availability board</td>
+<td>#58</td>
+<td>Opt-in, <code>AVAILABILITY</code>-gated, <strong>derived</strong> peer availability (counts only — no guest/finance). A peek on connected directory entries.</td>
+</tr>
+<tr>
+<td>d — Overflow referral marketplace</td>
+<td>#59</td>
+<td>The headline feature: refer → accept → book <strong>through the guarded path</strong> (409 inherited) → attribute revenue → <strong>derived</strong> reciprocal credit ledger → analytics. Guest phone withheld until accepted.</td>
+</tr>
+<tr>
+<td>e — Community scam network</td>
+<td>#60</td>
+<td>Opt-in verified shared scam list on top of the private <code>FlaggedNumber</code> list. Hashed phone, evidence-to-verify, <code>SCAM</code> grant, retention, dispute/appeal, audit, CSV export.</td>
+</tr>
+<tr>
+<td>f — Bad-guest alerts</td>
+<td>#61</td>
+<td>Evidence-backed shared alerts on the <code>Guest</code> blacklist. Hashed phone + masked first name, categorised evidence, <code>BAD_GUEST</code> grant, same safeguards.</td>
+</tr>
+<tr>
+<td>g — No-show reliability → shared flag</td>
+<td>#62</td>
+<td>A <strong>derived</strong> per-guest reliability score; a conservative threshold (≥3 bookings, ≥2 no-shows, ≥40%) gates an owner-filed shared repeat-offender flag (reuses the bad-guest workflow; server-recomputed, appealable).</td>
+</tr>
+<tr>
+<td>h — Shared trusted directories</td>
+<td>#63</td>
+<td>Read-only sharing of vendor + driver contacts via the <code>VENDORS</code> / <code>TRANSPORT</code> grants — public fields only (no notes/POs/payments/trips/fares). Guides + emergency contacts are vendor categories.</td>
+</tr>
+<tr>
+<td>i — Rollout polish</td>
+<td>#64</td>
+<td>Multi-location property switcher (<code>UserProperty</code>, re-issues the session; audit-logged) + hand-written, dependency-free offline tolerance (conservative SW: network-first pages, offline fallback, no stale data, no offline writes) + an offline banner.</td>
+</tr>
+</tbody></table>
+<h2>Safeguards on the sensitive slices (e, f, g)</h2>
+<p>Per the maintainer&#39;s steer that the decision to share is the owner&#39;s discretion,
+the blocking legal-review gate was dropped — but the technical safeguards ship as
+sensible defaults: <strong>data minimisation</strong> (share a hashed signal + last 4 / first
+name, never raw PII), <strong>evidence required to verify</strong>, <strong>moderation</strong> (only
+verified + unexpired share), <strong>retention</strong> (auto-expiry), a <strong>dispute/appeal</strong>
+path, <strong>grant-gated</strong> sharing (default-deny), and <strong>audit</strong> on report / verify /
+dispute / view / export.</p>
+<h2>Deferred / out of scope (flagged, not built)</h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Real WhatsApp/BSP send + the conversational LLM agent</strong></td>
+<td>Live in the separate <strong>ROOT</strong> service. This repo provides the data, contracts, and safeguards; ROOT orchestrates + notifies across the community via the existing agent seam.</td>
+</tr>
+<tr>
+<td><strong>Real OTA push/pull channel-manager APIs</strong></td>
+<td>Not available to a single property (unchanged project constraint).</td>
+</tr>
+<tr>
+<td><strong>Offline write queue</strong></td>
+<td>Deliberately omitted — a booking created offline can&#39;t be conflict-checked against the GiST constraint. Offline is read-tolerant only.</td>
+</tr>
+</tbody></table>
+<h2>Notes / small follow-ups (non-blocking)</h2>
+<ul>
+<li><strong>Per-membership roles.</strong> The property switcher keeps the user&#39;s role across
+properties; a full model would store a role per <code>UserProperty</code>.</li>
+<li><strong>Token-gated public routes</strong> (<code>/api/agent</code>, <code>/api/ingest</code>, <code>/api/ical</code>,
+<code>/api/cron</code>) don&#39;t receive the <code>x-ota-tenant</code> header (they bypass middleware);
+in a true multi-property deployment they need explicit <code>propertyRef</code> targeting
+(already noted in the ROOT agent seam).</li>
+<li><strong>Amenity matching</strong> in the directory is by normalized name substring; a shared
+amenity vocabulary would tighten it.</li>
+<li><strong>Evidence attachments</strong> for scam/bad-guest reports are text notes today; the
+existing Supabase Storage seam can back real photo/document uploads later.</li>
+</ul>
+<p>See <a href="PHASE-1-GAP-STATUS.html">PHASE-1-GAP-STATUS.md</a> and
+<a href="PHASE-2-STATUS.html">PHASE-2-STATUS.md</a> for the earlier phases.</p>
+
+</div>
+</body>
+</html>
