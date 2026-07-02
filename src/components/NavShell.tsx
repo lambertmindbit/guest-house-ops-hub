@@ -12,7 +12,7 @@ import { canSeeNav, type Role } from "@/lib/authz";
 // 8 setup modules collapse behind one "Property setup" door (the /settings hub);
 // "More" is a real /more hub screen on phone (no bottom sheet).
 type NavId =
-  | "today" | "calendar" | "bookings" | "guests" | "housekeeping" | "complaints" | "staff" | "needsyou"
+  | "today" | "calendar" | "bookings" | "groups" | "guests" | "housekeeping" | "complaints" | "staff" | "needsyou"
   | "maintenance" | "inventory" | "vendors" | "transport"
   | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "escalations" | "settings" | "help";
 
@@ -20,6 +20,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   today: { label: "Today", icon: "today", href: "/" },
   calendar: { label: "Calendar", icon: "calendar", href: "/calendar" },
   bookings: { label: "Bookings", icon: "bed", href: "/reservations" },
+  groups: { label: "Groups", icon: "layers", href: "/groups" },
   guests: { label: "Guests", icon: "guests", href: "/guests" },
   // Owner previously kept "Housekeeping" over the guide's "Cleaning" — preserved.
   housekeeping: { label: "Housekeeping", icon: "clean", href: "/housekeeping" },
@@ -44,7 +45,7 @@ const PRIMARY: NavId[] = ["today", "calendar", "bookings"];
 
 // Desktop sidebar — grouped; Setup is one entry (the /settings hub owns the rest).
 const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
-  { label: "Operate", items: ["today", "calendar", "bookings", "guests", "housekeeping", "complaints", "staff", "needsyou"] },
+  { label: "Operate", items: ["today", "calendar", "bookings", "groups", "guests", "housekeeping", "complaints", "staff", "needsyou"] },
   { label: "Facilities", items: ["maintenance", "inventory", "vendors", "transport"] },
   { label: "Business", items: ["finance", "pricing", "analytics"] },
   { label: "Review", items: ["inbox", "messages", "escalations"] },

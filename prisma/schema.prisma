@@ -463,6 +463,11 @@ model Reservation {
   advanceRequired Decimal?                  @map("advance_required") @db.Decimal(10, 2)
   createdAt       DateTime                  @default(now()) @map("created_at")
 
+  // Optional link into a booking group (whole-property / long-stay folio). Each
+  // grouped reservation is still a normal single-room booking created through the
+  // guarded path, so the no-double-booking guarantee is untouched.
+  groupId String? @map("group_id")
+
   room             Room              @relation(fields: [roomId], references: [id])
   guest            Guest             @relation(fields: [guestId], references: [id])
   channel          Channel           @relation(fields: [channelId], references: [id])
@@ -470,13 +475,30 @@ model Reservation {
   outboundMessages OutboundMessage[]
   refunds          Refund[]
   complaints       Complaint[]
+  group            BookingGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
   // Tenant (multi-property). Single-property today; backfilled + scoped by the
   // Prisma tenant extension. See src/lib/tenant.ts.
   propertyId       String?           @map("property_id")
 
   @@index([roomId])
   @@index([guestId])
+  @@index([groupId])
   @@map("reservations")
+}
+
+// A wrapper linking several single-room reservations into one folio (whole
+// property, group, or long stay). Does NOT create bookings — children are made
+// the normal way and attached here — so the GiST 409 guarantee is preserved.
+model BookingGroup {
+  id           String        @id @default(cuid())
+  name         String
+  guestId      String?       @map("guest_id") // lead guest (optional)
+  notes        String?
+  propertyId   String?       @map("property_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  reservations Reservation[]
+
+  @@map("booking_groups")
 }
 
 // Money received against a reservation. A booking can have several (e.g. a
