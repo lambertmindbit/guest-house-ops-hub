@@ -172,7 +172,8 @@ export default function HelpPage() {
           <li style={{ marginBottom: 6 }}><b>Cancelled bookings free their dates</b> immediately for re-booking.</li>
           <li style={{ marginBottom: 6 }}><b>Changes save instantly</b> and show on every device.</li>
           <li style={{ marginBottom: 6 }}><b>Patchy signal is OK</b> — if you lose connection, changes you make are saved and sync automatically when you&rsquo;re back online. If a booking clashed while you were offline, the app tells you so you can sort it.</li>
-          <li><b>Guest IDs auto-expire</b> — set a retention period in <Link href="/settings/property">Settings → Property</Link> and scanned ID documents older than that are deleted for you (privacy).</li>
+          <li style={{ marginBottom: 6 }}><b>Guest IDs auto-expire</b> — set a retention period in <Link href="/settings/property">Settings → Property</Link> and scanned ID documents older than that are deleted for you (privacy).</li>
+          <li><b>The ID rule is yours to set</b> — in <Link href="/settings/property">Settings → Property</Link>, choose whether check-in is <b>blocked</b> without an ID, only <b>warns</b>, or is <b>off</b>; and optionally require an ID number to take a booking (for walk-in-only properties).</li>
         </ul>
       </div>
 

@@ -820,6 +820,11 @@ model PropertySettings {
   // Days to keep a guest's scanned ID document before the retention purge deletes
   // it. Null = keep indefinitely (no auto-purge).
   idRetentionDays Int?  @map("id_retention_days")
+  // How strictly to enforce guest-ID collection at check-in: 'block' (default,
+  // refuse check-in without ID), 'warn' (allow but warn), or 'off'. And whether
+  // an ID is also required to SAVE a booking (walk-in-only properties).
+  idPolicy            String  @default("block") @map("id_policy")
+  idRequiredAtBooking Boolean @default(false) @map("id_required_at_booking")
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Community directory profile (Phase 3). Opt-in; blank/false until the owner

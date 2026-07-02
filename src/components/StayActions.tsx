@@ -19,12 +19,14 @@ export function StayActions({
   checkedInAt,
   checkedOutAt,
   idBlockReason = null,
+  idHardBlock = false,
   guestId,
 }: {
   reservationId: string;
   checkedInAt: string | null;
   checkedOutAt: string | null;
   idBlockReason?: string | null;
+  idHardBlock?: boolean;
   guestId?: string;
 }) {
   const router = useRouter();
@@ -45,8 +47,10 @@ export function StayActions({
   }
 
   const state = checkedOutAt ? "out" : checkedInAt ? "in" : "none";
-  // Hard gate: can't check in until the guest's ID is on file.
-  const checkInBlocked = state === "none" && !!idBlockReason;
+  // Before check-in, show the ID reason (policy 'warn' or 'block'); only 'block'
+  // (idHardBlock) actually disables the button.
+  const showIdReason = state === "none" && !!idBlockReason;
+  const checkInBlocked = showIdReason && idHardBlock;
 
   if (state === "out") {
     return (
@@ -64,12 +68,12 @@ export function StayActions({
 
   return (
     <div style={{ marginTop: 14 }}>
-      {/* ID required before check-in — explain why the button is disabled + how to fix. */}
-      {checkInBlocked && (
+      {/* ID reason before check-in. 'block' disables the button; 'warn' just informs. */}
+      {showIdReason && (
         <div className="banner banner--warn" style={{ marginBottom: 10, cursor: "default" }}>
           <span className="banner__icon"><Icon name="alert" size={18} /></span>
           <span className="banner__txt" style={{ flex: 1 }}>
-            {idBlockReason}{" "}
+            {idBlockReason}{!idHardBlock && " (you can still check in)"}{" "}
             {guestId && <Link href={`/guests/${guestId}`} style={{ fontWeight: 700, textDecoration: "underline" }}>Record ID</Link>}
           </span>
         </div>

@@ -33,3 +33,19 @@ export function checkInBlockReason(g: GuestIdFields): string | null {
   if (isForeignGuest(g) && !has(g.passportNumber)) return "Complete the C-Form (passport details) for this foreign guest before check-in.";
   return null;
 }
+
+// The owner-configurable enforcement level for the check-in gate.
+export type IdPolicy = "off" | "warn" | "block";
+export function normalizeIdPolicy(v: string | null | undefined): IdPolicy {
+  return v === "off" || v === "warn" ? v : "block";
+}
+
+// Apply the policy to a guest at check-in:
+//   • block → hard-refuse until ID is on file (reason shown, button disabled)
+//   • warn  → allow, but surface the reason
+//   • off   → no gate at all
+export function checkInGate(policy: IdPolicy, g: GuestIdFields): { blocked: boolean; reason: string | null } {
+  if (policy === "off") return { blocked: false, reason: null };
+  const reason = checkInBlockReason(g);
+  return { blocked: policy === "block" && !!reason, reason };
+}

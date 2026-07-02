@@ -28,6 +28,8 @@ type Props = {
   rooms: RoomOption[];
   channels: ChannelOption[];
   initial: ReservationFormValues;
+  idPolicy?: "off" | "warn" | "block";
+  idRequiredAtBooking?: boolean;
 };
 
 // Solid channel dots (match the calendar grid palette).
@@ -44,7 +46,7 @@ function nightsBetween(checkIn: string, checkOut: string): number {
   return Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / 86_400_000);
 }
 
-export function ReservationForm({ mode, rooms, channels, initial }: Props) {
+export function ReservationForm({ mode, rooms, channels, initial, idPolicy = "block", idRequiredAtBooking = false }: Props) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,8 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
   }
   // Booking-time acknowledgement that a valid ID will be collected at check-in.
   const [idAck, setIdAck] = useState(false);
+  const [idNumber, setIdNumber] = useState("");
+  const ackNeeded = mode === "create" && idPolicy !== "off";
 
   function set<K extends keyof ReservationFormValues>(key: K, value: string) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -168,7 +172,8 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
     if (!values.roomId) return setError("Pick a room for these dates.");
     if (!values.channelId) return setError("Choose a booking channel.");
     if (mode === "create" && scamWarn) return setError("This number is on your scam list — resolve before saving.");
-    if (mode === "create" && !idAck) return setError("Please confirm the guest accepts that a valid ID will be collected at check-in.");
+    if (mode === "create" && idRequiredAtBooking && !idNumber.trim()) return setError("Enter the guest's ID number to take this booking.");
+    if (ackNeeded && !idAck) return setError("Please confirm the guest accepts that a valid ID will be collected at check-in.");
     setSaving(true);
     try {
       const amount = values.grossAmount.trim();
@@ -189,7 +194,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
           ? await fetch("/api/reservations", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ ...common, guest: { name: values.guestName, phone: values.guestPhone }, idAck }),
+              body: JSON.stringify({ ...common, guest: { name: values.guestName, phone: values.guestPhone, idNumber: idNumber.trim() || undefined }, idAck }),
             })
           : await fetch(`/api/reservations/${values.id}`, {
               method: "PATCH",
@@ -386,7 +391,15 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
         </div>
       </div>
 
-      {mode === "create" && (
+      {mode === "create" && idRequiredAtBooking && (
+        <div className="card card--pad" style={{ marginBottom: 4 }}>
+          <label className="field-label">Guest ID number <span className="req">*</span></label>
+          <input className="input" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} placeholder="Passport / Aadhaar / driving licence…" />
+          <div className="field-hint">This property requires an ID to take a booking.</div>
+        </div>
+      )}
+
+      {ackNeeded && (
         <div className="card card--pad" style={{ marginBottom: 4, borderColor: "var(--warn-border, var(--border))" }}>
           <label className="row" style={{ gap: 10, cursor: "pointer", alignItems: "flex-start" }}>
             <input type="checkbox" checked={idAck} onChange={(e) => setIdAck(e.target.checked)} style={{ marginTop: 3 }} />
@@ -400,7 +413,7 @@ export function ReservationForm({ mode, rooms, channels, initial }: Props) {
       )}
 
       <div className="form-save">
-        <button type="submit" disabled={saving || (mode === "create" && (!!scamWarn || !idAck))} className="btn btn--primary btn--block">
+        <button type="submit" disabled={saving || (mode === "create" && (!!scamWarn || (ackNeeded && !idAck) || (idRequiredAtBooking && !idNumber.trim())))} className="btn btn--primary btn--block">
           <Icon name="check" size={18} /> {saving ? "Saving…" : mode === "create" ? "Save booking" : "Save changes"}
         </button>
       </div>

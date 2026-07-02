@@ -22,6 +22,7 @@ const createSchema = z
         name: z.string().min(1),
         phone: z.string().min(1),
         email: z.string().email().optional(),
+        idNumber: z.string().optional(),
       })
       .optional(),
     otaRef: z.string().optional(),
@@ -55,6 +56,12 @@ export async function POST(request: Request) {
   if (!parsed.success) return zodFail(parsed.error);
   const input = parsed.data;
 
+  // Walk-in-only properties can require an ID number to save a new booking.
+  if (input.guest && !input.guest.idNumber?.trim()) {
+    const settings = await prisma.propertySettings.findFirst({ select: { idRequiredAtBooking: true } });
+    if (settings?.idRequiredAtBooking) return fail("This property requires a guest ID number to take a booking.", 422);
+  }
+
   // Guest upsert + reservation insert run in ONE transaction so an overlap
   // rejection (or any failure) rolls the guest back — no orphan guest records
   // left behind by a booking that never completed.
@@ -62,10 +69,11 @@ export async function POST(request: Request) {
     const reservation = await prisma.$transaction(async (tx) => {
       let guestId = input.guestId;
       if (!guestId && input.guest) {
+        const idNumber = input.guest.idNumber?.trim() || undefined;
         const guest = await tx.guest.upsert({
           where: { phone: input.guest.phone },
-          update: { name: input.guest.name, email: input.guest.email },
-          create: input.guest,
+          update: { name: input.guest.name, email: input.guest.email, ...(idNumber ? { idNumber } : {}) },
+          create: { name: input.guest.name, phone: input.guest.phone, email: input.guest.email, idNumber },
         });
         guestId = guest.id;
       }
