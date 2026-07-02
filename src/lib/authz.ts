@@ -12,8 +12,8 @@ const OWNER_ONLY_PREFIXES = [
   "/api/pricing", "/api/settings", "/api/seasons", "/api/expenses",
   "/api/flagged-numbers", "/api/users", "/api/import",
   // Community sharing config is the owner's call (later slices may open specific
-  // sub-paths like referrals to reception).
-  "/api/community/connections", "/api/community/sharing",
+  // sub-paths like referrals to reception). Scam reporting is owner-only too.
+  "/api/community/connections", "/api/community/sharing", "/api/community/scam",
 ];
 
 export function isOwnerOnlyPath(pathname: string): boolean {
