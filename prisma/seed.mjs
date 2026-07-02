@@ -181,12 +181,77 @@ async function seedStaff(propertyId) {
   console.log(`Staff ready: ${created.length} staff, ${shifts.length} shifts + today's attendance.`);
 }
 
+// Sample data for the Facilities modules so each screen has something to test.
+const VENDORS = [
+  { name: "Shillong Laundry Co.", category: "Laundry", contact: "9863100001", rating: 4 },
+  { name: "Mawlai Groceries", category: "Groceries", contact: "9863100002", rating: 5 },
+  { name: "Bara Bazar Provisions", category: "Groceries", contact: "9863100003", rating: 3 },
+  { name: "Khasi Restaurant Supply", category: "Restaurant", contact: "9863100004", rating: 4 },
+];
+const INVENTORY = [
+  { name: "Toilet paper", unit: "rolls", quantity: 48, minThreshold: 24 },
+  { name: "Shampoo sachets", unit: "pcs", quantity: 30, minThreshold: 40 }, // low stock
+  { name: "Tea (packets)", unit: "packets", quantity: 12, minThreshold: 10 },
+  { name: "LPG cylinder", unit: "pcs", quantity: 2, minThreshold: 2 }, // low stock
+  { name: "Bed linen sets", unit: "sets", quantity: 18, minThreshold: 12 },
+];
+const ASSETS = [
+  { name: "Geyser — Room 101", category: "Water heater", preventiveEveryDays: 180 },
+  { name: "Generator", category: "Power", preventiveEveryDays: 90 },
+  { name: "Water pump", category: "Plumbing", preventiveEveryDays: 120 },
+];
+const MAINT = [
+  { title: "Geyser not heating in 101", priority: "high", status: "open" },
+  { title: "Wi-Fi router keeps dropping in lobby", priority: "medium", status: "in_progress" },
+  { title: "Leaky tap — Room 202", priority: "low", status: "open" },
+];
+const TOUR_PARTNERS = [
+  { name: "David Kharkongor (guide)", contact: "9863200001", commissionPct: 15 },
+  { name: "Meghalaya Trails", contact: "9863200002", commissionPct: 10 },
+];
+const TOURS = [
+  { name: "Living-root bridge trek", price: 1800, partner: "David Kharkongor (guide)" },
+  { name: "Shillong city sightseeing", price: 1200, partner: "Meghalaya Trails" },
+  { name: "Mawlynnong village day trip", price: 2500, partner: null },
+];
+
+async function ensureBy(model, where, data) {
+  const existing = await prisma[model].findFirst({ where });
+  return existing ?? prisma[model].create({ data });
+}
+
+async function seedVendors(propertyId) {
+  for (const v of VENDORS) await ensureBy("vendor", { name: v.name, propertyId }, { ...v, propertyId });
+}
+async function seedInventory(propertyId) {
+  for (const i of INVENTORY) await ensureBy("inventoryItem", { name: i.name, propertyId }, { ...i, propertyId });
+}
+async function seedMaintenance(propertyId) {
+  for (const a of ASSETS) await ensureBy("asset", { name: a.name, propertyId }, { ...a, propertyId });
+  for (const m of MAINT) await ensureBy("maintenanceRequest", { title: m.title, propertyId }, { ...m, propertyId });
+}
+async function seedTours(propertyId) {
+  for (const p of TOUR_PARTNERS) await ensureBy("tourPartner", { name: p.name, propertyId }, { ...p, propertyId });
+  for (const t of TOURS) {
+    const partner = t.partner ? await prisma.tourPartner.findFirst({ where: { name: t.partner, propertyId } }) : null;
+    await ensureBy("tour", { name: t.name, propertyId }, { name: t.name, price: t.price, partnerId: partner?.id ?? null, propertyId });
+  }
+}
+
 async function main() {
   // The seed uses the raw client (no tenant extension), so stamp propertyId itself.
   const property = await ensureProperty();
-  for (const channel of CHANNELS) await ensureChannel(channel, property.id);
-  for (const roomType of ROOM_TYPES) await ensureRoomType(roomType, property.id);
+  // SEED_MODULES=1 tops up only the team/facilities sample data (skips the sample
+  // rooms/channels) — used to add test data to an existing/real property.
+  if (process.env.SEED_MODULES !== "1") {
+    for (const channel of CHANNELS) await ensureChannel(channel, property.id);
+    for (const roomType of ROOM_TYPES) await ensureRoomType(roomType, property.id);
+  }
   await seedStaff(property.id);
+  await seedVendors(property.id);
+  await seedInventory(property.id);
+  await seedMaintenance(property.id);
+  await seedTours(property.id);
 
   const [channels, roomTypes, rooms] = await Promise.all([
     prisma.channel.count(),
