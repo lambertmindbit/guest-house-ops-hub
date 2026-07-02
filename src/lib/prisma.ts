@@ -113,10 +113,14 @@ function extendWith(resolve: PidResolver) {
 }
 
 // A client hard-bound to one property — the reliable per-tenant path (no ALS).
-// Used by tests today; slice (b) will bind one per request from the session.
 export function prismaForTenant(propertyId: string): PrismaClient {
   return extendWith(() => propertyId)(base) as unknown as PrismaClient;
 }
+
+// The UNSCOPED base client — bypasses all tenant scoping. Use ONLY inside
+// src/lib/community/* for permissioned cross-tenant reads (a peer's data, after
+// a SharingGrant check). Never use it for a property's own data.
+export const unscopedPrisma = base;
 
 // The default app client: scopes to the sole property (single-property today).
 export const prisma =
