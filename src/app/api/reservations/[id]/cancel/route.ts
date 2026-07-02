@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ok, fail } from "@/lib/api";
+import { recordAudit } from "@/lib/audit";
 
 // Cancelling sets status to 'cancelled', which drops the row out of the
 // exclusion-constraint predicate and frees the dates for re-booking.
@@ -16,5 +17,6 @@ export async function POST(
     data: { status: "cancelled" },
     include: { guest: true, channel: true, room: { include: { roomType: true } } },
   });
+  await recordAudit("reservation.cancel", "reservation", id, `Cancelled booking — ${reservation.guest.name}`).catch(() => {});
   return ok(reservation);
 }

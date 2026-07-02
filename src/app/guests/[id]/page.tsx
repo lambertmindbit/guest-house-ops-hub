@@ -89,6 +89,7 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
             idChecked: guest.idChecked,
             idPhotocopied: guest.idPhotocopied,
             idVerificationCompleted: guest.idVerificationCompleted,
+            consentGiven: guest.consentGivenAt !== null,
             blocked: guest.blocked,
             blockReason: guest.blockReason ?? "",
             nationality: guest.nationality ?? "",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
+import { recordAudit } from "@/lib/audit";
 
 // Owner transitions a refund. Approving / marking partial stamps approvedAt;
 // rejecting clears it. Amount can be adjusted (e.g. a partial refund).
@@ -32,6 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     where: { id },
     data: { ...parsed.data, ...(approvedAt !== undefined ? { approvedAt } : {}) },
   });
+  if (parsed.data.status) await recordAudit(`refund.${parsed.data.status}`, "refund", id).catch(() => {});
   return ok(refund);
 }
 
