@@ -102,7 +102,19 @@ function toolbarTitle(pathname: string): string {
   return META[activeId(pathname)].label;
 }
 
-export function NavShell({ conflictCount = 0, escalationCount = 0, role = "owner" }: { conflictCount?: number; escalationCount?: number; role?: Role }) {
+export function NavShell({
+  conflictCount = 0,
+  escalationCount = 0,
+  role = "owner",
+  properties = [],
+  currentPropertyId = null,
+}: {
+  conflictCount?: number;
+  escalationCount?: number;
+  role?: Role;
+  properties?: { id: string; name: string }[];
+  currentPropertyId?: string | null;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [panel, setPanel] = useState(false);
@@ -153,6 +165,17 @@ export function NavShell({ conflictCount = 0, escalationCount = 0, role = "owner
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
+  }
+
+  async function switchProperty(propertyId: string) {
+    if (propertyId === currentPropertyId) return;
+    const res = await fetch("/api/session/property", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ propertyId }),
+    });
+    // Full reload so every server component re-renders under the new tenant.
+    if (res.ok) window.location.reload();
   }
 
   return (
@@ -255,6 +278,15 @@ export function NavShell({ conflictCount = 0, escalationCount = 0, role = "owner
               <button className="iconbtn" onClick={() => setPanel(false)} aria-label="Close"><Icon name="x" size={16} /></button>
             </div>
             <div className="prefs__body">
+              {properties.length > 1 && (
+                <>
+                  <div className="prefs__group">Property</div>
+                  <select className="select" style={{ width: "100%" }} value={currentPropertyId ?? ""} onChange={(e) => switchProperty(e.target.value)}>
+                    {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </>
+              )}
+
               <div className="prefs__group">Appearance</div>
               <div className="seg" style={{ width: "100%" }}>
                 {["light", "dark", "system"].map((a) => (

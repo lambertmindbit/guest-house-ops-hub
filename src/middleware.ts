@@ -35,6 +35,6 @@ export const config = {
   matcher: [
     // Everything except the login page, auth endpoints, Next internals, and
     // the PWA/static files.
-    "/((?!login|api/auth|api/ical|api/cron|api/ingest|api/agent|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons|sw.js).*)",
+    "/((?!login|api/auth|api/ical|api/cron|api/ingest|api/agent|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons|sw.js|offline.html).*)",
   ],
 };

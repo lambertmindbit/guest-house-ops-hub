@@ -3,7 +3,9 @@ import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavShell } from "@/components/NavShell";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
-import { currentRole } from "@/lib/session";
+import { PwaRuntime } from "@/components/PwaRuntime";
+import { getSession } from "@/lib/session";
+import { listUserProperties } from "@/lib/properties";
 import { unstable_cache } from "next/cache";
 import { getConflicts } from "@/lib/conflicts";
 import { prisma } from "@/lib/prisma";
@@ -86,14 +88,23 @@ export default async function RootLayout({
     conflictCount = 0;
     escalationCount = 0;
   }
-  const role = await currentRole();
+  const session = await getSession();
+  const role = session?.role ?? "owner";
+  // Properties this user can switch between (multi-location). Tolerate hiccups.
+  let properties: { id: string; name: string }[] = [];
+  try {
+    properties = session ? await listUserProperties(session.sub, session.propertyId) : [];
+  } catch {
+    properties = [];
+  }
 
   return (
     <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} />
+        <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session?.propertyId ?? null} />
         <ConfirmProvider>{children}</ConfirmProvider>
+        <PwaRuntime />
       </body>
     </html>
   );

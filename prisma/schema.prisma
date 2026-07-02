@@ -55,6 +55,20 @@ model User {
   @@map("users")
 }
 
+/// Extra properties a user may switch into (multi-location owners). Their primary
+/// User.propertyId is always accessible; this grants access to additional ones.
+/// Not tenant-scoped. Additive to the single-property model.
+model UserProperty {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  propertyId String   @map("property_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@map("user_properties")
+}
+
 // How a block came to exist: created by the owner, or imported from an OTA's
 // iCal feed. Imported blocks are owned by the sync and replaced on each run.
 enum BlockSource {
