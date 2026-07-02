@@ -11,7 +11,7 @@ import { Icon } from "@/components/ui";
 // with its own back-chevron (SubHeader).
 const RAIL: { group: string; items: [string, string, string][] }[] = [
   { group: "Property", items: [["/settings/property", "Property details", "settings"]] },
-  { group: "Inventory", items: [["/settings/room-types", "Room types", "bed"], ["/settings/rooms", "Rooms", "door"]] },
+  { group: "Inventory", items: [["/settings/room-types", "Room types", "bed"], ["/settings/rooms", "Rooms", "door"], ["/settings/amenities", "Amenities", "box"]] },
   { group: "Channels & sync", items: [["/settings/channels", "Channels", "link"], ["/settings/feeds", "iCal feeds", "link"]] },
   { group: "Pricing", items: [["/settings/pricing", "Pricing rules", "tag"]] },
   { group: "Bookings", items: [["/settings/cancellation", "Cancellation & refunds", "receipt"]] },
