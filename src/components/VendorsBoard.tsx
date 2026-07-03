@@ -22,6 +22,10 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
   const [pay, setPay] = useState({ vendorId: "", amount: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ name: "", category: "", contact: "", rating: "" });
+  const [editPoId, setEditPoId] = useState<string | null>(null);
+  const [editPo, setEditPo] = useState({ description: "", amount: "", status: "ordered" as PoStatus });
+  const [editPayId, setEditPayId] = useState<string | null>(null);
+  const [editPay, setEditPay] = useState({ amount: "" });
   const [error, setError] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
@@ -41,6 +45,19 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
     if (await call(`/api/vendors/${id}`, { name: edit.name.trim(), category: edit.category.trim() || null, contact: edit.contact.trim() || null, rating: edit.rating ? Number(edit.rating) : null }, "PATCH")) {
       setEditId(null);
     }
+  }
+
+  function startEditPo(p: PO) {
+    setEditPoId(p.id);
+    setEditPo({ description: p.description, amount: String(p.amount), status: p.status });
+  }
+  async function savePo(id: string) {
+    if (!editPo.description.trim() || !editPo.amount) return;
+    if (await call(`/api/purchase-orders/${id}`, { description: editPo.description.trim(), amount: Number(editPo.amount), status: editPo.status }, "PATCH")) setEditPoId(null);
+  }
+  async function savePay(id: string) {
+    if (!editPay.amount) return;
+    if (await call(`/api/vendor-payments/${id}`, { amount: Number(editPay.amount) }, "PATCH")) setEditPayId(null);
   }
 
   return (
@@ -122,15 +139,35 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
       </div>
       <div className="col" style={{ gap: 8 }}>
         {pos.map((p) => (
-          <div key={p.id} className="rowcard">
-            <div className="rowcard__main">
-              <div className="rowcard__name">{p.description}</div>
-              <div className="rowcard__meta">{p.vendorName} · {displayINR(p.amount)}</div>
+          editPoId === p.id ? (
+            <div key={p.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="What" value={editPo.description} onChange={(e) => setEditPo({ ...editPo, description: e.target.value })} />
+                <input className="input" inputMode="numeric" placeholder="Amount ₹" value={editPo.amount} onChange={(e) => setEditPo({ ...editPo, amount: e.target.value })} />
+                <select className="select" value={editPo.status} onChange={(e) => setEditPo({ ...editPo, status: e.target.value as PoStatus })}>
+                  {(["draft", "ordered", "received"] as PoStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                </select>
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => savePo(p.id)} disabled={!editPo.description.trim() || !editPo.amount}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditPoId(null)}>Cancel</button>
+                <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={async () => { if (await confirm({ title: "Delete purchase order", message: "Delete this PO?", danger: true, confirmLabel: "Delete" })) { if (await call(`/api/purchase-orders/${p.id}`, {}, "DELETE")) setEditPoId(null); } }}>Delete</button>
+              </div>
             </div>
-            <select className="select" style={{ width: 130 }} value={p.status} onChange={(e) => call(`/api/purchase-orders/${p.id}`, { status: e.target.value }, "PATCH")}>
-              {(["draft", "ordered", "received"] as PoStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-            </select>
-          </div>
+          ) : (
+            <div key={p.id} className="rowcard">
+              <div className="rowcard__main">
+                <div className="rowcard__name">{p.description}</div>
+                <div className="rowcard__meta">{p.vendorName} · {displayINR(p.amount)}</div>
+              </div>
+              <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                <select className="select" style={{ width: 120 }} value={p.status} onChange={(e) => call(`/api/purchase-orders/${p.id}`, { status: e.target.value }, "PATCH")}>
+                  {(["draft", "ordered", "received"] as PoStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                </select>
+                <button className="btn btn--ghost btn--sm" onClick={() => startEditPo(p)}>Edit</button>
+              </div>
+            </div>
+          )
         ))}
       </div>
 
@@ -148,9 +185,23 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
       </div>
       <div className="col" style={{ gap: 6 }}>
         {payments.map((p) => (
-          <div key={p.id} className="spread" style={{ fontSize: "var(--fs-small)", padding: "6px 0", borderTop: "1px solid var(--border-subtle)" }}>
-            <span>{p.vendorName}</span><span className="num">{displayINR(p.amount)} · {p.paidAt}</span>
-          </div>
+          editPayId === p.id ? (
+            <div key={p.id} className="row" style={{ gap: 6, alignItems: "center", padding: "6px 0", borderTop: "1px solid var(--border-subtle)" }}>
+              <span style={{ flex: 1, fontSize: "var(--fs-small)" }}>{p.vendorName}</span>
+              <input className="input" inputMode="numeric" placeholder="Amount ₹" value={editPay.amount} onChange={(e) => setEditPay({ amount: e.target.value })} style={{ width: 110, padding: "6px 8px" }} />
+              <button className="btn btn--primary btn--sm" onClick={() => savePay(p.id)} disabled={!editPay.amount}>Save</button>
+              <button className="btn btn--ghost btn--sm" onClick={() => setEditPayId(null)}>Cancel</button>
+            </div>
+          ) : (
+            <div key={p.id} className="spread" style={{ fontSize: "var(--fs-small)", padding: "6px 0", borderTop: "1px solid var(--border-subtle)" }}>
+              <span>{p.vendorName}</span>
+              <span className="row" style={{ gap: 8, alignItems: "center" }}>
+                <span className="num">{displayINR(p.amount)} · {p.paidAt}</span>
+                <button className="btn btn--ghost btn--sm" onClick={() => { setEditPayId(p.id); setEditPay({ amount: String(p.amount) }); }}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete payment", message: "Remove this vendor payment?", danger: true, confirmLabel: "Delete" })) call(`/api/vendor-payments/${p.id}`, {}, "DELETE"); }} aria-label="Delete payment">✕</button>
+              </span>
+            </div>
+          )
         ))}
       </div>
     </div>

@@ -1,13 +1,11 @@
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
-import { updatePO } from "@/lib/vendors";
+import { updateVendorPayment, deleteVendorPayment } from "@/lib/vendors";
 
 const schema = z
   .object({
-    description: z.string().trim().min(1).optional(),
     amount: z.number().nonnegative().optional(),
-    status: z.enum(["draft", "ordered", "received"]).optional(),
+    note: z.string().trim().min(1).nullable().optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
@@ -16,15 +14,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
-  const updated = await updatePO(id, parsed.data);
-  if (!updated) return fail("purchase order not found", 404);
+  const updated = await updateVendorPayment(id, parsed.data);
+  if (!updated) return fail("payment not found", 404);
   return ok(updated);
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const existing = await prisma.purchaseOrder.findUnique({ where: { id } });
-  if (!existing) return fail("purchase order not found", 404);
-  await prisma.purchaseOrder.delete({ where: { id } });
+  const deleted = await deleteVendorPayment(id);
+  if (!deleted) return fail("payment not found", 404);
   return ok({ deleted: true });
 }
