@@ -226,7 +226,7 @@ const DRIVERS = [
   { name: "Airport Cabs Shillong", phone: "9863500003", vehicleNumber: "ML05 C 9012" },
 ];
 const TRIPS = [
-  { driver: "Bah Kyrmen", pickup: "Umroi Airport", dropoff: "Guest House", status: "done", fare: 900, dayOffset: -1, note: "Airport pickup" },
+  { driver: "Bah Kyrmen", guest: "Sample Guest (tours)", pickup: "Umroi Airport", dropoff: "Guest House", status: "done", fare: 900, dayOffset: -1, note: "Airport pickup" },
   { driver: "Deiwan Taxi Service", pickup: "Guest House", dropoff: "Police Bazar", status: "done", fare: 250, dayOffset: -2, note: null },
   { driver: "Airport Cabs Shillong", pickup: "Guest House", dropoff: "Cherrapunji day trip", status: "planned", fare: 2500, dayOffset: 1, note: "Full-day sightseeing" },
   { driver: null, pickup: "Guest House", dropoff: "Shillong Bus Stand", status: "planned", fare: 400, dayOffset: 0, note: "Driver TBD" },
@@ -270,12 +270,13 @@ async function seedTransport(propertyId) {
   for (const d of DRIVERS) await ensureBy("driver", { name: d.name, propertyId }, { ...d, propertyId });
   for (const t of TRIPS) {
     const driver = t.driver ? await prisma.driver.findFirst({ where: { name: t.driver, propertyId } }) : null;
+    const guest = t.guest ? await prisma.guest.findFirst({ where: { name: t.guest, propertyId } }) : null;
     const scheduledAt = new Date();
     scheduledAt.setDate(scheduledAt.getDate() + t.dayOffset);
     await ensureBy(
       "trip",
       { pickup: t.pickup, dropoff: t.dropoff, propertyId },
-      { driverId: driver?.id ?? null, pickup: t.pickup, dropoff: t.dropoff, scheduledAt, status: t.status, fare: t.fare ?? null, note: t.note ?? null, propertyId },
+      { driverId: driver?.id ?? null, guestId: guest?.id ?? null, pickup: t.pickup, dropoff: t.dropoff, scheduledAt, status: t.status, fare: t.fare ?? null, note: t.note ?? null, propertyId },
     );
   }
 }

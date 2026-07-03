@@ -5,6 +5,7 @@ import { createTrip } from "@/lib/transport";
 
 const schema = z.object({
   driverId: z.string().min(1).nullable().optional(),
+  guestId: z.string().min(1).nullable().optional(),
   pickup: z.string().trim().min(1, "pickup is required"),
   dropoff: z.string().trim().min(1, "drop-off is required"),
   scheduledAt: dateOnly.nullable().optional(),

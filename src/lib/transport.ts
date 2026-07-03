@@ -15,12 +15,12 @@ export async function listTrips() {
   return prisma.trip.findMany({ orderBy: { createdAt: "desc" }, include: { driver: { select: { name: true } } } });
 }
 export async function createTrip(data: {
-  driverId?: string | null; pickup: string; dropoff: string; scheduledAt?: string | null;
+  driverId?: string | null; guestId?: string | null; pickup: string; dropoff: string; scheduledAt?: string | null;
   fare?: number | null; status?: TripStatus; note?: string | null;
 }) {
   return prisma.trip.create({
     data: {
-      driverId: data.driverId ?? null, pickup: data.pickup, dropoff: data.dropoff,
+      driverId: data.driverId ?? null, guestId: data.guestId ?? null, pickup: data.pickup, dropoff: data.dropoff,
       scheduledAt: data.scheduledAt ? parseDateOnly(data.scheduledAt) : null,
       fare: data.fare ?? null, status: data.status ?? "planned", note: data.note ?? null,
     },
