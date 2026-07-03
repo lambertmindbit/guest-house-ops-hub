@@ -214,6 +214,9 @@ const TOURS = [
   { name: "Shillong city sightseeing", price: 1200, partner: "Meghalaya Trails" },
   { name: "Mawlynnong village day trip", price: 2500, partner: null },
 ];
+// One sample tour booking linked to a guest, so the Tours "Bookings" list isn't
+// empty and shows the guest ↔ tour link. Creates a clearly-sample guest for it.
+const TOUR_BOOKING = { guestName: "Sample Guest (tours)", guestPhone: "9800000001", tour: "Living-root bridge trek", amount: 1800, status: "confirmed", note: "Sample booking", daysAhead: 2 };
 
 // Owner-managed contact list + a few referrals sent out, so the Partners and
 // Referrals screens have something to test.
@@ -261,6 +264,21 @@ async function seedTours(propertyId) {
   for (const t of TOURS) {
     const partner = t.partner ? await prisma.tourPartner.findFirst({ where: { name: t.partner, propertyId } }) : null;
     await ensureBy("tour", { name: t.name, propertyId }, { name: t.name, price: t.price, partnerId: partner?.id ?? null, propertyId });
+  }
+
+  // A sample booking linked to a guest, so Tours → Bookings shows the guest link.
+  const b = TOUR_BOOKING;
+  const guest = await ensureBy("guest", { name: b.guestName, propertyId }, { name: b.guestName, phone: b.guestPhone, propertyId });
+  const tour = await prisma.tour.findFirst({ where: { name: b.tour, propertyId } });
+  if (tour) {
+    const tourPartner = tour.partnerId ? await prisma.tourPartner.findUnique({ where: { id: tour.partnerId } }) : null;
+    const date = new Date();
+    date.setDate(date.getDate() + b.daysAhead);
+    await ensureBy(
+      "tourBooking",
+      { note: b.note, propertyId },
+      { tourId: tour.id, guestId: guest.id, partnerId: tour.partnerId ?? null, amount: b.amount, commissionPct: tourPartner?.commissionPct ?? null, status: b.status, date, note: b.note, propertyId },
+    );
   }
 }
 
