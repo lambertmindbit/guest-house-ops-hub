@@ -218,6 +218,20 @@ const TOURS = [
 // empty and shows the guest ↔ tour link. Creates a clearly-sample guest for it.
 const TOUR_BOOKING = { guestName: "Sample Guest (tours)", guestPhone: "9800000001", tour: "Living-root bridge trek", amount: 1800, status: "confirmed", note: "Sample booking", daysAhead: 2 };
 
+// Transport: drivers + a few trips (mix of done/planned, some with fares) so the
+// Transport screen and its fare roll-up have something to show.
+const DRIVERS = [
+  { name: "Bah Kyrmen", phone: "9863500001", vehicleNumber: "ML05 A 1234" },
+  { name: "Deiwan Taxi Service", phone: "9863500002", vehicleNumber: "ML05 B 5678" },
+  { name: "Airport Cabs Shillong", phone: "9863500003", vehicleNumber: "ML05 C 9012" },
+];
+const TRIPS = [
+  { driver: "Bah Kyrmen", pickup: "Umroi Airport", dropoff: "Guest House", status: "done", fare: 900, dayOffset: -1, note: "Airport pickup" },
+  { driver: "Deiwan Taxi Service", pickup: "Guest House", dropoff: "Police Bazar", status: "done", fare: 250, dayOffset: -2, note: null },
+  { driver: "Airport Cabs Shillong", pickup: "Guest House", dropoff: "Cherrapunji day trip", status: "planned", fare: 2500, dayOffset: 1, note: "Full-day sightseeing" },
+  { driver: null, pickup: "Guest House", dropoff: "Shillong Bus Stand", status: "planned", fare: 400, dayOffset: 0, note: "Driver TBD" },
+];
+
 // Owner-managed contact list + a few referrals sent out, so the Partners and
 // Referrals screens have something to test.
 const PARTNERS = [
@@ -251,6 +265,19 @@ async function seedPartners(propertyId) {
 
 async function seedVendors(propertyId) {
   for (const v of VENDORS) await ensureBy("vendor", { name: v.name, propertyId }, { ...v, propertyId });
+}
+async function seedTransport(propertyId) {
+  for (const d of DRIVERS) await ensureBy("driver", { name: d.name, propertyId }, { ...d, propertyId });
+  for (const t of TRIPS) {
+    const driver = t.driver ? await prisma.driver.findFirst({ where: { name: t.driver, propertyId } }) : null;
+    const scheduledAt = new Date();
+    scheduledAt.setDate(scheduledAt.getDate() + t.dayOffset);
+    await ensureBy(
+      "trip",
+      { pickup: t.pickup, dropoff: t.dropoff, propertyId },
+      { driverId: driver?.id ?? null, pickup: t.pickup, dropoff: t.dropoff, scheduledAt, status: t.status, fare: t.fare ?? null, note: t.note ?? null, propertyId },
+    );
+  }
 }
 async function seedInventory(propertyId) {
   for (const i of INVENTORY) await ensureBy("inventoryItem", { name: i.name, propertyId }, { ...i, propertyId });
@@ -296,6 +323,7 @@ async function main() {
   await seedInventory(property.id);
   await seedMaintenance(property.id);
   await seedTours(property.id);
+  await seedTransport(property.id);
   await seedPartners(property.id);
 
   const [channels, roomTypes, rooms] = await Promise.all([
