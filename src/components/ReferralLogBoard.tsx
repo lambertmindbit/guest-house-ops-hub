@@ -9,7 +9,7 @@ import { SectionLabel } from "@/components/ui";
 type Status = "referred" | "booked" | "declined";
 type Partner = { id: string; name: string };
 type Referral = {
-  id: string; guestName: string; partnerName: string | null; guestPhone: string | null;
+  id: string; guestName: string; partnerId: string | null; partnerName: string | null; guestPhone: string | null;
   checkIn: string | null; checkOut: string | null; status: Status; note: string | null;
 };
 type Summary = { total: number; referred: number; booked: number; declined: number; conversionRate: number };
@@ -21,6 +21,8 @@ export function ReferralLogBoard({ referrals, partners, summary }: { referrals: 
   const router = useRouter();
   const { confirm } = useConfirm();
   const [nr, setNr] = useState({ guestName: "", partnerId: "", guestPhone: "", checkIn: "", checkOut: "", note: "" });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [edit, setEdit] = useState({ guestName: "", partnerId: "", guestPhone: "", checkIn: "", checkOut: "", note: "" });
   const [error, setError] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
@@ -29,6 +31,18 @@ export function ReferralLogBoard({ referrals, partners, summary }: { referrals: 
     if (!res.ok) { const j = await res.json().catch(() => ({})); setError(j.error ?? "Something went wrong."); return false; }
     router.refresh();
     return true;
+  }
+
+  function startEdit(r: Referral) {
+    setEditId(r.id);
+    setEdit({ guestName: r.guestName, partnerId: r.partnerId ?? "", guestPhone: r.guestPhone ?? "", checkIn: r.checkIn ?? "", checkOut: r.checkOut ?? "", note: r.note ?? "" });
+  }
+  async function saveEdit(id: string) {
+    if (!edit.guestName.trim() || (!!edit.checkOut && edit.checkOut <= edit.checkIn)) return;
+    if (await call(`/api/referrals/${id}`, {
+      guestName: edit.guestName.trim(), partnerId: edit.partnerId || null, guestPhone: edit.guestPhone.trim() || null,
+      checkIn: edit.checkIn || null, checkOut: edit.checkOut || null, note: edit.note.trim() || null,
+    }, "PATCH")) setEditId(null);
   }
 
   return (
@@ -75,19 +89,39 @@ export function ReferralLogBoard({ referrals, partners, summary }: { referrals: 
       <SectionLabel count={referrals.length}>Referrals</SectionLabel>
       <div className="col" style={{ gap: 8 }}>
         {referrals.length === 0 ? <div className="empty">No referrals logged yet.</div> : referrals.map((r) => (
-          <div key={r.id} className="rowcard">
-            <div className="rowcard__main">
-              <div className="rowcard__name">{r.guestName}{r.partnerName ? <span className="muted" style={{ fontWeight: 400 }}> → {r.partnerName}</span> : null}</div>
-              <div className="rowcard__meta">{[r.checkIn && r.checkOut ? `${r.checkIn} → ${r.checkOut}` : null, r.guestPhone, r.note].filter(Boolean).join(" · ") || "—"}</div>
+          editId === r.id ? (
+            <div key={r.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="Guest name" value={edit.guestName} onChange={(e) => setEdit({ ...edit, guestName: e.target.value })} />
+                <select className="select" value={edit.partnerId} onChange={(e) => setEdit({ ...edit, partnerId: e.target.value })}>
+                  <option value="">Referred to…</option>{partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <input className="input" placeholder="Guest phone" value={edit.guestPhone} onChange={(e) => setEdit({ ...edit, guestPhone: e.target.value })} />
+                <input className="input" type="date" aria-label="Check-in" value={edit.checkIn} onChange={(e) => setEdit({ ...edit, checkIn: e.target.value })} />
+                <input className="input" type="date" aria-label="Check-out" value={edit.checkOut} onChange={(e) => setEdit({ ...edit, checkOut: e.target.value })} />
+                <input className="input" placeholder="Note" value={edit.note} onChange={(e) => setEdit({ ...edit, note: e.target.value })} />
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => saveEdit(r.id)} disabled={!edit.guestName.trim() || (!!edit.checkOut && edit.checkOut <= edit.checkIn)}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditId(null)}>Cancel</button>
+              </div>
             </div>
-            <div className="row" style={{ gap: 6, alignItems: "center" }}>
-              <span className={`badge ${STATUS_CLS[r.status]}`}>{STATUS_LABEL[r.status]}</span>
-              <select className="select" style={{ width: 120 }} value={r.status} onChange={(e) => call(`/api/referrals/${r.id}`, { status: e.target.value }, "PATCH")} aria-label="Referral status">
-                {(["referred", "booked", "declined"] as Status[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-              </select>
-              <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete referral", message: "Remove this referral from the log?", danger: true, confirmLabel: "Delete" })) call(`/api/referrals/${r.id}`, {}, "DELETE"); }} aria-label="Delete referral">✕</button>
+          ) : (
+            <div key={r.id} className="rowcard">
+              <div className="rowcard__main">
+                <div className="rowcard__name">{r.guestName}{r.partnerName ? <span className="muted" style={{ fontWeight: 400 }}> → {r.partnerName}</span> : null}</div>
+                <div className="rowcard__meta">{[r.checkIn && r.checkOut ? `${r.checkIn} → ${r.checkOut}` : null, r.guestPhone, r.note].filter(Boolean).join(" · ") || "—"}</div>
+              </div>
+              <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                <span className={`badge ${STATUS_CLS[r.status]}`}>{STATUS_LABEL[r.status]}</span>
+                <select className="select" style={{ width: 120 }} value={r.status} onChange={(e) => call(`/api/referrals/${r.id}`, { status: e.target.value }, "PATCH")} aria-label="Referral status">
+                  {(["referred", "booked", "declined"] as Status[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                </select>
+                <button className="btn btn--ghost btn--sm" onClick={() => startEdit(r)}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete referral", message: "Remove this referral from the log?", danger: true, confirmLabel: "Delete" })) call(`/api/referrals/${r.id}`, {}, "DELETE"); }} aria-label="Delete referral">✕</button>
+              </div>
             </div>
-          </div>
+          )
         ))}
       </div>
     </div>

@@ -9,7 +9,7 @@ type TourStatus = "planned" | "confirmed" | "completed" | "cancelled";
 type Tour = { id: string; name: string; price: number | null; partnerId: string | null; partnerName: string | null; active: boolean };
 type Partner = { id: string; name: string; contact: string | null; commissionPct: number | null };
 type Guest = { id: string; name: string };
-type Booking = { id: string; tourName: string; partnerName: string | null; guestName: string | null; date: string | null; amount: number | null; status: TourStatus };
+type Booking = { id: string; tourName: string; partnerName: string | null; guestId: string | null; guestName: string | null; date: string | null; amount: number | null; status: TourStatus };
 type Summary = { bookings: number; revenue: number; commission: number };
 
 const STATUS_CLS: Record<TourStatus, string> = { planned: "badge--warn", confirmed: "badge--sent", completed: "badge--good", cancelled: "badge--neutral" };
@@ -25,6 +25,8 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
   const [editTour, setEditTour] = useState({ name: "", price: "", partnerId: "" });
   const [editPartnerId, setEditPartnerId] = useState<string | null>(null);
   const [editPartner, setEditPartner] = useState({ name: "", contact: "", commissionPct: "" });
+  const [editBookingId, setEditBookingId] = useState<string | null>(null);
+  const [editBooking, setEditBooking] = useState({ guestId: "", date: "", amount: "" });
 
   async function call(url: string, body: unknown, method = "POST") {
     setError(null);
@@ -32,6 +34,14 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
     if (!res.ok) { const j = await res.json().catch(() => ({})); setError(j.error ?? "Something went wrong."); return false; }
     router.refresh();
     return true;
+  }
+
+  function startEditBooking(b: Booking) {
+    setEditBookingId(b.id);
+    setEditBooking({ guestId: b.guestId ?? "", date: b.date ?? "", amount: b.amount != null ? String(b.amount) : "" });
+  }
+  async function saveBooking(id: string) {
+    if (await call(`/api/tour-bookings/${id}`, { guestId: editBooking.guestId || null, date: editBooking.date || null, amount: editBooking.amount ? Number(editBooking.amount) : null }, "PATCH")) setEditBookingId(null);
   }
 
   async function saveTour(id: string) {
@@ -86,18 +96,39 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
       {bookings.length > 0 && (
         <div className="col" style={{ gap: 8, marginBottom: 14 }}>
           {bookings.map((b) => (
-            <div key={b.id} className="card card--pad" style={{ padding: 14 }}>
-              <div className="spread" style={{ gap: 10, flexWrap: "wrap" }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{b.tourName}{b.guestName ? <span style={{ fontWeight: 400 }}> — {b.guestName}</span> : null}</div>
-                  <div className="muted" style={{ fontSize: "var(--fs-meta)" }}>{[b.partnerName, b.date ?? "No date", b.amount != null ? displayINR(b.amount) : null].filter(Boolean).join(" · ")}</div>
+            editBookingId === b.id ? (
+              <div key={b.id} className="card card--pad" style={{ padding: 14 }}>
+                <div style={{ fontWeight: 600, marginBottom: 10 }}>{b.tourName}</div>
+                <div className="form-grid" style={{ gap: 10 }}>
+                  <select className="select" value={editBooking.guestId} onChange={(e) => setEditBooking({ ...editBooking, guestId: e.target.value })}>
+                    <option value="">Guest…</option>{guests.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                  <input className="input" type="date" value={editBooking.date} onChange={(e) => setEditBooking({ ...editBooking, date: e.target.value })} />
+                  <input className="input" inputMode="numeric" placeholder="Amount ₹" value={editBooking.amount} onChange={(e) => setEditBooking({ ...editBooking, amount: e.target.value })} />
                 </div>
-                <select className="select" style={{ width: 130 }} value={b.status} onChange={(e) => call(`/api/tour-bookings/${b.id}`, { status: e.target.value }, "PATCH")}>
-                  {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                  <button className="btn btn--primary btn--sm" onClick={() => saveBooking(b.id)}>Save</button>
+                  <button className="btn btn--ghost btn--sm" onClick={() => setEditBookingId(null)}>Cancel</button>
+                  <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={async () => { if (await call(`/api/tour-bookings/${b.id}`, {}, "DELETE")) setEditBookingId(null); }}>Delete</button>
+                </div>
               </div>
-              <span className={`badge ${STATUS_CLS[b.status]}`} style={{ marginTop: 8, display: "inline-block" }}>{b.status}</span>
-            </div>
+            ) : (
+              <div key={b.id} className="card card--pad" style={{ padding: 14 }}>
+                <div className="spread" style={{ gap: 10, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{b.tourName}{b.guestName ? <span style={{ fontWeight: 400 }}> — {b.guestName}</span> : null}</div>
+                    <div className="muted" style={{ fontSize: "var(--fs-meta)" }}>{[b.partnerName, b.date ?? "No date", b.amount != null ? displayINR(b.amount) : null].filter(Boolean).join(" · ")}</div>
+                  </div>
+                  <div className="row" style={{ gap: 8, alignItems: "center" }}>
+                    <select className="select" style={{ width: 120 }} value={b.status} onChange={(e) => call(`/api/tour-bookings/${b.id}`, { status: e.target.value }, "PATCH")}>
+                      {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <button className="btn btn--ghost btn--sm" onClick={() => startEditBooking(b)}>Edit</button>
+                  </div>
+                </div>
+                <span className={`badge ${STATUS_CLS[b.status]}`} style={{ marginTop: 8, display: "inline-block" }}>{b.status}</span>
+              </div>
+            )
           ))}
         </div>
       )}

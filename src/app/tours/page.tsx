@@ -24,7 +24,7 @@ export default async function ToursPage() {
           tours={tours.map((t) => ({ id: t.id, name: t.name, price: t.price ? Number(t.price) : null, partnerId: t.partnerId, partnerName: t.partner?.name ?? null, active: t.active }))}
           partners={partners.map((p) => ({ id: p.id, name: p.name, contact: p.contact, commissionPct: p.commissionPct }))}
           guests={guests.map((g) => ({ id: g.id, name: g.name }))}
-          bookings={bookings.map((b) => ({ id: b.id, tourName: b.tour.name, partnerName: b.partner?.name ?? null, guestName: b.guestId ? guestName.get(b.guestId) ?? null : null, date: b.date ? formatDateOnly(b.date) : null, amount: b.amount ? Number(b.amount) : null, status: b.status }))}
+          bookings={bookings.map((b) => ({ id: b.id, tourName: b.tour.name, partnerName: b.partner?.name ?? null, guestId: b.guestId ?? null, guestName: b.guestId ? guestName.get(b.guestId) ?? null : null, date: b.date ? formatDateOnly(b.date) : null, amount: b.amount ? Number(b.amount) : null, status: b.status }))}
           summary={summary}
         />
       </div>

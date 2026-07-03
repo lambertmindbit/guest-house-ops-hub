@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 const STATUSES = ["open", "in_progress", "resolved"] as const;
 const STATUS_LABEL: Record<string, string> = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
@@ -14,6 +15,7 @@ export function ComplaintDetail({
   initial: { status: (typeof STATUSES)[number]; assignee: string; resolutionNote: string; satisfaction: number | null };
 }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [status, setStatus] = useState(initial.status);
   const [assignee, setAssignee] = useState(initial.assignee);
   const [resolutionNote, setResolutionNote] = useState(initial.resolutionNote);
@@ -39,6 +41,12 @@ export function ComplaintDetail({
       setSaved(true);
       router.refresh();
     }
+  }
+
+  async function remove() {
+    if (!(await confirm({ title: "Delete complaint", message: "Delete this complaint permanently?", danger: true, confirmLabel: "Delete" }))) return;
+    const res = await fetch(`/api/complaints/${id}`, { method: "DELETE" });
+    if (res.ok) router.push("/complaints");
   }
 
   return (
@@ -70,9 +78,10 @@ export function ComplaintDetail({
         </div>
       </div>
 
-      <div className="row" style={{ gap: 10, marginTop: 6 }}>
+      <div className="row" style={{ gap: 10, marginTop: 6, alignItems: "center" }}>
         <button className="btn btn--primary btn--sm" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save"}</button>
         {saved && <span style={{ fontSize: "var(--fs-small)", color: "var(--green-text)" }}>Saved ✓</span>}
+        <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={remove}>Delete</button>
       </div>
     </div>
   );

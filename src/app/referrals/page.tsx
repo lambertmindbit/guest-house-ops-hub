@@ -20,6 +20,7 @@ export default async function ReferralsPage() {
           referrals={referrals.map((r) => ({
             id: r.id,
             guestName: r.guestName,
+            partnerId: r.partnerId ?? null,
             partnerName: r.partner?.name ?? null,
             guestPhone: r.guestPhone,
             checkIn: r.checkIn ? formatDateOnly(r.checkIn) : null,
