@@ -44,10 +44,19 @@ export async function createTourBooking(data: {
     },
   });
 }
-export async function setTourBookingStatus(id: string, status: TourStatus) {
+export async function updateTourBooking(id: string, patch: {
+  status?: TourStatus; guestId?: string | null; date?: string | null; amount?: number | null; note?: string | null;
+}) {
   const existing = await prisma.tourBooking.findUnique({ where: { id } });
   if (!existing) return null;
-  return prisma.tourBooking.update({ where: { id }, data: { status } });
+  const data: Record<string, unknown> = { ...patch };
+  if (patch.date !== undefined) data.date = patch.date ? new Date(patch.date) : null;
+  return prisma.tourBooking.update({ where: { id }, data });
+}
+export async function deleteTourBooking(id: string) {
+  const existing = await prisma.tourBooking.findUnique({ where: { id } });
+  if (!existing) return null;
+  return prisma.tourBooking.delete({ where: { id } });
 }
 
 // ── Pure commission summary (testable) ───────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { SectionLabel } from "@/components/ui";
 
 type Status = "pending" | "sent" | "received" | "responded";
@@ -13,6 +14,7 @@ const STATUS_CLS: Record<Status, string> = { pending: "badge--neutral", sent: "b
 
 export function ReviewsBoard({ reviews, summary }: { reviews: Review[]; summary: Summary }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [channel, setChannel] = useState("Google");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
@@ -52,6 +54,7 @@ export function ReviewsBoard({ reviews, summary }: { reviews: Review[]; summary:
                 <select className="select" style={{ width: 120 }} value={r.status} onChange={(e) => call(`/api/reviews/${r.id}`, { status: e.target.value }, "PATCH")}>
                   {(["pending", "sent", "received", "responded"] as Status[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Stop tracking review", message: "Delete this review request?", danger: true, confirmLabel: "Delete" })) call(`/api/reviews/${r.id}`, {}, "DELETE"); }} aria-label="Delete review">✕</button>
               </div>
             </div>
             <div className="row" style={{ gap: 6, marginTop: 8 }}>

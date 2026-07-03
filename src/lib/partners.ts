@@ -51,12 +51,13 @@ export async function createReferral(data: {
     },
   });
 }
-export async function updateReferral(id: string, data: {
-  status?: ReferralOutcome; partnerId?: string | null; note?: string | null;
+export async function updateReferral(id: string, patch: {
+  status?: ReferralOutcome; partnerId?: string | null; guestName?: string; guestPhone?: string | null;
+  checkIn?: Date | null; checkOut?: Date | null; note?: string | null;
 }) {
   const current = await prisma.outboundReferral.findUnique({ where: { id } });
   if (!current) return null;
-  return prisma.outboundReferral.update({ where: { id }, data });
+  return prisma.outboundReferral.update({ where: { id }, data: patch });
 }
 export async function deleteReferral(id: string) {
   const current = await prisma.outboundReferral.findUnique({ where: { id } });
