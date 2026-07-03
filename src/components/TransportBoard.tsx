@@ -135,7 +135,6 @@ export function TransportBoard({ drivers, guests, trips, doneFares }: { drivers:
               <div className="row" style={{ gap: 6, marginTop: 10 }}>
                 <button className="btn btn--primary btn--sm" onClick={() => saveTrip(t.id)} disabled={!editTrip.pickup.trim() || !editTrip.dropoff.trim()}>Save</button>
                 <button className="btn btn--ghost btn--sm" onClick={() => setEditTripId(null)}>Cancel</button>
-                <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={async () => { if (await confirm({ title: "Delete trip", message: "Remove this trip from the log?", danger: true, confirmLabel: "Delete" })) { if (await call(`/api/trips/${t.id}`, {}, "DELETE")) setEditTripId(null); } }}>Delete</button>
               </div>
             </div>
           ) : (
@@ -149,6 +148,7 @@ export function TransportBoard({ drivers, guests, trips, doneFares }: { drivers:
                   {(["planned", "done", "cancelled"] as TripStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
                 <button className="btn btn--ghost btn--sm" onClick={() => startEditTrip(t)}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete trip", message: "Remove this trip from the log?", danger: true, confirmLabel: "Delete" })) call(`/api/trips/${t.id}`, {}, "DELETE"); }} aria-label="Delete trip">✕</button>
               </div>
             </div>
           )
