@@ -7,7 +7,7 @@
 //      the server stays authoritative (each replay still hits the 409 guard).
 //      Classification rules mirror src/lib/offline-queue.ts (the tested spec).
 
-const CACHE = "ops-shell-v1";
+const CACHE = "ops-shell-v2";
 const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/icons/icon-192.png"];
 
 const DB_NAME = "ota-offline";
@@ -140,8 +140,10 @@ self.addEventListener("fetch", (event) => {
   }
   if (req.method !== "GET") return;
 
-  // Immutable, content-hashed assets → cache-first.
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  // Immutable, content-hashed assets → cache-first. Skipped on localhost: dev
+  // chunks share stable URLs across rebuilds, so caching them serves stale code.
+  const isDev = self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1";
+  if (!isDev && (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/"))) {
     event.respondWith(
       caches.match(req).then((hit) =>
         hit ||

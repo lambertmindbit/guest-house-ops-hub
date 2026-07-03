@@ -16,6 +16,16 @@ export function PwaRuntime() {
   useEffect(() => {
     const sw = navigator.serviceWorker;
     if (sw) {
+      // In development Next serves chunks at stable URLs whose contents change on
+      // every rebuild; the cache-first SW would pin the first version and serve
+      // stale chunks (the "reading 'call'" webpack error). So never run the SW in
+      // dev — and unregister/clear any install left over from earlier testing so
+      // an existing dev SW heals itself on the next load.
+      if (process.env.NODE_ENV !== "production") {
+        sw.getRegistrations?.().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
+        if (typeof caches !== "undefined") caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+        return;
+      }
       sw.register("/sw.js").catch(() => {});
       // Ask the SW for the current queue count, and replay anything pending.
       const ping = (type: string) => sw.ready.then((reg) => reg.active?.postMessage({ type })).catch(() => {});
