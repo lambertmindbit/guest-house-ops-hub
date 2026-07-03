@@ -26,12 +26,6 @@ export async function createTrip(data: {
     },
   });
 }
-export async function transitionTrip(id: string, status: TripStatus) {
-  const current = await prisma.trip.findUnique({ where: { id } });
-  if (!current) return null;
-  return prisma.trip.update({ where: { id }, data: { status } });
-}
-
 // ── Pure (testable) ──────────────────────────────────────────────────────────
 export type TripForRollup = { status: TripStatus; fare: number | null };
 export function fareRollup(trips: TripForRollup[]): { doneFares: number; doneCount: number; plannedCount: number } {

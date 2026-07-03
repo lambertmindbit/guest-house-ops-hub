@@ -22,7 +22,7 @@ export default async function TransportPage() {
           drivers={drivers.map((d) => ({ id: d.id, name: d.name, phone: d.phone, vehicleNumber: d.vehicleNumber }))}
           guests={guests.map((g) => ({ id: g.id, name: g.name }))}
           trips={trips.map((t) => ({
-            id: t.id, driverName: t.driver?.name ?? null, guestName: t.guestId ? guestName.get(t.guestId) ?? null : null, pickup: t.pickup, dropoff: t.dropoff,
+            id: t.id, driverId: t.driverId ?? null, driverName: t.driver?.name ?? null, guestId: t.guestId ?? null, guestName: t.guestId ? guestName.get(t.guestId) ?? null : null, pickup: t.pickup, dropoff: t.dropoff,
             scheduledAt: t.scheduledAt ? formatDateOnly(t.scheduledAt) : null, status: t.status, fare: t.fare == null ? null : Number(t.fare),
           }))}
           doneFares={doneFares}
