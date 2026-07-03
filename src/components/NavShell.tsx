@@ -14,7 +14,7 @@ import { canSeeNav, type Role } from "@/lib/authz";
 type NavId =
   | "today" | "calendar" | "bookings" | "groups" | "guests" | "housekeeping" | "complaints" | "staff" | "needsyou"
   | "maintenance" | "inventory" | "vendors" | "transport" | "tours"
-  | "directory" | "referrals" | "directories"
+  | "partners" | "referrals"
   | "finance" | "pricing" | "analytics" | "inbox" | "messages" | "escalations" | "reviews" | "settings" | "help";
 
 const META: Record<NavId, { label: string; icon: string; href: string }> = {
@@ -32,9 +32,8 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   vendors: { label: "Vendors", icon: "receipt", href: "/vendors" },
   transport: { label: "Transport", icon: "truck", href: "/transport" },
   tours: { label: "Tours", icon: "compass", href: "/tours" },
-  directory: { label: "Directory", icon: "search", href: "/directory" },
+  partners: { label: "Partners", icon: "search", href: "/partners" },
   referrals: { label: "Referrals", icon: "layers", href: "/referrals" },
-  directories: { label: "Trusted lists", icon: "receipt", href: "/directories" },
   needsyou: { label: "Needs you", icon: "alert", href: "/needs-you" },
   finance: { label: "Finance", icon: "wallet", href: "/finance" },
   pricing: { label: "Pricing", icon: "tag", href: "/pricing" },
@@ -54,7 +53,7 @@ const SIDEBAR_GROUPS: { label: string; items: NavId[] }[] = [
   { label: "Operate", items: ["today", "calendar", "bookings", "groups", "guests", "housekeeping", "complaints", "staff", "needsyou"] },
   { label: "Facilities", items: ["maintenance", "inventory", "vendors", "transport", "tours"] },
   { label: "Business", items: ["finance", "pricing", "analytics"] },
-  { label: "Community", items: ["directory", "referrals", "directories"] },
+  { label: "Partners", items: ["partners", "referrals"] },
   { label: "Review", items: ["inbox", "messages", "escalations", "reviews"] },
   { label: "Setup", items: ["settings"] },
 ];
