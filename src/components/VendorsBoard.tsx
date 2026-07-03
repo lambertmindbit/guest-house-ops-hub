@@ -48,10 +48,10 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
       {error && <p style={{ color: "var(--red-text)", fontSize: "var(--fs-small)" }}>{error}</p>}
 
       <div className="kpi-strip" style={{ marginBottom: 14 }}>
-        <div className="kpi-panel kpi-panel--verdict"><div className="kpi-eyebrow">Outstanding</div><div className="kpi-num">{displayINR(summary.outstanding)}</div><div className="kpi-ctx">to vendors</div></div>
-        <div className="kpi-panel"><div className="kpi-eyebrow">Ordered</div><div className="kpi-num">{displayINR(summary.ordered)}</div></div>
-        <div className="kpi-panel"><div className="kpi-eyebrow">Received</div><div className="kpi-num">{displayINR(summary.received)}</div></div>
-        <div className="kpi-panel"><div className="kpi-eyebrow">Paid</div><div className="kpi-num">{displayINR(summary.paid)}</div></div>
+        <div className="kpi-panel kpi-panel--verdict"><div className="kpi-eyebrow">Outstanding</div><div className="kpi-num">{displayINR(summary.outstanding)}</div><div className="kpi-ctx">still owed (received − paid)</div></div>
+        <div className="kpi-panel"><div className="kpi-eyebrow">Ordered</div><div className="kpi-num">{displayINR(summary.ordered)}</div><div className="kpi-ctx">POs placed</div></div>
+        <div className="kpi-panel"><div className="kpi-eyebrow">Received</div><div className="kpi-num">{displayINR(summary.received)}</div><div className="kpi-ctx">goods in hand</div></div>
+        <div className="kpi-panel"><div className="kpi-eyebrow">Paid</div><div className="kpi-num">{displayINR(summary.paid)}</div><div className="kpi-ctx">to date</div></div>
       </div>
 
       {/* Directory */}
