@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { SectionLabel } from "@/components/ui";
 import { displayINR } from "@/lib/format";
 
@@ -17,6 +18,7 @@ const STATUSES: TourStatus[] = ["planned", "confirmed", "completed", "cancelled"
 
 export function ToursBoard({ tours, partners, guests, bookings, summary }: { tours: Tour[]; partners: Partner[]; guests: Guest[]; bookings: Booking[]; summary: Summary }) {
   const router = useRouter();
+  const { confirm } = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [np, setNp] = useState({ name: "", contact: "", commissionPct: "" });
   const [nt, setNt] = useState({ name: "", price: "", partnerId: "" });
@@ -109,7 +111,6 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
                 <div className="row" style={{ gap: 6, marginTop: 10 }}>
                   <button className="btn btn--primary btn--sm" onClick={() => saveBooking(b.id)}>Save</button>
                   <button className="btn btn--ghost btn--sm" onClick={() => setEditBookingId(null)}>Cancel</button>
-                  <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={async () => { if (await call(`/api/tour-bookings/${b.id}`, {}, "DELETE")) setEditBookingId(null); }}>Delete</button>
                 </div>
               </div>
             ) : (
@@ -124,6 +125,7 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
                       {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <button className="btn btn--ghost btn--sm" onClick={() => startEditBooking(b)}>Edit</button>
+                    <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete booking", message: "Delete this tour booking?", danger: true, confirmLabel: "Delete" })) call(`/api/tour-bookings/${b.id}`, {}, "DELETE"); }} aria-label="Delete booking">✕</button>
                   </div>
                 </div>
                 <span className={`badge ${STATUS_CLS[b.status]}`} style={{ marginTop: 8, display: "inline-block" }}>{b.status}</span>
@@ -167,7 +169,6 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
               <div className="row" style={{ gap: 6, marginTop: 10 }}>
                 <button className="btn btn--primary btn--sm" onClick={() => saveTour(t.id)} disabled={!editTour.name.trim()}>Save</button>
                 <button className="btn btn--ghost btn--sm" onClick={() => setEditTourId(null)}>Cancel</button>
-                <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={() => call(`/api/tours/${t.id}`, {}, "DELETE")}>Delete</button>
               </div>
             </div>
           ) : (
@@ -176,6 +177,7 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
               <span className="row" style={{ gap: 8, alignItems: "center" }}>
                 <span className="muted">{t.price != null ? displayINR(t.price) : "—"}</span>
                 <button className="btn btn--ghost btn--sm" onClick={() => { setEditTourId(t.id); setEditTour({ name: t.name, price: t.price != null ? String(t.price) : "", partnerId: t.partnerId ?? "" }); }}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete tour", message: "Delete this tour?", danger: true, confirmLabel: "Delete" })) call(`/api/tours/${t.id}`, {}, "DELETE"); }} aria-label="Delete tour">✕</button>
               </span>
             </div>
           )
@@ -207,7 +209,6 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
               <div className="row" style={{ gap: 6, marginTop: 10 }}>
                 <button className="btn btn--primary btn--sm" onClick={() => savePartner(p.id)} disabled={!editPartner.name.trim()}>Save</button>
                 <button className="btn btn--ghost btn--sm" onClick={() => setEditPartnerId(null)}>Cancel</button>
-                <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={() => call(`/api/tour-partners/${p.id}`, {}, "DELETE")}>Delete</button>
               </div>
             </div>
           ) : (
@@ -216,6 +217,7 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
               <span className="row" style={{ gap: 8, alignItems: "center" }}>
                 <span className="muted">{p.commissionPct != null ? `${p.commissionPct}%` : "—"}</span>
                 <button className="btn btn--ghost btn--sm" onClick={() => { setEditPartnerId(p.id); setEditPartner({ name: p.name, contact: p.contact ?? "", commissionPct: p.commissionPct != null ? String(p.commissionPct) : "" }); }}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete partner", message: "Delete this partner/guide?", danger: true, confirmLabel: "Delete" })) call(`/api/tour-partners/${p.id}`, {}, "DELETE"); }} aria-label="Delete partner">✕</button>
               </span>
             </div>
           )

@@ -151,7 +151,6 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
               <div className="row" style={{ gap: 6, marginTop: 10 }}>
                 <button className="btn btn--primary btn--sm" onClick={() => savePo(p.id)} disabled={!editPo.description.trim() || !editPo.amount}>Save</button>
                 <button className="btn btn--ghost btn--sm" onClick={() => setEditPoId(null)}>Cancel</button>
-                <button className="btn btn--danger btn--sm" style={{ marginLeft: "auto" }} onClick={async () => { if (await confirm({ title: "Delete purchase order", message: "Delete this PO?", danger: true, confirmLabel: "Delete" })) { if (await call(`/api/purchase-orders/${p.id}`, {}, "DELETE")) setEditPoId(null); } }}>Delete</button>
               </div>
             </div>
           ) : (
@@ -165,6 +164,7 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
                   {(["draft", "ordered", "received"] as PoStatus[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
                 <button className="btn btn--ghost btn--sm" onClick={() => startEditPo(p)}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete purchase order", message: "Delete this PO?", danger: true, confirmLabel: "Delete" })) call(`/api/purchase-orders/${p.id}`, {}, "DELETE"); }} aria-label="Delete purchase order">✕</button>
               </div>
             </div>
           )
