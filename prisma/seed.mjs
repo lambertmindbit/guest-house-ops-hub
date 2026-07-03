@@ -215,9 +215,35 @@ const TOURS = [
   { name: "Mawlynnong village day trip", price: 2500, partner: null },
 ];
 
+// Owner-managed contact list + a few referrals sent out, so the Partners and
+// Referrals screens have something to test.
+const PARTNERS = [
+  { name: "Pinewood Homestay", kind: "homestay", phone: "9863300001", locality: "Laitumkhrah", rating: 4, notes: "Takes overflow on weekends" },
+  { name: "Hotel Polo Orchid", kind: "hotel", phone: "9863300002", locality: "Police Bazar", rating: 5, notes: null },
+  { name: "Bah Rikynti (taxi)", kind: "driver", phone: "9863300003", locality: "Shillong", rating: 4, notes: "Airport & Cherrapunji runs" },
+  { name: "Meghalaya Holidays", kind: "agent", phone: "9863300004", locality: "Police Bazar", rating: 3, notes: "Sends group bookings" },
+];
+const REFERRALS = [
+  { guest: "Rohan Mehta", partner: "Pinewood Homestay", status: "booked", note: "We were full; sent for 2 nights" },
+  { guest: "The Iyer family", partner: "Hotel Polo Orchid", status: "referred", note: "Wanted 3 rooms" },
+  { guest: "Anita Rao", partner: "Meghalaya Holidays", status: "declined", note: "Preferred to book elsewhere" },
+];
+
 async function ensureBy(model, where, data) {
   const existing = await prisma[model].findFirst({ where });
   return existing ?? prisma[model].create({ data });
+}
+
+async function seedPartners(propertyId) {
+  for (const p of PARTNERS) await ensureBy("partner", { name: p.name, propertyId }, { ...p, propertyId });
+  for (const r of REFERRALS) {
+    const partner = r.partner ? await prisma.partner.findFirst({ where: { name: r.partner, propertyId } }) : null;
+    await ensureBy(
+      "outboundReferral",
+      { guestName: r.guest, propertyId },
+      { guestName: r.guest, partnerId: partner?.id ?? null, status: r.status, note: r.note, propertyId },
+    );
+  }
 }
 
 async function seedVendors(propertyId) {
@@ -252,6 +278,7 @@ async function main() {
   await seedInventory(property.id);
   await seedMaintenance(property.id);
   await seedTours(property.id);
+  await seedPartners(property.id);
 
   const [channels, roomTypes, rooms] = await Promise.all([
     prisma.channel.count(),
