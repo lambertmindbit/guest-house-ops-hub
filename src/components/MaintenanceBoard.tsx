@@ -22,6 +22,8 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
   const [asset, setAsset] = useState({ name: "", category: "", preventiveEveryDays: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [edit, setEdit] = useState({ title: "", priority: "medium" as Priority, assigneeStaffId: "", cost: "" });
+  const [editAssetId, setEditAssetId] = useState<string | null>(null);
+  const [editAsset, setEditAsset] = useState({ name: "", category: "", preventiveEveryDays: "" });
   const [error, setError] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
@@ -54,6 +56,16 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
     if (!edit.title.trim()) return;
     if (await call(`/api/maintenance/${id}`, { title: edit.title.trim(), priority: edit.priority, assigneeStaffId: edit.assigneeStaffId || null, cost: edit.cost ? Number(edit.cost) : null }, "PATCH")) {
       setEditId(null);
+    }
+  }
+  function startEditAsset(a: Asset) {
+    setEditAssetId(a.id);
+    setEditAsset({ name: a.name, category: a.category ?? "", preventiveEveryDays: a.preventiveEveryDays != null ? String(a.preventiveEveryDays) : "" });
+  }
+  async function saveEditAsset(id: string) {
+    if (!editAsset.name.trim()) return;
+    if (await call(`/api/assets/${id}`, { name: editAsset.name.trim(), category: editAsset.category.trim() || null, preventiveEveryDays: editAsset.preventiveEveryDays ? Number(editAsset.preventiveEveryDays) : null }, "PATCH")) {
+      setEditAssetId(null);
     }
   }
 
@@ -111,6 +123,7 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
                 <select className="select" style={{ width: 130 }} value={r.status} onChange={(e) => call(`/api/maintenance/${r.id}`, { status: e.target.value }, "PATCH")}>
                   {(["open", "in_progress", "done"] as Status[]).map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete request", message: "Delete this maintenance request?", danger: true, confirmLabel: "Delete" })) call(`/api/maintenance/${r.id}`, {}, "DELETE"); }} aria-label="Delete request">✕</button>
               </div>
             </div>
           )
@@ -129,18 +142,33 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
       </div>
       <div className="col" style={{ gap: 8 }}>
         {assets.map((a) => (
-          <div key={a.id} className="rowcard" style={a.due ? { borderColor: "var(--amber-border)", background: "var(--amber-bg)" } : undefined}>
-            <div className="rowcard__main">
-              <div className="rowcard__name">{a.name}{a.due && <span className="badge badge--warn" style={{ marginLeft: 8 }}>Service due</span>}</div>
-              <div className="rowcard__meta">
-                {[a.category, a.preventiveEveryDays ? `every ${a.preventiveEveryDays}d` : null, a.lastServicedAt ? `last ${a.lastServicedAt}` : "never serviced"].filter(Boolean).join(" · ")}
+          editAssetId === a.id ? (
+            <div key={a.id} className="card card--pad" style={{ padding: 12 }}>
+              <div className="form-grid" style={{ gap: 10 }}>
+                <input className="input" placeholder="Asset name" value={editAsset.name} onChange={(e) => setEditAsset({ ...editAsset, name: e.target.value })} />
+                <input className="input" placeholder="Category" value={editAsset.category} onChange={(e) => setEditAsset({ ...editAsset, category: e.target.value })} />
+                <input className="input" inputMode="numeric" placeholder="Service every N days" value={editAsset.preventiveEveryDays} onChange={(e) => setEditAsset({ ...editAsset, preventiveEveryDays: e.target.value.replace(/\D/g, "") })} />
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 10 }}>
+                <button className="btn btn--primary btn--sm" onClick={() => saveEditAsset(a.id)} disabled={!editAsset.name.trim()}>Save</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => setEditAssetId(null)}>Cancel</button>
               </div>
             </div>
-            <div className="row" style={{ gap: 6 }}>
-              <button className="btn btn--ghost btn--sm" onClick={() => call(`/api/assets/${a.id}`, { service: true }, "PATCH")}>Serviced today</button>
-              <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Remove asset", message: "Delete this asset?", danger: true, confirmLabel: "Delete" })) call(`/api/assets/${a.id}`, {}, "DELETE"); }} aria-label="Delete asset">✕</button>
+          ) : (
+            <div key={a.id} className="rowcard" style={a.due ? { borderColor: "var(--amber-border)", background: "var(--amber-bg)" } : undefined}>
+              <div className="rowcard__main">
+                <div className="rowcard__name">{a.name}{a.due && <span className="badge badge--warn" style={{ marginLeft: 8 }}>Service due</span>}</div>
+                <div className="rowcard__meta">
+                  {[a.category, a.preventiveEveryDays ? `every ${a.preventiveEveryDays}d` : null, a.lastServicedAt ? `last ${a.lastServicedAt}` : "never serviced"].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn btn--ghost btn--sm" onClick={() => call(`/api/assets/${a.id}`, { service: true }, "PATCH")}>Serviced today</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => startEditAsset(a)}>Edit</button>
+                <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Remove asset", message: "Delete this asset?", danger: true, confirmLabel: "Delete" })) call(`/api/assets/${a.id}`, {}, "DELETE"); }} aria-label="Delete asset">✕</button>
+              </div>
             </div>
-          </div>
+          )
         ))}
       </div>
     </div>

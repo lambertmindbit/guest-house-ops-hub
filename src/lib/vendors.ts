@@ -16,10 +16,13 @@ export async function listPurchaseOrders() {
 export async function createPO(data: { vendorId: string; description: string; amount: number; status?: PoStatus }) {
   return prisma.purchaseOrder.create({ data: { vendorId: data.vendorId, description: data.description, amount: data.amount, status: data.status ?? "draft" } });
 }
-export async function transitionPO(id: string, status: PoStatus) {
+export async function updatePO(id: string, patch: { description?: string; amount?: number; status?: PoStatus }) {
   const current = await prisma.purchaseOrder.findUnique({ where: { id } });
   if (!current) return null;
-  return prisma.purchaseOrder.update({ where: { id }, data: { status, receivedAt: status === "received" ? new Date() : null } });
+  const data: Record<string, unknown> = { ...patch };
+  // Keep receivedAt in step with status; don't reset the timestamp on unrelated edits.
+  if (patch.status !== undefined) data.receivedAt = patch.status === "received" ? current.receivedAt ?? new Date() : null;
+  return prisma.purchaseOrder.update({ where: { id }, data });
 }
 
 // ── Payments ─────────────────────────────────────────────────────────────
@@ -28,6 +31,16 @@ export async function listVendorPayments() {
 }
 export async function createVendorPayment(data: { vendorId: string; amount: number; mode?: PaymentMode | null; note?: string | null }) {
   return prisma.vendorPayment.create({ data: { vendorId: data.vendorId, amount: data.amount, mode: data.mode ?? null, note: data.note ?? null } });
+}
+export async function updateVendorPayment(id: string, patch: { amount?: number; note?: string | null }) {
+  const current = await prisma.vendorPayment.findUnique({ where: { id } });
+  if (!current) return null;
+  return prisma.vendorPayment.update({ where: { id }, data: patch });
+}
+export async function deleteVendorPayment(id: string) {
+  const current = await prisma.vendorPayment.findUnique({ where: { id } });
+  if (!current) return null;
+  return prisma.vendorPayment.delete({ where: { id } });
 }
 
 // ── Pure procurement summary (testable) ──────────────────────────────────────
