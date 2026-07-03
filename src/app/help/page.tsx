@@ -97,6 +97,17 @@ export default function HelpPage() {
         <Q q="Record a foreign guest's passport / visa (Form C)">Open the guest → the <b>Foreign-national details</b> section.</Q>
       </div>
 
+      {/* Team & facilities */}
+      <SectionLabel>Team &amp; facilities</SectionLabel>
+      <div className="card card--pad" style={{ marginBottom: 16 }}>
+        <div style={{ paddingTop: 2 }} />
+        <Q q="Manage your team"><Link href="/staff">Staff</Link> → add each person with a role and phone, plan <b>today&rsquo;s shifts</b> (the roster), and mark <b>attendance</b> (present / absent / leave).</Q>
+        <Q q="Log a repair or track equipment"><Link href="/maintenance">Maintenance</Link> → log what needs fixing (with priority, who&rsquo;s on it, and cost) and move it Open → In progress → Done. Keep an <b>asset register</b> (geyser, generator…) and it reminds you when a service is due.</Q>
+        <Q q="Track supplies"><Link href="/inventory">Inventory</Link> → add items with a low-stock level; tap <b>In</b> / <b>Out</b> to change the quantity. Anything below its level is flagged <b>Low</b>.</Q>
+        <Q q="Keep vendors, orders & payments"><Link href="/vendors">Vendors</Link> → a directory (with ratings), <b>purchase orders</b> (draft → ordered → received) and <b>vendor payments</b>.</Q>
+        <Q q="Edit or remove anything you added">Most lists — staff, vendors, inventory, maintenance, tours — have an <b>Edit</b> button on each row (change the details, then Save), and a delete (<b>✕</b> or <b>Delete</b>).</Q>
+      </div>
+
       {/* Key workflows */}
       <SectionLabel>Step-by-step workflows</SectionLabel>
 
