@@ -8,15 +8,16 @@ import { displayINR } from "@/lib/format";
 
 type TripStatus = "planned" | "done" | "cancelled";
 type Driver = { id: string; name: string; phone: string | null; vehicleNumber: string | null };
-type Trip = { id: string; driverName: string | null; pickup: string; dropoff: string; scheduledAt: string | null; status: TripStatus; fare: number | null };
+type Guest = { id: string; name: string };
+type Trip = { id: string; driverName: string | null; guestName: string | null; pickup: string; dropoff: string; scheduledAt: string | null; status: TripStatus; fare: number | null };
 
 const STATUS_LABEL: Record<TripStatus, string> = { planned: "Planned", done: "Done", cancelled: "Cancelled" };
 
-export function TransportBoard({ drivers, trips, doneFares }: { drivers: Driver[]; trips: Trip[]; doneFares: number }) {
+export function TransportBoard({ drivers, guests, trips, doneFares }: { drivers: Driver[]; guests: Guest[]; trips: Trip[]; doneFares: number }) {
   const router = useRouter();
   const { confirm } = useConfirm();
   const [nd, setNd] = useState({ name: "", phone: "", vehicleNumber: "" });
-  const [nt, setNt] = useState({ driverId: "", pickup: "", dropoff: "", scheduledAt: "", fare: "", status: "planned" as TripStatus });
+  const [nt, setNt] = useState({ driverId: "", guestId: "", pickup: "", dropoff: "", scheduledAt: "", fare: "", status: "planned" as TripStatus });
   const [error, setError] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
@@ -64,13 +65,16 @@ export function TransportBoard({ drivers, trips, doneFares }: { drivers: Driver[
           <select className="select" value={nt.driverId} onChange={(e) => setNt({ ...nt, driverId: e.target.value })}>
             <option value="">Driver…</option>{drivers.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
+          <select className="select" value={nt.guestId} onChange={(e) => setNt({ ...nt, guestId: e.target.value })}>
+            <option value="">Guest…</option>{guests.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
           <input className="input" type="date" value={nt.scheduledAt} onChange={(e) => setNt({ ...nt, scheduledAt: e.target.value })} />
           <input className="input" placeholder="Pickup" value={nt.pickup} onChange={(e) => setNt({ ...nt, pickup: e.target.value })} />
           <input className="input" placeholder="Drop-off" value={nt.dropoff} onChange={(e) => setNt({ ...nt, dropoff: e.target.value })} />
           <input className="input" inputMode="numeric" placeholder="Fare ₹" value={nt.fare} onChange={(e) => setNt({ ...nt, fare: e.target.value })} />
         </div>
         <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} disabled={!nt.pickup.trim() || !nt.dropoff.trim()}
-          onClick={async () => { if (await call("/api/trips", { driverId: nt.driverId || null, pickup: nt.pickup, dropoff: nt.dropoff, scheduledAt: nt.scheduledAt || null, fare: nt.fare ? Number(nt.fare) : null, status: nt.status })) setNt({ driverId: "", pickup: "", dropoff: "", scheduledAt: "", fare: "", status: "planned" }); }}>
+          onClick={async () => { if (await call("/api/trips", { driverId: nt.driverId || null, guestId: nt.guestId || null, pickup: nt.pickup, dropoff: nt.dropoff, scheduledAt: nt.scheduledAt || null, fare: nt.fare ? Number(nt.fare) : null, status: nt.status })) setNt({ driverId: "", guestId: "", pickup: "", dropoff: "", scheduledAt: "", fare: "", status: "planned" }); }}>
           Add trip
         </button>
       </div>
@@ -78,7 +82,7 @@ export function TransportBoard({ drivers, trips, doneFares }: { drivers: Driver[
         {trips.map((t) => (
           <div key={t.id} className="rowcard">
             <div className="rowcard__main">
-              <div className="rowcard__name">{t.pickup} → {t.dropoff}</div>
+              <div className="rowcard__name">{t.pickup} → {t.dropoff}{t.guestName ? <span style={{ fontWeight: 400 }}> — {t.guestName}</span> : null}</div>
               <div className="rowcard__meta">{[t.driverName, t.scheduledAt, t.fare != null ? displayINR(t.fare) : null].filter(Boolean).join(" · ") || "—"}</div>
             </div>
             <select className="select" style={{ width: 130 }} value={t.status} onChange={(e) => call(`/api/trips/${t.id}`, { status: e.target.value }, "PATCH")}>
