@@ -8,18 +8,19 @@ import { displayINR } from "@/lib/format";
 type TourStatus = "planned" | "confirmed" | "completed" | "cancelled";
 type Tour = { id: string; name: string; price: number | null; partnerId: string | null; partnerName: string | null; active: boolean };
 type Partner = { id: string; name: string; contact: string | null; commissionPct: number | null };
-type Booking = { id: string; tourName: string; partnerName: string | null; date: string | null; amount: number | null; status: TourStatus };
+type Guest = { id: string; name: string };
+type Booking = { id: string; tourName: string; partnerName: string | null; guestName: string | null; date: string | null; amount: number | null; status: TourStatus };
 type Summary = { bookings: number; revenue: number; commission: number };
 
 const STATUS_CLS: Record<TourStatus, string> = { planned: "badge--warn", confirmed: "badge--sent", completed: "badge--good", cancelled: "badge--neutral" };
 const STATUSES: TourStatus[] = ["planned", "confirmed", "completed", "cancelled"];
 
-export function ToursBoard({ tours, partners, bookings, summary }: { tours: Tour[]; partners: Partner[]; bookings: Booking[]; summary: Summary }) {
+export function ToursBoard({ tours, partners, guests, bookings, summary }: { tours: Tour[]; partners: Partner[]; guests: Guest[]; bookings: Booking[]; summary: Summary }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [np, setNp] = useState({ name: "", contact: "", commissionPct: "" });
   const [nt, setNt] = useState({ name: "", price: "", partnerId: "" });
-  const [nb, setNb] = useState({ tourId: "", date: "", amount: "" });
+  const [nb, setNb] = useState({ tourId: "", guestId: "", date: "", amount: "" });
   const [editTourId, setEditTourId] = useState<string | null>(null);
   const [editTour, setEditTour] = useState({ name: "", price: "", partnerId: "" });
   const [editPartnerId, setEditPartnerId] = useState<string | null>(null);
@@ -66,11 +67,18 @@ export function ToursBoard({ tours, partners, bookings, summary }: { tours: Tour
               {tours.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
+          <div>
+            <label className="field-label">Guest</label>
+            <select className="select" value={nb.guestId} onChange={(e) => setNb({ ...nb, guestId: e.target.value })}>
+              <option value="">Choose…</option>
+              {guests.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
           <div><label className="field-label">Date</label><input className="input" type="date" value={nb.date} onChange={(e) => setNb({ ...nb, date: e.target.value })} /></div>
           <div><label className="field-label">Amount</label><input className="input" inputMode="numeric" value={nb.amount} onChange={(e) => setNb({ ...nb, amount: e.target.value })} placeholder="₹" /></div>
         </div>
         <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} disabled={!nb.tourId}
-          onClick={async () => { if (await call("/api/tour-bookings", { tourId: nb.tourId, date: nb.date || null, amount: nb.amount ? Number(nb.amount) : null })) setNb({ tourId: "", date: "", amount: "" }); }}>
+          onClick={async () => { if (await call("/api/tour-bookings", { tourId: nb.tourId, guestId: nb.guestId || null, date: nb.date || null, amount: nb.amount ? Number(nb.amount) : null })) setNb({ tourId: "", guestId: "", date: "", amount: "" }); }}>
           Add booking
         </button>
       </div>
@@ -81,8 +89,8 @@ export function ToursBoard({ tours, partners, bookings, summary }: { tours: Tour
             <div key={b.id} className="card card--pad" style={{ padding: 14 }}>
               <div className="spread" style={{ gap: 10, flexWrap: "wrap" }}>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{b.tourName}{b.partnerName ? <span className="muted" style={{ fontWeight: 400 }}> · {b.partnerName}</span> : null}</div>
-                  <div className="muted" style={{ fontSize: "var(--fs-meta)" }}>{b.date ?? "No date"}{b.amount != null ? ` · ${displayINR(b.amount)}` : ""}</div>
+                  <div style={{ fontWeight: 600 }}>{b.tourName}{b.guestName ? <span style={{ fontWeight: 400 }}> — {b.guestName}</span> : null}</div>
+                  <div className="muted" style={{ fontSize: "var(--fs-meta)" }}>{[b.partnerName, b.date ?? "No date", b.amount != null ? displayINR(b.amount) : null].filter(Boolean).join(" · ")}</div>
                 </div>
                 <select className="select" style={{ width: 130 }} value={b.status} onChange={(e) => call(`/api/tour-bookings/${b.id}`, { status: e.target.value }, "PATCH")}>
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
