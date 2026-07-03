@@ -442,6 +442,49 @@ model TourBooking {
   @@map("tour_bookings")
 }
 
+enum ReferralOutcome {
+  referred
+  booked
+  declined
+}
+
+/// A place or contact the owner works with — another guesthouse, hotel, driver,
+/// or travel agent they can send guests to. Owner-curated contact list (distinct
+/// from the cross-tenant community network). Tenant-scoped.
+model Partner {
+  id         String             @id @default(cuid())
+  name       String
+  kind       String? // guesthouse | hotel | driver | agent | other
+  phone      String?
+  locality   String?
+  rating     Int? // 1–5
+  notes      String?
+  propertyId String?            @map("property_id")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  referrals  OutboundReferral[]
+
+  @@map("partners")
+}
+
+/// A guest the owner referred out to a partner — a one-sided log the owner keeps.
+/// No handshake with another property (unlike the community Referral). Tenant-scoped.
+model OutboundReferral {
+  id         String          @id @default(cuid())
+  partnerId  String?         @map("partner_id")
+  guestName  String          @map("guest_name")
+  guestPhone String?         @map("guest_phone")
+  checkIn    DateTime?       @map("check_in") @db.Date
+  checkOut   DateTime?       @map("check_out") @db.Date
+  status     ReferralOutcome @default(referred)
+  note       String?
+  propertyId String?         @map("property_id")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  partner    Partner?        @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@index([partnerId])
+  @@map("outbound_referrals")
+}
+
 // Audit trail for sensitive reads/writes (cancel, refund, blacklist, user &
 // consent changes). actorUserId is the acting login (nullable for system/env).
 model AuditEvent {

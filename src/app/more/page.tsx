@@ -45,6 +45,13 @@ export default async function MorePage() {
       ],
     },
     {
+      label: "Partners",
+      rows: [
+        { href: "/partners", icon: "search", title: "Partners", sub: "Places & people you work with" },
+        { href: "/referrals", icon: "layers", title: "Referrals", sub: "Guests you sent to a partner" },
+      ],
+    },
+    {
       label: "Business",
       rows: [
         { href: "/finance", icon: "wallet", title: "Finance", sub: "Revenue & balances" },
