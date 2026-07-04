@@ -22,7 +22,13 @@ export async function getAvailability(
     { night: Date; total: number; available: number }[]
   >`
     WITH type_rooms AS (
-      SELECT id FROM rooms WHERE room_type_id = ${roomTypeId} AND archived_at IS NULL
+      -- Defence in depth: pin to the room type's OWN property so a room whose
+      -- property_id disagrees with its type (or any future id reuse) can't leak
+      -- across tenants. This raw SQL is invisible to the Prisma tenant extension.
+      SELECT id FROM rooms
+       WHERE room_type_id = ${roomTypeId}
+         AND archived_at IS NULL
+         AND property_id IS NOT DISTINCT FROM (SELECT property_id FROM room_types WHERE id = ${roomTypeId})
     ),
     nights AS (
       SELECT generate_series(${from}::date, ${to}::date - 1, interval '1 day')::date AS night

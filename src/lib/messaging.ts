@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, unscopedPrisma } from "@/lib/prisma";
 import type { MessageChannel, MessageSource, MessageStatus } from "@prisma/client";
 import {
   bookingConfirmation, preArrivalDirections, paymentRequest, paymentReminder,
@@ -69,11 +69,9 @@ export async function logMessage(opts: LogMessageOpts) {
 // WhatsApp/SMS provider is wired into logMessage() it will actually send, with no
 // change here or at the call site. Returns null if the reservation is gone.
 export async function notifyBookingConfirmation(reservationId: string) {
-  const [r, property] = await Promise.all([
-    prisma.reservation.findUnique({ where: { id: reservationId }, include: { guest: true, room: true } }),
-    prisma.propertySettings.findFirst(),
-  ]);
+  const r = await unscopedPrisma.reservation.findUnique({ where: { id: reservationId }, include: { guest: true, room: true } });
   if (!r) return null;
+  const property = await settingsFor(r.propertyId);
 
   const nights = Math.round((r.checkOut.getTime() - r.checkIn.getTime()) / 86_400_000);
   const { body } = bookingConfirmation({
@@ -93,6 +91,7 @@ export async function notifyBookingConfirmation(reservationId: string) {
     template: "bookingConfirmation",
     guestId: r.guestId,
     reservationId: r.id,
+    propertyId: r.propertyId ?? undefined,
   });
 }
 
@@ -100,9 +99,23 @@ export async function notifyBookingConfirmation(reservationId: string) {
 // Scheduled/event notifications, enqueued via logMessage (LogAdapter today).
 // Each is idempotent: a (reservation, template) pair is only ever enqueued once,
 // so re-running the daily cron never double-messages a guest.
+//
+// Multi-property: each reservation carries its own propertyId, so the triggers
+// read reservations/settings via the UNSCOPED client and derive the property from
+// the row. That lets the daily cron process EVERY property (not just the sole
+// one) and keeps the property name/UPI on each message correct.
 
-async function alreadySent(reservationId: string, template: TemplateName): Promise<boolean> {
-  return !!(await prisma.outboundMessage.findFirst({ where: { reservationId, template }, select: { id: true } }));
+// The property's settings, by id (PropertySettings is the tenant root — not
+// auto-scoped — so we look it up explicitly rather than findFirst()).
+async function settingsFor(propertyId: string | null) {
+  return propertyId ? unscopedPrisma.propertySettings.findUnique({ where: { id: propertyId } }) : null;
+}
+
+async function alreadySent(reservationId: string, template: TemplateName, propertyId: string | null): Promise<boolean> {
+  return !!(await unscopedPrisma.outboundMessage.findFirst({
+    where: { reservationId, template, ...(propertyId ? { propertyId } : {}) },
+    select: { id: true },
+  }));
 }
 
 function balanceOf(r: { grossAmount: unknown; payments: { amount: unknown }[] }): number {
@@ -113,12 +126,10 @@ function balanceOf(r: { grossAmount: unknown; payments: { amount: unknown }[] })
 
 // Pre-arrival directions (fired for arrivals the day before check-in).
 export async function notifyPreArrival(reservationId: string) {
-  if (await alreadySent(reservationId, "preArrivalDirections")) return null;
-  const [r, property] = await Promise.all([
-    prisma.reservation.findUnique({ where: { id: reservationId }, include: { guest: true } }),
-    prisma.propertySettings.findFirst(),
-  ]);
+  const r = await unscopedPrisma.reservation.findUnique({ where: { id: reservationId }, include: { guest: true } });
   if (!r) return null;
+  if (await alreadySent(reservationId, "preArrivalDirections", r.propertyId)) return null;
+  const property = await settingsFor(r.propertyId);
   const { body } = preArrivalDirections({
     guestName: r.guest.name,
     propertyName: property?.name ?? "our guest house",
@@ -126,22 +137,20 @@ export async function notifyPreArrival(reservationId: string) {
     checkInTime: property?.checkInTime ?? "14:00",
     address: property?.address ?? null,
   });
-  return logMessage({ source: "system", channel: "whatsapp", to: r.guest.phone, body, template: "preArrivalDirections", guestId: r.guestId, reservationId: r.id });
+  return logMessage({ source: "system", channel: "whatsapp", to: r.guest.phone, body, template: "preArrivalDirections", guestId: r.guestId, reservationId: r.id, propertyId: r.propertyId ?? undefined });
 }
 
 // Payment request / reminder. Both no-op (return null) when nothing is due.
 async function notifyPayment(reservationId: string, template: "paymentRequest" | "paymentReminder") {
-  if (await alreadySent(reservationId, template)) return null;
-  const [r, property] = await Promise.all([
-    prisma.reservation.findUnique({ where: { id: reservationId }, include: { guest: true, payments: { select: { amount: true } } } }),
-    prisma.propertySettings.findFirst(),
-  ]);
+  const r = await unscopedPrisma.reservation.findUnique({ where: { id: reservationId }, include: { guest: true, payments: { select: { amount: true } } } });
   if (!r) return null;
+  if (await alreadySent(reservationId, template, r.propertyId)) return null;
   const balance = balanceOf(r);
   if (balance <= 0) return null;
+  const property = await settingsFor(r.propertyId);
   const data = { guestName: r.guest.name, propertyName: property?.name ?? "our guest house", amountDue: displayINR(balance), upiVpa: property?.upiVpa ?? null };
   const { body } = template === "paymentRequest" ? paymentRequest(data) : paymentReminder(data);
-  return logMessage({ source: "system", channel: "whatsapp", to: r.guest.phone, body, template, guestId: r.guestId, reservationId: r.id });
+  return logMessage({ source: "system", channel: "whatsapp", to: r.guest.phone, body, template, guestId: r.guestId, reservationId: r.id, propertyId: r.propertyId ?? undefined });
 }
 
 export const notifyPaymentRequest = (id: string) => notifyPayment(id, "paymentRequest");
@@ -155,11 +164,13 @@ export async function runMessagingTriggers() {
   const todayDate = parseDateOnly(today);
   const in3 = parseDateOnly(addDays(today, 3));
 
-  const arrivals = await prisma.reservation.findMany({ where: { status: "confirmed", checkIn: tomorrow }, select: { id: true } });
+  // Unscoped scans so the daily cron covers EVERY property; each notify derives
+  // its own property from the reservation row.
+  const arrivals = await unscopedPrisma.reservation.findMany({ where: { status: "confirmed", checkIn: tomorrow }, select: { id: true } });
   let preArrival = 0;
   for (const r of arrivals) if (await notifyPreArrival(r.id)) preArrival += 1;
 
-  const upcoming = await prisma.reservation.findMany({ where: { status: "confirmed", checkIn: { gte: todayDate, lte: in3 } }, select: { id: true } });
+  const upcoming = await unscopedPrisma.reservation.findMany({ where: { status: "confirmed", checkIn: { gte: todayDate, lte: in3 } }, select: { id: true } });
   let paymentReminders = 0;
   for (const r of upcoming) if (await notifyPaymentReminder(r.id)) paymentReminders += 1;
 
