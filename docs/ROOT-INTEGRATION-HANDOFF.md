@@ -1,5 +1,13 @@
 # ROOT Integration Handoff — for Claude Code
 
+> **⚠ UPDATE 2026-07-04 — one scope clause was consciously reversed.** The §3 line
+> "the conversational LLM agent is a *separate* ROOT service; do NOT add an LLM
+> SDK here" no longer holds: the agent is being brought **into this monorepo** as
+> a co-located Python ADK sidecar (the Next.js app still ships no LLM SDK). See
+> `docs/AGENT-GENUI-PLAN.md` for the decision and rationale. Every other sacred
+> rule in §2 stands unchanged. The `/api/agent/*` seam this handoff produced
+> remains the tool contract.
+
 > **Place this file at `docs/ROOT-INTEGRATION-HANDOFF.md` in the repo.** The
 > kickoff prompt references it by that path. It is the single source of truth
 > for this body of work. Read it fully before planning anything.

@@ -1,6 +1,12 @@
 # ROOT ⇄ OTA Integration Plan — wiring the ADK agents to the PMS
 
-**Status:** approved plan, implementation not started
+> **⚠ UPDATE 2026-07-04 — direction changed.** P1 (the `/api/agent/*` seam) shipped
+> and stands. P2+ assumed the agent stays a *separate* service; the maintainer has
+> since chosen to bring the agent **into this monorepo** as an ADK Python sidecar.
+> See `docs/AGENT-GENUI-PLAN.md` — that plan now governs the agent build; the tool
+> contracts below are still exactly what its tools call.
+
+**Status:** P1 shipped; P2+ superseded by AGENT-GENUI-PLAN.md
 **Date:** 2026-07-04
 **Companion docs:** `docs/ROOT-INTEGRATION-HANDOFF.md` (the architecture contract — already fully implemented on the OTA side), `docs/ORG-DESIGN.md`
 **ROOT code reference:** `/Tourism Agent` drop (partial extract of the `whatsapp_api` repo)
