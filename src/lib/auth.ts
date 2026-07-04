@@ -7,7 +7,10 @@
 import type { Role } from "@/lib/authz";
 
 export const SESSION_COOKIE = "ota_session";
-const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// 7 days. The Node layer (getSession) re-checks the user against the DB on every
+// request, so a disabled/role-changed account is cut off immediately regardless;
+// this only bounds the window for the coarse edge-only gate (which can't hit the DB).
+const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
