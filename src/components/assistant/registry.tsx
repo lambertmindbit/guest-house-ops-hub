@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { displayINR } from "@/lib/format";
 import type { UIComponent } from "@/lib/assistant/types";
 
@@ -18,6 +19,8 @@ export function RenderComponent({ component, onAction, disabled }: { component: 
       return <QuoteCard c={component} onAction={onAction} disabled={disabled} />;
     case "confirm_booking":
       return <ConfirmCard c={component} onAction={onAction} disabled={disabled} />;
+    case "otp":
+      return <OtpCard c={component} onAction={onAction} disabled={disabled} />;
     case "availability":
       return <AvailabilityCard c={component} />;
   }
@@ -64,6 +67,9 @@ function ConfirmCard({ c, onAction, disabled }: { c: Extract<UIComponent, { type
     <div className="card card--pad" style={{ marginTop: 8, maxWidth: 360, borderColor: "var(--accent-border, var(--border))" }}>
       <div className="eyebrow eyebrow--accent">Confirm booking</div>
       <div style={{ fontWeight: 600, marginTop: 4 }}>{b.roomLabel} <span className="muted" style={{ fontWeight: 400 }}>· {b.roomTypeName}</span></div>
+      {(b.guestName || b.guestPhone) && (
+        <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{[b.guestName, b.guestPhone].filter(Boolean).join(" · ")}</div>
+      )}
       <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{b.checkIn} → {b.checkOut} · {b.nights} night{b.nights === 1 ? "" : "s"}</div>
       <div className="spread" style={{ marginTop: 8, alignItems: "baseline" }}>
         <span className="muted" style={{ fontSize: "var(--fs-small)" }}>Total</span>
@@ -72,6 +78,27 @@ function ConfirmCard({ c, onAction, disabled }: { c: Extract<UIComponent, { type
       <div className="row" style={{ gap: 6, marginTop: 12 }}>
         <button className="btn btn--primary btn--sm" style={{ flex: 1 }} disabled={disabled} onClick={() => onAction(`/confirm ${b.roomId} ${b.checkIn} ${b.checkOut}`)}>Confirm</button>
         <button className="btn btn--ghost btn--sm" disabled={disabled} onClick={() => onAction("cancel")}>Not now</button>
+      </div>
+    </div>
+  );
+}
+
+function OtpCard({ c, onAction, disabled }: { c: Extract<UIComponent, { type: "otp" }>; onAction: Action; disabled: boolean }) {
+  const [code, setCode] = useState("");
+  const submit = () => { if (code.trim()) onAction(`/otp ${code.trim()}`); };
+  return (
+    <div className="card card--pad" style={{ marginTop: 8, maxWidth: 340 }}>
+      <div className="eyebrow eyebrow--accent">Verify</div>
+      <div style={{ fontSize: "var(--fs-small)", marginTop: 4 }}>{c.data.note}</div>
+      {c.data.demoCode && (
+        <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 4 }}>Demo code: <b className="num">{c.data.demoCode}</b> (normally sent by WhatsApp)</div>
+      )}
+      <div className="row" style={{ gap: 6, marginTop: 10 }}>
+        <input className="input" inputMode="numeric" placeholder="Enter code" value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          disabled={disabled} style={{ flex: 1 }} aria-label="Verification code" />
+        <button className="btn btn--primary btn--sm" onClick={submit} disabled={disabled || !code.trim()}>Verify</button>
       </div>
     </div>
   );

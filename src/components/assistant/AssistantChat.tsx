@@ -20,6 +20,9 @@ export function AssistantChat() {
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  // One id for the whole chat session so the agent keeps conversation memory
+  // across turns (needed for the booking flow: gather details → confirm → OTP).
+  const sessionRef = useRef<string>(typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +40,7 @@ export function AssistantChat() {
       const res = await fetch("/api/assistant/message", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, sessionId: sessionRef.current }),
       });
       if (!res.ok || !res.body) throw new Error("no stream");
 

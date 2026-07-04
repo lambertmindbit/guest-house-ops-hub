@@ -30,6 +30,15 @@ export type ConfirmCardData = {
   checkOut: string;
   nights: number;
   total: number;
+  guestName?: string;
+  guestPhone?: string;
+};
+
+// A demo OTP challenge (Phase 3). Real WhatsApp delivery is the flagged BSP
+// follow-up; in demo mode the code is echoed by the agent and typed back here.
+export type OtpCardData = {
+  note: string;
+  demoCode?: string; // shown only in demo mode
 };
 
 export type AvailabilityNight = { date: string; total: number; available: number };
@@ -44,6 +53,7 @@ export type UIComponent =
   | { type: "rooms"; data: RoomCardData[]; checkIn: string; checkOut: string }
   | { type: "quote"; data: QuoteCardData }
   | { type: "confirm_booking"; data: ConfirmCardData }
+  | { type: "otp"; data: OtpCardData }
   | { type: "availability"; data: AvailabilityCardData };
 
 // The streaming wire protocol: the route emits one JSON object per line (NDJSON).
