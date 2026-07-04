@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { icalTokenForRoom } from "@/lib/ical-token";
 import { CopyButton } from "@/components/CopyButton";
 import { ImportFeeds } from "@/components/ImportFeeds";
 import { SubHeader } from "@/components/settings/SubHeader";
@@ -42,7 +43,7 @@ export default async function FeedsPage() {
         ) : (
           <div className="col" style={{ gap: 12, marginTop: 16 }}>
             {rooms.map((room) => {
-              const url = `${origin}/api/ical/${token}/${room.id}.ics`;
+              const url = `${origin}/api/ical/${icalTokenForRoom(room.id)}/${room.id}.ics`;
               return (
                 <div key={room.id} className="card" style={{ padding: 14 }}>
                   <div style={{ fontSize: "var(--fs-body)", fontWeight: 600, marginBottom: 8 }}>

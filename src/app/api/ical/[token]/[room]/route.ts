@@ -1,18 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { buildIcsFeed, type IcalEvent } from "@/lib/ical";
+import { icalTokenValid } from "@/lib/ical-token";
 import { todayDateOnly, parseDateOnly } from "@/lib/dates";
 
 // Public, token-gated feed (OTAs fetch it without our login cookie). The token
-// in the path is the only secret, so compare it in constant time and 404 on
-// any mismatch to avoid confirming whether a room exists.
-function validToken(token: string): boolean {
-  const expected = process.env.ICAL_FEED_TOKEN ?? "";
-  if (!expected || token.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < token.length; i++) diff |= token.charCodeAt(i) ^ expected.charCodeAt(i);
-  return diff === 0;
-}
-
+// is PER ROOM (derived from the room id + the secret), so a leaked link exposes
+// only that one room. Constant-time compare; 404 on any mismatch so we never
+// confirm whether a room exists.
 const notFound = () => new Response("Not found", { status: 404 });
 
 export async function GET(
@@ -20,9 +14,9 @@ export async function GET(
   { params }: { params: Promise<{ token: string; room: string }> },
 ) {
   const { token, room } = await params;
-  if (!validToken(token)) return notFound();
-
   const roomId = room.replace(/\.ics$/i, "");
+  if (!icalTokenValid(roomId, token)) return notFound();
+
   const roomRow = await prisma.room.findUnique({
     where: { id: roomId },
     include: { roomType: true },
