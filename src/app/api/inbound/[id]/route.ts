@@ -22,6 +22,13 @@ export async function PATCH(
   const existing = await prisma.inboundBooking.findUnique({ where: { id } });
   if (!existing) return fail("inbound booking not found", 404);
 
+  // Don't link to a reservation that doesn't exist (or isn't this property's) —
+  // the tenant extension scopes this lookup.
+  if (parsed.data.reservationId) {
+    const res = await prisma.reservation.findUnique({ where: { id: parsed.data.reservationId }, select: { id: true } });
+    if (!res) return fail("That booking no longer exists.", 422);
+  }
+
   const updated = await prisma.inboundBooking.update({
     where: { id },
     data: { status: parsed.data.status, reservationId: parsed.data.reservationId },

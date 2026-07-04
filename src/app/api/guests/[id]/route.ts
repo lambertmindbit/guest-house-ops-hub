@@ -10,7 +10,7 @@ const optDate = dateOnly.nullable().optional();
 const updateSchema = z
   .object({
     name: z.string().trim().min(1).optional(),
-    email: z.string().nullable().optional(),
+    email: z.string().email().nullable().optional(),
     idNumber: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     blocked: z.boolean().optional(),

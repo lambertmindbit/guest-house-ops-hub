@@ -19,6 +19,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const reservation = await prisma.reservation.findUnique({ where: { id } });
   if (!reservation) return fail("reservation not found", 404);
 
+  // You can't refund more than was collected (net of refunds already on file).
+  const [payments, refunds] = await Promise.all([
+    prisma.payment.findMany({ where: { reservationId: id }, select: { amount: true } }),
+    prisma.refund.findMany({ where: { reservationId: id, status: { not: "rejected" } }, select: { amount: true } }),
+  ]);
+  const collected = payments.reduce((s, p) => s + Number(p.amount), 0);
+  const alreadyRefunded = refunds.reduce((s, r) => s + Number(r.amount), 0);
+  const refundable = collected - alreadyRefunded;
+  if (parsed.data.amount > refundable) {
+    return fail(`Refund exceeds what's collected. At most ₹${Math.round(refundable).toLocaleString("en-IN")} can be refunded.`, 422);
+  }
+
   const refund = await prisma.refund.create({
     data: { reservationId: id, amount: parsed.data.amount, reason: parsed.data.reason ?? null },
   });
