@@ -1,0 +1,86 @@
+"""Typed async client for the PMS agent seam (/api/agent/*).
+
+This is the ONLY file that knows the OTA app's URLs. Every tool calls the PMS
+through here, so the agent holds no booking state of its own and the GiST
+no-double-booking guarantee governs every write (Phase 3). Read endpoints used in
+Phase 2: rooms catalog, per-room availability, price quote.
+
+Config comes from the environment (see .env.example):
+  OTA_BASE_URL     e.g. https://guest-house-ops-hub.vercel.app
+  OTA_AGENT_TOKEN  the same secret as the OTA app's AGENT_TOKEN
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import httpx
+
+
+class OtaError(Exception):
+    """Raised when the seam returns a non-2xx (except 409, surfaced explicitly)."""
+
+
+class RoomJustTaken(Exception):
+    """POST /api/agent/reservations returned 409 — the room was booked first."""
+
+
+class OtaClient:
+    def __init__(self, base_url: str | None = None, token: str | None = None, timeout: float = 15.0) -> None:
+        self.base_url = (base_url or os.environ["OTA_BASE_URL"]).rstrip("/")
+        self.token = token or os.environ["OTA_AGENT_TOKEN"]
+        self._timeout = timeout
+
+    def _headers(self) -> dict[str, str]:
+        # Mirror src/lib/agent-auth.ts: x-agent-token (Authorization Bearer also works).
+        return {"x-agent-token": self.token}
+
+    async def _get(self, path: str, params: dict[str, Any]) -> Any:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            res = await client.get(f"{self.base_url}{path}", params=params, headers=self._headers())
+        if res.status_code == 401:
+            raise OtaError("Unauthorized — OTA_AGENT_TOKEN does not match the OTA app.")
+        if res.status_code >= 400:
+            raise OtaError(f"GET {path} -> {res.status_code}: {res.text[:200]}")
+        return res.json().get("data")
+
+    async def _post(self, path: str, body: dict[str, Any]) -> Any:
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            res = await client.post(f"{self.base_url}{path}", json=body, headers=self._headers())
+        if res.status_code == 409:
+            raise RoomJustTaken()
+        if res.status_code == 401:
+            raise OtaError("Unauthorized — OTA_AGENT_TOKEN does not match the OTA app.")
+        if res.status_code >= 400:
+            raise OtaError(f"POST {path} -> {res.status_code}: {res.text[:200]}")
+        return res.json().get("data")
+
+    # ── Read tools (Phase 2) ────────────────────────────────────────────────
+    async def rooms(self) -> list[dict[str, Any]]:
+        """GET /api/agent/rooms — catalog: id, label, roomTypeId, roomTypeName, maxOccupancy, baseRate."""
+        return await self._get("/api/agent/rooms", {})
+
+    async def room_availability(self, check_in: str, check_out: str, room_ids: list[str] | None = None) -> list[dict[str, Any]]:
+        """GET /api/agent/rooms/availability — per-room free/busy for [check_in, check_out)."""
+        params: dict[str, Any] = {"checkIn": check_in, "checkOut": check_out}
+        if room_ids:
+            params["roomIds"] = ",".join(room_ids)
+        return await self._get("/api/agent/rooms/availability", params)
+
+    async def quote(self, room_id: str, check_in: str, check_out: str) -> dict[str, Any]:
+        """GET /api/agent/quote — advisory price for a room + date range."""
+        return await self._get("/api/agent/quote", {"roomId": room_id, "checkIn": check_in, "checkOut": check_out})
+
+    # ── Write / HITL tools (Phase 3+; here for the ota_client to be complete) ─
+    async def create_reservation(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/agent/reservations — the guarded booking path (GiST 409 → RoomJustTaken)."""
+        return await self._post("/api/agent/reservations", body)
+
+    async def create_escalation(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/agent/escalations — file a HITL ticket for the owner."""
+        return await self._post("/api/agent/escalations", body)
+
+    async def log_message(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/agent/messages — record an outbound message in the CRM thread."""
+        return await self._post("/api/agent/messages", body)
