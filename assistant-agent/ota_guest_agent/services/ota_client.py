@@ -30,6 +30,9 @@ class OtaClient:
     def __init__(self, base_url: str | None = None, token: str | None = None, timeout: float = 15.0) -> None:
         self.base_url = (base_url or os.environ["OTA_BASE_URL"]).rstrip("/")
         self.token = token or os.environ["OTA_AGENT_TOKEN"]
+        # The "Assistant (ROOT)" channel a booking is attributed to. Required for
+        # create_reservation; read here so the tool doesn't have to know it.
+        self.channel_id = os.environ.get("OTA_CHANNEL_ID", "")
         self._timeout = timeout
 
     def _headers(self) -> dict[str, str]:

@@ -34,11 +34,14 @@ load_dotenv()
 
 from fastapi import FastAPI, Header, HTTPException, Request  # noqa: E402
 from fastapi.responses import StreamingResponse  # noqa: E402
+from google.adk.events import Event, EventActions  # noqa: E402
 from google.adk.runners import Runner  # noqa: E402
 from google.adk.sessions import InMemorySessionService  # noqa: E402
 from google.genai import types  # noqa: E402
 
 from .core_agents.guest_agent import guest_agent  # noqa: E402
+from .services.ota_client import OtaClient, OtaError, RoomJustTaken  # noqa: E402
+from .services import ui  # noqa: E402
 
 APP_NAME = "ota_guest_agent"
 USER_ID = "guest"
@@ -46,10 +49,79 @@ USER_ID = "guest"
 api = FastAPI(title="OTA Guest Assistant")
 _session_service = InMemorySessionService()
 _runner = Runner(app_name=APP_NAME, agent=guest_agent, session_service=_session_service)
+_ota = OtaClient()
 
 
 def _line(obj: dict) -> str:
     return json.dumps(obj, ensure_ascii=False) + "\n"
+
+
+async def _set_state(session, delta: dict) -> None:
+    # The reliable way to update session state outside a tool.
+    await _session_service.append_event(session, Event(author="system", actions=EventActions(state_delta=delta)))
+
+
+async def _handle_slash(message: str, session_id: str):
+    """Deterministic handling of the /confirm and /otp card actions — NO LLM call.
+    Returns an async generator of NDJSON lines, or None if not one of these
+    commands (then the LLM agent runs normally). propose_booking (LLM) has already
+    stored the pending booking in session state; here we only send the demo code
+    and, on a correct code, create the booking through the guarded seam."""
+    msg = message.strip()
+    if not (msg.startswith("/confirm") or msg.startswith("/otp")):
+        return None
+
+    session = await _session_service.get_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
+    state = dict(session.state) if session else {}
+    pending = state.get("_pending")
+
+    import random
+
+    async def gen():
+        if session is None or not pending:
+            yield _line({"type": "text", "delta": "I don't have a booking ready to confirm — let's start again with your dates."})
+            yield _line({"type": "done"})
+            return
+
+        if msg.startswith("/confirm"):
+            code = f"{random.randint(0, 9999):04d}"
+            await _set_state(session, {"_otp": code})
+            yield _line({"type": "ui", "component": ui.otp_component(f"Enter the code sent to {pending['guestPhone']} to confirm.", demo_code=code)})
+            yield _line({"type": "text", "delta": "Almost done — enter the code above to confirm your booking."})
+            yield _line({"type": "done"})
+            return
+
+        # /otp <code>
+        parts = msg.split(maxsplit=1)
+        code = parts[1].strip() if len(parts) > 1 else ""
+        if code != str(state.get("_otp")):
+            yield _line({"type": "text", "delta": "That code doesn't match — please try again."})
+            yield _line({"type": "done"})
+            return
+
+        body = {
+            "roomId": pending["roomId"], "channelId": _ota.channel_id,
+            "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
+            "guest": {"name": pending["guestName"], "phone": pending["guestPhone"]},
+            "grossAmount": pending["total"],
+        }
+        try:
+            reservation = await _ota.create_reservation(body)
+        except RoomJustTaken:
+            await _set_state(session, {"_pending": None, "_otp": None})
+            yield _line({"type": "text", "delta": "Sorry — that room was just booked by someone else. Want me to check other options?"})
+            yield _line({"type": "done"})
+            return
+        except OtaError as exc:
+            yield _line({"type": "text", "delta": f"I couldn't complete the booking ({exc})."})
+            yield _line({"type": "done"})
+            return
+
+        await _set_state(session, {"_pending": None, "_otp": None})
+        yield _line({"type": "text", "delta": f"✅ Booked! Reference #{reservation.get('id')} — {pending['roomLabel']}, {pending['checkIn']} → {pending['checkOut']} for {pending['guestName']}."})
+        yield _line({"type": "done"})
+
+    return gen()
 
 
 async def _run(message: str, session_id: str) -> AsyncIterator[str]:
@@ -94,7 +166,11 @@ async def chat(request: Request, authorization: str | None = Header(default=None
         raise HTTPException(status_code=422, detail="message is required")
     session_id = (body or {}).get("sessionId") or f"web-{uuid.uuid4().hex}"
 
-    return StreamingResponse(_run(message, session_id), media_type="application/x-ndjson")
+    # Button actions (/confirm, /otp) are handled deterministically without an LLM
+    # call; everything else goes to the agent.
+    handled = await _handle_slash(message, session_id)
+    stream = handled if handled is not None else _run(message, session_id)
+    return StreamingResponse(stream, media_type="application/x-ndjson")
 
 
 @api.get("/healthz")

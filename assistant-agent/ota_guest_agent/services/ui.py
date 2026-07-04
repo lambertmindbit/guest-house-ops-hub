@@ -46,7 +46,10 @@ def quote_component(room: dict[str, Any], check_in: str, check_out: str, nights:
     }
 
 
-def confirm_component(room: dict[str, Any], check_in: str, check_out: str, nights: int, total: float) -> dict[str, Any]:
+def confirm_component(
+    room: dict[str, Any], check_in: str, check_out: str, nights: int, total: float,
+    guest_name: str | None = None, guest_phone: str | None = None,
+) -> dict[str, Any]:
     return {
         "type": "confirm_booking",
         "data": {
@@ -57,5 +60,14 @@ def confirm_component(room: dict[str, Any], check_in: str, check_out: str, night
             "checkOut": check_out,
             "nights": nights,
             "total": total,
+            "guestName": guest_name,
+            "guestPhone": guest_phone,
         },
     }
+
+
+def otp_component(note: str, demo_code: str | None = None) -> dict[str, Any]:
+    data: dict[str, Any] = {"note": note}
+    if demo_code is not None:
+        data["demoCode"] = demo_code
+    return {"type": "otp", "data": data}
