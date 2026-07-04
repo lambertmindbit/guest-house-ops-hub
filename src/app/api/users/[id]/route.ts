@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { getSession } from "@/lib/session";
+import { isLastActiveOwner } from "@/lib/users";
 import { hashPassword } from "@/lib/password";
 import { recordAudit } from "@/lib/audit";
 
@@ -23,6 +24,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return fail("user not found", 404);
 
+  // Block a change that would remove the last active owner.
+  const losesOwner = (role !== undefined && role !== "owner") || active === false;
+  if (losesOwner && (await isLastActiveOwner(id))) {
+    return fail("This is the last owner — add another owner before changing this account.", 409);
+  }
+
   const user = await prisma.user.update({
     where: { id },
     data: {
@@ -41,6 +48,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (session?.sub === id) return fail("You can't delete your own account.", 400);
   const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return fail("user not found", 404);
+  if (await isLastActiveOwner(id)) return fail("This is the last owner — add another owner before removing this account.", 409);
   await prisma.user.delete({ where: { id } });
   await recordAudit("user.delete", "user", id, `Removed ${existing.email}`).catch(() => {});
   return ok({ deleted: true });
