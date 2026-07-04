@@ -2,7 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
-import { updateReservation, OverlapError } from "@/lib/reservations";
+import { updateReservation, OverlapError, StaleWriteError } from "@/lib/reservations";
 
 const include = {
   guest: true,
@@ -32,6 +32,8 @@ const updateSchema = z
     grossAmount: z.number().nonnegative().nullable().optional(),
     advanceRequired: z.number().nonnegative().nullable().optional(),
     otaRef: z.string().nullable().optional(),
+    // Optimistic-concurrency token the edit form round-trips (see L-4).
+    expectedVersion: z.number().int().optional(),
   })
   .refine((d) => !(d.checkIn && d.checkOut) || d.checkOut > d.checkIn, {
     path: ["checkOut"],
@@ -70,11 +72,12 @@ export async function PATCH(
       grossAmount: input.grossAmount,
       advanceRequired: input.advanceRequired,
       otaRef: input.otaRef,
-    });
+    }, input.expectedVersion);
     const full = await prisma.reservation.findUnique({ where: { id }, include });
     return ok(full);
   } catch (error) {
     if (error instanceof OverlapError) return fail(error.message, 409);
+    if (error instanceof StaleWriteError) return fail(error.message, 409);
     throw error;
   }
 }

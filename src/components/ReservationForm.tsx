@@ -11,6 +11,7 @@ export type ChannelOption = { id: string; name: string };
 
 export type ReservationFormValues = {
   id?: string;
+  version?: number;
   roomId: string;
   channelId: string;
   checkIn: string;
@@ -199,7 +200,7 @@ export function ReservationForm({ mode, rooms, channels, initial, idPolicy = "bl
           : await fetch(`/api/reservations/${values.id}`, {
               method: "PATCH",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify(common),
+              body: JSON.stringify({ ...common, expectedVersion: values.version }),
             });
 
       const json = await res.json();
