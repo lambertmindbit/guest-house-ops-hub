@@ -22,8 +22,12 @@ _client = OtaClient()
 
 
 def _push_ui(tool_context: ToolContext, component: dict[str, Any]) -> None:
-    bucket = tool_context.state.setdefault("_ui", [])
+    # Re-ASSIGN the whole list (not an in-place append): ADK records state changes
+    # as deltas keyed by __setitem__, so an in-place mutation of a nested list is
+    # not tracked and would never reach the session the server drains.
+    bucket = list(tool_context.state.get("_ui", []))
     bucket.append(component)
+    tool_context.state["_ui"] = bucket
 
 
 async def check_availability(tool_context: ToolContext, check_in: str, check_out: str) -> dict[str, Any]:
