@@ -6,3 +6,4 @@ httpx>=0.27
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-dotenv>=1.0
+aiohttp>=3.10          # google-genai needs ClientConnectorDNSError (added in 3.10)
