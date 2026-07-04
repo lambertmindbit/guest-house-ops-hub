@@ -10,14 +10,24 @@ export async function createItem(data: { name: string; unit?: string | null; min
   });
 }
 
+export type MovementResult =
+  | { ok: true; item: Awaited<ReturnType<typeof createItem>> }
+  | { ok: false; reason: "not_found" }
+  | { ok: false; reason: "insufficient"; have: number };
+
 // Record a stock movement (+in / -out) and adjust the derived quantity in one
-// transaction. Quantity never goes below 0.
-export async function applyMovement(itemId: string, delta: number, reason?: string | null) {
+// transaction. Uses an ATOMIC increment (not read-modify-write) so concurrent
+// movements can't lose each other's updates. An out-movement that would push
+// stock negative is REJECTED rather than silently clamped, which kept the stored
+// quantity honest with sum(movements).
+export async function applyMovement(itemId: string, delta: number, reason?: string | null): Promise<MovementResult> {
   return prisma.$transaction(async (tx) => {
     const item = await tx.inventoryItem.findUnique({ where: { id: itemId } });
-    if (!item) return null;
+    if (!item) return { ok: false, reason: "not_found" };
+    if (delta < 0 && item.quantity + delta < 0) return { ok: false, reason: "insufficient", have: item.quantity };
     await tx.stockMovement.create({ data: { itemId, delta, reason: reason ?? null } });
-    return tx.inventoryItem.update({ where: { id: itemId }, data: { quantity: Math.max(0, item.quantity + delta) } });
+    const updated = await tx.inventoryItem.update({ where: { id: itemId }, data: { quantity: { increment: delta } } });
+    return { ok: true, item: updated };
   });
 }
 

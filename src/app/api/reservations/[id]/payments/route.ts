@@ -23,6 +23,13 @@ export async function POST(
   const reservation = await prisma.reservation.findUnique({ where: { id } });
   if (!reservation) return fail("reservation not found", 404);
 
+  // Fat-finger guard: a single payment larger than the whole booking is almost
+  // always a typo (e.g. 15000 for 1500). Only enforced once a gross is set.
+  const gross = reservation.grossAmount ? Number(reservation.grossAmount) : 0;
+  if (gross > 0 && parsed.data.amount > gross) {
+    return fail(`That's more than the booking total (₹${Math.round(gross).toLocaleString("en-IN")}). Check the amount.`, 422);
+  }
+
   const payment = await prisma.payment.create({
     data: {
       reservationId: id,
