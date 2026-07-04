@@ -1,0 +1,8 @@
+# OTA guest assistant — ADK Python sidecar.
+# Pin exact versions when you first run it (see README) — ADK's API moves.
+google-adk>=1.0.0
+google-genai>=1.0.0
+httpx>=0.27
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-dotenv>=1.0
