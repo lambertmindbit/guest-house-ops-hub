@@ -23,6 +23,7 @@ export default async function EditReservationPage({
 
   const initial: ReservationFormValues = {
     id: reservation.id,
+    version: reservation.version,
     roomId: reservation.roomId,
     channelId: reservation.channelId,
     checkIn: formatDateOnly(reservation.checkIn),

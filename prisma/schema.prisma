@@ -644,6 +644,11 @@ model Reservation {
   // Generated in the DB from check_in/check_out as a half-open [) daterange.
   stay            Unsupported("daterange")? @map("stay")
   status          ReservationStatus         @default(confirmed)
+  // Optimistic-concurrency token: bumped on every update. An edit that carries a
+  // stale version is rejected (StaleWriteError → 409) so two devices editing the
+  // same booking can't silently overwrite each other. Not part of the exclusion
+  // constraint or the generated `stay`, so the sacred core is untouched.
+  version         Int                       @default(0)
   // Live arrival/departure stamps. Orthogonal to `status` (a confirmed booking
   // may or may not be in-house yet) and to `stay`, so the exclusion constraint
   // is untouched. Drive the Today board's in-house view + housekeeping handoff.
