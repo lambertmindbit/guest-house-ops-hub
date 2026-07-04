@@ -60,3 +60,46 @@ export async function getAvailability(
     available: row.available,
   }));
 }
+
+export type RoomFreedom = {
+  id: string;
+  label: string;
+  roomTypeId: string;
+  roomTypeName: string;
+  free: boolean;
+};
+
+// Which physical rooms are free for the whole stay [checkIn, checkOut)?
+// Derived, never stored: a room is free when no confirmed reservation and no
+// block overlaps the half-open range. `excludeReservationId` lets edit-mode
+// ignore the reservation being edited. This is the ONLY room-level availability
+// SQL — both the owner form (/api/rooms/available) and the agent seam wrap it.
+export async function freeRooms(
+  checkIn: string,
+  checkOut: string,
+  excludeReservationId = "",
+): Promise<RoomFreedom[]> {
+  return prisma.$queryRaw<RoomFreedom[]>`
+    WITH rng AS (SELECT daterange(${checkIn}::date, ${checkOut}::date, '[)') AS r)
+    SELECT rm.id,
+           rm.label,
+           rt.id   AS "roomTypeId",
+           rt.name AS "roomTypeName",
+           NOT EXISTS (
+             SELECT 1 FROM reservations res, rng
+              WHERE res.room_id = rm.id
+                AND res.status = 'confirmed'
+                AND res.id <> ${excludeReservationId}
+                AND res.stay && rng.r
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM blocks b, rng
+              WHERE b.room_id = rm.id
+                AND b.period && rng.r
+           ) AS free
+      FROM rooms rm
+      JOIN room_types rt ON rt.id = rm.room_type_id
+     WHERE rm.archived_at IS NULL
+     ORDER BY rt.name, rm.label;
+  `;
+}
