@@ -24,6 +24,9 @@ const CHANNELS = [
   { name: "Travel agent", commissionPct: 10, collectsPayment: false },
   { name: "Walk-in", commissionPct: 0, collectsPayment: false },
   { name: "Word-of-mouth", commissionPct: 0, collectsPayment: false },
+  // Bookings created by the ROOT assistant through /api/agent/reservations —
+  // separately attributable in finance/analytics (see docs/ROOT-INTEGRATION-PLAN.md).
+  { name: "Assistant (ROOT)", commissionPct: 0, collectsPayment: false },
 ];
 
 // A small sample property: 3 room types, 6 physical rooms.

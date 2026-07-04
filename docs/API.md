@@ -152,6 +152,8 @@ until the agents are ready. All accept an optional forward-compatible `propertyR
 |--------|------|---------|
 | `POST` | `/api/agent/escalations` | File a HITL escalation (idempotent on `externalId`; **200** `deduped:true` on repeat). See [INTEGRATION.md](INTEGRATION.md) |
 | `GET` | `/api/agent/availability` | Derived availability for `roomTypeId` + `checkIn`/`checkOut` |
+| `GET` | `/api/agent/rooms` | Read-only room catalog (id, label, type, capacity, base rate) — the PMS truth ROOT grounds its cards/id-mapping on |
+| `GET` | `/api/agent/rooms/availability` | Per-**room** free/busy for `checkIn`/`checkOut` (optional comma-separated `roomIds`); wraps the same derived query as the owner form |
 | `GET` | `/api/agent/quote` | Suggested price for `roomId` + `checkIn`/`checkOut` (reuses the advisory pricing engine) |
 | `POST` | `/api/agent/reservations` | Create a booking — same guest-upsert + transaction path as the owner route, so the GiST overlap constraint governs (**409** on overlap) |
 | `POST` | `/api/agent/messages` | Queue an outbound message via the LogAdapter (returns **201** with the id + `status:"logged"`) |
