@@ -76,33 +76,38 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Nav badge counts. Tolerate DB hiccups → 0.
-  let conflictCount = 0;
-  let escalationCount = 0;
-  try {
-    [conflictCount, escalationCount] = await Promise.all([
-      getCachedConflictCount(),
-      getCachedEscalationCount(),
-    ]);
-  } catch {
-    conflictCount = 0;
-    escalationCount = 0;
-  }
+  // The owner chrome (NavShell + its badge/property queries) is only for signed-in
+  // users. Public surfaces (the guest chat at /chat, the login page) reach this
+  // layout with no session → render just the content, no owner nav, no queries.
   const session = await getSession();
   const role = session?.role ?? "owner";
-  // Properties this user can switch between (multi-location). Tolerate hiccups.
+  let conflictCount = 0;
+  let escalationCount = 0;
   let properties: { id: string; name: string }[] = [];
-  try {
-    properties = session ? await listUserProperties(session.sub, session.propertyId) : [];
-  } catch {
-    properties = [];
+  if (session) {
+    try {
+      [conflictCount, escalationCount] = await Promise.all([
+        getCachedConflictCount(),
+        getCachedEscalationCount(),
+      ]);
+    } catch {
+      conflictCount = 0;
+      escalationCount = 0;
+    }
+    try {
+      properties = await listUserProperties(session.sub, session.propertyId);
+    } catch {
+      properties = [];
+    }
   }
 
   return (
     <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session?.propertyId ?? null} />
+        {session && (
+          <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session.propertyId ?? null} />
+        )}
         <ConfirmProvider>{children}</ConfirmProvider>
         <PwaRuntime />
       </body>
