@@ -485,6 +485,22 @@ model OutboundReferral {
   @@map("outbound_referrals")
 }
 
+/// Owner-managed FAQ the guest assistant answers from (parking, wifi, check-in
+/// time, house rules…). Tenant-scoped; the agent reads active entries via
+/// GET /api/agent/faq. Free-form Q&A so the owner isn't limited to fixed topics.
+model FaqEntry {
+  id         String   @id @default(cuid())
+  question   String
+  answer     String
+  category   String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  active     Boolean  @default(true)
+  propertyId String?  @map("property_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("faq_entries")
+}
+
 // Audit trail for sensitive reads/writes (cancel, refund, blacklist, user &
 // consent changes). actorUserId is the acting login (nullable for system/env).
 model AuditEvent {

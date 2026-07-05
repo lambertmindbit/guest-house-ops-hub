@@ -9,7 +9,13 @@ export const dynamic = "force-dynamic";
 // which lives at /feeds).
 type SetItem = { key: string; title: string; sub: string; icon: string; href?: string };
 const GROUPS: { group: string; items: SetItem[] }[] = [
-  { group: "Property", items: [{ key: "property", title: "Property details", sub: "Name, address, GST, check-in/out times", icon: "settings" }] },
+  {
+    group: "Property",
+    items: [
+      { key: "property", title: "Property details", sub: "Name, address, GST, check-in/out times", icon: "settings" },
+      { key: "faq", title: "Guest FAQ", sub: "Answers the chat assistant gives guests (parking, wifi, check-in…)", icon: "help" },
+    ],
+  },
   {
     group: "Inventory",
     items: [
