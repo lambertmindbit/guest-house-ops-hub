@@ -14,9 +14,12 @@ const SUGGESTIONS = [
   "Help",
 ];
 
-export function AssistantChat() {
+export function AssistantChat({
+  endpoint = "/api/assistant/message",
+  intro = "Namaste! 👋 Ask me what rooms are free for your dates, and I'll show you options with prices.",
+}: { endpoint?: string; intro?: string } = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", text: "Namaste! 👋 Ask me what rooms are free for your dates, and I'll show you options with prices.", ui: [] },
+    { role: "assistant", text: intro, ui: [] },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,7 +40,7 @@ export function AssistantChat() {
     setMessages((m) => [...m, { role: "user", text: message, ui: [] }, { role: "assistant", text: "", ui: [] }]);
 
     try {
-      const res = await fetch("/api/assistant/message", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message, sessionId: sessionRef.current }),
