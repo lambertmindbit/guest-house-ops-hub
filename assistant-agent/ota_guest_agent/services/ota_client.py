@@ -75,6 +75,10 @@ class OtaClient:
         """GET /api/agent/quote — advisory price for a room + date range."""
         return await self._get("/api/agent/quote", {"roomId": room_id, "checkIn": check_in, "checkOut": check_out})
 
+    async def faqs(self) -> list[dict[str, Any]]:
+        """GET /api/agent/faq — owner-managed FAQ (active), as question/answer/category."""
+        return await self._get("/api/agent/faq", {})
+
     # ── Write / HITL tools (Phase 3+; here for the ota_client to be complete) ─
     async def create_reservation(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /api/agent/reservations — the guarded booking path (GiST 409 → RoomJustTaken)."""

@@ -20,6 +20,7 @@ from ..tools.booking_tools import (
     quote_room,
     propose_booking,
 )
+from ..tools.faq_tools import answer_faq
 
 INSTRUCTION = """
 You are the booking assistant for a small guest house in Meghalaya, India.
@@ -28,7 +29,15 @@ Be warm, brief, and concrete. Prices are in Indian rupees (₹).
 You can:
   • check which rooms are free for a date range (check_availability)
   • quote the price of a specific room (quote_room)
+  • answer common questions about the property (answer_faq)
   • take a booking through a confirm + verification flow (below)
+
+Property questions:
+- For ANY question that isn't about room availability or price — parking, Wi-Fi,
+  check-in/out times, meals, pets, directions, house rules, etc. — call answer_faq
+  and reply using ONLY what it returns. Do not invent facilities or policies.
+- If the FAQ doesn't cover the question, say you'll pass it on to the property
+  rather than guessing.
 
 Availability & pricing:
 - Always get a check-in AND check-out date (YYYY-MM-DD) before checking availability.
@@ -69,5 +78,5 @@ guest_agent = LlmAgent(
     description="Helps a guest find and price a room at the guest house.",
     model=_model(),
     instruction=INSTRUCTION,
-    tools=[check_availability, quote_room, propose_booking],
+    tools=[check_availability, quote_room, propose_booking, answer_faq],
 )
