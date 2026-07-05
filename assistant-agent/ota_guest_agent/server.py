@@ -62,7 +62,8 @@ async def _set_state(session, delta: dict) -> None:
 
 
 async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
-    """Deterministic handling of the /confirm and /otp card actions — NO LLM call.
+    """Deterministic handling of the /quote, /confirm and /otp card actions — NO
+    LLM call (faster, cheaper, and immune to model overload/quota on these steps).
     Returns an async generator of NDJSON lines, or None if not one of these.
     propose_booking (LLM) already stored the pending booking in session state.
 
@@ -72,16 +73,42 @@ async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
         escalation for the owner to confirm — NO OTP, NO reservation. An anonymous
         guest can never create a confirmed booking."""
     msg = message.strip()
-    if not (msg.startswith("/confirm") or msg.startswith("/otp")):
+    if not (msg.startswith("/quote") or msg.startswith("/confirm") or msg.startswith("/otp")):
         return None
-
-    session = await _session_service.get_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
-    state = dict(session.state) if session else {}
-    pending = state.get("_pending")
 
     import random
 
     async def gen():
+        # /quote <roomId> <checkIn> <checkOut> — deterministic price card, NO LLM call.
+        if msg.startswith("/quote"):
+            parts = msg.split()
+            if len(parts) < 4:
+                yield _line({"type": "text", "delta": "Tap a room's Price to see its cost."})
+                yield _line({"type": "done"})
+                return
+            room_id, check_in, check_out = parts[1], parts[2], parts[3]
+            try:
+                room = {r["id"]: r for r in await _ota.rooms()}.get(room_id)
+                if not room:
+                    yield _line({"type": "text", "delta": "That room isn't available anymore — please check availability again."})
+                    yield _line({"type": "done"})
+                    return
+                quote = await _ota.quote(room_id, check_in, check_out)
+            except OtaError as exc:
+                yield _line({"type": "text", "delta": f"I couldn't get that price ({exc})."})
+                yield _line({"type": "done"})
+                return
+            nights = len(quote.get("nights", []))
+            total = quote.get("total", 0)
+            yield _line({"type": "ui", "component": ui.quote_component(room, check_in, check_out, nights, total)})
+            yield _line({"type": "text", "delta": f"{room['label']}: ₹{total} for {nights} night(s). Tap Book to continue."})
+            yield _line({"type": "done"})
+            return
+
+        # /confirm and /otp need the pending booking that propose_booking stored.
+        session = await _session_service.get_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
+        state = dict(session.state) if session else {}
+        pending = state.get("_pending")
         if session is None or not pending:
             yield _line({"type": "text", "delta": "I don't have a booking ready to confirm — let's start again with your dates."})
             yield _line({"type": "done"})
