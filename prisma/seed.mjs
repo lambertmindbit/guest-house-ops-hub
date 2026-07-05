@@ -249,9 +249,22 @@ const REFERRALS = [
   { guest: "Anita Rao", partner: "Meghalaya Holidays", status: "declined", note: "Preferred to book elsewhere" },
 ];
 
+// Guest FAQ the chat assistant answers from.
+const FAQS = [
+  { question: "Do you have parking?", answer: "Yes — free on-site parking is available for our guests.", category: "Facilities", sortOrder: 1 },
+  { question: "Is there Wi-Fi?", answer: "Yes, complimentary Wi-Fi is available throughout the property.", category: "Facilities", sortOrder: 2 },
+  { question: "What are the check-in and check-out times?", answer: "Check-in is from 2:00 PM and check-out is by 11:00 AM. Early check-in / late check-out can sometimes be arranged — just ask.", category: "Stay", sortOrder: 3 },
+  { question: "Is breakfast included?", answer: "Breakfast can be arranged on request for a small charge — please let us know a day in advance.", category: "Food", sortOrder: 4 },
+  { question: "Do you allow pets?", answer: "We're sorry, but pets are not allowed at the property.", category: "Policies", sortOrder: 5 },
+];
+
 async function ensureBy(model, where, data) {
   const existing = await prisma[model].findFirst({ where });
   return existing ?? prisma[model].create({ data });
+}
+
+async function seedFaqs(propertyId) {
+  for (const f of FAQS) await ensureBy("faqEntry", { question: f.question, propertyId }, { ...f, propertyId });
 }
 
 async function seedPartners(propertyId) {
@@ -329,6 +342,7 @@ async function main() {
   await seedTours(property.id);
   await seedTransport(property.id);
   await seedPartners(property.id);
+  await seedFaqs(property.id);
 
   const [channels, roomTypes, rooms] = await Promise.all([
     prisma.channel.count(),
