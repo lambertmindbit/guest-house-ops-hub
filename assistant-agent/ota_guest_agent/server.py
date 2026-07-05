@@ -61,12 +61,16 @@ async def _set_state(session, delta: dict) -> None:
     await _session_service.append_event(session, Event(author="system", actions=EventActions(state_delta=delta)))
 
 
-async def _handle_slash(message: str, session_id: str):
+async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
     """Deterministic handling of the /confirm and /otp card actions — NO LLM call.
-    Returns an async generator of NDJSON lines, or None if not one of these
-    commands (then the LLM agent runs normally). propose_booking (LLM) has already
-    stored the pending booking in session state; here we only send the demo code
-    and, on a correct code, create the booking through the guarded seam."""
+    Returns an async generator of NDJSON lines, or None if not one of these.
+    propose_booking (LLM) already stored the pending booking in session state.
+
+    mode="owner"  (default, the in-app assistant): /confirm → demo OTP → /otp writes
+        a real reservation through the guarded seam.
+    mode="public" (the anonymous guest widget): /confirm files a booking REQUEST
+        escalation for the owner to confirm — NO OTP, NO reservation. An anonymous
+        guest can never create a confirmed booking."""
     msg = message.strip()
     if not (msg.startswith("/confirm") or msg.startswith("/otp")):
         return None
@@ -84,6 +88,30 @@ async def _handle_slash(message: str, session_id: str):
             return
 
         if msg.startswith("/confirm"):
+            if mode == "public":
+                # File a request for the owner to confirm — no reservation is created.
+                summary = (
+                    f"Guest {pending['guestName']} ({pending['guestPhone']}) requested "
+                    f"{pending['roomLabel']} ({pending['roomTypeName']}), {pending['checkIn']} → {pending['checkOut']}, "
+                    f"{pending['nights']} night(s), about ₹{pending['total']}. Sent from the public chat widget — "
+                    f"please confirm availability and contact the guest."
+                )
+                try:
+                    await _ota.create_escalation({
+                        "source": "assistant", "category": "booking", "severity": "medium",
+                        "title": f"Booking request: {pending['roomLabel']} {pending['checkIn']}→{pending['checkOut']}",
+                        "summary": summary,
+                        "raisedBy": {"name": pending["guestName"], "contact": pending["guestPhone"]},
+                    })
+                except OtaError as exc:
+                    yield _line({"type": "text", "delta": f"I couldn't send your request ({exc}). Please try again."})
+                    yield _line({"type": "done"})
+                    return
+                await _set_state(session, {"_pending": None})
+                yield _line({"type": "text", "delta": f"Thank you, {pending['guestName']}! 🙏 I've sent your request for {pending['roomLabel']} ({pending['checkIn']} → {pending['checkOut']}) to the property. They'll confirm availability and reach you on {pending['guestPhone']} shortly."})
+                yield _line({"type": "done"})
+                return
+
             code = f"{random.randint(0, 9999):04d}"
             await _set_state(session, {"_otp": code})
             yield _line({"type": "ui", "component": ui.otp_component(f"Enter the code sent to {pending['guestPhone']} to confirm.", demo_code=code)})
@@ -165,10 +193,12 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     if not message:
         raise HTTPException(status_code=422, detail="message is required")
     session_id = (body or {}).get("sessionId") or f"web-{uuid.uuid4().hex}"
+    mode = "public" if (body or {}).get("mode") == "public" else "owner"
 
     # Button actions (/confirm, /otp) are handled deterministically without an LLM
-    # call; everything else goes to the agent.
-    handled = await _handle_slash(message, session_id)
+    # call; everything else goes to the agent. In public mode /confirm files a
+    # booking request rather than creating a reservation.
+    handled = await _handle_slash(message, session_id, mode)
     stream = handled if handled is not None else _run(message, session_id)
     return StreamingResponse(stream, media_type="application/x-ndjson")
 
