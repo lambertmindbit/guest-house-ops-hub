@@ -67,6 +67,82 @@ async def _set_state(session, delta: dict) -> None:
     await _session_service.append_event(session, Event(author="system", actions=EventActions(state_delta=delta)))
 
 
+async def _quote_lines(msg: str) -> AsyncIterator[str]:
+    """The deterministic /quote price card — shared by the public and owner paths.
+    `/quote <roomId> <checkIn> <checkOut>`; NO LLM call."""
+    parts = msg.split()
+    if len(parts) < 4:
+        yield _line({"type": "text", "delta": "Tap a room's Price to see its cost."})
+        yield _line({"type": "done"})
+        return
+    room_id, check_in, check_out = parts[1], parts[2], parts[3]
+    try:
+        room = {r["id"]: r for r in await _ota.rooms()}.get(room_id)
+        if not room:
+            yield _line({"type": "text", "delta": "That room isn't available anymore — please check availability again."})
+            yield _line({"type": "done"})
+            return
+        quote = await _ota.quote(room_id, check_in, check_out)
+    except OtaError as exc:
+        yield _line({"type": "text", "delta": f"I couldn't get that price ({exc})."})
+        yield _line({"type": "done"})
+        return
+    nights = len(quote.get("nights", []))
+    total = quote.get("total", 0)
+    yield _line({"type": "ui", "component": ui.quote_component(room, check_in, check_out, nights, total)})
+    yield _line({"type": "text", "delta": f"{room['label']}: ₹{total} for {nights} night(s). Tap Book to continue."})
+    yield _line({"type": "done"})
+
+
+async def _handle_owner_slash(message: str, session_id: str):
+    """Deterministic owner-console card actions — NO LLM call.
+    /quote → price card (shared). /confirm → write the reservation DIRECTLY through
+    the guarded seam (no OTP: the owner is trusted and already authenticated). The
+    pending booking was stored by propose_booking in the owner session state.
+    Returns an async generator, or None if not one of these."""
+    msg = message.strip()
+    if not (msg.startswith("/quote") or msg.startswith("/confirm")):
+        return None
+
+    async def gen():
+        if msg.startswith("/quote"):
+            async for line in _quote_lines(msg):
+                yield line
+            return
+
+        session = await _session_service.get_session(app_name=OWNER_APP_NAME, user_id=OWNER_USER_ID, session_id=session_id)
+        pending = (dict(session.state) if session else {}).get("_pending")
+        if session is None or not pending:
+            yield _line({"type": "text", "delta": "I don't have a booking ready to confirm — tell me the room, dates, guest name and phone."})
+            yield _line({"type": "done"})
+            return
+
+        body = {
+            "roomId": pending["roomId"], "channelId": _ota.channel_id,
+            "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
+            "guest": {"name": pending["guestName"], "phone": pending["guestPhone"]},
+            "grossAmount": pending["total"],
+        }
+        try:
+            reservation = await _ota.create_reservation(body)
+        except RoomJustTaken:
+            # The GiST no-double-booking constraint rejected it — never retry.
+            await _set_state(session, {"_pending": None})
+            yield _line({"type": "text", "delta": f"Those dates are no longer free for {pending['roomLabel']} — it was just booked. Want to try other dates or another room?"})
+            yield _line({"type": "done"})
+            return
+        except OtaError as exc:
+            yield _line({"type": "text", "delta": f"I couldn't complete the booking ({exc})."})
+            yield _line({"type": "done"})
+            return
+
+        await _set_state(session, {"_pending": None})
+        yield _line({"type": "text", "delta": f"✅ Booked! #{reservation.get('id')} — {pending['roomLabel']}, {pending['checkIn']} → {pending['checkOut']} for {pending['guestName']} ({pending['guestPhone']}), ₹{pending['total']}."})
+        yield _line({"type": "done"})
+
+    return gen()
+
+
 async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
     """Deterministic handling of the /quote, /confirm and /otp card actions — NO
     LLM call (faster, cheaper, and immune to model overload/quota on these steps).
@@ -87,28 +163,8 @@ async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
     async def gen():
         # /quote <roomId> <checkIn> <checkOut> — deterministic price card, NO LLM call.
         if msg.startswith("/quote"):
-            parts = msg.split()
-            if len(parts) < 4:
-                yield _line({"type": "text", "delta": "Tap a room's Price to see its cost."})
-                yield _line({"type": "done"})
-                return
-            room_id, check_in, check_out = parts[1], parts[2], parts[3]
-            try:
-                room = {r["id"]: r for r in await _ota.rooms()}.get(room_id)
-                if not room:
-                    yield _line({"type": "text", "delta": "That room isn't available anymore — please check availability again."})
-                    yield _line({"type": "done"})
-                    return
-                quote = await _ota.quote(room_id, check_in, check_out)
-            except OtaError as exc:
-                yield _line({"type": "text", "delta": f"I couldn't get that price ({exc})."})
-                yield _line({"type": "done"})
-                return
-            nights = len(quote.get("nights", []))
-            total = quote.get("total", 0)
-            yield _line({"type": "ui", "component": ui.quote_component(room, check_in, check_out, nights, total)})
-            yield _line({"type": "text", "delta": f"{room['label']}: ₹{total} for {nights} night(s). Tap Book to continue."})
-            yield _line({"type": "done"})
+            async for line in _quote_lines(msg):
+                yield line
             return
 
         # /confirm and /otp need the pending booking that propose_booking stored.
@@ -234,10 +290,14 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     session_id = (body or {}).get("sessionId") or f"web-{uuid.uuid4().hex}"
     mode = "public" if (body or {}).get("mode") == "public" else "owner"
 
-    # The in-app owner console is a separate, read-only agent — no guest booking
-    # cards, so the /quote·/confirm·/otp slash handlers don't apply here.
+    # The in-app owner console (separate agent). Its card actions are handled
+    # deterministically: /quote → price card, /confirm → write the reservation
+    # directly through the guarded seam (no OTP — the owner is authenticated).
+    # Everything else (incl. /book, which gathers guest name + phone) goes to the
+    # owner agent.
     if mode == "owner":
-        stream = _run(message, session_id, _owner_runner, OWNER_APP_NAME, OWNER_USER_ID)
+        handled = await _handle_owner_slash(message, session_id)
+        stream = handled if handled is not None else _run(message, session_id, _owner_runner, OWNER_APP_NAME, OWNER_USER_ID)
         return StreamingResponse(stream, media_type="application/x-ndjson")
 
     # Public guest widget: button actions (/quote, /confirm) are handled
