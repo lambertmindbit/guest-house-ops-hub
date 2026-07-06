@@ -90,6 +90,11 @@ class OtaClient:
         (booking requests, complaints, agent hand-offs) still needing action."""
         return await self._get("/api/agent/owner/escalations", {})
 
+    async def create_block(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/agent/owner/blocks — block a room (maintenance / hold) for
+        a [startDate, endDate) range. roomId must be the real id."""
+        return await self._post("/api/agent/owner/blocks", body)
+
     # ── Write / HITL tools (Phase 3+; here for the ota_client to be complete) ─
     async def create_reservation(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /api/agent/reservations — the guarded booking path (GiST 409 → RoomJustTaken)."""
