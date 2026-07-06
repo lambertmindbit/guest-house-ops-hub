@@ -95,6 +95,11 @@ class OtaClient:
         a [startDate, endDate) range. roomId must be the real id."""
         return await self._post("/api/agent/owner/blocks", body)
 
+    async def act_on_escalation(self, escalation_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/agent/owner/escalations/{id} — resolve / dismiss / start a
+        queue item, with an optional note."""
+        return await self._post(f"/api/agent/owner/escalations/{escalation_id}", body)
+
     # ── Write / HITL tools (Phase 3+; here for the ota_client to be complete) ─
     async def create_reservation(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /api/agent/reservations — the guarded booking path (GiST 409 → RoomJustTaken)."""

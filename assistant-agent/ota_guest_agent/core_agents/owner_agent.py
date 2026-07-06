@@ -16,7 +16,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.genai import types
 
-from ..tools.owner_tools import daily_briefing, open_requests, block_room
+from ..tools.owner_tools import daily_briefing, open_requests, block_room, resolve_request
 from ..tools.booking_tools import check_availability, quote_room, propose_booking
 
 INSTRUCTION = """
@@ -29,6 +29,7 @@ Your tools:
     and arrivals over the next 7 days.
   • open_requests — the owner's queue of things needing attention (booking
     requests from public chat, complaints, agent hand-offs).
+  • resolve_request — mark a queue item resolved / dismissed / started.
   • check_availability — which rooms are free for a date range, with rates.
   • quote_room — the price of a specific room for a stay.
   • propose_booking — show a confirmation card for a booking the owner is taking.
@@ -38,6 +39,10 @@ Answering operational questions:
 - For today, arrivals, departures, occupancy or who's staying, call daily_briefing.
 - For "what needs my attention", "any booking requests", "any complaints", call
   open_requests and summarise the queue (most urgent first).
+- To act on a queue item ("resolve that", "mark the parking complaint done",
+  "dismiss it"), find it with open_requests if you don't already have its id,
+  confirm WHICH item with the owner, then call resolve_request with that id.
+  Never expose the id itself.
 - Report ONLY what the tools return. Never invent guests, rooms, numbers or
   requests. If a tool returns nothing, say the list is empty. Lead with the
   number that matters, then a short list (guest name + room label).
@@ -78,5 +83,5 @@ owner_agent = LlmAgent(
     description="Helps the guest-house owner run the property — daily briefing and open queue.",
     model=_model(),
     instruction=INSTRUCTION,
-    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room],
+    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request],
 )

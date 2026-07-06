@@ -74,3 +74,31 @@ async def block_room(
     except OtaError as e:
         return {"status": "error", "message": str(e)}
     return {"status": "success", "block": result}
+
+
+async def resolve_request(
+    tool_context: ToolContext, request_id: str, action: str = "resolved", note: str = ""
+) -> dict[str, Any]:
+    """Act on a queue item from open_requests — mark it resolved, dismissed, or
+    started (in_progress). Get the request_id from open_requests first, and
+    confirm which item with the owner before acting.
+
+    Args:
+        request_id: the id of the queue item (from open_requests)
+        action: "resolved" (default), "dismissed", or "in_progress"
+        note: optional note on how it was handled
+    """
+    status_map = {"resolved": "resolved", "resolve": "resolved",
+                  "dismissed": "dismissed", "dismiss": "dismissed",
+                  "in_progress": "in_progress", "start": "in_progress"}
+    status = status_map.get(action.strip().lower())
+    if not status:
+        return {"status": "error", "message": "Action must be resolve, dismiss, or start."}
+    body: dict[str, Any] = {"status": status}
+    if note.strip():
+        body["resolutionNote"] = note.strip()
+    try:
+        result = await _client.act_on_escalation(request_id, body)
+    except OtaError as e:
+        return {"status": "error", "message": str(e)}
+    return {"status": "success", "request": result}
