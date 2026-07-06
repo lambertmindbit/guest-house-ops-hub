@@ -30,7 +30,7 @@ const TENANT_MODELS = new Set<string>([
   "Escalation", "OutboundMessage", "Complaint", "Refund", "CancellationPolicy",
   "Staff", "Shift", "Attendance", "HousekeepingTask", "Asset", "MaintenanceRequest", "InventoryItem", "StockMovement", "Vendor", "PurchaseOrder", "VendorPayment", "Driver", "Trip", "BookingGroup", "Amenity", "RoomTypeAmenity", "ReviewRequest", "AuditEvent",
   "TourPartner", "Tour", "TourBooking",
-  "Partner", "OutboundReferral", "FaqEntry", "ConversationTurn",
+  "Partner", "OutboundReferral", "FaqEntry", "ConversationTurn", "PushSubscription",
 ]);
 
 // The acting property for the current request, read from the `x-ota-tenant`

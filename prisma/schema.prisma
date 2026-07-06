@@ -518,6 +518,20 @@ model ConversationTurn {
   @@map("conversation_turns")
 }
 
+/// A browser's Web Push subscription for owner notifications (e.g. a new queue
+/// item). Keyed by the push endpoint (unique) so re-subscribing upserts. Written
+/// by /api/push/subscribe; read by the server-side sender (src/lib/push.ts).
+model PushSubscription {
+  id         String   @id @default(cuid())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  propertyId String?  @map("property_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("push_subscriptions")
+}
+
 // Audit trail for sensitive reads/writes (cancel, refund, blacklist, user &
 // consent changes). actorUserId is the acting login (nullable for system/env).
 model AuditEvent {

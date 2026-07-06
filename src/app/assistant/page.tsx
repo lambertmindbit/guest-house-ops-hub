@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/session";
 import { PageHead } from "@/components/ui";
 import { AssistantChat } from "@/components/assistant/AssistantChat";
+import { PushToggle } from "@/components/PushToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function AssistantPage() {
           sub="Ask about your day — occupancy, arrivals, check-outs and what needs your attention."
           right={<Link className="btn btn--ghost btn--sm" href="/assistant/log">Chat log</Link>}
         />
+        <PushToggle />
         <AssistantChat
           intro="Hi 👋 I'm your operations assistant. Ask me how today looks, who's arriving, your occupancy, or what needs your attention."
           suggestions={["How's today looking?", "Who's arriving this week?", "Anything need my attention?"]}

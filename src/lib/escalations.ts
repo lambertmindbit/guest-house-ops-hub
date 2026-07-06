@@ -131,6 +131,16 @@ export async function createEscalation(
       // propertyRef is accepted but not yet persisted — see schema note.
     },
   });
+
+  // Ping the owner's phone: a new queue item needs attention. Best-effort —
+  // a push failure must never break filing the escalation.
+  try {
+    const { sendOwnerPush } = await import("@/lib/push");
+    await sendOwnerPush({ title: e.title, body: e.summary, url: "/needs-you", tag: "escalation" });
+  } catch {
+    // ignore
+  }
+
   return { escalation: toView(e), deduped: false };
 }
 
