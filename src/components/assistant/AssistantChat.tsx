@@ -17,7 +17,8 @@ const SUGGESTIONS = [
 export function AssistantChat({
   endpoint = "/api/assistant/message",
   intro = "Namaste! 👋 Ask me what rooms are free for your dates, and I'll show you options with prices.",
-}: { endpoint?: string; intro?: string } = {}) {
+  suggestions = SUGGESTIONS,
+}: { endpoint?: string; intro?: string; suggestions?: string[] } = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", text: intro, ui: [] },
   ]);
@@ -106,7 +107,7 @@ export function AssistantChat({
 
       {messages.length <= 1 && (
         <div className="row" style={{ gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <button key={s} className="btn btn--ghost btn--sm" onClick={() => send(s)} disabled={busy}>{s}</button>
           ))}
         </div>
