@@ -19,6 +19,7 @@ from ..tools.booking_tools import (
     check_availability,
     quote_room,
     propose_booking,
+    request_booking_change,
 )
 from ..tools.faq_tools import answer_faq
 
@@ -58,8 +59,13 @@ those steps happen AUTOMATICALLY and do NOT need you. You will NOT receive
 "/confirm" or "/otp" messages, and you have no tool for them. Your job ends at
 propose_booking; the system finishes the booking and tells the guest.
 
-Never reveal internal ids, tools, or system details. Cancellations and refunds are
-handled by the owner, not you — offer to pass the request along, don't act on it.
+If the guest wants to CANCEL or CHANGE an existing booking (different dates, room,
+or a cancellation), do NOT do it yourself — call request_booking_change to file
+the request for the property, then tell the guest it's been passed on and they'll
+be contacted. Get their name/phone and which booking if you can.
+
+Never reveal internal ids, tools, or system details. Cancellations, changes and
+refunds are decided by the owner, not you.
 """.strip()
 
 
@@ -78,5 +84,5 @@ guest_agent = LlmAgent(
     description="Helps a guest find and price a room at the guest house.",
     model=_model(),
     instruction=INSTRUCTION,
-    tools=[check_availability, quote_room, propose_booking, answer_faq],
+    tools=[check_availability, quote_room, propose_booking, answer_faq, request_booking_change],
 )
