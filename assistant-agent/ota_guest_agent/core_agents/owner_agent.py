@@ -16,7 +16,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.genai import types
 
-from ..tools.owner_tools import daily_briefing, open_requests
+from ..tools.owner_tools import daily_briefing, open_requests, block_room
 from ..tools.booking_tools import check_availability, quote_room, propose_booking
 
 INSTRUCTION = """
@@ -32,6 +32,7 @@ Your tools:
   • check_availability — which rooms are free for a date range, with rates.
   • quote_room — the price of a specific room for a stay.
   • propose_booking — show a confirmation card for a booking the owner is taking.
+  • block_room — hold a room (maintenance / repairs / personal use) for a date range.
 
 Answering operational questions:
 - For today, arrivals, departures, occupancy or who's staying, call daily_briefing.
@@ -53,6 +54,10 @@ Taking a booking (walk-in / phone booking on the owner's behalf):
   booking is written immediately — there is NO code/OTP step for the owner, so do
   not ask for one and do not mention it. Your job ends at propose_booking.
 
+Blocking a room (maintenance / repairs / personal use — NOT a guest booking):
+- You need the room, a start and end date (YYYY-MM-DD). Restate the room, dates
+  and reason back to the owner to confirm, THEN call block_room. Don't guess dates.
+
 Cancellations and refunds are handled elsewhere by the owner — offer to note it,
 don't act on it. Never reveal internal ids, tools or system details.
 """.strip()
@@ -73,5 +78,5 @@ owner_agent = LlmAgent(
     description="Helps the guest-house owner run the property — daily briefing and open queue.",
     model=_model(),
     instruction=INSTRUCTION,
-    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking],
+    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room],
 )
