@@ -34,7 +34,7 @@ const META: Record<NavId, { label: string; icon: string; href: string }> = {
   tours: { label: "Tours", icon: "compass", href: "/tours" },
   partners: { label: "Partners", icon: "search", href: "/partners" },
   referrals: { label: "Referrals", icon: "layers", href: "/referrals" },
-  assistant: { label: "Assistant", icon: "inbox", href: "/assistant" },
+  assistant: { label: "Owner console", icon: "inbox", href: "/assistant" },
   needsyou: { label: "Needs you", icon: "alert", href: "/needs-you" },
   finance: { label: "Finance", icon: "wallet", href: "/finance" },
   pricing: { label: "Pricing", icon: "tag", href: "/pricing" },
