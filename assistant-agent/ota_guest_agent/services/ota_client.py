@@ -100,6 +100,17 @@ class OtaClient:
         queue item, with an optional note."""
         return await self._post(f"/api/agent/owner/escalations/{escalation_id}", body)
 
+    async def owner_finance(self, from_date: str = "", to_date: str = "") -> dict[str, Any]:
+        """GET /api/agent/owner/finance — revenue, net profit, per-channel
+        earnings and performance (occupancy, ADR, RevPAR). Defaults to the
+        current month when from/to are omitted."""
+        params: dict[str, Any] = {}
+        if from_date:
+            params["from"] = from_date
+        if to_date:
+            params["to"] = to_date
+        return await self._get("/api/agent/owner/finance", params)
+
     # ── Write / HITL tools (Phase 3+; here for the ota_client to be complete) ─
     async def create_reservation(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /api/agent/reservations — the guarded booking path (GiST 409 → RoomJustTaken)."""
