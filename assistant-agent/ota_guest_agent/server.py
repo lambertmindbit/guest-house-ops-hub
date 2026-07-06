@@ -275,6 +275,27 @@ async def _run(
     yield _line({"type": "done"})
 
 
+async def _logged(stream: AsyncIterator[str], message: str, session_id: str, mode: str) -> AsyncIterator[str]:
+    """Tee the outgoing NDJSON stream: forward every line unchanged, accumulate
+    the assistant's text, and log the finished turn for the owner's chat log.
+    Best-effort — a logging failure (or an empty reply) never affects the chat."""
+    reply_parts: list[str] = []
+    async for line in stream:
+        try:
+            obj = json.loads(line)
+            if obj.get("type") == "text":
+                reply_parts.append(obj.get("delta", ""))
+        except Exception:
+            pass
+        yield line
+    reply = "".join(reply_parts).strip()
+    if reply:
+        try:
+            await _ota.log_turn({"sessionId": session_id, "mode": mode, "userMessage": message, "reply": reply})
+        except Exception:
+            pass
+
+
 @api.post("/chat")
 async def chat(request: Request, authorization: str | None = Header(default=None)) -> StreamingResponse:
     expected = os.getenv("ASSISTANT_AGENT_TOKEN")
@@ -298,14 +319,14 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     if mode == "owner":
         handled = await _handle_owner_slash(message, session_id)
         stream = handled if handled is not None else _run(message, session_id, _owner_runner, OWNER_APP_NAME, OWNER_USER_ID)
-        return StreamingResponse(stream, media_type="application/x-ndjson")
+        return StreamingResponse(_logged(stream, message, session_id, mode), media_type="application/x-ndjson")
 
     # Public guest widget: button actions (/quote, /confirm) are handled
     # deterministically without an LLM call; /confirm files a booking request
     # rather than creating a reservation. Everything else goes to the guest agent.
     handled = await _handle_slash(message, session_id, mode)
     stream = handled if handled is not None else _run(message, session_id)
-    return StreamingResponse(stream, media_type="application/x-ndjson")
+    return StreamingResponse(_logged(stream, message, session_id, mode), media_type="application/x-ndjson")
 
 
 @api.get("/healthz")

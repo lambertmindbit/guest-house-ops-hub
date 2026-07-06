@@ -123,3 +123,8 @@ class OtaClient:
     async def log_message(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /api/agent/messages — record an outbound message in the CRM thread."""
         return await self._post("/api/agent/messages", body)
+
+    async def log_turn(self, body: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/agent/turns — record one conversation turn for the owner's
+        chat log. Best-effort; callers ignore failures."""
+        return await self._post("/api/agent/turns", body)
