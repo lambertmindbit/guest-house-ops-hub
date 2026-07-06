@@ -79,6 +79,17 @@ class OtaClient:
         """GET /api/agent/faq — owner-managed FAQ (active), as question/answer/category."""
         return await self._get("/api/agent/faq", {})
 
+    # ── Owner console reads (owner-only; behind the same agent token) ─────────
+    async def owner_summary(self) -> dict[str, Any]:
+        """GET /api/agent/owner/summary — daily briefing: occupancy, today's
+        arrivals/departures, in-house, and arrivals over the next 7 days."""
+        return await self._get("/api/agent/owner/summary", {})
+
+    async def owner_escalations(self) -> dict[str, Any]:
+        """GET /api/agent/owner/escalations — the owner's open HITL queue
+        (booking requests, complaints, agent hand-offs) still needing action."""
+        return await self._get("/api/agent/owner/escalations", {})
+
     # ── Write / HITL tools (Phase 3+; here for the ota_client to be complete) ─
     async def create_reservation(self, body: dict[str, Any]) -> dict[str, Any]:
         """POST /api/agent/reservations — the guarded booking path (GiST 409 → RoomJustTaken)."""

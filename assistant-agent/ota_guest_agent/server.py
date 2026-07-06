@@ -40,15 +40,21 @@ from google.adk.sessions import InMemorySessionService  # noqa: E402
 from google.genai import types  # noqa: E402
 
 from .core_agents.guest_agent import guest_agent  # noqa: E402
+from .core_agents.owner_agent import owner_agent  # noqa: E402
 from .services.ota_client import OtaClient, OtaError, RoomJustTaken  # noqa: E402
 from .services import ui  # noqa: E402
 
 APP_NAME = "ota_guest_agent"
 USER_ID = "guest"
+# The owner console is a separate agent + session namespace so owner turns never
+# share state or persona with the guest/public path.
+OWNER_APP_NAME = "ota_owner_agent"
+OWNER_USER_ID = "owner"
 
 api = FastAPI(title="OTA Guest Assistant")
 _session_service = InMemorySessionService()
 _runner = Runner(app_name=APP_NAME, agent=guest_agent, session_service=_session_service)
+_owner_runner = Runner(app_name=OWNER_APP_NAME, agent=owner_agent, session_service=_session_service)
 _ota = OtaClient()
 
 
@@ -179,19 +185,25 @@ async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
     return gen()
 
 
-async def _run(message: str, session_id: str) -> AsyncIterator[str]:
+async def _run(
+    message: str,
+    session_id: str,
+    runner: Runner = _runner,
+    app_name: str = APP_NAME,
+    user_id: str = USER_ID,
+) -> AsyncIterator[str]:
     # Fresh state bucket per turn so tool-produced UI doesn't leak across turns.
     try:
-        await _session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id, state={"_ui": []})
+        await _session_service.create_session(app_name=app_name, user_id=user_id, session_id=session_id, state={"_ui": []})
     except Exception:
         # Session already exists — reset the per-turn UI bucket.
-        session = await _session_service.get_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
+        session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
         if session is not None:
             session.state["_ui"] = []
 
     content = types.Content(role="user", parts=[types.Part(text=message)])
     try:
-        async for event in _runner.run_async(user_id=USER_ID, session_id=session_id, new_message=content):
+        async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
             parts = getattr(getattr(event, "content", None), "parts", None) or []
             for part in parts:
                 text = getattr(part, "text", None)
@@ -200,7 +212,7 @@ async def _run(message: str, session_id: str) -> AsyncIterator[str]:
     except Exception as exc:  # keep the transport honest — surface, don't crash
         yield _line({"type": "error", "message": f"assistant error: {exc}"})
 
-    session = await _session_service.get_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
+    session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
     for component in (session.state.get("_ui") if session else []) or []:
         yield _line({"type": "ui", "component": component})
 
@@ -222,9 +234,15 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     session_id = (body or {}).get("sessionId") or f"web-{uuid.uuid4().hex}"
     mode = "public" if (body or {}).get("mode") == "public" else "owner"
 
-    # Button actions (/confirm, /otp) are handled deterministically without an LLM
-    # call; everything else goes to the agent. In public mode /confirm files a
-    # booking request rather than creating a reservation.
+    # The in-app owner console is a separate, read-only agent — no guest booking
+    # cards, so the /quote·/confirm·/otp slash handlers don't apply here.
+    if mode == "owner":
+        stream = _run(message, session_id, _owner_runner, OWNER_APP_NAME, OWNER_USER_ID)
+        return StreamingResponse(stream, media_type="application/x-ndjson")
+
+    # Public guest widget: button actions (/quote, /confirm) are handled
+    # deterministically without an LLM call; /confirm files a booking request
+    # rather than creating a reservation. Everything else goes to the guest agent.
     handled = await _handle_slash(message, session_id, mode)
     stream = handled if handled is not None else _run(message, session_id)
     return StreamingResponse(stream, media_type="application/x-ndjson")
