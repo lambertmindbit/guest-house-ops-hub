@@ -501,6 +501,23 @@ model FaqEntry {
   @@map("faq_entries")
 }
 
+/// Assistant conversation log: one row per turn (the user's message + the
+/// assistant's reply), so the owner can review guest and owner chats. Written by
+/// the agent via POST /api/agent/turns; read by the owner chat-log screen.
+model ConversationTurn {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  mode        String // "owner" | "public"
+  userMessage String   @map("user_message")
+  reply       String
+  propertyId  String?  @map("property_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("conversation_turns")
+}
+
 // Audit trail for sensitive reads/writes (cancel, refund, blacklist, user &
 // consent changes). actorUserId is the acting login (nullable for system/env).
 model AuditEvent {
