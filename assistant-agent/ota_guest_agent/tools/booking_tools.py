@@ -137,6 +137,41 @@ async def propose_booking(
 # path); a 409 becomes a "just taken" message.
 
 
+async def request_booking_change(
+    tool_context: ToolContext, change: str, details: str,
+    guest_name: str = "", guest_phone: str = "", booking_ref: str = "",
+) -> dict[str, Any]:
+    """File a request to CANCEL or MODIFY an existing booking. The assistant must
+    NEVER cancel or change a booking itself — this always goes to a human, who
+    resolves it from the queue. Use this whenever someone asks to cancel, change
+    dates, change room, or otherwise alter a confirmed booking.
+
+    Args:
+        change: "cancel" or "modify"
+        details: what is being asked — the booking, the change, and any reason
+        guest_name: the guest's name, if known
+        guest_phone: the guest's phone, if known
+        booking_ref: the booking reference / id, if known
+    """
+    kind = "cancellation" if change.strip().lower().startswith("cancel") else "change"
+    title = f"Booking {kind} request"
+    if booking_ref:
+        title += f" · {booking_ref}"
+    summary = f"{kind.capitalize()} requested: {details.strip()}"
+    who = " ".join(p for p in (guest_name.strip(), guest_phone.strip()) if p)
+    if who:
+        summary += f" — guest: {who}"
+    try:
+        result = await _client.create_escalation({
+            "source": "assistant", "category": "booking", "severity": "medium",
+            "title": title[:160], "summary": summary[:4000],
+            "raisedBy": {"name": guest_name.strip() or None, "contact": guest_phone.strip() or None},
+        })
+    except OtaError as e:
+        return {"status": "error", "message": str(e)}
+    return {"status": "filed", "escalation": result}
+
+
 async def _availability_with_rates(check_in: str, check_out: str) -> list[dict[str, Any]]:
     """Free rooms enriched with rate/occupancy from the catalog (one call each)."""
     avail = await _client.room_availability(check_in, check_out)

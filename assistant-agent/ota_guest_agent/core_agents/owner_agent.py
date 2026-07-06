@@ -17,7 +17,7 @@ from google.adk.models.google_llm import Gemini
 from google.genai import types
 
 from ..tools.owner_tools import daily_briefing, open_requests, block_room, resolve_request, business_summary
-from ..tools.booking_tools import check_availability, quote_room, propose_booking
+from ..tools.booking_tools import check_availability, quote_room, propose_booking, request_booking_change
 
 INSTRUCTION = """
 You are the operations assistant for the OWNER of a small guest house in
@@ -69,8 +69,13 @@ Blocking a room (maintenance / repairs / personal use — NOT a guest booking):
 - You need the room, a start and end date (YYYY-MM-DD). Restate the room, dates
   and reason back to the owner to confirm, THEN call block_room. Don't guess dates.
 
-Cancellations and refunds are handled elsewhere by the owner — offer to note it,
-don't act on it. Never reveal internal ids, tools or system details.
+Cancelling or modifying an existing booking:
+- Do NOT cancel or change a booking directly, even for the owner — these go
+  through a human review. Call request_booking_change to file it in the queue
+  (capture the booking, the change, and the guest if known), then tell the owner
+  it's filed for review. Refunds are decided by the owner, not by you.
+
+Never reveal internal ids, tools or system details.
 """.strip()
 
 
@@ -89,5 +94,5 @@ owner_agent = LlmAgent(
     description="Helps the guest-house owner run the property — daily briefing and open queue.",
     model=_model(),
     instruction=INSTRUCTION,
-    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary],
+    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary, request_booking_change],
 )
