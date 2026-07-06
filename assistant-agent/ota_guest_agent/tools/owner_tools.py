@@ -102,3 +102,22 @@ async def resolve_request(
     except OtaError as e:
         return {"status": "error", "message": str(e)}
     return {"status": "success", "request": result}
+
+
+async def business_summary(tool_context: ToolContext, from_date: str = "", to_date: str = "") -> dict[str, Any]:
+    """Revenue and performance for a period: gross/net revenue, money collected vs
+    outstanding, net profit, occupancy %, ADR, RevPAR, and earnings by channel.
+    Call this for "how's revenue this month?", "what's my occupancy / ADR?",
+    "which channel earns the most?", "how are we doing this month?".
+
+    Args:
+        from_date: start of the period, YYYY-MM-DD (optional; omit for this month)
+        to_date: end of the period, YYYY-MM-DD, exclusive (optional; omit for this month)
+    """
+    if bool(from_date) != bool(to_date):
+        return {"status": "error", "message": "Give both a start and end date, or neither (for this month)."}
+    try:
+        summary = await _client.owner_finance(from_date, to_date)
+    except OtaError as e:
+        return {"status": "error", "message": str(e)}
+    return {"status": "success", "summary": summary}

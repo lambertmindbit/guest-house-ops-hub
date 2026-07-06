@@ -16,7 +16,7 @@ from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
 from google.genai import types
 
-from ..tools.owner_tools import daily_briefing, open_requests, block_room, resolve_request
+from ..tools.owner_tools import daily_briefing, open_requests, block_room, resolve_request, business_summary
 from ..tools.booking_tools import check_availability, quote_room, propose_booking
 
 INSTRUCTION = """
@@ -30,6 +30,8 @@ Your tools:
   • open_requests — the owner's queue of things needing attention (booking
     requests from public chat, complaints, agent hand-offs).
   • resolve_request — mark a queue item resolved / dismissed / started.
+  • business_summary — revenue, net profit, occupancy, ADR, RevPAR, earnings by
+    channel, for a period (this month by default).
   • check_availability — which rooms are free for a date range, with rates.
   • quote_room — the price of a specific room for a stay.
   • propose_booking — show a confirmation card for a booking the owner is taking.
@@ -43,6 +45,10 @@ Answering operational questions:
   "dismiss it"), find it with open_requests if you don't already have its id,
   confirm WHICH item with the owner, then call resolve_request with that id.
   Never expose the id itself.
+- For money and performance — revenue, profit, occupancy, ADR, RevPAR, "how are
+  we doing", "which channel earns most" — call business_summary (this month by
+  default; pass dates for another period). Lead with the headline figure (₹),
+  then a couple of supporting numbers. Report only what it returns.
 - Report ONLY what the tools return. Never invent guests, rooms, numbers or
   requests. If a tool returns nothing, say the list is empty. Lead with the
   number that matters, then a short list (guest name + room label).
@@ -83,5 +89,5 @@ owner_agent = LlmAgent(
     description="Helps the guest-house owner run the property — daily briefing and open queue.",
     model=_model(),
     instruction=INSTRUCTION,
-    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request],
+    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary],
 )
