@@ -32,6 +32,7 @@ export default async function MorePage() {
         { href: "/housekeeping", icon: "clean", title: "Housekeeping", sub: hk.toCleanCount > 0 ? `${hk.toCleanCount} room${hk.toCleanCount === 1 ? "" : "s"} to clean` : "All rooms clean" },
         { href: "/complaints", icon: "alertCircle", title: "Complaints", sub: "Log & resolve guest issues" },
         { href: "/staff", icon: "guests", title: "Staff", sub: "Directory, shifts & attendance" },
+        { href: "/assistant", icon: "inbox", title: "Owner console", sub: "Ask about your day; book, block, resolve" },
         { href: "/needs-you", icon: "alert", title: "Needs you", sub: "Conflicts & approvals", badge: needsYou },
       ],
     },
