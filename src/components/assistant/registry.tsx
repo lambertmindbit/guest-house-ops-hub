@@ -17,6 +17,8 @@ export function RenderComponent({ component, onAction, disabled }: { component: 
       return <RoomsCards c={component} onAction={onAction} disabled={disabled} />;
     case "quote":
       return <QuoteCard c={component} onAction={onAction} disabled={disabled} />;
+    case "booking_form":
+      return <BookingFormCard c={component} onAction={onAction} disabled={disabled} />;
     case "confirm_booking":
       return <ConfirmCard c={component} onAction={onAction} disabled={disabled} />;
     case "otp":
@@ -37,7 +39,6 @@ function RoomsCards({ c, onAction, disabled }: { c: Extract<UIComponent, { type:
             <div className="rowcard__meta">Sleeps {r.maxOccupancy} · <b className="num" style={{ color: "var(--ink)" }}>{displayINR(r.rate)}</b>/night</div>
           </div>
           <div className="row" style={{ gap: 6 }}>
-            <button className="btn btn--ghost btn--sm" disabled={disabled} onClick={() => onAction(`/quote ${r.id} ${checkIn} ${checkOut}`)}>Price</button>
             <button className="btn btn--primary btn--sm" disabled={disabled} onClick={() => onAction(`/book ${r.id} ${checkIn} ${checkOut}`)}>Book</button>
           </div>
         </div>
@@ -57,6 +58,31 @@ function QuoteCard({ c, onAction, disabled }: { c: Extract<UIComponent, { type: 
         <span className="num" style={{ fontSize: 22, fontWeight: 700 }}>{displayINR(q.total)}</span>
       </div>
       <button className="btn btn--primary btn--sm btn--block" style={{ marginTop: 10 }} disabled={disabled} onClick={() => onAction(`/book ${q.roomId} ${q.checkIn} ${q.checkOut}`)}>Book this room</button>
+    </div>
+  );
+}
+
+function BookingFormCard({ c, onAction, disabled }: { c: Extract<UIComponent, { type: "booking_form" }>; onAction: Action; disabled: boolean }) {
+  const { data: b } = c;
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const ready = name.trim().length > 0 && phone.length === 10;
+  const submit = () => { if (ready) onAction(`/bookdetails ${b.roomId} ${b.checkIn} ${b.checkOut} ${phone} ${name.trim()}`); };
+  return (
+    <div className="card card--pad" style={{ marginTop: 8, maxWidth: 340 }}>
+      <div style={{ fontWeight: 600 }}>{b.roomLabel} <span className="muted" style={{ fontWeight: 400 }}>· {b.roomTypeName}</span></div>
+      <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{b.checkIn} → {b.checkOut}</div>
+      <div className="col" style={{ gap: 6, marginTop: 10 }}>
+        <input className="input" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} aria-label="Your name" />
+        <input className="input" inputMode="numeric" placeholder="10-digit phone" value={phone}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+          disabled={disabled} aria-label="Phone number" />
+      </div>
+      <div className="row" style={{ gap: 6, marginTop: 10 }}>
+        <button className="btn btn--primary btn--sm" style={{ flex: 1 }} onClick={submit} disabled={disabled || !ready}>Continue</button>
+        <button className="btn btn--ghost btn--sm" disabled={disabled} onClick={() => onAction("cancel")}>Not now</button>
+      </div>
     </div>
   );
 }
