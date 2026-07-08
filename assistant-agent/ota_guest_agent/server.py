@@ -24,6 +24,7 @@ GEMINI_API_KEY before it will serve. See README.md.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import uuid
@@ -40,8 +41,8 @@ from google.adk.runners import Runner  # noqa: E402
 from google.adk.sessions import InMemorySessionService  # noqa: E402
 from google.genai import types  # noqa: E402
 
-from .core_agents.guest_agent import guest_agent  # noqa: E402
-from .core_agents.owner_agent import owner_agent  # noqa: E402
+from .core_agents.guest_agent import guest_agent, build_guest_agent  # noqa: E402
+from .core_agents.owner_agent import owner_agent, build_owner_agent  # noqa: E402
 from .services.ota_client import OtaClient, OtaError, RoomJustTaken  # noqa: E402
 from .services import ui  # noqa: E402
 
@@ -51,6 +52,13 @@ USER_ID = "guest"
 # share state or persona with the guest/public path.
 OWNER_APP_NAME = "ota_owner_agent"
 OWNER_USER_ID = "owner"
+
+# Fallback model for the empty-turn retry chain (see _run). Gemini occasionally
+# returns an empty candidate under load; the last attempt of a turn switches to
+# this model. Same free/billing account, different capacity bucket.
+FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
+
+logger = logging.getLogger(__name__)
 
 api = FastAPI(title="OTA Guest Assistant")
 # Sessions (conversation + the pending-booking `_pending` state) live in THIS
@@ -62,6 +70,16 @@ api = FastAPI(title="OTA Guest Assistant")
 _session_service = InMemorySessionService()
 _runner = Runner(app_name=APP_NAME, agent=guest_agent, session_service=_session_service)
 _owner_runner = Runner(app_name=OWNER_APP_NAME, agent=owner_agent, session_service=_session_service)
+# Fallback-model twins share the SAME app_name/session namespace as their primary
+# so a fallback attempt reads/writes the same session (its _pending, _ui state).
+_fallback_runner = Runner(
+    app_name=APP_NAME, agent=build_guest_agent(FALLBACK_MODEL, name="ota_guest_agent_fb"),
+    session_service=_session_service,
+)
+_owner_fallback_runner = Runner(
+    app_name=OWNER_APP_NAME, agent=build_owner_agent(FALLBACK_MODEL, name="ota_owner_agent_fb"),
+    session_service=_session_service,
+)
 _ota = OtaClient()
 
 
@@ -377,31 +395,69 @@ async def _run(
     runner: Runner = _runner,
     app_name: str = APP_NAME,
     user_id: str = USER_ID,
+    fallback_runner: Runner | None = None,
 ) -> AsyncIterator[str]:
-    # Fresh state bucket per turn so tool-produced UI doesn't leak across turns.
-    try:
-        await _session_service.create_session(app_name=app_name, user_id=user_id, session_id=session_id, state={"_ui": []})
-    except Exception:
-        # Session already exists — reset the per-turn UI bucket.
+    """Run one conversational turn, guaranteeing it never ends silently.
+
+    Gemini under load either returns an empty candidate or fails outright (503/
+    overloaded — both observed in prod). So each turn tries up to three attempts
+    and stops the moment one produces any text OR a UI card: primary model,
+    primary again (a plain retry usually clears a transient blip), then the
+    FALLBACK_MODEL (a different-capacity model that tends to answer when the
+    primary is overloaded). An attempt that comes back empty OR raises a transient
+    error just falls through to the next attempt; only when all attempts fail does
+    the guest get a friendly "please try again" instead of silence or a raw error.
+
+    Exception: once an attempt has already streamed some text, a mid-stream error
+    stops the chain — the partial answer is kept rather than re-run on another
+    model (which would duplicate or contradict it)."""
+    attempts: list[Runner] = [runner, runner]
+    if fallback_runner is not None:
+        attempts.append(fallback_runner)
+
+    last_error: Exception | None = None
+    for attempt_runner in attempts:
+        # Fresh per-turn _ui bucket (also clears any UI a prior empty attempt left).
+        try:
+            await _session_service.create_session(app_name=app_name, user_id=user_id, session_id=session_id, state={"_ui": []})
+        except Exception:
+            session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
+            if session is not None:
+                session.state["_ui"] = []
+
+        emitted = False
+        content = types.Content(role="user", parts=[types.Part(text=message)])
+        try:
+            async for event in attempt_runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
+                parts = getattr(getattr(event, "content", None), "parts", None) or []
+                for part in parts:
+                    text = getattr(part, "text", None)
+                    if text:
+                        emitted = True
+                        yield _line({"type": "text", "delta": text})
+        except Exception as exc:
+            last_error = exc
+            logger.warning("assistant turn attempt failed: %s", exc)
+            if emitted:
+                # A partial answer already reached the user — keep it, don't retry.
+                yield _line({"type": "done"})
+                return
+            continue  # nothing streamed yet — try the next runner in the chain
+
         session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
-        if session is not None:
-            session.state["_ui"] = []
+        for component in (session.state.get("_ui") if session else []) or []:
+            emitted = True
+            yield _line({"type": "ui", "component": component})
 
-    content = types.Content(role="user", parts=[types.Part(text=message)])
-    try:
-        async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
-            parts = getattr(getattr(event, "content", None), "parts", None) or []
-            for part in parts:
-                text = getattr(part, "text", None)
-                if text:
-                    yield _line({"type": "text", "delta": text})
-    except Exception as exc:  # keep the transport honest — surface, don't crash
-        yield _line({"type": "error", "message": f"assistant error: {exc}"})
+        if emitted:
+            yield _line({"type": "done"})
+            return
+        # Empty attempt — fall through to the next runner in the chain.
 
-    session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
-    for component in (session.state.get("_ui") if session else []) or []:
-        yield _line({"type": "ui", "component": component})
-
+    # Every attempt came back empty or failed.
+    if last_error is not None:
+        logger.error("assistant turn exhausted all attempts; last error: %s", last_error)
+    yield _line({"type": "text", "delta": "Sorry, I ran into a brief hiccup just now — could you send that to me again?"})
     yield _line({"type": "done"})
 
 
@@ -457,14 +513,17 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     # owner agent.
     if mode == "owner":
         handled = await _handle_owner_slash(message, session_id)
-        stream = handled if handled is not None else _run(message, session_id, _owner_runner, OWNER_APP_NAME, OWNER_USER_ID)
+        stream = handled if handled is not None else _run(
+            message, session_id, _owner_runner, OWNER_APP_NAME, OWNER_USER_ID,
+            fallback_runner=_owner_fallback_runner,
+        )
         return StreamingResponse(_logged(stream, message, session_id, mode), media_type="application/x-ndjson")
 
     # Public guest widget: button actions (/quote, /confirm) are handled
     # deterministically without an LLM call; /confirm files a booking request
     # rather than creating a reservation. Everything else goes to the guest agent.
     handled = await _handle_slash(message, session_id, mode)
-    stream = handled if handled is not None else _run(message, session_id)
+    stream = handled if handled is not None else _run(message, session_id, fallback_runner=_fallback_runner)
     return StreamingResponse(_logged(stream, message, session_id, mode), media_type="application/x-ndjson")
 
 
