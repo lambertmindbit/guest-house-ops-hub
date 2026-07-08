@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type {
   EscalationSource,
@@ -33,6 +34,8 @@ export type CreateEscalationInput = {
   relatedId?: string | null;
   threadRef?: string | null;
   externalId?: string | null;
+  /** Structured payload for a direct action — see the schema comment on Escalation.metadata. */
+  metadata?: Prisma.InputJsonValue | null;
   /** Forward-compatible tenant hint. Ignored until the multi-tenancy gate lands. */
   propertyRef?: string | null;
 };
@@ -128,6 +131,7 @@ export async function createEscalation(
       relatedId: input.relatedId ?? null,
       threadRef: input.threadRef ?? null,
       externalId: input.externalId ?? null,
+      metadata: input.metadata ?? undefined,
       // propertyRef is accepted but not yet persisted — see schema note.
     },
   });

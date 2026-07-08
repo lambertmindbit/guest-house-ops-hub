@@ -32,6 +32,22 @@ const AgentBody = z.object({
     .optional(),
   threadRef: z.string().max(128).optional(),
   externalId: z.string().max(128).optional(),
+  // Structured payload for a direct owner action (e.g. "Approve & book" on a
+  // booking request) — see the schema comment on Escalation.metadata.
+  metadata: z
+    .object({
+      kind: z.string().max(40).optional(),
+      roomId: z.string().max(64).optional(),
+      roomLabel: z.string().max(64).optional(),
+      roomTypeName: z.string().max(120).optional(),
+      checkIn: z.string().max(20).optional(),
+      checkOut: z.string().max(20).optional(),
+      nights: z.number().optional(),
+      total: z.number().optional(),
+      guestName: z.string().max(160).optional(),
+      guestPhone: z.string().max(32).optional(),
+    })
+    .optional(),
   /** Forward-compatible tenant hint; accepted now, persisted post-tenancy. */
   propertyRef: z.string().max(64).optional(),
 });
@@ -65,6 +81,7 @@ export async function POST(req: Request) {
     relatedId: d.related?.id,
     threadRef: d.threadRef,
     externalId: d.externalId,
+    metadata: d.metadata,
     propertyRef: d.propertyRef,
   });
 
