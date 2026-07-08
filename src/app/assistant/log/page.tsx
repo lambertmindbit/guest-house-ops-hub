@@ -41,6 +41,19 @@ export default async function ChatLogPage() {
                     <div key={t.id} className="col" style={{ gap: 3 }}>
                       <p style={{ margin: 0 }}><strong>›</strong> {t.userMessage}</p>
                       <p className="muted" style={{ margin: 0, whiteSpace: "pre-wrap" }}>{t.reply}</p>
+                      {t.meta && ((t.meta.tools && t.meta.tools.length > 0) || t.meta.tokens || t.meta.fallback) && (
+                        <div className="row" style={{ gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                          {t.meta.tools?.map((tool, i) => (
+                            <span key={`${tool}-${i}`} className="badge badge--neutral" style={{ fontSize: 10 }}>{tool}</span>
+                          ))}
+                          {typeof t.meta.tokens === "number" && (
+                            <span className="badge badge--neutral" style={{ fontSize: 10 }}>{t.meta.tokens} tok</span>
+                          )}
+                          {t.meta.fallback && (
+                            <span className="badge badge--warn" style={{ fontSize: 10 }}>fallback model</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

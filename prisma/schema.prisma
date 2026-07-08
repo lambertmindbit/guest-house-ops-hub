@@ -510,6 +510,10 @@ model ConversationTurn {
   mode        String // "owner" | "public"
   userMessage String   @map("user_message")
   reply       String
+  // Optional per-turn diagnostics for the owner's chat log: which tools the
+  // assistant called, a best-effort token count, and whether the fallback model
+  // answered. e.g. {tools:["check_availability"], tokens:812, fallback:false}.
+  metadata    Json?
   propertyId  String?  @map("property_id")
   createdAt   DateTime @default(now()) @map("created_at")
 

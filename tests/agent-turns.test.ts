@@ -44,4 +44,13 @@ describe("agent turns endpoint", () => {
     const rows = await prisma.conversationTurn.findMany({ where: { sessionId: TAG } });
     expect(rows).toHaveLength(1); // still just the one from before
   });
+
+  it("stores optional per-turn diagnostics metadata", async () => {
+    const meta = { tools: ["check_availability", "quote_room"], tokens: 812, fallback: true };
+    const res = await postTurn(makePost({ sessionId: `${TAG}-m`, mode: "public", userMessage: "rooms?", reply: "Here are the rooms.", metadata: meta }, TEST_TOKEN));
+    expect(res.status).toBe(201);
+    const row = await prisma.conversationTurn.findFirst({ where: { sessionId: `${TAG}-m` } });
+    expect(row?.metadata).toEqual(meta);
+    await prisma.conversationTurn.deleteMany({ where: { sessionId: `${TAG}-m` } });
+  });
 });
