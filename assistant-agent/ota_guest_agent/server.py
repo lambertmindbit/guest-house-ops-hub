@@ -95,6 +95,20 @@ async def _quote_lines(msg: str) -> AsyncIterator[str]:
     yield _line({"type": "done"})
 
 
+async def _room_still_free(room_id: str, check_in: str, check_out: str) -> bool:
+    """Best-effort availability re-check at each booking step (/book, /bookdetails,
+    /confirm) — catches a room that got taken WHILE the guest was filling in their
+    details, so they hear about it right away instead of after a request sits in
+    the owner's queue. The GiST constraint at the actual write is still the only
+    hard guarantee; a transient check failure here never blocks the flow."""
+    try:
+        avail = await _ota.room_availability(check_in, check_out, [room_id])
+    except OtaError:
+        return True
+    row = next((a for a in avail if a["id"] == room_id), None)
+    return bool(row and row.get("free"))
+
+
 async def _handle_booking_step(message: str, session_id: str, app_name: str, user_id: str):
     """Deterministic booking button-flow — NO LLM (so the room list is never
     re-rendered, and it's immune to model overload/quota). Shared by the public
@@ -124,6 +138,10 @@ async def _handle_booking_step(message: str, session_id: str, app_name: str, use
                 yield _line({"type": "text", "delta": "That room isn't available anymore — please check availability again."})
                 yield _line({"type": "done"})
                 return
+            if not await _room_still_free(room["id"], check_in, check_out):
+                yield _line({"type": "text", "delta": f"Sorry — {room['label']} is no longer free for those dates. Want to check other options?"})
+                yield _line({"type": "done"})
+                return
             yield _line({"type": "ui", "component": ui.booking_form_component(room, check_in, check_out)})
             yield _line({"type": "text", "delta": "Almost there — enter your name and phone to continue."})
             yield _line({"type": "done"})
@@ -148,6 +166,10 @@ async def _handle_booking_step(message: str, session_id: str, app_name: str, use
                 room = next((r for r in await _ota.rooms() if r["id"] == room_id or r["label"] == room_id), None)
                 if not room:
                     yield _line({"type": "text", "delta": "That room isn't available anymore — please check availability again."})
+                    yield _line({"type": "done"})
+                    return
+                if not await _room_still_free(room["id"], check_in, check_out):
+                    yield _line({"type": "text", "delta": f"Sorry — {room['label']} was just booked for those dates. Want to check other options?"})
                     yield _line({"type": "done"})
                     return
                 quote = await _ota.quote(room["id"], check_in, check_out)
@@ -260,6 +282,16 @@ async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
 
         if msg.startswith("/confirm"):
             if mode == "public":
+                # Last-moment re-check — the guest may have spent a while on the
+                # form. Catching it here means "sorry, that's gone" arrives as part
+                # of booking, not as a surprise days later when the owner tries to
+                # approve a request that can no longer be honoured.
+                if not await _room_still_free(pending["roomId"], pending["checkIn"], pending["checkOut"]):
+                    await _set_state(session, {"_pending": None})
+                    yield _line({"type": "text", "delta": f"Sorry — {pending['roomLabel']} is no longer available for those dates. Want to check other options?"})
+                    yield _line({"type": "done"})
+                    return
+
                 # File a request for the owner to confirm — no reservation is created.
                 summary = (
                     f"Guest {pending['guestName']} ({pending['guestPhone']}) requested "
