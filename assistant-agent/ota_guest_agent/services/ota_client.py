@@ -79,6 +79,11 @@ class OtaClient:
         """GET /api/agent/faq — owner-managed FAQ (active), as question/answer/category."""
         return await self._get("/api/agent/faq", {})
 
+    async def policies(self) -> list[dict[str, Any]]:
+        """GET /api/agent/policies — owner-editable assistant guidance (active),
+        as {intent, instructions}. Injected into the prompt per turn."""
+        return await self._get("/api/agent/policies", {})
+
     # ── Owner console reads (owner-only; behind the same agent token) ─────────
     async def owner_summary(self) -> dict[str, Any]:
         """GET /api/agent/owner/summary — daily briefing: occupancy, today's
