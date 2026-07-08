@@ -19,7 +19,7 @@ from google.adk.agents.readonly_context import ReadonlyContext
 _IST = ZoneInfo("Asia/Kolkata")
 
 
-def _today_line() -> str:
+def today_line() -> str:
     now = datetime.now(_IST)
     return (
         f"Today's date is {now.strftime('%d-%b-%Y')} ({now.strftime('%A')}), Indian "
@@ -29,6 +29,10 @@ def _today_line() -> str:
         "YYYY-MM-DD, but when you SPEAK a date to the guest or owner, always write "
         "it as DD-Mon-YYYY (e.g. \"10-Jul-2026\") — the Indian format."
     )
+
+
+# Backwards-compat alias (older imports used the private name).
+_today_line = today_line
 
 
 def dated_instruction(body: str):

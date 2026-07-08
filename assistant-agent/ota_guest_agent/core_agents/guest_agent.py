@@ -22,8 +22,8 @@ from ..tools.booking_tools import (
     request_booking_change,
 )
 from ..tools.faq_tools import answer_faq
-from ..services.dates import dated_instruction
 from ..prompts import blocks
+from ..prompts.instruction import build_instruction
 
 INSTRUCTION_BODY = """
 You are the booking assistant for a small guest house in Meghalaya, India.
@@ -93,7 +93,7 @@ def build_guest_agent(model_name: str | None = None, name: str = "ota_guest_agen
         name=name,
         description="Helps a guest find and price a room at the guest house.",
         model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
-        instruction=dated_instruction(blocks.compose(INSTRUCTION_BODY, blocks.GUEST_CLOSING)),
+        instruction=build_instruction(INSTRUCTION_BODY, blocks.GUEST_CLOSING),
         tools=GUEST_TOOLS,
     )
 
