@@ -53,6 +53,12 @@ OWNER_APP_NAME = "ota_owner_agent"
 OWNER_USER_ID = "owner"
 
 api = FastAPI(title="OTA Guest Assistant")
+# Sessions (conversation + the pending-booking `_pending` state) live in THIS
+# process's memory. That makes the Cloud Run service stateful: it MUST run at
+# most one instance (`--max-instances=1`). A second instance would serve a
+# guest's follow-up turn from a different memory and lose their pending booking
+# mid-flow. Scaling past 1 requires a persistent ADK session service first
+# (see the architecture upgrade plan, decision D1).
 _session_service = InMemorySessionService()
 _runner = Runner(app_name=APP_NAME, agent=guest_agent, session_service=_session_service)
 _owner_runner = Runner(app_name=OWNER_APP_NAME, agent=owner_agent, session_service=_session_service)

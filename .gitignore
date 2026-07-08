@@ -41,3 +41,6 @@ ROOT_Lawei_Gap_Analysis*
 # ROOT platform reference drop (separate repo; contains node_modules + a large zip)
 /Tourism Agent/
 /Tourism Agent.zip
+
+# Reference agent-system drop for study (separate project; node_modules + .env inside)
+/Archive/

@@ -64,6 +64,22 @@ Explore the agent directly with the ADK dev UI:
 adk web --reload_agents --port 8001 assistant-agent
 ```
 
+## Deploy & scaling — MUST stay single-instance
+
+Sessions (conversation history + the in-flight `_pending` booking) live in this
+process's memory via ADK's `InMemorySessionService`. **The Cloud Run service must
+therefore run at most one instance** — a second instance would serve a guest's
+follow-up turn from a different memory and lose their pending booking mid-flow.
+
+```bash
+gcloud run deploy ota-guest-agent --source . --region asia-south1 --quiet
+gcloud run services update ota-guest-agent --region asia-south1 --max-instances=1
+```
+
+To scale past one instance, swap `InMemorySessionService` for a persistent
+(DB-backed) ADK session service first. Tracked as decision D1 in the AI
+architecture upgrade plan.
+
 ## Scope
 
 Phase 2 is **read-only** (availability, rooms, price). The booking write
