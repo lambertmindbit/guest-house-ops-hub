@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import uuid
 from typing import AsyncIterator
 
@@ -92,6 +93,87 @@ async def _quote_lines(msg: str) -> AsyncIterator[str]:
     yield _line({"type": "ui", "component": ui.quote_component(room, check_in, check_out, nights, total)})
     yield _line({"type": "text", "delta": f"{room['label']}: ₹{total} for {nights} night(s). Tap Book to continue."})
     yield _line({"type": "done"})
+
+
+async def _handle_booking_step(message: str, session_id: str, app_name: str, user_id: str):
+    """Deterministic booking button-flow — NO LLM (so the room list is never
+    re-rendered, and it's immune to model overload/quota). Shared by the public
+    and owner paths; the caller passes the session namespace so the pending
+    booking is stored where /confirm will read it.
+
+        /book <roomId> <ci> <co>                    → show the name/phone form
+        /bookdetails <roomId> <ci> <co> <phone> <name...> → store pending + confirm card
+
+    Returns an async generator, or None if this isn't a booking-step message."""
+    msg = message.strip()
+
+    if msg.startswith("/book "):
+        parts = msg.split()
+        if len(parts) < 4:
+            return None
+        room_id, check_in, check_out = parts[1], parts[2], parts[3]
+
+        async def gen_form():
+            try:
+                room = next((r for r in await _ota.rooms() if r["id"] == room_id or r["label"] == room_id), None)
+            except OtaError as exc:
+                yield _line({"type": "text", "delta": f"Sorry, I couldn't load that room ({exc})."})
+                yield _line({"type": "done"})
+                return
+            if not room:
+                yield _line({"type": "text", "delta": "That room isn't available anymore — please check availability again."})
+                yield _line({"type": "done"})
+                return
+            yield _line({"type": "ui", "component": ui.booking_form_component(room, check_in, check_out)})
+            yield _line({"type": "text", "delta": "Almost there — enter your name and phone to continue."})
+            yield _line({"type": "done"})
+
+        return gen_form()
+
+    if msg.startswith("/bookdetails "):
+        # /bookdetails <roomId> <ci> <co> <phone> <name...>
+        parts = msg.split()
+        room_id = parts[1] if len(parts) > 1 else ""
+        check_in = parts[2] if len(parts) > 2 else ""
+        check_out = parts[3] if len(parts) > 3 else ""
+        phone = re.sub(r"\D", "", parts[4]) if len(parts) > 4 else ""
+        name = " ".join(parts[5:]).strip()
+
+        async def gen_details():
+            if len(phone) != 10 or not name:
+                yield _line({"type": "text", "delta": "Please enter your name and a valid 10-digit phone number."})
+                yield _line({"type": "done"})
+                return
+            try:
+                room = next((r for r in await _ota.rooms() if r["id"] == room_id or r["label"] == room_id), None)
+                if not room:
+                    yield _line({"type": "text", "delta": "That room isn't available anymore — please check availability again."})
+                    yield _line({"type": "done"})
+                    return
+                quote = await _ota.quote(room["id"], check_in, check_out)
+            except OtaError as exc:
+                yield _line({"type": "text", "delta": f"I couldn't price that stay ({exc})."})
+                yield _line({"type": "done"})
+                return
+
+            nights = len(quote.get("nights", []))
+            total = quote.get("total", 0)
+            session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
+            if session is None:
+                await _session_service.create_session(app_name=app_name, user_id=user_id, session_id=session_id, state={"_ui": []})
+                session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
+            await _set_state(session, {"_pending": {
+                "roomId": room["id"], "roomLabel": room["label"], "roomTypeName": room["roomTypeName"],
+                "checkIn": check_in, "checkOut": check_out, "nights": nights, "total": total,
+                "guestName": name, "guestPhone": phone,
+            }})
+            yield _line({"type": "ui", "component": ui.confirm_component(room, check_in, check_out, nights, total, name, phone)})
+            yield _line({"type": "text", "delta": f"Please review and tap Confirm to book {room['label']}."})
+            yield _line({"type": "done"})
+
+        return gen_details()
+
+    return None
 
 
 async def _handle_owner_slash(message: str, session_id: str):
@@ -310,6 +392,15 @@ async def chat(request: Request, authorization: str | None = Header(default=None
         raise HTTPException(status_code=422, detail="message is required")
     session_id = (body or {}).get("sessionId") or f"web-{uuid.uuid4().hex}"
     mode = "public" if (body or {}).get("mode") == "public" else "owner"
+
+    # The Book button flow (/book → name/phone form → /bookdetails → confirm card)
+    # is fully deterministic in BOTH modes — no LLM, so the room list is never
+    # re-rendered. Pending is stored in this mode's session namespace so /confirm
+    # (below) reads it back.
+    book_app, book_user = (OWNER_APP_NAME, OWNER_USER_ID) if mode == "owner" else (APP_NAME, USER_ID)
+    booking = await _handle_booking_step(message, session_id, book_app, book_user)
+    if booking is not None:
+        return StreamingResponse(_logged(booking, message, session_id, mode), media_type="application/x-ndjson")
 
     # The in-app owner console (separate agent). Its card actions are handled
     # deterministically: /quote → price card, /confirm → write the reservation
