@@ -273,6 +273,16 @@ async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
                         "title": f"Booking request: {pending['roomLabel']} {pending['checkIn']}→{pending['checkOut']}",
                         "summary": summary,
                         "raisedBy": {"name": pending["guestName"], "contact": pending["guestPhone"]},
+                        # Structured so the owner can approve with one tap (creates the
+                        # reservation directly) instead of re-typing everything by hand.
+                        "metadata": {
+                            "kind": "booking_request",
+                            "roomId": pending["roomId"], "roomLabel": pending["roomLabel"],
+                            "roomTypeName": pending["roomTypeName"],
+                            "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
+                            "nights": pending["nights"], "total": pending["total"],
+                            "guestName": pending["guestName"], "guestPhone": pending["guestPhone"],
+                        },
                     })
                 except OtaError as exc:
                     yield _line({"type": "text", "delta": f"I couldn't send your request ({exc}). Please try again."})
