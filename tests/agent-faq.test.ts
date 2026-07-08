@@ -38,4 +38,13 @@ describe("agent FAQ endpoint", () => {
     expect(mine.map((f: { question: string }) => f.question)).toEqual([`${TAG}-active`]);
     expect(mine[0]).toMatchObject({ answer: "yes we do", category: "Facilities" });
   });
+
+  it("includes media when present", async () => {
+    const media = { photos: ["https://example.com/pool.jpg"], mapLink: "https://maps.example/x" };
+    await prisma.faqEntry.create({ data: { question: `${TAG}-media`, answer: "a", active: true, media, sortOrder: 3 } });
+    const res = await getFaq(makeGet(TEST_TOKEN));
+    const { data } = await res.json();
+    const row = data.find((f: { question: string }) => f.question === `${TAG}-media`);
+    expect(row.media).toEqual(media);
+  });
 });

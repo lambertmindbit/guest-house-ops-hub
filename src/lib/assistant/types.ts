@@ -57,6 +57,9 @@ export type BookingFormData = {
   checkOut: string;
 };
 
+// Photos and/or a map link the assistant shows with a FAQ answer.
+export type FaqMediaData = { caption?: string; photos?: string[]; mapLink?: string };
+
 // A generative-UI descriptor the assistant emits; the client renders each via a
 // small type→component registry (src/components/assistant/registry.tsx).
 export type UIComponent =
@@ -65,6 +68,7 @@ export type UIComponent =
   | { type: "booking_form"; data: BookingFormData }
   | { type: "confirm_booking"; data: ConfirmCardData }
   | { type: "otp"; data: OtpCardData }
+  | { type: "faq_media"; data: FaqMediaData }
   | { type: "availability"; data: AvailabilityCardData };
 
 // The streaming wire protocol: the route emits one JSON object per line (NDJSON).

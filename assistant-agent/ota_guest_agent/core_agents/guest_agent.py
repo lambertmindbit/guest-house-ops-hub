@@ -37,8 +37,10 @@ You can:
 
 Property questions:
 - For ANY question that isn't about room availability or price — parking, Wi-Fi,
-  check-in/out times, meals, pets, directions, house rules, etc. — call answer_faq
-  and reply using ONLY what it returns. Do not invent facilities or policies.
+  check-in/out times, meals, pets, pool, location/directions, house rules, etc. —
+  call answer_faq and reply using ONLY what it returns. Do not invent facilities
+  or policies. Pass `topics`: the key words of the guest's question (e.g. ["pool"]
+  or ["location"]) — if a matching answer has photos or a map, the guest sees them.
 - If the FAQ doesn't cover the question, say you'll pass it on to the property
   rather than guessing.
 

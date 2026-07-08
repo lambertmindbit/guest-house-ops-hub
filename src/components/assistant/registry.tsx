@@ -23,9 +23,36 @@ export function RenderComponent({ component, onAction, disabled }: { component: 
       return <ConfirmCard c={component} onAction={onAction} disabled={disabled} />;
     case "otp":
       return <OtpCard c={component} onAction={onAction} disabled={disabled} />;
+    case "faq_media":
+      return <FaqMediaCard c={component} />;
     case "availability":
       return <AvailabilityCard c={component} />;
   }
+}
+
+function FaqMediaCard({ c }: { c: Extract<UIComponent, { type: "faq_media" }> }) {
+  const { photos, mapLink, caption } = c.data;
+  const hasPhotos = photos && photos.length > 0;
+  if (!hasPhotos && !mapLink) return null;
+  return (
+    <div className="card card--pad" style={{ marginTop: 8, maxWidth: 360 }}>
+      {caption && <div className="muted" style={{ fontSize: "var(--fs-meta)", marginBottom: 8 }}>{caption}</div>}
+      {hasPhotos && (
+        <div className="row" style={{ gap: 8, overflowX: "auto", paddingBottom: 4 }}>
+          {photos!.map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={`${src}-${i}`} src={src} alt="" loading="lazy"
+              style={{ height: 128, width: "auto", borderRadius: 8, flex: "none", objectFit: "cover" }} />
+          ))}
+        </div>
+      )}
+      {mapLink && (
+        <a href={mapLink} target="_blank" rel="noopener noreferrer" className="btn btn--ghost btn--sm" style={{ marginTop: hasPhotos ? 10 : 0 }}>
+          📍 View on map
+        </a>
+      )}
+    </div>
+  );
 }
 
 function RoomsCards({ c, onAction, disabled }: { c: Extract<UIComponent, { type: "rooms" }>; onAction: Action; disabled: boolean }) {

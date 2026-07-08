@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ok, fail, zodFail } from "@/lib/api";
-import { updateFaq, deleteFaq } from "@/lib/faq";
+import { updateFaq, deleteFaq, faqMediaSchema } from "@/lib/faq";
 
 const schema = z
   .object({
@@ -9,6 +9,7 @@ const schema = z
     category: z.string().trim().min(1).nullable().optional(),
     active: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
+    media: faqMediaSchema,
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 

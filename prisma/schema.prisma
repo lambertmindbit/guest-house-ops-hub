@@ -493,6 +493,10 @@ model FaqEntry {
   question   String
   answer     String
   category   String?
+  // Optional attachments the assistant can show with this answer: photo URLs and
+  // a map link. Shape: {photos?: string[], mapLink?: string}. The guest agent
+  // emits a card for these when it answers from this FAQ.
+  media      Json?
   sortOrder  Int      @default(0) @map("sort_order")
   active     Boolean  @default(true)
   propertyId String?  @map("property_id")
