@@ -1233,6 +1233,13 @@ model Escalation {
   resolvedAt      DateTime? @map("resolved_at")
   resolutionNote  String?   @map("resolution_note")
 
+  // Structured payload for escalations a human can act on directly instead of
+  // just reading prose — e.g. a booking request carries {kind:"booking_request",
+  // roomId, checkIn, checkOut, guestName, guestPhone, total} so "Approve & book"
+  // can create the reservation without re-typing anything. Optional/untyped by
+  // design: only escalations that support a direct action populate it.
+  metadata Json?
+
   // FORWARD-COMPATIBLE TENANCY. Single-property today, so this is nullable and
   // unused. When the multi-tenancy gate lands, backfill it and add
   // `propertyId String` + an index, and scope every query by it (one line in

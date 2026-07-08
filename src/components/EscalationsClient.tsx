@@ -2,7 +2,32 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { EscalationView, EscalationStats } from "@/lib/escalations";
+import { displayINR } from "@/lib/format";
+
+// A booking-request escalation's structured payload (see the Escalation.metadata
+// schema comment). Parsed loosely here — the server is the source of truth on
+// whether it's complete enough to approve; this just decides which UI to show.
+type BookingMeta = {
+  roomLabel?: string;
+  roomTypeName?: string;
+  checkIn?: string;
+  checkOut?: string;
+  nights?: number;
+  total?: number;
+  guestName?: string;
+  guestPhone?: string;
+};
+
+function bookingMeta(e: EscalationView): BookingMeta | null {
+  if (e.category !== "booking") return null;
+  const m = e.metadata;
+  if (!m || typeof m !== "object" || Array.isArray(m)) return null;
+  const rec = m as Record<string, unknown>;
+  if (rec.kind !== "booking_request") return null;
+  return rec as BookingMeta;
+}
 
 // Escalations queue (matches the DPR Escalations screen — KPI strip + tabbed
 // ticket table + per-ticket triage). Uses only documented design-system classes
@@ -86,6 +111,27 @@ export default function EscalationsClient({
           body: JSON.stringify(body),
         });
         if (res.ok) await refetch();
+      } finally {
+        setBusy(null);
+      }
+    },
+    [refetch],
+  );
+
+  // Distinct from patch: POSTs to /approve (creates the reservation), and
+  // returns an error string on failure so the booking card can show it inline
+  // (a 409 room-conflict must NOT look like a silent no-op).
+  const approveBooking = useCallback(
+    async (id: string): Promise<string | null> => {
+      setBusy(id);
+      try {
+        const res = await fetch(`/api/escalations/${id}/approve`, { method: "POST" });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok) {
+          await refetch();
+          return null;
+        }
+        return json.error || "Couldn't approve this request.";
       } finally {
         setBusy(null);
       }
@@ -207,59 +253,71 @@ export default function EscalationsClient({
                 {/* detail + actions */}
                 {open && (
                   <div style={{ padding: "0 14px 14px", display: "grid", gap: 10 }}>
-                    <div style={{ fontSize: "var(--fs-body)", lineHeight: 1.5 }}>{e.summary}</div>
+                    {bookingMeta(e) ? (
+                      <BookingRequestCard
+                        e={e}
+                        meta={bookingMeta(e)!}
+                        busy={busy === e.id}
+                        onApprove={() => approveBooking(e.id)}
+                        onDecline={(note) => patch(e.id, { status: "dismissed", resolutionNote: note || "Declined" })}
+                      />
+                    ) : (
+                      <>
+                        <div style={{ fontSize: "var(--fs-body)", lineHeight: 1.5 }}>{e.summary}</div>
 
-                    {e.reason && (
-                      <div
-                        className="banner"
-                        style={{ fontSize: "var(--fs-small)", background: "var(--warn-fill)", color: "var(--warn-text)" }}
-                      >
-                        <strong>Why escalated:</strong> {e.reason}
-                      </div>
-                    )}
-
-                    {(e.originalText || e.translatedText) && (
-                      <div
-                        style={{
-                          fontSize: "var(--fs-small)",
-                          border: "1px solid var(--line)",
-                          borderRadius: "var(--r-md, 10px)",
-                          padding: "10px 12px",
-                          background: "var(--sys-fill)",
-                        }}
-                      >
-                        {e.originalText && (
-                          <div>
-                            <span style={{ color: "var(--sys-label-3)", fontWeight: 600 }}>
-                              Original{e.raisedByLang ? ` (${e.raisedByLang.toUpperCase()})` : ""}:
-                            </span>{" "}
-                            {e.originalText}
+                        {e.reason && (
+                          <div
+                            className="banner"
+                            style={{ fontSize: "var(--fs-small)", background: "var(--warn-fill)", color: "var(--warn-text)" }}
+                          >
+                            <strong>Why escalated:</strong> {e.reason}
                           </div>
                         )}
-                        {e.translatedText && (
-                          <div style={{ marginTop: e.originalText ? 6 : 0 }}>
-                            <span style={{ color: "var(--sys-label-3)", fontWeight: 600 }}>Translation:</span>{" "}
-                            {e.translatedText}
+
+                        {(e.originalText || e.translatedText) && (
+                          <div
+                            style={{
+                              fontSize: "var(--fs-small)",
+                              border: "1px solid var(--line)",
+                              borderRadius: "var(--r-md, 10px)",
+                              padding: "10px 12px",
+                              background: "var(--sys-fill)",
+                            }}
+                          >
+                            {e.originalText && (
+                              <div>
+                                <span style={{ color: "var(--sys-label-3)", fontWeight: 600 }}>
+                                  Original{e.raisedByLang ? ` (${e.raisedByLang.toUpperCase()})` : ""}:
+                                </span>{" "}
+                                {e.originalText}
+                              </div>
+                            )}
+                            {e.translatedText && (
+                              <div style={{ marginTop: e.originalText ? 6 : 0 }}>
+                                <span style={{ color: "var(--sys-label-3)", fontWeight: 600 }}>Translation:</span>{" "}
+                                {e.translatedText}
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    {e.relatedType !== "none" && e.relatedId && (
-                      <a
-                        href={relatedHref(e.relatedType, e.relatedId)}
-                        className="btn btn--outline btn--sm"
-                        style={{ justifySelf: "start" }}
-                      >
-                        Open {e.relatedType}
-                      </a>
-                    )}
+                        {e.relatedType !== "none" && e.relatedId && (
+                          <a
+                            href={relatedHref(e.relatedType, e.relatedId)}
+                            className="btn btn--outline btn--sm"
+                            style={{ justifySelf: "start" }}
+                          >
+                            Open {e.relatedType}
+                          </a>
+                        )}
 
-                    <TriageActions
-                      e={e}
-                      busy={busy === e.id}
-                      onPatch={(body) => patch(e.id, body)}
-                    />
+                        <TriageActions
+                          e={e}
+                          busy={busy === e.id}
+                          onPatch={(body) => patch(e.id, body)}
+                        />
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -268,6 +326,111 @@ export default function EscalationsClient({
         </div>
       )}
     </main>
+  );
+}
+
+// A booking request from the public widget: structured detail + a direct
+// decision (Approve & book creates the reservation right here; Decline sends
+// it to dismissed) — no severity dropdown or generic Claim/Resolve, which
+// don't mean anything for "should I take this booking or not."
+function BookingRequestCard({
+  e,
+  meta,
+  busy,
+  onApprove,
+  onDecline,
+}: {
+  e: EscalationView;
+  meta: BookingMeta;
+  busy: boolean;
+  onApprove: () => Promise<string | null>;
+  onDecline: (note: string) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [declining, setDeclining] = useState(false);
+  const [note, setNote] = useState("");
+  const terminal = e.status === "resolved" || e.status === "dismissed";
+
+  async function handleApprove() {
+    setError(null);
+    const err = await onApprove();
+    if (err) setError(err);
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      <div
+        style={{
+          border: "1px solid var(--line)",
+          borderRadius: "var(--r-md, 10px)",
+          padding: "10px 12px",
+          display: "grid",
+          gap: 4,
+          fontSize: "var(--fs-small)",
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: "var(--fs-body)" }}>
+          {meta.roomLabel} <span style={{ fontWeight: 400, color: "var(--sys-label-2)" }}>· {meta.roomTypeName}</span>
+        </div>
+        <div>{meta.checkIn} → {meta.checkOut}{meta.nights ? ` · ${meta.nights} night${meta.nights === 1 ? "" : "s"}` : ""}</div>
+        <div>{meta.guestName} · {meta.guestPhone}</div>
+        {typeof meta.total === "number" && (
+          <div style={{ fontWeight: 600 }}>{displayINR(meta.total)}</div>
+        )}
+      </div>
+
+      {terminal ? (
+        <div style={{ fontSize: "var(--fs-small)" }}>
+          {e.status === "resolved" ? (
+            <div style={{ color: "var(--good-text)", fontWeight: 600 }}>
+              ✓ Booked
+              {e.relatedType === "reservation" && e.relatedId && (
+                <>
+                  {" — "}
+                  <Link href={`/reservations/${e.relatedId}`} className="btn btn--outline btn--sm" style={{ marginLeft: 6 }}>
+                    Open reservation
+                  </Link>
+                </>
+              )}
+            </div>
+          ) : (
+            <div style={{ color: "var(--sys-label-2)" }}>
+              Declined{e.resolutionNote ? ` — ${e.resolutionNote}` : ""}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          {error && (
+            <div className="banner" style={{ fontSize: "var(--fs-small)", background: "var(--danger-fill)", color: "var(--danger-text)" }}>
+              {error}
+            </div>
+          )}
+          {declining ? (
+            <div style={{ display: "grid", gap: 7 }}>
+              <textarea
+                className="textarea"
+                placeholder="Reason (optional) — the request is just marked declined; nothing is sent to the guest automatically."
+                value={note}
+                onChange={(ev) => setNote(ev.target.value)}
+                rows={2}
+              />
+              <div style={{ display: "flex", gap: 7 }}>
+                <button className="btn btn--danger btn--sm" disabled={busy} onClick={() => onDecline(note)}>Confirm decline</button>
+                <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => setDeclining(false)}>Back</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 7 }}>
+              <button className="btn btn--good btn--sm" disabled={busy} onClick={handleApprove}>
+                {busy ? "Booking…" : "Approve & book"}
+              </button>
+              <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => setDeclining(true)}>Decline</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
