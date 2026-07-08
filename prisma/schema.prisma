@@ -532,6 +532,24 @@ model PushSubscription {
   @@map("push_subscriptions")
 }
 
+/// Owner-editable guidance the assistant follows, per topic (intent), changeable
+/// from Settings without a deploy. Injected into the agent's prompt per turn
+/// (below the role, above the fixed SECURITY block — policies may tighten, never
+/// override). `autonomous` is reserved for a future auto-approve toggle and is
+/// unused today. One row per intent per property.
+model AssistantPolicy {
+  id           String   @id @default(cuid())
+  intent       String // "booking" | "cancellation" | "general"
+  instructions String   @default("")
+  autonomous   Boolean  @default(false)
+  active       Boolean  @default(true)
+  propertyId   String?  @map("property_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("assistant_policies")
+}
+
 // Audit trail for sensitive reads/writes (cancel, refund, blacklist, user &
 // consent changes). actorUserId is the acting login (nullable for system/env).
 model AuditEvent {
