@@ -64,6 +64,18 @@ Explore the agent directly with the ADK dev UI:
 adk web --reload_agents --port 8001 assistant-agent
 ```
 
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q          # fast: no network, no LLM, no API key
+```
+
+The suite (`tests/`) faces the deterministic core — the `/book → /bookdetails →
+/confirm` slash-flows in both modes and the empty-turn retry chain — with a faked
+seam (`server._ota`) and faked runners. It runs in CI as the `agent-tests` job.
+Conversational LLM turns are verified live, not in CI.
+
 ## Deploy & scaling — MUST stay single-instance
 
 Sessions (conversation history + the in-flight `_pending` booking) live in this
