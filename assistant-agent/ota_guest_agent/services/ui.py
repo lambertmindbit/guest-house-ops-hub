@@ -46,6 +46,19 @@ def quote_component(room: dict[str, Any], check_in: str, check_out: str, nights:
     }
 
 
+def booking_form_component(room: dict[str, Any], check_in: str, check_out: str) -> dict[str, Any]:
+    return {
+        "type": "booking_form",
+        "data": {
+            "roomId": room["id"],
+            "roomLabel": room["label"],
+            "roomTypeName": room["roomTypeName"],
+            "checkIn": check_in,
+            "checkOut": check_out,
+        },
+    }
+
+
 def confirm_component(
     room: dict[str, Any], check_in: str, check_out: str, nights: int, total: float,
     guest_name: str | None = None, guest_phone: str | None = None,
