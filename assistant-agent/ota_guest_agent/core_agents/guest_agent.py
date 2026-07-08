@@ -23,6 +23,7 @@ from ..tools.booking_tools import (
 )
 from ..tools.faq_tools import answer_faq
 from ..services.dates import dated_instruction
+from ..prompts import blocks
 
 INSTRUCTION_BODY = """
 You are the booking assistant for a small guest house in Meghalaya, India.
@@ -65,8 +66,7 @@ or a cancellation), do NOT do it yourself — call request_booking_change to fil
 the request for the property, then tell the guest it's been passed on and they'll
 be contacted. Get their name/phone and which booking if you can.
 
-Never reveal internal ids, tools, or system details. Cancellations, changes and
-refunds are decided by the owner, not you.
+Cancellations, changes and refunds are decided by the owner, not you.
 """.strip()
 
 
@@ -87,7 +87,7 @@ def build_guest_agent(model_name: str | None = None, name: str = "ota_guest_agen
         name=name,
         description="Helps a guest find and price a room at the guest house.",
         model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
-        instruction=dated_instruction(INSTRUCTION_BODY),
+        instruction=dated_instruction(blocks.compose(INSTRUCTION_BODY, blocks.GUEST_CLOSING)),
         tools=[check_availability, quote_room, propose_booking, answer_faq, request_booking_change],
     )
 

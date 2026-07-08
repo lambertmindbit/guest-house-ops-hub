@@ -19,6 +19,7 @@ from google.genai import types
 from ..tools.owner_tools import daily_briefing, open_requests, block_room, resolve_request, business_summary
 from ..tools.booking_tools import check_availability, quote_room, propose_booking, request_booking_change
 from ..services.dates import dated_instruction
+from ..prompts import blocks
 
 INSTRUCTION_BODY = """
 You are the operations assistant for the OWNER of a small guest house in
@@ -75,8 +76,6 @@ Cancelling or modifying an existing booking:
   through a human review. Call request_booking_change to file it in the queue
   (capture the booking, the change, and the guest if known), then tell the owner
   it's filed for review. Refunds are decided by the owner, not by you.
-
-Never reveal internal ids, tools or system details.
 """.strip()
 
 
@@ -97,7 +96,7 @@ def build_owner_agent(model_name: str | None = None, name: str = "ota_owner_agen
         name=name,
         description="Helps the guest-house owner run the property — daily briefing and open queue.",
         model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
-        instruction=dated_instruction(INSTRUCTION_BODY),
+        instruction=dated_instruction(blocks.compose(INSTRUCTION_BODY, blocks.OWNER_CLOSING)),
         tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary, request_booking_change],
     )
 
