@@ -4,11 +4,14 @@ import { prisma } from "@/lib/prisma";
 // (one chat thread) for the owner's review screen. Dates → ISO strings at the
 // boundary so the data passes cleanly to client components.
 
+export type TurnMeta = { tools?: string[]; tokens?: number; fallback?: boolean };
+
 export type TurnView = {
   id: string;
   userMessage: string;
   reply: string;
   createdAt: string;
+  meta: TurnMeta | null;
 };
 
 export type ConversationView = {
@@ -38,6 +41,7 @@ export async function listRecentConversations(sessionLimit = 40): Promise<Conver
       userMessage: r.userMessage,
       reply: r.reply,
       createdAt: r.createdAt.toISOString(),
+      meta: (r.metadata as TurnMeta | null) ?? null,
     });
   }
 

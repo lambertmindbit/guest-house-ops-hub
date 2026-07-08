@@ -43,6 +43,7 @@ class FakeOta:
         self.conflict = False       # create_reservation raises RoomJustTaken
         self.created_reservations: list[dict] = []
         self.created_escalations: list[dict] = []
+        self.logged_turns: list[dict] = []
 
     async def rooms(self):
         return self.rooms_data
@@ -65,6 +66,10 @@ class FakeOta:
         esc = {"id": f"esc-{len(self.created_escalations) + 1}", **body}
         self.created_escalations.append(esc)
         return esc
+
+    async def log_turn(self, body):
+        self.logged_turns.append(body)
+        return {"id": f"turn-{len(self.logged_turns)}"}
 
 
 @pytest.fixture

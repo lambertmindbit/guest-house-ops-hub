@@ -421,6 +421,7 @@ async def _run(
 
     last_error: Exception | None = None
     for attempt_runner in attempts:
+        is_fallback = fallback_runner is not None and attempt_runner is fallback_runner
         # Fresh per-turn _ui bucket (also clears any UI a prior empty attempt left).
         try:
             await _session_service.create_session(app_name=app_name, user_id=user_id, session_id=session_id, state={"_ui": []})
@@ -430,11 +431,21 @@ async def _run(
                 session.state["_ui"] = []
 
         emitted = False
+        tools: list[str] = []   # which LLM tools this attempt called (for the chat log)
+        tokens = 0              # best-effort total token count (cumulative on the last event)
         content = types.Content(role="user", parts=[types.Part(text=message)])
         try:
             async for event in attempt_runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
+                usage = getattr(event, "usage_metadata", None)
+                total = getattr(usage, "total_token_count", None) if usage is not None else None
+                if isinstance(total, int):
+                    tokens = max(tokens, total)
                 parts = getattr(getattr(event, "content", None), "parts", None) or []
                 for part in parts:
+                    fc = getattr(part, "function_call", None)
+                    fname = getattr(fc, "name", None) if fc is not None else None
+                    if fname:
+                        tools.append(fname)
                     text = getattr(part, "text", None)
                     if text:
                         emitted = True
@@ -454,6 +465,9 @@ async def _run(
             yield _line({"type": "ui", "component": component})
 
         if emitted:
+            # Stash per-turn diagnostics for the chat log; _logged drains this.
+            if session is not None:
+                await _set_state(session, {"_diag": {"tools": tools, "tokens": tokens, "fallback": is_fallback}})
             yield _line({"type": "done"})
             return
         # Empty attempt — fall through to the next runner in the chain.
@@ -480,8 +494,29 @@ async def _logged(stream: AsyncIterator[str], message: str, session_id: str, mod
         yield line
     reply = "".join(reply_parts).strip()
     if reply:
+        body: dict = {"sessionId": session_id, "mode": mode, "userMessage": message, "reply": reply}
+        # Attach per-turn diagnostics (which tools ran, tokens, fallback) if _run
+        # stashed any this turn — then clear it so it can't leak into the next
+        # (deterministic) turn's log. Deterministic flows set no _diag → omitted.
+        app_name, user_id = (OWNER_APP_NAME, OWNER_USER_ID) if mode == "owner" else (APP_NAME, USER_ID)
         try:
-            await _ota.log_turn({"sessionId": session_id, "mode": mode, "userMessage": message, "reply": reply})
+            sess = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
+            diag = (dict(sess.state).get("_diag") if sess else None)
+            if diag:
+                md: dict = {}
+                if diag.get("tools"):
+                    md["tools"] = diag["tools"]
+                if diag.get("tokens"):
+                    md["tokens"] = diag["tokens"]
+                if diag.get("fallback"):
+                    md["fallback"] = True
+                if md:
+                    body["metadata"] = md
+                await _set_state(sess, {"_diag": None})
+        except Exception:
+            pass
+        try:
+            await _ota.log_turn(body)
         except Exception:
             pass
 

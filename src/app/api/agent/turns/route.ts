@@ -14,6 +14,14 @@ const schema = z.object({
   mode: z.enum(["owner", "public"]),
   userMessage: z.string().min(1).max(8000),
   reply: z.string().max(20000),
+  // Optional per-turn diagnostics (tools called, token count, fallback flag).
+  metadata: z
+    .object({
+      tools: z.array(z.string().max(60)).max(30).optional(),
+      tokens: z.number().int().nonnegative().optional(),
+      fallback: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export async function POST(req: Request) {
@@ -27,12 +35,12 @@ export async function POST(req: Request) {
   }
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
-  const { sessionId, mode, userMessage, reply } = parsed.data;
+  const { sessionId, mode, userMessage, reply, metadata } = parsed.data;
 
   if (!reply.trim()) return ok({ skipped: true });
 
   const turn = await prisma.conversationTurn.create({
-    data: { sessionId, mode, userMessage, reply },
+    data: { sessionId, mode, userMessage, reply, metadata: metadata ?? undefined },
   });
   return ok({ id: turn.id }, 201);
 }
