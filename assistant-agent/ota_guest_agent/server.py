@@ -43,8 +43,12 @@ from google.genai import types  # noqa: E402
 
 from .core_agents.guest_agent import guest_agent, build_guest_agent  # noqa: E402
 from .core_agents.owner_agent import owner_agent, build_owner_agent  # noqa: E402
+from .guardrails import assert_tool_isolation  # noqa: E402
 from .services.ota_client import OtaClient, OtaError, RoomJustTaken  # noqa: E402
 from .services import ui  # noqa: E402
+
+# Refuse to start if the public guest agent was ever wired with an owner tool.
+assert_tool_isolation()
 
 APP_NAME = "ota_guest_agent"
 USER_ID = "guest"

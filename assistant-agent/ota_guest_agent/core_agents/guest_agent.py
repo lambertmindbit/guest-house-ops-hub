@@ -80,6 +80,12 @@ def _model(model_name: str) -> Gemini:
     )
 
 
+# The guest agent's tools. Public-safe by construction: read/quote/FAQ, propose a
+# booking (HITL confirm card, never a direct write), and file a change request.
+# It must NEVER hold an owner-privileged tool — enforced in guardrails.py.
+GUEST_TOOLS = [check_availability, quote_room, propose_booking, answer_faq, request_booking_change]
+
+
 # Factory so the server can build a fallback-model twin (same persona + tools,
 # different model) for the empty-turn retry chain — see server.py._run.
 def build_guest_agent(model_name: str | None = None, name: str = "ota_guest_agent") -> LlmAgent:
@@ -88,7 +94,7 @@ def build_guest_agent(model_name: str | None = None, name: str = "ota_guest_agen
         description="Helps a guest find and price a room at the guest house.",
         model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
         instruction=dated_instruction(blocks.compose(INSTRUCTION_BODY, blocks.GUEST_CLOSING)),
-        tools=[check_availability, quote_room, propose_booking, answer_faq, request_booking_change],
+        tools=GUEST_TOOLS,
     )
 
 
