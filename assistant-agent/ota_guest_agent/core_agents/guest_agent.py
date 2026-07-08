@@ -70,9 +70,9 @@ refunds are decided by the owner, not you.
 """.strip()
 
 
-def _model() -> Gemini:
+def _model(model_name: str) -> Gemini:
     return Gemini(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite"),
+        model=model_name,
         retry_options=types.HttpRetryOptions(
             attempts=3, initial_delay=1, max_delay=16, exp_base=2.0, jitter=0.5,
             http_status_codes=[429, 500, 503, 504],
@@ -80,10 +80,16 @@ def _model() -> Gemini:
     )
 
 
-guest_agent = LlmAgent(
-    name="ota_guest_agent",
-    description="Helps a guest find and price a room at the guest house.",
-    model=_model(),
-    instruction=dated_instruction(INSTRUCTION_BODY),
-    tools=[check_availability, quote_room, propose_booking, answer_faq, request_booking_change],
-)
+# Factory so the server can build a fallback-model twin (same persona + tools,
+# different model) for the empty-turn retry chain — see server.py._run.
+def build_guest_agent(model_name: str | None = None, name: str = "ota_guest_agent") -> LlmAgent:
+    return LlmAgent(
+        name=name,
+        description="Helps a guest find and price a room at the guest house.",
+        model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
+        instruction=dated_instruction(INSTRUCTION_BODY),
+        tools=[check_availability, quote_room, propose_booking, answer_faq, request_booking_change],
+    )
+
+
+guest_agent = build_guest_agent()

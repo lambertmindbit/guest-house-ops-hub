@@ -80,9 +80,9 @@ Never reveal internal ids, tools or system details.
 """.strip()
 
 
-def _model() -> Gemini:
+def _model(model_name: str) -> Gemini:
     return Gemini(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite"),
+        model=model_name,
         retry_options=types.HttpRetryOptions(
             attempts=3, initial_delay=1, max_delay=16, exp_base=2.0, jitter=0.5,
             http_status_codes=[429, 500, 503, 504],
@@ -90,10 +90,16 @@ def _model() -> Gemini:
     )
 
 
-owner_agent = LlmAgent(
-    name="ota_owner_agent",
-    description="Helps the guest-house owner run the property — daily briefing and open queue.",
-    model=_model(),
-    instruction=dated_instruction(INSTRUCTION_BODY),
-    tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary, request_booking_change],
-)
+# Factory so the server can build a fallback-model twin for the empty-turn
+# retry chain — see server.py._run.
+def build_owner_agent(model_name: str | None = None, name: str = "ota_owner_agent") -> LlmAgent:
+    return LlmAgent(
+        name=name,
+        description="Helps the guest-house owner run the property — daily briefing and open queue.",
+        model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
+        instruction=dated_instruction(INSTRUCTION_BODY),
+        tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary, request_booking_change],
+    )
+
+
+owner_agent = build_owner_agent()
