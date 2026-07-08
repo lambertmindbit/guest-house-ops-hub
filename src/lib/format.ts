@@ -15,6 +15,14 @@ export function displayShortDate(date: Date): string {
   return format(local, "d MMM");
 }
 
+// Indian DD-Mon-YYYY, e.g. "10-Jul-2026". Takes a plain "YYYY-MM-DD" string (the
+// wire format the assistant's GenUI cards carry) rather than a Date, so callers
+// don't need to construct one just to display it.
+export function displayDMY(isoDateOnly: string): string {
+  const [y, m, d] = isoDateOnly.split("-").map(Number);
+  return format(new Date(y, m - 1, d), "dd-MMM-yyyy");
+}
+
 export function displayINR(amount: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
