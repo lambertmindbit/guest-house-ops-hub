@@ -4,7 +4,8 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { EscalationView, EscalationStats } from "@/lib/escalations";
-import { displayINR } from "@/lib/format";
+import { displayINR, displayDMY } from "@/lib/format";
+import { useConfirm } from "@/components/ConfirmProvider";
 
 // A booking-request escalation's structured payload (see the Escalation.metadata
 // schema comment). Parsed loosely here — the server is the source of truth on
@@ -346,15 +347,33 @@ function BookingRequestCard({
   onApprove: () => Promise<string | null>;
   onDecline: (note: string) => void;
 }) {
+  const { confirm } = useConfirm();
   const [error, setError] = useState<string | null>(null);
   const [declining, setDeclining] = useState(false);
   const [note, setNote] = useState("");
   const terminal = e.status === "resolved" || e.status === "dismissed";
 
   async function handleApprove() {
+    const ok = await confirm({
+      title: "Approve & book?",
+      message: `This creates the reservation for ${meta.roomLabel} right away and can't be undone from here.`,
+      confirmLabel: "Approve & book",
+    });
+    if (!ok) return;
     setError(null);
     const err = await onApprove();
     if (err) setError(err);
+  }
+
+  async function handleDecline() {
+    const ok = await confirm({
+      title: "Decline this request?",
+      message: "The guest won't be booked. This can't be undone.",
+      confirmLabel: "Decline",
+      danger: true,
+    });
+    if (!ok) return;
+    onDecline(note);
   }
 
   return (
@@ -372,7 +391,7 @@ function BookingRequestCard({
         <div style={{ fontWeight: 700, fontSize: "var(--fs-body)" }}>
           {meta.roomLabel} <span style={{ fontWeight: 400, color: "var(--sys-label-2)" }}>· {meta.roomTypeName}</span>
         </div>
-        <div>{meta.checkIn} → {meta.checkOut}{meta.nights ? ` · ${meta.nights} night${meta.nights === 1 ? "" : "s"}` : ""}</div>
+        <div>{meta.checkIn && displayDMY(meta.checkIn)} → {meta.checkOut && displayDMY(meta.checkOut)}{meta.nights ? ` · ${meta.nights} night${meta.nights === 1 ? "" : "s"}` : ""}</div>
         <div>{meta.guestName} · {meta.guestPhone}</div>
         {typeof meta.total === "number" && (
           <div style={{ fontWeight: 600 }}>{displayINR(meta.total)}</div>
@@ -416,7 +435,7 @@ function BookingRequestCard({
                 rows={2}
               />
               <div style={{ display: "flex", gap: 7 }}>
-                <button className="btn btn--danger btn--sm" disabled={busy} onClick={() => onDecline(note)}>Confirm decline</button>
+                <button className="btn btn--danger btn--sm" disabled={busy} onClick={handleDecline}>Confirm decline</button>
                 <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => setDeclining(false)}>Back</button>
               </div>
             </div>

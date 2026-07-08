@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { displayINR } from "@/lib/format";
+import { displayINR, displayDMY } from "@/lib/format";
 import type { UIComponent } from "@/lib/assistant/types";
 
 // The generative-UI registry: maps an assistant-emitted descriptor { type, data }
@@ -52,7 +52,7 @@ function QuoteCard({ c, onAction, disabled }: { c: Extract<UIComponent, { type: 
   return (
     <div className="card card--pad" style={{ marginTop: 8, maxWidth: 340 }}>
       <div style={{ fontWeight: 600 }}>{q.roomLabel} <span className="muted" style={{ fontWeight: 400 }}>· {q.roomTypeName}</span></div>
-      <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{q.checkIn} → {q.checkOut} · {q.nights} night{q.nights === 1 ? "" : "s"}</div>
+      <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{displayDMY(q.checkIn)} → {displayDMY(q.checkOut)} · {q.nights} night{q.nights === 1 ? "" : "s"}</div>
       <div className="spread" style={{ marginTop: 10, alignItems: "baseline" }}>
         <span className="muted" style={{ fontSize: "var(--fs-small)" }}>Total</span>
         <span className="num" style={{ fontSize: 22, fontWeight: 700 }}>{displayINR(q.total)}</span>
@@ -71,7 +71,7 @@ function BookingFormCard({ c, onAction, disabled }: { c: Extract<UIComponent, { 
   return (
     <div className="card card--pad" style={{ marginTop: 8, maxWidth: 340 }}>
       <div style={{ fontWeight: 600 }}>{b.roomLabel} <span className="muted" style={{ fontWeight: 400 }}>· {b.roomTypeName}</span></div>
-      <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{b.checkIn} → {b.checkOut}</div>
+      <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{displayDMY(b.checkIn)} → {displayDMY(b.checkOut)}</div>
       <div className="col" style={{ gap: 6, marginTop: 10 }}>
         <input className="input" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} aria-label="Your name" />
         <input className="input" inputMode="numeric" placeholder="10-digit phone" value={phone}
@@ -96,7 +96,7 @@ function ConfirmCard({ c, onAction, disabled }: { c: Extract<UIComponent, { type
       {(b.guestName || b.guestPhone) && (
         <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{[b.guestName, b.guestPhone].filter(Boolean).join(" · ")}</div>
       )}
-      <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{b.checkIn} → {b.checkOut} · {b.nights} night{b.nights === 1 ? "" : "s"}</div>
+      <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{displayDMY(b.checkIn)} → {displayDMY(b.checkOut)} · {b.nights} night{b.nights === 1 ? "" : "s"}</div>
       <div className="spread" style={{ marginTop: 8, alignItems: "baseline" }}>
         <span className="muted" style={{ fontSize: "var(--fs-small)" }}>Total</span>
         <span className="num" style={{ fontSize: 20, fontWeight: 700 }}>{displayINR(b.total)}</span>
@@ -138,7 +138,7 @@ function AvailabilityCard({ c }: { c: Extract<UIComponent, { type: "availability
       <div className="col" style={{ gap: 3 }}>
         {data.nights.map((n) => (
           <div key={n.date} className="spread" style={{ fontSize: "var(--fs-small)" }}>
-            <span className="muted">{n.date}</span>
+            <span className="muted">{displayDMY(n.date)}</span>
             <span className="num">{n.available} / {n.total} free</span>
           </div>
         ))}
