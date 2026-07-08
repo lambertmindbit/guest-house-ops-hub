@@ -47,11 +47,22 @@ export type AvailabilityCardData = {
   nights: AvailabilityNight[];
 };
 
+// The details form shown after the guest taps Book — collects name + phone
+// deterministically (no LLM), then submits to build the confirmation.
+export type BookingFormData = {
+  roomId: string;
+  roomLabel: string;
+  roomTypeName: string;
+  checkIn: string;
+  checkOut: string;
+};
+
 // A generative-UI descriptor the assistant emits; the client renders each via a
 // small type→component registry (src/components/assistant/registry.tsx).
 export type UIComponent =
   | { type: "rooms"; data: RoomCardData[]; checkIn: string; checkOut: string }
   | { type: "quote"; data: QuoteCardData }
+  | { type: "booking_form"; data: BookingFormData }
   | { type: "confirm_booking"; data: ConfirmCardData }
   | { type: "otp"; data: OtpCardData }
   | { type: "availability"; data: AvailabilityCardData };
