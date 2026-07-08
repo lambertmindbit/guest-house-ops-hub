@@ -258,6 +258,14 @@ const FAQS = [
   { question: "Do you allow pets?", answer: "We're sorry, but pets are not allowed at the property.", category: "Policies", sortOrder: 5 },
 ];
 
+// Owner-editable assistant guidance, seeded with sensible starting text so the
+// owner sees the shape. Editable at Settings > Assistant rules.
+const ASSISTANT_POLICIES = [
+  { intent: "booking", instructions: "Offer a 5% discount for stays of 3 nights or more. For groups of 4+, suggest the Family Suite first." },
+  { intent: "cancellation", instructions: "Free cancellation up to 48 hours before check-in; after that, one night is charged. Always pass the actual request to the owner." },
+  { intent: "general", instructions: "Be warm and welcoming. We are a quiet, family-run homestay in Meghalaya — mention our free on-site parking when relevant." },
+];
+
 async function ensureBy(model, where, data) {
   const existing = await prisma[model].findFirst({ where });
   return existing ?? prisma[model].create({ data });
@@ -265,6 +273,10 @@ async function ensureBy(model, where, data) {
 
 async function seedFaqs(propertyId) {
   for (const f of FAQS) await ensureBy("faqEntry", { question: f.question, propertyId }, { ...f, propertyId });
+}
+
+async function seedAssistantPolicies(propertyId) {
+  for (const p of ASSISTANT_POLICIES) await ensureBy("assistantPolicy", { intent: p.intent, propertyId }, { ...p, propertyId });
 }
 
 async function seedPartners(propertyId) {
@@ -343,6 +355,7 @@ async function main() {
   await seedTransport(property.id);
   await seedPartners(property.id);
   await seedFaqs(property.id);
+  await seedAssistantPolicies(property.id);
 
   const [channels, roomTypes, rooms] = await Promise.all([
     prisma.channel.count(),

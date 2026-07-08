@@ -14,6 +14,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
     items: [
       { key: "property", title: "Property details", sub: "Name, address, GST, check-in/out times", icon: "settings" },
       { key: "faq", title: "Guest FAQ", sub: "Answers the chat assistant gives guests (parking, wifi, check-in…)", icon: "help" },
+      { key: "assistant-rules", title: "Assistant rules", sub: "Guidance the chat assistant follows (bookings, cancellations, tone)", icon: "inbox" },
     ],
   },
   {
