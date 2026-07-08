@@ -90,6 +90,16 @@ def _model(model_name: str) -> Gemini:
 
 
 # Factory so the server can build a fallback-model twin for the empty-turn
+# Owner-privileged tools: they read owner-only data or take owner actions, so they
+# must NEVER appear on the public guest agent. guardrails.py asserts that.
+OWNER_ONLY_TOOLS = [daily_briefing, open_requests, block_room, resolve_request, business_summary]
+# Full owner tool set = owner-only + the shared booking/read tools.
+OWNER_TOOLS = [
+    daily_briefing, open_requests, check_availability, quote_room, propose_booking,
+    block_room, resolve_request, business_summary, request_booking_change,
+]
+
+
 # retry chain — see server.py._run.
 def build_owner_agent(model_name: str | None = None, name: str = "ota_owner_agent") -> LlmAgent:
     return LlmAgent(
@@ -97,7 +107,7 @@ def build_owner_agent(model_name: str | None = None, name: str = "ota_owner_agen
         description="Helps the guest-house owner run the property — daily briefing and open queue.",
         model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
         instruction=dated_instruction(blocks.compose(INSTRUCTION_BODY, blocks.OWNER_CLOSING)),
-        tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary, request_booking_change],
+        tools=OWNER_TOOLS,
     )
 
 
