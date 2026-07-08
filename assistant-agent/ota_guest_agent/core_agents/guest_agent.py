@@ -22,8 +22,9 @@ from ..tools.booking_tools import (
     request_booking_change,
 )
 from ..tools.faq_tools import answer_faq
+from ..services.dates import dated_instruction
 
-INSTRUCTION = """
+INSTRUCTION_BODY = """
 You are the booking assistant for a small guest house in Meghalaya, India.
 Be warm, brief, and concrete. Prices are in Indian rupees (₹).
 
@@ -83,6 +84,6 @@ guest_agent = LlmAgent(
     name="ota_guest_agent",
     description="Helps a guest find and price a room at the guest house.",
     model=_model(),
-    instruction=INSTRUCTION,
+    instruction=dated_instruction(INSTRUCTION_BODY),
     tools=[check_availability, quote_room, propose_booking, answer_faq, request_booking_change],
 )

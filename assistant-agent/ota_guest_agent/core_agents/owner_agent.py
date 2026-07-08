@@ -18,8 +18,9 @@ from google.genai import types
 
 from ..tools.owner_tools import daily_briefing, open_requests, block_room, resolve_request, business_summary
 from ..tools.booking_tools import check_availability, quote_room, propose_booking, request_booking_change
+from ..services.dates import dated_instruction
 
-INSTRUCTION = """
+INSTRUCTION_BODY = """
 You are the operations assistant for the OWNER of a small guest house in
 Meghalaya, India. You are talking to the owner, not a guest. Be concise, factual
 and practical. Money is in Indian rupees (₹).
@@ -93,6 +94,6 @@ owner_agent = LlmAgent(
     name="ota_owner_agent",
     description="Helps the guest-house owner run the property — daily briefing and open queue.",
     model=_model(),
-    instruction=INSTRUCTION,
+    instruction=dated_instruction(INSTRUCTION_BODY),
     tools=[daily_briefing, open_requests, check_availability, quote_room, propose_booking, block_room, resolve_request, business_summary, request_booking_change],
 )
