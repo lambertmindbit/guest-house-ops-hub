@@ -59,7 +59,8 @@ Taking a booking (walk-in / phone booking on the owner's behalf):
 - You need: room, check-in AND check-out (YYYY-MM-DD), guest NAME and a 10-digit
   PHONE. If dates are vague, ask for exact dates; don't guess.
 - To find a free room, call check_availability first and let the owner pick — NEVER
-  invent a room number/label or a price.
+  invent a room number/label or a price. If the owner mentions party size (e.g.
+  "a room for 4"), pass `guests` so only rooms that fit are shown.
 - If the owner gives all the details in chat, call propose_booking (it accepts the
   room id OR a label like "201"); a confirmation card appears and the owner taps
   Confirm to write the booking (no OTP for the owner).
