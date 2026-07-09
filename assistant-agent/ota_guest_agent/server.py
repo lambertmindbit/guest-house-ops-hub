@@ -367,12 +367,16 @@ async def _run(
     for attempt_runner in attempts:
         is_fallback = fallback_runner is not None and attempt_runner is fallback_runner
         # Fresh per-turn _ui bucket (also clears any UI a prior empty attempt left).
+        # On an existing session the reset MUST go through _set_state (an event
+        # with a state delta) — mutating the get_session() snapshot silently does
+        # nothing, which live meant every past room card was re-emitted on every
+        # later turn of the conversation.
         try:
             await _session_service.create_session(app_name=app_name, user_id=user_id, session_id=session_id, state={"_ui": []})
         except Exception:
             session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
-            if session is not None:
-                session.state["_ui"] = []
+            if session is not None and session.state.get("_ui"):
+                await _set_state(session, {"_ui": []})
 
         emitted = False
         tools: list[str] = []   # which LLM tools this attempt called (for the chat log)
