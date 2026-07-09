@@ -138,8 +138,13 @@ with <code>?pgbouncer=true&amp;connection_limit=5</code> while <code>DIRECT_URL<
 </thead>
 <tbody><tr>
 <td><code>AGENT_TOKEN</code></td>
-<td>ROOT agent API seam (<code>/api/agent/*</code>). All agent routes return 401 if unset — the seam stays dark until a real agent is pointed at it.</td>
-<td>Set a long random string (<code>openssl rand -hex 32</code>), add the same value in the ROOT agent service config and in Vercel env vars.</td>
+<td>The AI agent&#39;s API seam (<code>/api/agent/*</code>). All agent routes return 401 if unset — the seam stays dark until an agent is pointed at it.</td>
+<td>Set a long random string (<code>openssl rand -hex 32</code>); the <strong>same</strong> value goes into the Python agent&#39;s <code>OTA_AGENT_TOKEN</code> (below) and Vercel env vars.</td>
+</tr>
+<tr>
+<td><code>ASSISTANT_AGENT_URL</code>, <code>ASSISTANT_AGENT_TOKEN</code></td>
+<td>Points the in-app assistant (<code>/assistant</code>, <code>/chat</code>) at the Python agent&#39;s <code>/chat</code> endpoint. Unset or unreachable → falls back to a Phase-1 stub; production never breaks.</td>
+<td><code>ASSISTANT_AGENT_URL</code> = the agent&#39;s deployed URL + <code>/chat</code> (e.g. <code>https://ota-guest-agent-….run.app/chat</code>). <code>ASSISTANT_AGENT_TOKEN</code> (optional) must match the agent&#39;s own <code>ASSISTANT_AGENT_TOKEN</code>.</td>
 </tr>
 <tr>
 <td><code>INGEST_TOKEN</code></td>
@@ -167,7 +172,64 @@ npm run db:seed        # sample rooms/room types, the 5 channels, demo bookings
 <p>Log in with the <code>OWNER_EMAIL</code> / <code>OWNER_PASSWORD</code> you set.</p>
 <p>The app is a PWA and is designed mobile-first (~390px). On desktop it shows a
 sidebar shell; on mobile, an iOS-style tab bar.</p>
-<h2>5. Tests &amp; the test database</h2>
+<h2>6. The AI agent (<code>assistant-agent/</code>) — optional, separate process</h2>
+<p>The chat assistant is a <strong>separate Python service</strong>, not part of <code>npm run dev</code>.
+Skip this section if you only need the app itself (it degrades gracefully to a
+canned stub with no agent running).</p>
+<pre><code class="language-bash">cd assistant-agent
+python -m venv .venv &amp;&amp; source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+</code></pre>
+<p>Fill in <code>assistant-agent/.env</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Var</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GEMINI_API_KEY</code></td>
+<td><strong>Required.</strong> Get one free at <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a></td>
+</tr>
+<tr>
+<td><code>GEMINI_MODEL</code> / <code>GEMINI_FALLBACK_MODEL</code></td>
+<td>Optional overrides; defaults are <code>gemini-2.5-flash-lite</code> / <code>gemini-2.5-flash</code></td>
+</tr>
+<tr>
+<td><code>OTA_BASE_URL</code></td>
+<td>The OTA app&#39;s URL (e.g. your local <code>http://localhost:3100</code> or the deployed Vercel URL)</td>
+</tr>
+<tr>
+<td><code>OTA_AGENT_TOKEN</code></td>
+<td><strong>Must equal</strong> the OTA app&#39;s <code>AGENT_TOKEN</code> above — this is the agent calling <em>into</em> the app&#39;s <code>/api/agent/*</code> seam</td>
+</tr>
+<tr>
+<td><code>OTA_CHANNEL_ID</code></td>
+<td>The channel id a booking is attributed to (seeded channel; check via <code>GET /api/channels</code> or Prisma Studio)</td>
+</tr>
+<tr>
+<td><code>ASSISTANT_AGENT_TOKEN</code></td>
+<td>Optional; if set, must equal the OTA app&#39;s <code>ASSISTANT_AGENT_TOKEN</code> above — the app calling <em>out to</em> this agent</td>
+</tr>
+</tbody></table>
+<p>Run it:</p>
+<pre><code class="language-bash">uvicorn ota_guest_agent.server:api --port 8080
+</code></pre>
+<p>Then point the OTA app at it — in the OTA app&#39;s <code>.env</code>:</p>
+<pre><code>ASSISTANT_AGENT_URL=&quot;http://localhost:8080/chat&quot;
+</code></pre>
+<p>Restart <code>npm run dev</code>; the <code>/assistant</code> and public chat pages now stream from
+the real agent instead of the stub.</p>
+<p>Run the agent&#39;s own test suite (no network, no API key needed):</p>
+<pre><code class="language-bash">pip install -r requirements-dev.txt
+pytest -q
+</code></pre>
+<p>Full detail — tool list, prompt architecture, deployment, the single-instance
+constraint — is in <a href="../assistant-agent/README.html"><code>assistant-agent/README.md</code></a>
+and <a href="ARCHITECTURE.html#ai-agent-architecture">ARCHITECTURE.md → AI agent architecture</a>.</p>
+<h2>7. Tests &amp; the test database</h2>
 <p>The integration suite (<code>tests/conflict.test.ts</code>, <code>tests/availability.test.ts</code>)
 creates and deletes <strong>real rows</strong>, so it has a safety gate (<a href="../tests/setup.ts"><code>tests/setup.ts</code></a>):
 it refuses to run unless <code>TEST_DATABASE_URL</code> is set (or <code>ALLOW_PROD_DB_TESTS=1</code>

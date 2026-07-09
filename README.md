@@ -103,10 +103,11 @@ Detailed setup (Supabase connection-string nuances, the separate test database):
 | Doc | For |
 |-----|-----|
 | [docs/SETUP.md](docs/SETUP.md) | Getting a local environment running (Supabase, env, test DB) |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it's built, the correctness core, data model, directory map |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it's built, the correctness core, data model, directory map, **the AI agent architecture** |
+| [docs/WORKFLOW.html](docs/WORKFLOW.html) | **How it all works** (open in a browser) — visual walk-through: system topology, a booking step by step, the two-agent security model, the reliability chain, deployment map |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Dev workflow, conventions, the safe migration process, testing, PRs |
 | [docs/API.md](docs/API.md) | HTTP endpoint reference |
-| [docs/INTEGRATION.md](docs/INTEGRATION.md) | ROOT agent ↔ core contract — the escalation seam + per-agent mapping |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | The AI agent ↔ core contract — the escalation seam + per-agent mapping |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel + Supabase + cron + CI |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What's built, what's deferred, and why |
 | [docs/STATUS.html](docs/STATUS.html) | At-a-glance status report (open in a browser) — delivered phases, deferred items, concerns, first tasks |
