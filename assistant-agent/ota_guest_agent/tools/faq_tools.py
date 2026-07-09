@@ -11,6 +11,7 @@ selects, the tool renders (see answer_faq's `topics`).
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from google.adk.tools.tool_context import ToolContext
@@ -29,33 +30,67 @@ def _push_ui(tool_context: ToolContext, component: dict[str, Any]) -> None:
     tool_context.state["_ui"] = bucket
 
 
+# Guests say "pictures"/"images" where an owner wrote "photos", and "map"/
+# "directions" where the FAQ says "location". Normalising these few media words
+# is what keeps the media card from silently not appearing while the text reply
+# says "here are some photos" (a real reported failure).
+_SYNONYMS = {
+    "picture": "photo", "pic": "photo", "image": "photo", "photograph": "photo",
+    "direction": "location", "map": "location", "address": "location",
+}
+
+
+def _words(text: str) -> set[str]:
+    # Lowercase word tokens, plural 's' stripped, synonyms normalised.
+    out = set()
+    for w in re.findall(r"[a-z]+", text.lower()):
+        w = w[:-1] if len(w) > 3 and w.endswith("s") else w
+        out.add(_SYNONYMS.get(w, w))
+    return out
+
+
+def _topics_match(topics: list[str], faq: dict[str, Any]) -> bool:
+    wanted = set()
+    for t in topics:
+        wanted |= _words(t)
+    wanted -= {"room", "the", "your", "our", "have", "some", "any"}  # too generic to select a FAQ
+    if not wanted:
+        return True  # model unsure — show media rather than silently drop it
+    haystack = _words(f"{faq.get('question', '')} {faq.get('category') or ''} {faq.get('answer', '')}")
+    return bool(wanted & haystack)
+
+
 async def answer_faq(tool_context: ToolContext, topics: list[str]) -> dict[str, Any]:
     """Look up the property's answers to common guest questions — parking, Wi-Fi,
-    check-in/out times, meals, pets, pool, location/directions, house rules, etc.
-    Call this for ANY question about the property that isn't room availability or
-    price. Answer using ONLY what this returns; if it doesn't cover the question,
-    say you'll pass it to the property.
+    check-in/out times, meals, pets, pool, photos, location/directions, house
+    rules, etc. Call this for ANY question about the property that isn't room
+    availability or price. Answer using ONLY what this returns; if it doesn't
+    cover the question, file it with pass_to_property instead of guessing.
 
     Args:
-        topics: the key words of what the guest is asking about, e.g. ["pool"] or
-            ["location", "directions"]. If a matching FAQ has photos or a map, they
-            are shown to the guest automatically. Pass [] if unsure.
+        topics: single keywords for what the guest is asking about, e.g. ["pool"]
+            or ["photos", "rooms"] or ["location"]. If a matching FAQ has photos
+            or a map, they are shown to the guest automatically. Pass [] if unsure.
     """
     try:
         faqs = await _client.faqs()
     except OtaError as e:
         return {"status": "error", "message": str(e)}
 
-    # Show media for FAQs that have it AND match one of the topics the model gave.
-    wanted = [t.lower() for t in (topics or []) if t and t.strip()]
+    # Show media for FAQs that have it AND match the topics (word-level, synonym
+    # tolerant). The model selects the subject; the tool renders the card.
+    wanted = [t for t in (topics or []) if t and t.strip()]
+    shown = 0
     for f in faqs:
         media = f.get("media")
         if not media or not (media.get("photos") or media.get("mapLink")):
             continue
-        haystack = f"{f.get('question', '')} {f.get('category') or ''}".lower()
-        if wanted and not any(t in haystack for t in wanted):
+        if not _topics_match(wanted, f):
             continue
         _push_ui(tool_context, ui.faq_media_component(media, caption=f.get("question")))
+        shown += 1
+        if shown >= 3:  # never flood the chat with cards
+            break
 
     # Hand the model only the text (not media URLs — those are rendered as cards).
     text_only = [

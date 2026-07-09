@@ -31,6 +31,56 @@ def _push_ui(tool_context: ToolContext, component: dict[str, Any]) -> None:
     tool_context.state["_ui"] = bucket
 
 
+async def list_rooms(tool_context: ToolContext, guests: int = 0) -> dict[str, Any]:
+    """Show the property's rooms — with photos — WITHOUT needing dates. Use this
+    when someone wants to browse ("show me the rooms", "what rooms do you have",
+    "any photos?", "a room for 4") before they've given a check-in/check-out.
+    For date-specific availability use check_availability instead.
+
+    Args:
+        guests: how many people, if mentioned (e.g. "a room for 4"). Only rooms
+            that fit are shown. Pass 0 if not mentioned.
+    """
+    try:
+        rooms = await _client.rooms()
+    except OtaError as e:
+        return {"status": "error", "message": str(e)}
+
+    rooms = [
+        {
+            "id": r["id"], "label": r["label"], "roomTypeName": r["roomTypeName"],
+            "rate": r.get("baseRate", 0), "maxOccupancy": r.get("maxOccupancy", 0),
+            "photos": r.get("photos") or [], "facing": r.get("facing"),
+            "view": r.get("view"), "amenities": r.get("amenities") or [],
+        }
+        for r in rooms
+    ]
+    if guests > 0:
+        rooms = sorted((r for r in rooms if r["maxOccupancy"] >= guests), key=lambda r: r["maxOccupancy"])
+        if not rooms:
+            return {
+                "status": "success", "room_count": 0,
+                "message": f"No room sleeps {guests} — the largest fits fewer. Suggest a smaller group size or two rooms.",
+            }
+
+    # Empty dates → the card renders as a browse gallery (no Book buttons); the
+    # guest picks dates before booking. Mirrors the reference's rooms_get_details.
+    _push_ui(tool_context, ui.rooms_component(rooms, "", ""))
+    return {
+        "status": "success",
+        "room_count": len(rooms),
+        "note": "Cards with photos are shown. Rates are base per-night; exact price needs dates.",
+        "rooms": [
+            {
+                "label": r["label"], "type": r["roomTypeName"], "sleeps": r["maxOccupancy"],
+                "base_rate": r["rate"], "facing": r.get("facing"), "view": r.get("view"),
+                "amenities": r.get("amenities") or [],
+            }
+            for r in rooms
+        ],
+    }
+
+
 async def check_availability(tool_context: ToolContext, check_in: str, check_out: str, guests: int = 0) -> dict[str, Any]:
     """Show which rooms are free for a stay and their nightly rate.
 
@@ -192,6 +242,40 @@ async def request_booking_change(
     except OtaError as e:
         return {"status": "error", "message": str(e)}
     return {"status": "filed", "escalation": result}
+
+
+async def pass_to_property(
+    tool_context: ToolContext, topic: str, details: str,
+    guest_name: str = "", guest_phone: str = "",
+) -> dict[str, Any]:
+    """File a guest's request or question with the property so a human follows
+    up. Use this whenever the guest asks for something you can't do or don't
+    have information about — early check-in, airport pickup / a cab, extra bed,
+    special meals, a question the FAQ doesn't answer, a complaint, anything.
+    NEVER just say "I'll pass it on" without calling this — that would lose the
+    request. Get the guest's name and phone if you can, but file even without.
+
+    Args:
+        topic: a few words naming the request, e.g. "Early check-in request"
+        details: what the guest asked for, in full
+        guest_name: the guest's name, if known
+        guest_phone: the guest's phone, if known
+    """
+    title = topic.strip() or "Guest request"
+    summary = details.strip() or title
+    who = " ".join(p for p in (guest_name.strip(), guest_phone.strip()) if p)
+    if who:
+        summary += f" — guest: {who}"
+    try:
+        result = await _client.create_escalation({
+            "source": "assistant", "category": "customer", "severity": "medium",
+            "title": title[:160], "summary": summary[:4000],
+            "raisedBy": {"name": guest_name.strip() or None, "contact": guest_phone.strip() or None},
+        })
+    except OtaError as e:
+        return {"status": "error", "message": str(e)}
+    return {"status": "filed", "escalation": result,
+            "message": "Filed for the property. Tell the guest it's been passed on and they'll be contacted."}
 
 
 async def _availability_with_rates(check_in: str, check_out: str) -> list[dict[str, Any]]:
