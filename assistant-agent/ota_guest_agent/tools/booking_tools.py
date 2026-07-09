@@ -31,17 +31,30 @@ def _push_ui(tool_context: ToolContext, component: dict[str, Any]) -> None:
     tool_context.state["_ui"] = bucket
 
 
-async def check_availability(tool_context: ToolContext, check_in: str, check_out: str) -> dict[str, Any]:
+async def check_availability(tool_context: ToolContext, check_in: str, check_out: str, guests: int = 0) -> dict[str, Any]:
     """Show which rooms are free for a stay and their nightly rate.
 
     Args:
         check_in: check-in date, YYYY-MM-DD
         check_out: check-out date, YYYY-MM-DD (must be after check_in)
+        guests: how many people the stay is for, if the guest has said so (e.g.
+            "a room for 4", "4 of us"). Only rooms that fit are shown. Pass 0 if
+            not mentioned — don't ask just to fill this in.
     """
     try:
         free = await _availability_with_rates(check_in, check_out)
     except OtaError as e:
         return {"status": "error", "message": str(e)}
+
+    if guests > 0:
+        # Smallest room that still fits first — a group of 2 shouldn't see the
+        # 6-person suite ahead of a room sized for them.
+        free = sorted((r for r in free if r["maxOccupancy"] >= guests), key=lambda r: r["maxOccupancy"])
+        if not free:
+            return {
+                "status": "success", "available_count": 0,
+                "message": f"No room sleeps {guests} for {check_in} to {check_out} — the largest fits fewer. Want me to check a smaller group size, or suggest booking two rooms?",
+            }
 
     if not free:
         return {"status": "success", "available_count": 0, "message": f"No rooms are free for {check_in} to {check_out}."}
