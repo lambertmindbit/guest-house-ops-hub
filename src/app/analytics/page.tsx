@@ -2,7 +2,7 @@ import { getAnalytics } from "@/lib/analytics";
 import { currentMonthRange } from "@/lib/finance";
 import { displayINR } from "@/lib/format";
 import { PageHead, SectionLabel, RangeForm, ChannelBadge } from "@/components/ui";
-import { OccupancyTrendChart, SourceMixChart, RoomTypeChart } from "@/components/AnalyticsCharts";
+import { OccupancyTrendChart, SourceMixChart, RevenueByChannelChart, RoomTypeChart } from "@/components/AnalyticsCharts";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +98,16 @@ export default async function AnalyticsPage({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Revenue by channel — money, not room-nights (a different ranking). */}
+        <SectionLabel>Revenue by channel</SectionLabel>
+        <div className="card card--pad">
+          {a.sourceMix.length === 0 ? (
+            <div className="empty">No revenue in this period.</div>
+          ) : (
+            <RevenueByChannelChart sourceMix={a.sourceMix} />
+          )}
         </div>
 
         {/* Occupancy trend across the period — absolute 0–100% scale. */}

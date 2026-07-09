@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { format } from "date-fns";
 import { parseDateOnly } from "@/lib/dates";
+import { displayINR } from "@/lib/format";
 import type { RoomTypeRow, SourceRow, TrendPoint } from "@/lib/analytics";
 
 // Recharts renders SVG, so CSS custom properties resolve against the current
@@ -98,6 +99,24 @@ export function SourceMixChart({ sourceMix }: { sourceMix: SourceRow[] }) {
           formatter={(v, _n, p) => [`${Number(v)} room-nights · ${pct(p.payload.sharePct)}`, p.payload.channel]}
         />
       </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function RevenueByChannelChart({ sourceMix }: { sourceMix: SourceRow[] }) {
+  // Highest-earning channel first — the owner's "where does the money come from"
+  // view, distinct from the room-nights donut above (a low-volume channel can
+  // still out-earn a high-volume one).
+  const data = [...sourceMix].sort((a, b) => b.revenue - a.revenue);
+  const h = Math.max(120, data.length * 44);
+  return (
+    <ResponsiveContainer width="100%" height={h}>
+      <BarChart data={data} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }} barSize={18}>
+        <XAxis type="number" tickFormatter={(v) => displayINR(Number(v))} tick={tick} axisLine={false} tickLine={false} />
+        <YAxis type="category" dataKey="channel" tick={tick} width={92} axisLine={false} tickLine={false} />
+        <Tooltip contentStyle={tipStyle} cursor={{ fill: "var(--surface-3)" }} formatter={(v) => [displayINR(Number(v)), "Revenue"]} />
+        <Bar dataKey="revenue" fill="var(--accent)" radius={[0, 4, 4, 0]} />
+      </BarChart>
     </ResponsiveContainer>
   );
 }

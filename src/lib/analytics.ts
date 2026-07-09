@@ -16,6 +16,7 @@ export type SourceRow = {
   bookings: number;
   roomNights: number;
   sharePct: number;
+  revenue: number; // prorated gross revenue attributable to this channel in the window
 };
 
 export type TrendPoint = { date: string; occupancyPct: number };
@@ -71,7 +72,7 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
   const availableRoomNights = rooms * nights;
   let soldRoomNights = 0;
   let revenue = 0;
-  const sourceMap = new Map<string, { bookings: number; roomNights: number }>();
+  const sourceMap = new Map<string, { bookings: number; roomNights: number; revenue: number }>();
   // Per-night occupied-room count (for the trend) and per-room-type sold nights.
   const dayCount = new Array<number>(Math.max(0, nights)).fill(0);
   const typeSold = new Map<string, number>();
@@ -84,11 +85,13 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
 
     const totalNights = nightsBetween(r.checkIn, r.checkOut) || 1;
     soldRoomNights += nightsInWindow;
-    revenue += num(r.grossAmount) * (nightsInWindow / totalNights);
+    const prorated = num(r.grossAmount) * (nightsInWindow / totalNights);
+    revenue += prorated;
 
-    const row = sourceMap.get(r.channel.name) ?? { bookings: 0, roomNights: 0 };
+    const row = sourceMap.get(r.channel.name) ?? { bookings: 0, roomNights: 0, revenue: 0 };
     row.bookings += 1;
     row.roomNights += nightsInWindow;
+    row.revenue += prorated;
     sourceMap.set(r.channel.name, row);
 
     typeSold.set(r.room.roomType.name, (typeSold.get(r.room.roomType.name) ?? 0) + nightsInWindow);
@@ -124,6 +127,7 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
       bookings: v.bookings,
       roomNights: v.roomNights,
       sharePct: soldRoomNights === 0 ? 0 : (v.roomNights / soldRoomNights) * 100,
+      revenue: v.revenue,
     }))
     .sort((a, b) => b.roomNights - a.roomNights);
 
