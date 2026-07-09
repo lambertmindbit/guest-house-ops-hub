@@ -92,9 +92,22 @@ async def answer_faq(tool_context: ToolContext, topics: list[str]) -> dict[str, 
         if shown >= 3:  # never flood the chat with cards
             break
 
-    # Hand the model only the text (not media URLs — those are rendered as cards).
+    # Hand the model only the text (not media URLs — those are rendered as cards),
+    # split into what actually MATCHES the guest's topics vs everything else. The
+    # split is the guard against answer substitution: asked about a pool when the
+    # FAQ has no pool entry, the model must say "don't know" + pass_to_property —
+    # never present the parking answer instead (a real observed failure).
     text_only = [
         {k: f.get(k) for k in ("question", "answer", "category") if k in f}
         for f in faqs
     ]
-    return {"status": "success", "faqs": text_only}
+    matched = [f for f in text_only if _topics_match(wanted, f)]
+    others = [f for f in text_only if f not in matched]
+    note = (
+        "Answer using matched_faqs ONLY."
+        if matched
+        else "NOTHING in the FAQ answers this question. Say you don't have that "
+             "information and file it with pass_to_property — do NOT answer with "
+             "a different facility's information."
+    )
+    return {"status": "success", "matched_faqs": matched, "other_faqs": others, "note": note}

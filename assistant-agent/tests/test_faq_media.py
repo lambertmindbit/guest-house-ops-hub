@@ -34,7 +34,7 @@ async def test_media_card_shown_on_topic_match(monkeypatch):
     assert len(ui) == 1 and ui[0]["type"] == "faq_media"
     assert ui[0]["data"]["photos"] == ["https://x/pool1.jpg", "https://x/pool2.jpg"]
     # The model gets text only — never the media URLs to describe.
-    assert "media" not in res["faqs"][0]
+    assert "media" not in res["matched_faqs"][0]
 
 
 async def test_no_media_card_on_topic_mismatch(monkeypatch):
@@ -50,4 +50,16 @@ async def test_no_card_when_faq_has_no_media(monkeypatch):
     tc = FakeToolContext()
     res = await faq_tools.answer_faq(tc, topics=["parking"])
     assert tc.state["_ui"] == []
-    assert res["faqs"][0]["question"] == "Do you have parking?"
+    assert res["matched_faqs"][0]["question"] == "Do you have parking?"
+
+
+async def test_unanswered_topic_flags_no_match_not_substitution(monkeypatch):
+    # "Is there a pool?" when the FAQ only covers parking: the model must get an
+    # explicit nothing-matches signal, never a tempting adjacent answer.
+    faq = {"question": "Do you have parking?", "answer": "Yes, free on-site.", "category": "Facilities", "media": None}
+    monkeypatch.setattr(faq_tools, "_client", FakeFaqClient([faq]))
+    tc = FakeToolContext()
+    res = await faq_tools.answer_faq(tc, topics=["pool"])
+    assert res["matched_faqs"] == []
+    assert "pass_to_property" in res["note"]
+    assert res["other_faqs"][0]["question"] == "Do you have parking?"
