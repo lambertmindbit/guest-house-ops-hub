@@ -82,7 +82,7 @@ occupancy and pricing-occupancy signals.
 
 ## Data model
 
-The schema has grown to **46 models** across three gap-analysis phases (see the
+The schema has grown to **55 models** across three gap-analysis phases (see the
 [PHASE-1](PHASE-1-GAP-STATUS.md) / [PHASE-2](PHASE-2-STATUS.md) /
 [PHASE-3](PHASE-3-STATUS.md) status notes and
 [`prisma/schema.prisma`](../prisma/schema.prisma)). The **Phase 1 operations
@@ -97,7 +97,7 @@ Phase 1 operations core:
 | Model | Purpose |
 |-------|---------|
 | `RoomType` | A category (Standard/Deluxe/…) with `baseRate`, `maxOccupancy`, `rateFloor`, `rateCeiling` |
-| `Room` | A physical room. `archivedAt` retires it (kept in history); `lastCleanedAt` + `needsCleaningFlag` drive housekeeping |
+| `Room` | A physical room. `archivedAt` retires it (kept in history); `lastCleanedAt` + `needsCleaningFlag` drive housekeeping; `photos` (owner-pasted URLs, JSON), `facing`/`view` (free text) are guest-facing content the AI agent shows and speaks from |
 | `Channel` | A booking source (Direct, WhatsApp, Booking.com, …) with `commissionPct`, `collectsPayment` |
 | `Guest` | CRM record. `phone` unique; `idNumber`, `blocked`/`blockReason` for blacklist; `idDocumentPath` → scanned ID in object storage (optional); 13 nullable **C-Form** fields (nationality, passport, visa, port/date of entry, purpose) for foreign-national registration |
 | `Reservation` | The booking. `stay` (generated daterange) + the exclusion constraint; `status`, `grossAmount`, `checkedInAt`/`checkedOutAt`, `advanceRequired` (deposit expected) |
@@ -110,7 +110,7 @@ Phase 1 operations core:
 | `RateOverride` | A pinned nightly rate for a room type on a date (wins over rules) |
 | `PropertySettings` | Single-row property profile (name, address, GST, check-in/out times, currency) |
 | `InboundBooking` | An OTA confirmation email parsed + staged for review before becoming a `Reservation` (`pending`/`imported`/`dismissed`) |
-| `Escalation` | A human-in-the-loop item ROOT agents file (source/category/severity/status, optional reservation link, `externalId` for idempotency) |
+| `Escalation` | A human-in-the-loop item the AI agent (or any future agent) files (source/category/severity/status, optional reservation link, `externalId` for idempotency, `metadata` for structured card data) |
 | `OutboundMessage` | A logged outbound guest message (source/channel/to/body/status), written via the LogAdapter |
 | `FlaggedNumber` | A phone on the scam/flagged list (`phone` unique, `reason`) — warns at booking time |
 
@@ -147,7 +147,8 @@ both Server Components and API routes:
 | `housekeeping.ts` | Derive which rooms need cleaning |
 | `pricing.ts` | Advisory rate engine (pure `computeNightRate` + `quoteRoomType` wrapper) |
 | `finance.ts` | Per-channel revenue/commission, expenses, net profit |
-| `analytics.ts` | Occupancy, ADR, RevPAR, source mix |
+| `analytics.ts` | Occupancy, ADR, RevPAR, avg stay, cancellation rate, source mix (bookings/room-nights/**revenue** per channel), daily occupancy trend |
+| `analytics-csv.ts` | Pure formatter — the same `Analytics` snapshot as a labelled, multi-section CSV (`GET /api/analytics/export`) |
 | `ical.ts` / `ical-import.ts` | iCal export feed + feed import |
 | `auth.ts` | HMAC-signed session cookie (Web Crypto; works in Edge + Node) |
 | `dates.ts` | Date-only helpers (UTC-anchored) |
@@ -211,33 +212,151 @@ The parser regexes are scaffolding to validate against real OTA emails; the revi
 step keeps mis-parses harmless. See [ROADMAP.md](ROADMAP.md) and each forwarder's
 README in [`integrations/`](../integrations/).
 
-## ROOT agent seam
+## AI agent architecture
 
-The deterministic core's contract with the ROOT AI agents (separate services).
-The agents **never** get direct write access to money or bookings — they reach the
-app only through a small, token-gated seam under `/api/agent/*`, and any sensitive
-action is **filed for a human**, not performed:
+**History, so the naming makes sense:** the seam below (`/api/agent/*`) was
+originally designed for **ROOT** — a separately-hosted third-party agent
+service. That plan was superseded on 2026-07-04
+([`docs/AGENT-GENUI-PLAN.md`](AGENT-GENUI-PLAN.md)): instead of waiting on an
+externally-run agent, the AI brain was brought **in-repo** as
+[`assistant-agent/`](../assistant-agent) — a Python sidecar, deployed
+separately from the Next.js app but living in the same monorepo. It talks to
+the exact same seam ROOT would have used, so that design work wasn't wasted;
+docs that still say "ROOT" are describing this seam's origin, not a live
+external dependency. There is no ROOT service running today.
+
+```
+Guest / owner browser
+   │
+   ▼
+Next.js  /assistant , /chat  (public widget)          ← ships NO LLM SDK
+   │  src/lib/assistant/transport.ts
+   │  proxies NDJSON; falls back to a Phase-1 stub if the agent is unreachable
+   ▼
+assistant-agent/  (Python · Google ADK · Gemini)        ← Cloud Run, 1 instance
+   │  guest_agent  (public)      owner_agent  (owner console)
+   │  tools call the seam below — never a database directly
+   ▼
+Next.js  /api/agent/*  (token-gated, AGENT_TOKEN, fail-closed)
+   │  same domain functions + Prisma as every other route
+   ▼
+PostgreSQL — the GiST exclusion constraint governs every write, agent or human
+```
+
+### The seam (`/api/agent/*`) — the deterministic core's contract with agents
+
+The agent **never** gets direct write access to money or bookings — it reaches
+the app only through this small, token-gated seam, and any sensitive action is
+**filed for a human**, not performed:
 
 - **One gate, fail-closed.** Every `/api/agent/*` route calls `agentTokenOk()`
   ([`src/lib/agent-auth.ts`](../src/lib/agent-auth.ts)) — a constant-time compare
   against `AGENT_TOKEN`. The seam is excluded from the owner-cookie middleware and
-  returns 401 if the token is unset, so it stays dark until the agents are wired.
+  returns 401 if the token is unset, so it stays dark until an agent is wired.
 - **Same write path as the owner.** `POST /api/agent/reservations` runs the
   identical guest-upsert + `tx.reservation.create` transaction as the owner route,
   so the `no_overlapping_confirmed_stays` GiST constraint governs agent bookings
-  too (409 on overlap). Availability/quote reuse `availability.ts` / `pricing.ts`.
-- **Sensitive actions are escalated, not taken.** Cancellations, payments, anything
-  needing approval → the agent POSTs to `/api/agent/escalations` and a human commits
-  the change through the guarded owner route. Same discipline as the Inbox: external
-  intent is staged; a human commits the state change. Full contract + per-agent
-  mapping in [INTEGRATION.md](INTEGRATION.md).
+  too (409 on overlap). Availability/quote reuse `availability.ts` / `pricing.ts`;
+  `GET /api/agent/rooms` also returns guest-facing content (photos/facing/view +
+  the room type's amenities) so the agent can show and speak from it.
+- **Sensitive actions are escalated, not taken.** Cancellations, payments, and
+  anything the agent can't do or doesn't know → `POST /api/agent/escalations`
+  and a human commits the change through the guarded owner route. Same
+  discipline as the Inbox: external intent is staged; a human commits the state
+  change. Full contract + per-agent mapping in [INTEGRATION.md](INTEGRATION.md).
 - **Messaging via LogAdapter.** `POST /api/agent/messages` records the message with
   `status=logged` ([`src/lib/messaging.ts`](../src/lib/messaging.ts)). No provider
   is wired yet; when one is, the adapter sends and flips the status without changing
   any caller. The owner reviews everything at `/messages`.
+- **Runtime policies + diagnostics.** `GET /api/agent/policies` returns
+  owner-authored behaviour rules (Settings → Assistant rules) the agent injects
+  into its prompt every turn — edits apply within ~1 minute, no redeploy.
+  `POST /api/agent/turns` appends which tools ran + token count + whether the
+  fallback model fired to the existing chat-log write, so the owner's
+  **Chat log** screen is the debugging surface.
 - **Forward-compatible tenancy.** Agent payloads carry an optional `propertyRef`
   (ignored today, single property). When multi-tenancy lands, start persisting it
   without changing the agent contract.
+
+### The Python agent (`assistant-agent/`)
+
+Google **ADK** (Agent Development Kit) + **Gemini**, a **FastAPI** process,
+deployed to **Cloud Run** (`asia-south1`). The Next.js app never imports an LLM
+SDK — the brain is entirely this separate process.
+
+**Two personas, structurally isolated.** `guest_agent` (public widget) and
+`owner_agent` (owner console) are built by separate factories in
+[`core_agents/`](../assistant-agent/ota_guest_agent/core_agents), routed by
+the request's `mode`, and **never share a session namespace**. A startup
+assertion (`guardrails.assert_tool_isolation()`) refuses to boot if an
+owner-only tool (`daily_briefing`, `open_requests`, `block_room`,
+`resolve_request`, `business_summary`) is ever wired onto the guest agent —
+provable isolation, not incidental.
+
+**The booking commit is never an LLM decision.** Browsing and chat go through
+the agent; the moment a booking is actually written is a **deterministic**
+slash-flow in `server.py` (`/book` → name/phone form → `/bookdetails` → confirm
+card → `/confirm`) — the same fixed code path every time, no model in the loop.
+Public `/confirm` re-checks availability and files a booking-request escalation
+(a guest never writes a reservation); owner `/confirm` writes through the
+guarded seam, so a GiST 409 surfaces as "room just taken," never silently retried.
+
+**Guest agent tools** (7): `list_rooms` (browse with photos, no dates needed),
+`check_availability` (date-specific, filters/sorts by `guests` party size),
+`quote_room`, `propose_booking` (shows the confirm card — never writes),
+`answer_faq` (owner-managed Q&A; splits into matched-vs-other so the model can
+never substitute a different facility's answer for one it doesn't have),
+`request_booking_change` (cancel/modify → always an escalation), and
+`pass_to_property` (files anything else — early check-in, a cab, a complaint —
+so a request is never just verbally "passed on" and lost). The owner agent adds
+5 owner-only tools (briefing, open queue, block a room, resolve a request,
+business summary).
+
+**Reliability.** `_run` in `server.py` is a 3-attempt chain: primary model →
+primary retry → `GEMINI_FALLBACK_MODEL` (default `gemini-2.5-flash`). An empty
+or transient-error attempt falls through; a partial stream that then errors
+keeps the partial; only if every attempt fails does the guest see a friendly
+"I hit a hiccup" — never silence, never a raw error. Both personas also run a
+**thinking planner** (`BuiltInPlanner`, modest budget) before choosing a tool —
+without it, a fast/cheap model picks tools sloppily (a live-observed failure:
+"is there a pool?" triggered the room-list tool instead of the FAQ tool).
+
+**Prompts.** [`prompts/blocks.py`](../assistant-agent/ota_guest_agent/prompts/blocks.py)
+defines SECURITY / ACCURACY / FORMATTING once, shared by both personas, composed
+as `role → FORMATTING → ACCURACY → SECURITY → persona closing` — SECURITY last,
+so with instruction-following models the final constraints bind hardest and
+nothing after it (including owner-authored policy text) can override it.
+[`prompts/instruction.py`](../assistant-agent/ota_guest_agent/prompts/instruction.py)
+composes this per turn as an async `InstructionProvider`, leading with the
+current IST date and the owner's runtime policies from the seam above.
+
+**Guest-facing content.** `answer_faq` can attach owner-curated photos or a map
+link (`FaqEntry.media`); `list_rooms` / `check_availability` show each room's
+photos (owner-pasted URLs, `Room.photos`), facing, view, and its room type's
+amenities — rendered as a gallery card with a lightbox in
+[`src/components/assistant/registry.tsx`](../src/components/assistant/registry.tsx).
+A card with empty dates (browse mode) never shows a Book button — there is no
+valid booking target without dates yet.
+
+**Deployment constraint.** Sessions (conversation + any in-flight pending
+booking) live in this process's memory via ADK's `InMemorySessionService`, so
+**the Cloud Run service must run at most one instance** — a second instance
+would serve a follow-up turn from different memory and lose the pending
+booking mid-flow. Every deploy must re-pin this:
+
+```bash
+gcloud run deploy ota-guest-agent --source . --region asia-south1 --quiet
+gcloud run services update ota-guest-agent --region asia-south1 --max-instances=1
+```
+
+**Testing.** [`assistant-agent/tests/`](../assistant-agent/tests) is a pytest
+suite (`agent-tests` CI job, Python 3.13) exercising the deterministic core with
+a faked seam and faked LLM runners — no network, no API key, sub-second. It
+covers both confirm paths, room-taken at every step, the retry/fallback chain,
+tool isolation, FAQ/room-photo matching, party-size filtering, and a regression
+guard proving a room card never leaks into a later turn that didn't ask for one.
+Conversational LLM behaviour itself is verified live, not in CI. See
+[`assistant-agent/README.md`](../assistant-agent/README.md) for local run/test/deploy commands.
 
 ## Multi-tenancy & the community seam
 
@@ -320,6 +439,11 @@ Domain queries themselves are already parallelized (`Promise.all` in
   panel.
 - [`src/components/ui.tsx`](../src/components/ui.tsx) holds server-safe primitives
   (`Icon`, `KPI`, `StatusPill`, `ChannelBadge`, `PageHead`, …).
+- **Analytics charts** ([`src/components/AnalyticsCharts.tsx`](../src/components/AnalyticsCharts.tsx))
+  use **Recharts** — the only charting dependency, code-split to the `/analytics`
+  route only. Colours are CSS custom properties (`var(--accent)`, …), so charts
+  follow the live theme with no JS. Pin stays at `recharts@2.x`: the `3.x` line's
+  `ResponsiveContainer` measured zero width in testing and rendered nothing.
 
 For the directory layout and per-file map, see
 [`.planning/codebase/STRUCTURE.md`](../.planning/codebase/STRUCTURE.md).
