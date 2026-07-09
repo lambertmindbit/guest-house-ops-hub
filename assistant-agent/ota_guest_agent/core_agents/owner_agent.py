@@ -14,6 +14,7 @@ import os
 
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
+from google.adk.planners import BuiltInPlanner
 from google.genai import types
 
 from ..tools.owner_tools import daily_briefing, open_requests, block_room, resolve_request, business_summary
@@ -107,6 +108,10 @@ def build_owner_agent(model_name: str | None = None, name: str = "ota_owner_agen
         name=name,
         description="Helps the guest-house owner run the property — daily briefing and open queue.",
         model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
+        # Same think-before-tool-choice planner as the guest agent (see there).
+        planner=BuiltInPlanner(
+            thinking_config=types.ThinkingConfig(include_thoughts=False, thinking_budget=512),
+        ),
         instruction=build_instruction(INSTRUCTION_BODY, blocks.OWNER_CLOSING),
         tools=OWNER_TOOLS,
     )
