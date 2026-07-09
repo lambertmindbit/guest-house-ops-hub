@@ -39,7 +39,7 @@ export function OccupancyTrendChart({ trend }: { trend: TrendPoint[] }) {
   // bars normalised to their own max (the old CSS version was misleading).
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={trend} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+      <AreaChart data={trend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="occFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.28} />
