@@ -23,7 +23,15 @@ export default async function AnalyticsPage({
   return (
     <main className="app-main">
       <div className="entrance">
-        <PageHead title="Analytics" sub={`${from} – ${to} · ${a.nights} night${a.nights === 1 ? "" : "s"}, ${a.rooms} rooms`} />
+        <PageHead
+          title="Analytics"
+          sub={`${from} – ${to} · ${a.nights} night${a.nights === 1 ? "" : "s"}, ${a.rooms} rooms`}
+          right={
+            <a className="btn btn--ghost btn--sm" href={`/api/analytics/export?from=${from}&to=${to}`} download>
+              Download CSV
+            </a>
+          }
+        />
         <RangeForm from={from} to={to} />
 
         <div className="kpi-strip" style={{ marginTop: 14 }}>
