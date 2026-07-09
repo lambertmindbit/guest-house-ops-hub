@@ -427,6 +427,16 @@ until the agents are ready. All accept an optional forward-compatible <code>prop
 </tr>
 <tr>
 <td><code>GET</code></td>
+<td><code>/api/agent/rooms</code></td>
+<td>Read-only room catalog (id, label, type, capacity, base rate) — the PMS truth ROOT grounds its cards/id-mapping on</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/agent/rooms/availability</code></td>
+<td>Per-<strong>room</strong> free/busy for <code>checkIn</code>/<code>checkOut</code> (optional comma-separated <code>roomIds</code>); wraps the same derived query as the owner form</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
 <td><code>/api/agent/quote</code></td>
 <td>Suggested price for <code>roomId</code> + <code>checkIn</code>/<code>checkOut</code> (reuses the advisory pricing engine)</td>
 </tr>
@@ -439,6 +449,26 @@ until the agents are ready. All accept an optional forward-compatible <code>prop
 <td><code>POST</code></td>
 <td><code>/api/agent/messages</code></td>
 <td>Queue an outbound message via the LogAdapter (returns <strong>201</strong> with the id + <code>status:&quot;logged&quot;</code>)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/agent/faq</code></td>
+<td>Active FAQ entries (question / answer / category + optional photo/map <code>media</code>) the guest assistant answers from</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/agent/policies</code></td>
+<td>Owner-authored assistant policies — the agent injects these into its prompt each turn (edits apply within ~1 min, no redeploy)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/agent/turns</code></td>
+<td>Per-turn diagnostics (tools used, token count, fallback-model flag) appended to the owner chat log</td>
+</tr>
+<tr>
+<td><code>GET</code>/<code>POST</code></td>
+<td><code>/api/agent/owner/*</code></td>
+<td>Owner-console agent tools — daily summary, open requests, blocks, escalation actions, finance</td>
 </tr>
 </tbody></table>
 <blockquote>
@@ -516,6 +546,11 @@ then <code>PATCH</code>es the inbound item to <code>imported</code>.</p>
 <td><code>GET</code></td>
 <td><code>/api/export/payments.csv</code></td>
 <td>Download payments CSV (optional <code>from</code>/<code>to</code>)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/analytics/export</code></td>
+<td>Download the Analytics view as CSV — summary metrics + source mix + occupancy by room type + daily occupancy (optional <code>from</code>/<code>to</code>)</td>
 </tr>
 </tbody></table>
 <h2>iCal feeds &amp; sync</h2>

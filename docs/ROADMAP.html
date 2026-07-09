@@ -81,9 +81,12 @@ notes, and a blacklist toggle that warns at booking time.</p>
 <h3>Phase 5 — Finance → real profit</h3>
 <p>Per-channel revenue and commission, plus <strong>expense tracking</strong> so Finance shows true
 <strong>net profit</strong> (gross − commission − expenses).</p>
-<h3>Phase 6 — Invoices + export</h3>
-<p>Printable guest invoices (browser Print → PDF, using the property profile) and
-dependency-free <strong>Bookings / Payments CSV</strong> exports for the accountant.</p>
+<h3>Phase 6 — Analytics, invoices + export</h3>
+<p>An <strong>Analytics dashboard</strong> — occupancy, ADR, RevPAR, average stay, cancellation
+rate — with <strong>interactive charts</strong> (occupancy trend, source-mix donut, a
+<strong>revenue-by-channel</strong> bar chart) via Recharts, plus a <strong>Download CSV</strong> of the whole
+Analytics view (<code>GET /api/analytics/export</code>). Printable guest invoices (browser
+Print → PDF) and dependency-free <strong>Bookings / Payments CSV</strong> exports for the accountant.</p>
 <h3>ROOT agent integration (phases A–F)</h3>
 <p>The deterministic core&#39;s half of the contract with the ROOT AI agents — built as a
 small, token-gated seam (<code>AGENT_TOKEN</code>, fail-closed) so agents reach the app
@@ -106,6 +109,22 @@ payment; advance status is derived, never stored.</li>
 outbox; agents queue messages via <code>POST /api/agent/messages</code> (<code>status=logged</code>
 until a provider is wired). This is the groundwork the deferred messaging
 automation will plug a provider into.</li>
+</ul>
+<h3>Agent AI architecture upgrade (<code>assistant-agent</code>, its own A–F plan)</h3>
+<p>The Python assistant sidecar (Google ADK + Gemini, on Cloud Run) got a full
+reliability/quality pass — shipped as PRs #136–#145, distinct from the seam
+lettering above. See <code>assistant-agent/README.md</code> and the architecture-upgrade plan.</p>
+<ul>
+<li><strong>Resilience</strong> — 3-attempt run chain with a <code>GEMINI_FALLBACK_MODEL</code> fallback; no
+more silent empty replies.</li>
+<li><strong>Two isolated personas</strong> — guest vs owner, with a startup assertion that owner-only
+tools can never leak into the guest agent.</li>
+<li><strong>Shared prompts + canonical security block</strong> composed per turn (security outranks
+everything, including owner policies).</li>
+<li><strong>Runtime owner policies</strong> — owners edit assistant behaviour from Settings →
+&quot;Assistant rules&quot; (<code>GET /api/agent/policies</code>), applied within ~1 min, no redeploy.</li>
+<li><strong>Per-turn diagnostics</strong> (tools, tokens, fallback) in the chat log; <strong>FAQ media</strong>
+cards; and a <strong>pytest suite + <code>agent-tests</code> CI job</strong>.</li>
 </ul>
 <h2>Bookings list</h2>
 <p>A searchable all-bookings view at <code>/reservations</code> (labelled <strong>Bookings</strong> in nav)

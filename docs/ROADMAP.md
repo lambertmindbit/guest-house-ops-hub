@@ -53,9 +53,12 @@ notes, and a blacklist toggle that warns at booking time.
 Per-channel revenue and commission, plus **expense tracking** so Finance shows true
 **net profit** (gross − commission − expenses).
 
-### Phase 6 — Invoices + export
-Printable guest invoices (browser Print → PDF, using the property profile) and
-dependency-free **Bookings / Payments CSV** exports for the accountant.
+### Phase 6 — Analytics, invoices + export
+An **Analytics dashboard** — occupancy, ADR, RevPAR, average stay, cancellation
+rate — with **interactive charts** (occupancy trend, source-mix donut, a
+**revenue-by-channel** bar chart) via Recharts, plus a **Download CSV** of the whole
+Analytics view (`GET /api/analytics/export`). Printable guest invoices (browser
+Print → PDF) and dependency-free **Bookings / Payments CSV** exports for the accountant.
 
 ### ROOT agent integration (phases A–F)
 The deterministic core's half of the contract with the ROOT AI agents — built as a
@@ -79,6 +82,22 @@ without ever getting direct write access to money or bookings. See
   outbox; agents queue messages via `POST /api/agent/messages` (`status=logged`
   until a provider is wired). This is the groundwork the deferred messaging
   automation will plug a provider into.
+
+### Agent AI architecture upgrade (`assistant-agent`, its own A–F plan)
+The Python assistant sidecar (Google ADK + Gemini, on Cloud Run) got a full
+reliability/quality pass — shipped as PRs #136–#145, distinct from the seam
+lettering above. See `assistant-agent/README.md` and the architecture-upgrade plan.
+
+- **Resilience** — 3-attempt run chain with a `GEMINI_FALLBACK_MODEL` fallback; no
+  more silent empty replies.
+- **Two isolated personas** — guest vs owner, with a startup assertion that owner-only
+  tools can never leak into the guest agent.
+- **Shared prompts + canonical security block** composed per turn (security outranks
+  everything, including owner policies).
+- **Runtime owner policies** — owners edit assistant behaviour from Settings →
+  "Assistant rules" (`GET /api/agent/policies`), applied within ~1 min, no redeploy.
+- **Per-turn diagnostics** (tools, tokens, fallback) in the chat log; **FAQ media**
+  cards; and a **pytest suite + `agent-tests` CI job**.
 
 ## Bookings list
 A searchable all-bookings view at `/reservations` (labelled **Bookings** in nav)

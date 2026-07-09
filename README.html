@@ -87,13 +87,13 @@ See <a href="#hard-rules-do-not-break">the hard rules</a> below.</p>
 </tr>
 <tr>
 <td align="right">6</td>
-<td><strong>Invoices / export</strong></td>
-<td>Printable invoices, Bookings/Payments CSV export</td>
+<td><strong>Analytics, invoices &amp; export</strong></td>
+<td>Occupancy / ADR / RevPAR / avg-stay / cancellation dashboard with <strong>interactive charts</strong> (occupancy trend, source-mix donut, <strong>revenue-by-channel</strong>), <strong>Analytics CSV export</strong>, printable invoices, Bookings/Payments CSV export</td>
 </tr>
 <tr>
 <td align="right">A–F</td>
-<td><strong>ROOT agent integration</strong></td>
-<td>Token-gated agent seam (availability / quote / book / escalate / message), HITL escalation queue, C-Form guest fields, scam-number warnings + payment verification, advance-payment tracking, messaging outbox</td>
+<td><strong>ROOT agent integration + AI upgrade</strong></td>
+<td>Token-gated agent seam (availability / quote / book / escalate / message), HITL escalation queue, C-Form guest fields, scam-number warnings + payment verification, advance-payment tracking, messaging outbox. <strong>Agent architecture upgrade (A–F):</strong> resilient model fallback, owner-editable runtime policies, canonical security guardrail + tool-isolation, per-turn diagnostics, FAQ media, pytest suite + CI</td>
 </tr>
 </tbody></table>
 <p>Plus an all-bookings <strong>Bookings</strong> list (<code>/reservations</code>) — instant search and
@@ -116,7 +116,7 @@ property). See <a href="docs/ROADMAP.html">docs/ROADMAP.md</a>.</p>
 <li><strong>TypeScript</strong> (strict)</li>
 <li><strong>PostgreSQL</strong> via <strong>Supabase</strong>, <strong>Prisma</strong> ORM</li>
 <li><strong>Tailwind CSS v4</strong> (mobile-first, PWA)</li>
-<li><strong>Zod</strong> validation, <strong>Vitest</strong> tests, <strong>date-fns</strong></li>
+<li><strong>Zod</strong> validation, <strong>Vitest</strong> tests, <strong>date-fns</strong>, <strong>Recharts</strong> (analytics charts)</li>
 <li>Hosting: <strong>Vercel</strong> (+ Vercel Cron); CI: <strong>GitHub Actions</strong></li>
 </ul>
 <p>Full inventory: <a href="docs/ARCHITECTURE.html">docs/ARCHITECTURE.md</a>.</p>

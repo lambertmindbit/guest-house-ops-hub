@@ -157,6 +157,10 @@ until the agents are ready. All accept an optional forward-compatible `propertyR
 | `GET` | `/api/agent/quote` | Suggested price for `roomId` + `checkIn`/`checkOut` (reuses the advisory pricing engine) |
 | `POST` | `/api/agent/reservations` | Create a booking — same guest-upsert + transaction path as the owner route, so the GiST overlap constraint governs (**409** on overlap) |
 | `POST` | `/api/agent/messages` | Queue an outbound message via the LogAdapter (returns **201** with the id + `status:"logged"`) |
+| `GET` | `/api/agent/faq` | Active FAQ entries (question / answer / category + optional photo/map `media`) the guest assistant answers from |
+| `GET` | `/api/agent/policies` | Owner-authored assistant policies — the agent injects these into its prompt each turn (edits apply within ~1 min, no redeploy) |
+| `POST` | `/api/agent/turns` | Per-turn diagnostics (tools used, token count, fallback-model flag) appended to the owner chat log |
+| `GET`/`POST` | `/api/agent/owner/*` | Owner-console agent tools — daily summary, open requests, blocks, escalation actions, finance |
 
 > Agents never get direct write access to money or bookings beyond this seam. The
 > booking route runs the **same** `tx.reservation.create` as the owner path — the
@@ -185,6 +189,7 @@ until the agents are ready. All accept an optional forward-compatible `propertyR
 | `DELETE` | `/api/expenses/[id]` | Delete an expense |
 | `GET` | `/api/export/reservations.csv` | Download bookings CSV (optional `from`/`to`) |
 | `GET` | `/api/export/payments.csv` | Download payments CSV (optional `from`/`to`) |
+| `GET` | `/api/analytics/export` | Download the Analytics view as CSV — summary metrics + source mix + occupancy by room type + daily occupancy (optional `from`/`to`) |
 
 ## iCal feeds & sync
 
