@@ -1,8 +1,8 @@
 import { getAnalytics } from "@/lib/analytics";
 import { currentMonthRange } from "@/lib/finance";
-import { displayINR, displayShortDate } from "@/lib/format";
-import { parseDateOnly } from "@/lib/dates";
+import { displayINR } from "@/lib/format";
 import { PageHead, SectionLabel, RangeForm, ChannelBadge } from "@/components/ui";
+import { OccupancyTrendChart, SourceMixChart, RoomTypeChart } from "@/components/AnalyticsCharts";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +53,11 @@ export default async function AnalyticsPage({
         </p>
 
         <SectionLabel>Source mix · by room-nights</SectionLabel>
+        {a.sourceMix.length > 0 && (
+          <div className="card card--pad" style={{ marginBottom: 10 }}>
+            <SourceMixChart sourceMix={a.sourceMix} />
+          </div>
+        )}
         <div className="tbl-wrap">
           <table className="tbl">
             <thead>
@@ -87,31 +92,13 @@ export default async function AnalyticsPage({
           </table>
         </div>
 
-        {/* 14-day-style occupancy trend across the period. */}
+        {/* Occupancy trend across the period — absolute 0–100% scale. */}
         <SectionLabel>Occupancy trend</SectionLabel>
         <div className="card card--pad">
           {a.trend.length === 0 ? (
             <div className="empty">No nights in this period.</div>
           ) : (
-            <>
-              <div className="trend">
-                {(() => {
-                  const maxT = Math.max(1, ...a.trend.map((t) => t.occupancyPct));
-                  return a.trend.map((t) => (
-                    <div
-                      key={t.date}
-                      className="trend__bar"
-                      style={{ height: `${Math.round((t.occupancyPct / maxT) * 100)}%` }}
-                      title={`${displayShortDate(parseDateOnly(t.date))} · ${pct(t.occupancyPct)}`}
-                    />
-                  ));
-                })()}
-              </div>
-              <div className="spread" style={{ marginTop: 8, color: "var(--text-subtle)", fontSize: "var(--fs-meta)" }}>
-                <span>{displayShortDate(parseDateOnly(a.trend[0].date))}</span>
-                <span>{displayShortDate(parseDateOnly(a.trend[a.trend.length - 1].date))}</span>
-              </div>
-            </>
+            <OccupancyTrendChart trend={a.trend} />
           )}
         </div>
 
@@ -121,13 +108,7 @@ export default async function AnalyticsPage({
           {a.byRoomType.length === 0 ? (
             <div className="empty">No room types yet.</div>
           ) : (
-            a.byRoomType.map((t) => (
-              <div key={t.name} className="mixrow">
-                <span className="mixrow__l">{t.name}</span>
-                <span className="mixrow__track"><span className="mixrow__fill" style={{ width: `${Math.min(100, Math.round(t.occupancyPct))}%` }} /></span>
-                <span className="mixrow__v">{pct(t.occupancyPct)}</span>
-              </div>
-            ))
+            <RoomTypeChart byRoomType={a.byRoomType} />
           )}
         </div>
       </div>
