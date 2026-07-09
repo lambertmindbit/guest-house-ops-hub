@@ -41,13 +41,13 @@ describe("PATCH /api/rooms/[id] — photos/facing/view", () => {
 
   it("rejects a non-URL photo", async () => {
     const res = await PATCH(patch({ photos: ["not-a-url"] }), ctx(roomId));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
   });
 
   it("rejects more than 8 photos", async () => {
     const photos = Array.from({ length: 9 }, (_, i) => `https://example.com/${i}.jpg`);
     const res = await PATCH(patch({ photos }), ctx(roomId));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
   });
 
   it("clears facing/view/photos back to null/empty", async () => {
