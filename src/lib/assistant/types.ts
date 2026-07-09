@@ -10,6 +10,10 @@ export type RoomCardData = {
   maxOccupancy: number;
   rate: number; // base advisory rate per night (whole rupees)
   free: boolean;
+  photos?: string[];
+  facing?: string | null;
+  view?: string | null;
+  amenities?: string[];
 };
 
 export type QuoteCardData = {

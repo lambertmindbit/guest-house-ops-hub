@@ -19,7 +19,10 @@ export type RoomType = {
   rateCeiling: number;
   roomCount: number;
 };
-export type Room = { id: string; label: string; roomTypeId: string; roomTypeName: string; archived: boolean };
+export type Room = {
+  id: string; label: string; roomTypeId: string; roomTypeName: string; archived: boolean;
+  photos: string[]; facing: string | null; view: string | null;
+};
 export type Channel = { id: string; name: string; commissionPct: number; collectsPayment: boolean; resCount: number };
 export type Block = { id: string; roomId: string; roomLabel: string; startDate: string; endDate: string; reason: string | null };
 export type Settings = {
@@ -270,6 +273,8 @@ export function RoomTypesSection({ types }: { types: RoomType[] }) {
 }
 
 /* ---------------- Rooms ---------------- */
+const BLANK_ROOM_CONTENT = { photos: "", facing: "", view: "" };
+
 export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[] }) {
   const router = useRouter();
   const { confirm, alert } = useConfirm();
@@ -278,6 +283,8 @@ export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[
   const [roomTypeId, setRoomTypeId] = useState(types[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [content, setContent] = useState(BLANK_ROOM_CONTENT);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -286,6 +293,21 @@ export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[
     setBusy(false);
     if (!r.ok) return setError(r.error!);
     setLabel(""); setAdding(false); router.refresh();
+  }
+  function startEditContent(room: Room) {
+    setError(null); setAdding(false); setEditing(room.id);
+    setContent({ photos: room.photos.join("\n"), facing: room.facing ?? "", view: room.view ?? "" });
+  }
+  async function saveContent(e: React.FormEvent, roomId: string) {
+    e.preventDefault();
+    const photos = content.photos.split("\n").map((s) => s.trim()).filter(Boolean);
+    setBusy(true); setError(null);
+    const r = await send("PATCH", `/api/rooms/${roomId}`, {
+      photos, facing: content.facing.trim() || null, view: content.view.trim() || null,
+    });
+    setBusy(false);
+    if (!r.ok) return setError(r.error!);
+    setEditing(null); router.refresh();
   }
   async function setArchived(room: Room, archived: boolean) {
     if (
@@ -337,12 +359,36 @@ export function RoomsSection({ rooms, types }: { rooms: Room[]; types: RoomType[
                 <span className="h3" style={{ fontSize: "var(--fs-h3)" }}>Room {room.label}</span>
                 <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{room.roomTypeName}</span>
                 {room.archived && <span className="badge badge--neutral">Archived</span>}
+                {room.photos.length > 0 && <span className="badge badge--neutral">📷 {room.photos.length}</span>}
               </div>
               <span className="row" style={{ gap: 4, flex: "none" }}>
+                <button onClick={() => (editing === room.id ? setEditing(null) : startEditContent(room))} className="btn btn--quiet btn--sm">{editing === room.id ? "Close" : "Edit"}</button>
                 <button onClick={() => setArchived(room, !room.archived)} className="btn btn--quiet btn--sm">{room.archived ? "Unarchive" : "Archive"}</button>
                 <button onClick={() => remove(room)} className="btn btn--quiet btn--icon btn--sm" aria-label="Delete" style={{ color: "var(--red-text)" }}><Icon name="trash" size={16} /></button>
               </span>
             </div>
+            {(room.facing || room.view) && editing !== room.id && (
+              <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 6 }}>
+                {[room.facing, room.view].filter(Boolean).join(" · ")}
+              </div>
+            )}
+            {editing === room.id && (
+              <form onSubmit={(e) => saveContent(e, room.id)} style={{ marginTop: 12, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                <ErrorLine msg={error} />
+                <div className="form-grid">
+                  <div><label className="field-label">Facing</label><input className="input" placeholder="e.g. East" value={content.facing} onChange={(e) => setContent({ ...content, facing: e.target.value })} /></div>
+                  <div><label className="field-label">View</label><input className="input" placeholder="e.g. Pool view" value={content.view} onChange={(e) => setContent({ ...content, view: e.target.value })} /></div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <label className="field-label">Photos — URLs, one per line (max 8)</label>
+                  <textarea className="textarea" style={{ minHeight: 60 }} placeholder="https://…" value={content.photos} onChange={(e) => setContent({ ...content, photos: e.target.value })} />
+                </div>
+                <div className="row" style={{ gap: 10, marginTop: 12 }}>
+                  <button type="submit" disabled={busy} className="btn btn--primary btn--sm">{busy ? "Saving…" : "Save"}</button>
+                  <button type="button" onClick={() => setEditing(null)} className="btn btn--ghost btn--sm">Cancel</button>
+                </div>
+              </form>
+            )}
           </div>
         ))}
         {rooms.length === 0 && <div className="empty">No rooms yet.</div>}
@@ -587,7 +633,7 @@ export function PricingSection({ policy, seasons }: { policy: Policy; seasons: S
 }
 
 /* ---------------- Blocks (maintenance) ---------------- */
-export function BlocksSection({ blocks, rooms }: { blocks: Block[]; rooms: Room[] }) {
+export function BlocksSection({ blocks, rooms }: { blocks: Block[]; rooms: Pick<Room, "id" | "label" | "roomTypeName">[] }) {
   const router = useRouter();
   const { confirm, alert } = useConfirm();
   const [adding, setAdding] = useState(false);

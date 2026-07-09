@@ -27,7 +27,11 @@ from ota_guest_agent.services.ota_client import RoomJustTaken  # noqa: E402
 
 
 DEFAULT_ROOMS = [
-    {"id": "r201", "label": "201", "roomTypeId": "t-deluxe", "roomTypeName": "Deluxe", "maxOccupancy": 3, "baseRate": 3500},
+    {
+        "id": "r201", "label": "201", "roomTypeId": "t-deluxe", "roomTypeName": "Deluxe", "maxOccupancy": 3, "baseRate": 3500,
+        "photos": ["https://example.com/r201-a.jpg", "https://example.com/r201-b.jpg"],
+        "facing": "East", "view": "Pool view", "amenities": ["AC", "WiFi"],
+    },
     {"id": "r101", "label": "101", "roomTypeId": "t-std", "roomTypeName": "Standard Double", "maxOccupancy": 2, "baseRate": 2500},
 ]
 

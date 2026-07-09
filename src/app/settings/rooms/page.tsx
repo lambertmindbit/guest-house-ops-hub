@@ -21,6 +21,9 @@ export default async function Page() {
             roomTypeId: r.roomTypeId,
             roomTypeName: r.roomType.name,
             archived: r.archivedAt !== null,
+            photos: Array.isArray(r.photos) ? (r.photos as string[]) : [],
+            facing: r.facing,
+            view: r.view,
           }))}
           types={types.map((t) => ({
             id: t.id,

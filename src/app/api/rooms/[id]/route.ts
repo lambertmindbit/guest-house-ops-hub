@@ -1,18 +1,23 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail } from "@/lib/api";
+import { roomPhotosSchema, roomFacingSchema, roomViewSchema } from "@/lib/rooms";
 
 // One PATCH serves two callers:
 //  - Housekeeping: { markCleaned } stamps/clears the cleaning state.
-//  - Settings admin: { label?, roomTypeId?, archived? } edits or retires a room.
-//    archived:true sets archived_at=now (room drops off calendar/booking/etc.
-//    but keeps its history); archived:false un-archives.
+//  - Settings admin: { label?, roomTypeId?, archived?, photos?, facing?, view? }
+//    edits or retires a room. archived:true sets archived_at=now (room drops off
+//    calendar/booking/etc. but keeps its history); archived:false un-archives.
 const schema = z
   .object({
     markCleaned: z.boolean().optional(),
     label: z.string().trim().min(1).optional(),
     roomTypeId: z.string().min(1).optional(),
     archived: z.boolean().optional(),
+    photos: roomPhotosSchema,
+    facing: roomFacingSchema,
+    view: roomViewSchema,
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "no fields to update",
@@ -43,6 +48,9 @@ export async function PATCH(
   if (input.label !== undefined) data.label = input.label;
   if (input.roomTypeId !== undefined) data.roomTypeId = input.roomTypeId;
   if (input.archived !== undefined) data.archivedAt = input.archived ? new Date() : null;
+  if (input.photos !== undefined) data.photos = (input.photos ?? Prisma.DbNull) as Prisma.InputJsonValue | typeof Prisma.DbNull;
+  if (input.facing !== undefined) data.facing = input.facing || null;
+  if (input.view !== undefined) data.view = input.view || null;
 
   const room = await prisma.room.update({ where: { id }, data, include: { roomType: true } });
   return ok(room);
