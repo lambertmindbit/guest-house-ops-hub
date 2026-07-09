@@ -61,7 +61,17 @@ export function AssistantChat({
         while ((nl = buffer.indexOf("\n")) >= 0) {
           const line = buffer.slice(0, nl).trim();
           buffer = buffer.slice(nl + 1);
-          if (line) applyChunk(JSON.parse(line) as StreamChunk);
+          if (!line) continue;
+          // Skip a malformed line rather than aborting the whole turn — one bad
+          // chunk (proxy keep-alive, a truncated frame) shouldn't discard an
+          // otherwise-good reply that already streamed.
+          let chunk: StreamChunk;
+          try {
+            chunk = JSON.parse(line) as StreamChunk;
+          } catch {
+            continue;
+          }
+          applyChunk(chunk);
         }
       }
     } catch {

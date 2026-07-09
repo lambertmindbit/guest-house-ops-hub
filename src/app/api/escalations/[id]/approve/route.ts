@@ -42,8 +42,16 @@ export async function POST(_req: Request, { params }: Ctx) {
   }
   const { roomId, checkIn, checkOut, guestName, guestPhone, total } = meta.data;
 
-  const channel = await prisma.channel.findFirst({ where: { name: "Assistant (ROOT)" } });
-  if (!channel) return fail("No channel is configured for assistant bookings — check Settings > Channels.", 500);
+  // Attribute the booking to the assistant channel, but don't hard-fail if the
+  // owner has renamed it: prefer an exact match, then any channel whose name
+  // mentions "assistant", then Direct (0% commission — a safe, non-OTA default),
+  // then any channel at all. Only 500 if the property has no channels at all.
+  const channel =
+    (await prisma.channel.findFirst({ where: { name: "Assistant (ROOT)" } })) ??
+    (await prisma.channel.findFirst({ where: { name: { contains: "assistant", mode: "insensitive" } } })) ??
+    (await prisma.channel.findFirst({ where: { name: { equals: "Direct", mode: "insensitive" } } })) ??
+    (await prisma.channel.findFirst({ orderBy: { name: "asc" } }));
+  if (!channel) return fail("No channel is configured — add one under Settings > Channels first.", 500);
 
   try {
     const reservation = await prisma.$transaction(async (tx) => {

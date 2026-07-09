@@ -3,8 +3,10 @@ import { analyticsCsv } from "@/lib/analytics-csv";
 import { currentMonthRange } from "@/lib/finance";
 
 // GET /api/analytics/export?from=&to= → the current Analytics view as a CSV
-// download. Owner-gated by middleware (same as the page). Invalid/missing dates
-// fall back to the current month, mirroring the page.
+// download. Owner-only: middleware redirects non-owners because "/api/analytics"
+// is in OWNER_ONLY_PREFIXES (src/lib/authz.ts) — the API path is listed
+// separately from the "/analytics" page path. Invalid/missing dates fall back to
+// the current month, mirroring the page.
 const isDate = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 export async function GET(request: Request) {

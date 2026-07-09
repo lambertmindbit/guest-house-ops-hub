@@ -136,10 +136,15 @@ export async function GET(request: Request) {
         }
       : {};
 
+  // Safety cap on the unbounded (no date range) case so history can't grow into
+  // a pathologically large payload. When a range is given it's already bounded
+  // by the range. Ordered most-recent-first so a cap keeps the relevant rows;
+  // callers needing older records should pass an explicit `from`/`to`.
   const reservations = await prisma.reservation.findMany({
     where,
     include: reservationInclude,
-    orderBy: { checkIn: "asc" },
+    orderBy: { checkIn: from && to ? "asc" : "desc" },
+    ...(from && to ? {} : { take: 1000 }),
   });
   return ok(reservations);
 }
