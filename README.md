@@ -27,8 +27,8 @@ All six planned milestones are built and in production:
 | 3 | **Check-in / out** | Live arrival/departure tracking on the Today board |
 | 4 | **Guest CRM** | Stay history, repeat-guest badge, lifetime value, ID, blacklist |
 | 5 | **Finance** | Per-channel revenue + commission, expense tracking → net profit |
-| 6 | **Invoices / export** | Printable invoices, Bookings/Payments CSV export |
-| A–F | **ROOT agent integration** | Token-gated agent seam (availability / quote / book / escalate / message), HITL escalation queue, C-Form guest fields, scam-number warnings + payment verification, advance-payment tracking, messaging outbox |
+| 6 | **Analytics, invoices & export** | Occupancy / ADR / RevPAR / avg-stay / cancellation dashboard with **interactive charts** (occupancy trend, source-mix donut, **revenue-by-channel**), **Analytics CSV export**, printable invoices, Bookings/Payments CSV export |
+| A–F | **ROOT agent integration + AI upgrade** | Token-gated agent seam (availability / quote / book / escalate / message), HITL escalation queue, C-Form guest fields, scam-number warnings + payment verification, advance-payment tracking, messaging outbox. **Agent architecture upgrade (A–F):** resilient model fallback, owner-editable runtime policies, canonical security guardrail + tool-isolation, per-turn diagnostics, FAQ media, pytest suite + CI |
 
 Plus an all-bookings **Bookings** list (`/reservations`) — instant search and
 timeline filter (Upcoming / In-house / Past / Cancelled) — alongside the
@@ -51,7 +51,7 @@ property). See [docs/ROADMAP.md](docs/ROADMAP.md).
 - **TypeScript** (strict)
 - **PostgreSQL** via **Supabase**, **Prisma** ORM
 - **Tailwind CSS v4** (mobile-first, PWA)
-- **Zod** validation, **Vitest** tests, **date-fns**
+- **Zod** validation, **Vitest** tests, **date-fns**, **Recharts** (analytics charts)
 - Hosting: **Vercel** (+ Vercel Cron); CI: **GitHub Actions**
 
 Full inventory: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

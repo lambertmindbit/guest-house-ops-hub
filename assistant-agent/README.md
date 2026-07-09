@@ -11,31 +11,50 @@ ota_guest_agent/
   __init__.py            load .env, expose app + root_agent
   agent.py               App(...) + root_agent  (ADK entry point)
   core_agents/
-    guest_agent.py       the LlmAgent (Gemini) + instruction + tools
+    guest_agent.py       public LlmAgent — GUEST_TOOLS (read + propose-booking + FAQ)
+    owner_agent.py       owner LlmAgent — adds OWNER_ONLY_TOOLS (briefing/queue/block/resolve/summary)
+  prompts/
+    blocks.py            shared SECURITY / ACCURACY / FORMATTING blocks + persona closings
+    instruction.py       build_instruction() — async InstructionProvider composed per turn
+  guardrails.py          assert_tool_isolation() — guest tools can never include owner-only tools
   tools/
-    booking_tools.py     check_availability, quote_room  (Phase-2 read tools)
+    booking_tools.py     check_availability, quote_room, propose_booking, request_booking_change
+    faq_tools.py         answer_faq — emits FAQ media cards
+    owner_tools.py       daily_briefing, open_requests, block_room, resolve_request, business_summary
   services/
     ota_client.py        typed async client for /api/agent/*  (the only file with OTA URLs)
+    policies.py          fetch owner-authored assistant policies (cached ~60s)
+    dates.py             per-turn IST date grounding
     ui.py                generative-UI builders — EXACT shapes of src/lib/assistant/types.ts
-  server.py              FastAPI POST /chat -> NDJSON StreamChunk (what the OTA proxy calls)
+  server.py              FastAPI POST /chat -> NDJSON StreamChunk; deterministic slash-flows + retry/fallback
 ```
 
-## ⚠ Status: written, syntax-checked, NOT YET RUN
+## Status: live in production
 
-Per the agreed Phase-2 mode ("build now, wire the key + deploy later"), this
-package is authored against the reference's ADK usage and passes `py_compile`, but
-it has **not been executed** — there is no Gemini key or Python host in the build
-environment. Before it will serve, verify against the installed `google-adk`
-version + a real key:
+Deployed on Cloud Run (`ota-guest-agent`, `asia-south1`) and serving both the
+public guest widget and the owner console. The **AI architecture upgrade plan
+(phases A–F)** is complete — 10 PRs, #136–#145. What that added on top of the
+original read-only agent:
 
-- the ADK **Runner** streaming loop in `server.py` (`run_async` event/part shape),
-- **session** lifecycle (`create_session` / `get_session` signatures, how
-  `tool_context.state` surfaces as `session.state`),
-- the **Gemini model** import path and retry options.
+- **Resilience (A):** `_run` is a 3-attempt chain — primary → primary →
+  `GEMINI_FALLBACK_MODEL` (default `gemini-2.5-flash`); empty or transient-error
+  turns fall through, a partial-then-error stream keeps the partial, and only an
+  all-fail turn emits a friendly message (never silence or a raw error).
+- **Two personas (guardrails):** `guest_agent` (public) and `owner_agent` (owner),
+  routed by `mode`, never sharing a session namespace. `guardrails.assert_tool_isolation()`
+  runs at import so owner-only tools can never leak into the guest tool list.
+- **Shared prompts (B/C):** one `prompts/blocks.py` for the SECURITY / ACCURACY /
+  FORMATTING blocks; `build_instruction()` composes date → role → owner policies →
+  formatting → accuracy → **security last (outranks everything)** per turn.
+- **Runtime owner policies (D):** owners edit assistant behaviour from Settings →
+  "Assistant rules"; `services/policies.py` injects them per turn (cached ~60s), so
+  edits apply within a minute with no redeploy. Security block always outranks policy.
+- **Diagnostics (C3):** each turn logs which tools ran, token count, and whether the
+  fallback model was used, into the owner's chat log.
+- **FAQ media (E1):** `answer_faq` can attach owner-curated photos / a map card.
 
-These are the spots most likely to need a small tweak for your ADK version; the
-integration-specific code (tools → our endpoints, UI descriptor shapes, the
-`/chat` NDJSON contract) is the stable part.
+Conversational LLM behaviour is verified live; the deterministic core is covered by
+the pytest suite (below).
 
 ## Run locally
 
@@ -92,8 +111,16 @@ To scale past one instance, swap `InMemorySessionService` for a persistent
 (DB-backed) ADK session service first. Tracked as decision D1 in the AI
 architecture upgrade plan.
 
-## Scope
+## Scope & the write path
 
-Phase 2 is **read-only** (availability, rooms, price). The booking write
-(`create_reservation`), OTP flow, and escalation/message tools are Phase 3 — the
-`OtaClient` already has those methods; the agent just isn't given them yet.
+The agent can read (availability, rooms, price) **and** move a booking forward — but
+never writes blindly. The deterministic `/book → /bookdetails → /confirm` flow (no
+LLM at the moment of commitment) drives it:
+
+- **Public guest:** `/confirm` re-checks availability and files a **booking-request
+  escalation** for the owner to approve — a guest never writes a reservation directly.
+- **Owner console:** `/confirm` writes through the guarded `/api/agent/*` seam, so a
+  GiST conflict (409) surfaces as "room just taken" and is never retried.
+
+Cancel / modify / refund are **always** human escalations, never agent actions. The
+demo OTP flow was removed (public confirm files an escalation instead).
