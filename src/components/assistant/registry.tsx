@@ -57,6 +57,9 @@ function FaqMediaCard({ c }: { c: Extract<UIComponent, { type: "faq_media" }> })
 
 function RoomsCards({ c, onAction, disabled }: { c: Extract<UIComponent, { type: "rooms" }>; onAction: Action; disabled: boolean }) {
   const { data, checkIn, checkOut } = c;
+  // Browse mode (list_rooms, no dates yet): the card is a photo gallery — there
+  // is no valid /book target without dates, so no Book button is rendered.
+  const bookable = Boolean(checkIn && checkOut);
   const [lightbox, setLightbox] = useState<{ roomId: string; index: number } | null>(null);
   const activeRoom = lightbox ? data.find((r) => r.id === lightbox.roomId) : null;
   const activePhotos = activeRoom?.photos ?? [];
@@ -91,9 +94,11 @@ function RoomsCards({ c, onAction, disabled }: { c: Extract<UIComponent, { type:
               {details && <div className="rowcard__meta">{details}</div>}
               {r.amenities && r.amenities.length > 0 && <div className="rowcard__meta">{r.amenities.join(" · ")}</div>}
             </div>
-            <div className="row" style={{ gap: 6 }}>
-              <button className="btn btn--primary btn--sm" disabled={disabled} onClick={() => onAction(`/book ${r.id} ${checkIn} ${checkOut}`)}>Book</button>
-            </div>
+            {bookable && (
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn btn--primary btn--sm" disabled={disabled} onClick={() => onAction(`/book ${r.id} ${checkIn} ${checkOut}`)}>Book</button>
+              </div>
+            )}
           </div>
         );
       })}
