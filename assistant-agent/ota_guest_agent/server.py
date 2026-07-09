@@ -226,171 +226,115 @@ async def _handle_booking_step(message: str, session_id: str, app_name: str, use
     return None
 
 
+async def _confirm_pending(session_id: str, mode: str) -> AsyncIterator[str]:
+    """The single /confirm implementation for BOTH modes. propose_booking (or the
+    /bookdetails form) stashed the booking as `_pending` in this mode's session.
+
+    mode="public": re-check availability, then file a booking-REQUEST escalation —
+        NO reservation is created (an anonymous guest can never confirm a booking).
+    mode="owner":  write the reservation DIRECTLY through the guarded seam (the
+        owner is authenticated); a GiST 409 -> RoomJustTaken is surfaced, never
+        retried."""
+    app_name, user_id = (OWNER_APP_NAME, OWNER_USER_ID) if mode == "owner" else (APP_NAME, USER_ID)
+    session = await _session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
+    pending = (dict(session.state) if session else {}).get("_pending")
+    if session is None or not pending:
+        yield _line({"type": "text", "delta": "I don't have a booking ready to confirm — let's start again with your dates."})
+        yield _line({"type": "done"})
+        return
+
+    if mode == "public":
+        # Last-moment re-check — the guest may have spent a while on the form.
+        # Catching it here means "sorry, that's gone" arrives as part of booking,
+        # not days later when the owner tries to approve a request that can no
+        # longer be honoured.
+        if not await _room_still_free(pending["roomId"], pending["checkIn"], pending["checkOut"]):
+            await _set_state(session, {"_pending": None})
+            yield _line({"type": "text", "delta": f"Sorry — {pending['roomLabel']} is no longer available for those dates. Want to check other options?"})
+            yield _line({"type": "done"})
+            return
+
+        summary = (
+            f"Guest {pending['guestName']} ({pending['guestPhone']}) requested "
+            f"{pending['roomLabel']} ({pending['roomTypeName']}), {pending['checkIn']} → {pending['checkOut']}, "
+            f"{pending['nights']} night(s), about ₹{pending['total']}. Sent from the public chat widget — "
+            f"please confirm availability and contact the guest."
+        )
+        try:
+            await _ota.create_escalation({
+                "source": "assistant", "category": "booking", "severity": "medium",
+                "title": f"Booking request: {pending['roomLabel']} {pending['checkIn']}→{pending['checkOut']}",
+                "summary": summary,
+                "raisedBy": {"name": pending["guestName"], "contact": pending["guestPhone"]},
+                # Structured so the owner can approve with one tap (creates the
+                # reservation directly) instead of re-typing everything by hand.
+                "metadata": {
+                    "kind": "booking_request",
+                    "roomId": pending["roomId"], "roomLabel": pending["roomLabel"],
+                    "roomTypeName": pending["roomTypeName"],
+                    "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
+                    "nights": pending["nights"], "total": pending["total"],
+                    "guestName": pending["guestName"], "guestPhone": pending["guestPhone"],
+                },
+            })
+        except OtaError as exc:
+            yield _line({"type": "text", "delta": f"I couldn't send your request ({exc}). Please try again."})
+            yield _line({"type": "done"})
+            return
+        await _set_state(session, {"_pending": None})
+        yield _line({"type": "text", "delta": f"Thank you, {pending['guestName']}! 🙏 I've sent your request for {pending['roomLabel']} ({pending['checkIn']} → {pending['checkOut']}) to the property. They'll confirm availability and reach you on {pending['guestPhone']} shortly."})
+        yield _line({"type": "done"})
+        return
+
+    # mode == "owner": write the reservation directly through the guarded seam.
+    body = {
+        "roomId": pending["roomId"], "channelId": _ota.channel_id,
+        "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
+        "guest": {"name": pending["guestName"], "phone": pending["guestPhone"]},
+        "grossAmount": pending["total"],
+    }
+    try:
+        reservation = await _ota.create_reservation(body)
+    except RoomJustTaken:
+        # The GiST no-double-booking constraint rejected it — never retry.
+        await _set_state(session, {"_pending": None})
+        yield _line({"type": "text", "delta": f"Those dates are no longer free for {pending['roomLabel']} — it was just booked. Want to try other dates or another room?"})
+        yield _line({"type": "done"})
+        return
+    except OtaError as exc:
+        yield _line({"type": "text", "delta": f"I couldn't complete the booking ({exc})."})
+        yield _line({"type": "done"})
+        return
+
+    await _set_state(session, {"_pending": None})
+    yield _line({"type": "text", "delta": f"✅ Booked! #{reservation.get('id')} — {pending['roomLabel']}, {pending['checkIn']} → {pending['checkOut']} for {pending['guestName']} ({pending['guestPhone']}), ₹{pending['total']}."})
+    yield _line({"type": "done"})
+
+
 async def _handle_owner_slash(message: str, session_id: str):
     """Deterministic owner-console card actions — NO LLM call.
-    /quote → price card (shared). /confirm → write the reservation DIRECTLY through
-    the guarded seam (no OTP: the owner is trusted and already authenticated). The
-    pending booking was stored by propose_booking in the owner session state.
-    Returns an async generator, or None if not one of these."""
+    /quote → price card. /confirm → write the reservation directly (see
+    _confirm_pending, mode="owner"). Returns an async generator, or None."""
     msg = message.strip()
-    if not (msg.startswith("/quote") or msg.startswith("/confirm")):
-        return None
-
-    async def gen():
-        if msg.startswith("/quote"):
-            async for line in _quote_lines(msg):
-                yield line
-            return
-
-        session = await _session_service.get_session(app_name=OWNER_APP_NAME, user_id=OWNER_USER_ID, session_id=session_id)
-        pending = (dict(session.state) if session else {}).get("_pending")
-        if session is None or not pending:
-            yield _line({"type": "text", "delta": "I don't have a booking ready to confirm — tell me the room, dates, guest name and phone."})
-            yield _line({"type": "done"})
-            return
-
-        body = {
-            "roomId": pending["roomId"], "channelId": _ota.channel_id,
-            "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
-            "guest": {"name": pending["guestName"], "phone": pending["guestPhone"]},
-            "grossAmount": pending["total"],
-        }
-        try:
-            reservation = await _ota.create_reservation(body)
-        except RoomJustTaken:
-            # The GiST no-double-booking constraint rejected it — never retry.
-            await _set_state(session, {"_pending": None})
-            yield _line({"type": "text", "delta": f"Those dates are no longer free for {pending['roomLabel']} — it was just booked. Want to try other dates or another room?"})
-            yield _line({"type": "done"})
-            return
-        except OtaError as exc:
-            yield _line({"type": "text", "delta": f"I couldn't complete the booking ({exc})."})
-            yield _line({"type": "done"})
-            return
-
-        await _set_state(session, {"_pending": None})
-        yield _line({"type": "text", "delta": f"✅ Booked! #{reservation.get('id')} — {pending['roomLabel']}, {pending['checkIn']} → {pending['checkOut']} for {pending['guestName']} ({pending['guestPhone']}), ₹{pending['total']}."})
-        yield _line({"type": "done"})
-
-    return gen()
+    if msg.startswith("/quote"):
+        return _quote_lines(msg)
+    if msg.startswith("/confirm"):
+        return _confirm_pending(session_id, "owner")
+    return None
 
 
-async def _handle_slash(message: str, session_id: str, mode: str = "owner"):
-    """Deterministic handling of the /quote, /confirm and /otp card actions — NO
-    LLM call (faster, cheaper, and immune to model overload/quota on these steps).
-    Returns an async generator of NDJSON lines, or None if not one of these.
-    propose_booking (LLM) already stored the pending booking in session state.
-
-    mode="owner"  (default, the in-app assistant): /confirm → demo OTP → /otp writes
-        a real reservation through the guarded seam.
-    mode="public" (the anonymous guest widget): /confirm files a booking REQUEST
-        escalation for the owner to confirm — NO OTP, NO reservation. An anonymous
-        guest can never create a confirmed booking."""
+async def _handle_slash(message: str, session_id: str):
+    """Deterministic public-widget card actions — NO LLM call (faster, cheaper,
+    immune to model overload on these steps). /quote → price card; /confirm →
+    file a booking REQUEST (see _confirm_pending, mode="public") — never a
+    reservation, since an anonymous guest can't confirm a booking. Returns an
+    async generator, or None."""
     msg = message.strip()
-    if not (msg.startswith("/quote") or msg.startswith("/confirm") or msg.startswith("/otp")):
-        return None
-
-    import random
-
-    async def gen():
-        # /quote <roomId> <checkIn> <checkOut> — deterministic price card, NO LLM call.
-        if msg.startswith("/quote"):
-            async for line in _quote_lines(msg):
-                yield line
-            return
-
-        # /confirm and /otp need the pending booking that propose_booking stored.
-        session = await _session_service.get_session(app_name=APP_NAME, user_id=USER_ID, session_id=session_id)
-        state = dict(session.state) if session else {}
-        pending = state.get("_pending")
-        if session is None or not pending:
-            yield _line({"type": "text", "delta": "I don't have a booking ready to confirm — let's start again with your dates."})
-            yield _line({"type": "done"})
-            return
-
-        if msg.startswith("/confirm"):
-            if mode == "public":
-                # Last-moment re-check — the guest may have spent a while on the
-                # form. Catching it here means "sorry, that's gone" arrives as part
-                # of booking, not as a surprise days later when the owner tries to
-                # approve a request that can no longer be honoured.
-                if not await _room_still_free(pending["roomId"], pending["checkIn"], pending["checkOut"]):
-                    await _set_state(session, {"_pending": None})
-                    yield _line({"type": "text", "delta": f"Sorry — {pending['roomLabel']} is no longer available for those dates. Want to check other options?"})
-                    yield _line({"type": "done"})
-                    return
-
-                # File a request for the owner to confirm — no reservation is created.
-                summary = (
-                    f"Guest {pending['guestName']} ({pending['guestPhone']}) requested "
-                    f"{pending['roomLabel']} ({pending['roomTypeName']}), {pending['checkIn']} → {pending['checkOut']}, "
-                    f"{pending['nights']} night(s), about ₹{pending['total']}. Sent from the public chat widget — "
-                    f"please confirm availability and contact the guest."
-                )
-                try:
-                    await _ota.create_escalation({
-                        "source": "assistant", "category": "booking", "severity": "medium",
-                        "title": f"Booking request: {pending['roomLabel']} {pending['checkIn']}→{pending['checkOut']}",
-                        "summary": summary,
-                        "raisedBy": {"name": pending["guestName"], "contact": pending["guestPhone"]},
-                        # Structured so the owner can approve with one tap (creates the
-                        # reservation directly) instead of re-typing everything by hand.
-                        "metadata": {
-                            "kind": "booking_request",
-                            "roomId": pending["roomId"], "roomLabel": pending["roomLabel"],
-                            "roomTypeName": pending["roomTypeName"],
-                            "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
-                            "nights": pending["nights"], "total": pending["total"],
-                            "guestName": pending["guestName"], "guestPhone": pending["guestPhone"],
-                        },
-                    })
-                except OtaError as exc:
-                    yield _line({"type": "text", "delta": f"I couldn't send your request ({exc}). Please try again."})
-                    yield _line({"type": "done"})
-                    return
-                await _set_state(session, {"_pending": None})
-                yield _line({"type": "text", "delta": f"Thank you, {pending['guestName']}! 🙏 I've sent your request for {pending['roomLabel']} ({pending['checkIn']} → {pending['checkOut']}) to the property. They'll confirm availability and reach you on {pending['guestPhone']} shortly."})
-                yield _line({"type": "done"})
-                return
-
-            code = f"{random.randint(0, 9999):04d}"
-            await _set_state(session, {"_otp": code})
-            yield _line({"type": "ui", "component": ui.otp_component(f"Enter the code sent to {pending['guestPhone']} to confirm.", demo_code=code)})
-            yield _line({"type": "text", "delta": "Almost done — enter the code above to confirm your booking."})
-            yield _line({"type": "done"})
-            return
-
-        # /otp <code>
-        parts = msg.split(maxsplit=1)
-        code = parts[1].strip() if len(parts) > 1 else ""
-        if code != str(state.get("_otp")):
-            yield _line({"type": "text", "delta": "That code doesn't match — please try again."})
-            yield _line({"type": "done"})
-            return
-
-        body = {
-            "roomId": pending["roomId"], "channelId": _ota.channel_id,
-            "checkIn": pending["checkIn"], "checkOut": pending["checkOut"],
-            "guest": {"name": pending["guestName"], "phone": pending["guestPhone"]},
-            "grossAmount": pending["total"],
-        }
-        try:
-            reservation = await _ota.create_reservation(body)
-        except RoomJustTaken:
-            await _set_state(session, {"_pending": None, "_otp": None})
-            yield _line({"type": "text", "delta": "Sorry — that room was just booked by someone else. Want me to check other options?"})
-            yield _line({"type": "done"})
-            return
-        except OtaError as exc:
-            yield _line({"type": "text", "delta": f"I couldn't complete the booking ({exc})."})
-            yield _line({"type": "done"})
-            return
-
-        await _set_state(session, {"_pending": None, "_otp": None})
-        yield _line({"type": "text", "delta": f"✅ Booked! Reference #{reservation.get('id')} — {pending['roomLabel']}, {pending['checkIn']} → {pending['checkOut']} for {pending['guestName']}."})
-        yield _line({"type": "done"})
-
-    return gen()
+    if msg.startswith("/quote"):
+        return _quote_lines(msg)
+    if msg.startswith("/confirm"):
+        return _confirm_pending(session_id, "public")
+    return None
 
 
 async def _run(
@@ -561,7 +505,7 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     # Public guest widget: button actions (/quote, /confirm) are handled
     # deterministically without an LLM call; /confirm files a booking request
     # rather than creating a reservation. Everything else goes to the guest agent.
-    handled = await _handle_slash(message, session_id, mode)
+    handled = await _handle_slash(message, session_id)
     stream = handled if handled is not None else _run(message, session_id, fallback_runner=_fallback_runner)
     return StreamingResponse(_logged(stream, message, session_id, mode), media_type="application/x-ndjson")
 
