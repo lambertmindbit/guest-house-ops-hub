@@ -46,6 +46,17 @@ def quote_component(room: dict[str, Any], check_in: str, check_out: str, nights:
     }
 
 
+def faq_media_component(media: dict[str, Any], caption: str | None = None) -> dict[str, Any]:
+    data: dict[str, Any] = {}
+    if caption:
+        data["caption"] = caption
+    if media.get("photos"):
+        data["photos"] = media["photos"]
+    if media.get("mapLink"):
+        data["mapLink"] = media["mapLink"]
+    return {"type": "faq_media", "data": data}
+
+
 def booking_form_component(room: dict[str, Any], check_in: str, check_out: str) -> dict[str, Any]:
     return {
         "type": "booking_form",

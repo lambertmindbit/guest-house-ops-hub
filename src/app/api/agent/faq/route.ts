@@ -16,5 +16,5 @@ export async function GET(req: Request) {
   if (!parsed.success) return zodFail(parsed.error);
 
   const faqs = await listActiveFaqs();
-  return ok(faqs.map((f) => ({ question: f.question, answer: f.answer, category: f.category })));
+  return ok(faqs.map((f) => ({ id: f.id, question: f.question, answer: f.answer, category: f.category, media: f.media ?? null })));
 }
