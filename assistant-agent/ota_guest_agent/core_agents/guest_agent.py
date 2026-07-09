@@ -13,6 +13,7 @@ import os
 
 from google.adk.agents import LlmAgent
 from google.adk.models.google_llm import Gemini
+from google.adk.planners import BuiltInPlanner
 from google.genai import types
 
 from ..tools.booking_tools import (
@@ -39,20 +40,27 @@ You can:
   • take a booking through a confirm + verification flow (below)
   • file anything else with the property so a human follows up (pass_to_property)
 
-Browsing rooms (no dates yet):
-- If the guest wants to SEE the rooms — "show me the rooms", "any photos?",
-  "what rooms do you have", "a room for 4" — and hasn't given dates, call
-  list_rooms (pass `guests` if they said how many people). The guest sees room
-  cards with photos. THEN invite them to share dates to check availability —
-  don't demand dates before showing anything.
+PICKING THE RIGHT TOOL — decide in this order:
+1. Question about the property or its facilities (pool, gym, parking, Wi-Fi,
+   meals, pets, check-in/out times, location, house rules) → answer_faq. Give a
+   direct yes/no answer with one helpful detail. NEVER answer a facility
+   question by listing rooms.
+2. Guest mentions ANY date ("the 16th", "next Friday", "10 to 13") → this is a
+   booking conversation, NOT browsing. If a date is missing, ASK for it — show
+   nothing yet. Once you have both dates, call check_availability (with
+   `guests` if a headcount was mentioned).
+3. Guest wants to look around with NO dates mentioned at all ("show me the
+   rooms", "any photos?", "what rooms do you have", "a room for 4") →
+   list_rooms (pass `guests` if they said how many people).
+4. Anything you can't do or don't know → pass_to_property (see below).
+Never show a room list as a way of asking a question — ask first, show rooms
+only when they answer the guest's actual request.
 
 Property questions:
-- For ANY question that isn't about rooms, availability or price — parking,
-  Wi-Fi, check-in/out times, meals, pets, pool, location/directions, house
-  rules, etc. — call answer_faq and reply using ONLY what it returns. Do not
-  invent facilities or policies. Pass `topics`: single key words (e.g. ["pool"]
-  or ["location"]) — if a matching answer has photos or a map, the guest sees
-  them automatically; never tell a guest you can't show photos without trying.
+- Reply using ONLY what answer_faq returns. Do not invent facilities or
+  policies. Pass `topics`: single key words (e.g. ["pool"] or ["location"]) —
+  if a matching answer has photos or a map, the guest sees them automatically;
+  never tell a guest you can't show photos without trying.
 - If the FAQ doesn't cover it, or the guest asks for anything you can't do
   (early check-in, a cab or pickup, extra bed, special requests, complaints),
   call pass_to_property — never just SAY you'll pass it on without filing it —
@@ -114,6 +122,13 @@ def build_guest_agent(model_name: str | None = None, name: str = "ota_guest_agen
         name=name,
         description="Helps a guest find and price a room at the guest house.",
         model=_model(model_name or os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")),
+        # Think before choosing tools — the reference runs its same-class model
+        # with a planner, and without one flash-lite picks tools sloppily (e.g.
+        # answering "is there a pool?" with the room list). Budget kept modest
+        # so a chat turn stays snappy.
+        planner=BuiltInPlanner(
+            thinking_config=types.ThinkingConfig(include_thoughts=False, thinking_budget=512),
+        ),
         instruction=build_instruction(INSTRUCTION_BODY, blocks.GUEST_CLOSING),
         tools=GUEST_TOOLS,
     )

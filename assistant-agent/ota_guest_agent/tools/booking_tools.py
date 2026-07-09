@@ -32,10 +32,15 @@ def _push_ui(tool_context: ToolContext, component: dict[str, Any]) -> None:
 
 
 async def list_rooms(tool_context: ToolContext, guests: int = 0) -> dict[str, Any]:
-    """Show the property's rooms — with photos — WITHOUT needing dates. Use this
-    when someone wants to browse ("show me the rooms", "what rooms do you have",
-    "any photos?", "a room for 4") before they've given a check-in/check-out.
-    For date-specific availability use check_availability instead.
+    """Show the property's rooms — with photos — for browsing ONLY, when the
+    guest has mentioned NO dates at all ("show me the rooms", "what rooms do
+    you have", "any photos?").
+
+    Do NOT call this:
+    - for facility/property questions (pool, parking, Wi-Fi, meals, location…)
+      — use answer_faq;
+    - once the guest has mentioned ANY date — ask for the missing date, then
+      use check_availability.
 
     Args:
         guests: how many people, if mentioned (e.g. "a room for 4"). Only rooms
