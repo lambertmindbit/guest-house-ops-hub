@@ -57,19 +57,82 @@ function FaqMediaCard({ c }: { c: Extract<UIComponent, { type: "faq_media" }> })
 
 function RoomsCards({ c, onAction, disabled }: { c: Extract<UIComponent, { type: "rooms" }>; onAction: Action; disabled: boolean }) {
   const { data, checkIn, checkOut } = c;
+  const [lightbox, setLightbox] = useState<{ roomId: string; index: number } | null>(null);
+  const activeRoom = lightbox ? data.find((r) => r.id === lightbox.roomId) : null;
+  const activePhotos = activeRoom?.photos ?? [];
+
   return (
     <div className="col" style={{ gap: 8, marginTop: 8 }}>
-      {data.map((r) => (
-        <div key={r.id} className="rowcard">
-          <div className="rowcard__main">
-            <div className="rowcard__name">{r.label} <span className="badge badge--neutral" style={{ marginLeft: 6 }}>{r.roomTypeName}</span></div>
-            <div className="rowcard__meta">Sleeps {r.maxOccupancy} · <b className="num" style={{ color: "var(--ink)" }}>{displayINR(r.rate)}</b>/night</div>
+      {data.map((r) => {
+        const photos = r.photos ?? [];
+        const details = [r.facing, r.view].filter(Boolean).join(" · ");
+        return (
+          <div key={r.id} className="rowcard">
+            {photos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setLightbox({ roomId: r.id, index: 0 })}
+                aria-label={`View photos of ${r.label}`}
+                className="rowcard__lead"
+                style={{ width: 52, height: 52, padding: 0, border: "none", cursor: "pointer", position: "relative", overflow: "hidden" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photos[0]} alt="" loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                {photos.length > 1 && (
+                  <span style={{ position: "absolute", right: 2, bottom: 2, background: "rgba(0,0,0,0.65)", color: "#fff", fontSize: 9, fontWeight: 600, padding: "1px 4px", borderRadius: 99, lineHeight: 1.4 }}>
+                    1/{photos.length}
+                  </span>
+                )}
+              </button>
+            )}
+            <div className="rowcard__main">
+              <div className="rowcard__name">{r.label} <span className="badge badge--neutral" style={{ marginLeft: 6 }}>{r.roomTypeName}</span></div>
+              <div className="rowcard__meta">Sleeps {r.maxOccupancy} · <b className="num" style={{ color: "var(--ink)" }}>{displayINR(r.rate)}</b>/night</div>
+              {details && <div className="rowcard__meta">{details}</div>}
+              {r.amenities && r.amenities.length > 0 && <div className="rowcard__meta">{r.amenities.join(" · ")}</div>}
+            </div>
+            <div className="row" style={{ gap: 6 }}>
+              <button className="btn btn--primary btn--sm" disabled={disabled} onClick={() => onAction(`/book ${r.id} ${checkIn} ${checkOut}`)}>Book</button>
+            </div>
           </div>
-          <div className="row" style={{ gap: 6 }}>
-            <button className="btn btn--primary btn--sm" disabled={disabled} onClick={() => onAction(`/book ${r.id} ${checkIn} ${checkOut}`)}>Book</button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
+      {activeRoom && activePhotos.length > 0 && (
+        <RoomLightbox
+          photos={activePhotos}
+          index={lightbox!.index}
+          label={activeRoom.label}
+          onIndex={(index) => setLightbox({ roomId: activeRoom.id, index })}
+          onClose={() => setLightbox(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RoomLightbox({ photos, index, label, onIndex, onClose }: { photos: string[]; index: number; label: string; onIndex: (i: number) => void; onClose: () => void }) {
+  const prev = () => onIndex((index - 1 + photos.length) % photos.length);
+  const next = () => onIndex((index + 1) % photos.length);
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Photos of ${label}`}
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <button type="button" onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "#fff", fontSize: 28, lineHeight: 1, cursor: "pointer", padding: 6 }}>×</button>
+      {photos.length > 1 && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); prev(); }} aria-label="Previous photo" style={{ position: "absolute", left: 6, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", padding: 10 }}>‹</button>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photos[index]} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "88vw", maxHeight: "78vh", objectFit: "contain", borderRadius: 6 }} />
+      {photos.length > 1 && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); next(); }} aria-label="Next photo" style={{ position: "absolute", right: 6, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", padding: 10 }}>›</button>
+      )}
+      {photos.length > 1 && (
+        <span style={{ position: "absolute", bottom: 16, color: "#fff", fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}>{index + 1} / {photos.length}</span>
+      )}
     </div>
   );
 }

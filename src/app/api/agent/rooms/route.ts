@@ -5,10 +5,12 @@ import { agentTokenOk } from "@/lib/agent-auth";
 
 // GET /api/agent/rooms
 // Read-only room catalog for the ROOT agent: the PMS truth the bot grounds its
-// room cards and id mapping on (P1 of docs/ROOT-INTEGRATION-PLAN.md). Room
-// CONTENT (photos, descriptions) deliberately stays ROOT-side; this returns
-// identity + capacity + the base advisory rate. Date-specific pricing comes from
-// GET /api/agent/quote; availability from the availability endpoints.
+// room cards and id mapping on (P1 of docs/ROOT-INTEGRATION-PLAN.md). Returns
+// identity + capacity + the base advisory rate, plus owner-authored guest-facing
+// content (photos, facing, view, room-type amenities) so the assistant can show
+// a photo card and answer "does it face east / is it poolside / what's included".
+// Date-specific pricing comes from GET /api/agent/quote; availability from the
+// availability endpoints.
 
 const schema = z.object({ propertyRef: z.string().optional() });
 
@@ -21,7 +23,7 @@ export async function GET(req: Request) {
 
   const rooms = await prisma.room.findMany({
     where: { archivedAt: null },
-    include: { roomType: true },
+    include: { roomType: { include: { amenities: { include: { amenity: true } } } } },
     orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
   });
 
@@ -33,6 +35,10 @@ export async function GET(req: Request) {
       roomTypeName: r.roomType.name,
       maxOccupancy: r.roomType.maxOccupancy,
       baseRate: Number(r.roomType.baseRate),
+      photos: Array.isArray(r.photos) ? (r.photos as string[]) : [],
+      facing: r.facing,
+      view: r.view,
+      amenities: r.roomType.amenities.map((a) => a.amenity.name),
     })),
   );
 }

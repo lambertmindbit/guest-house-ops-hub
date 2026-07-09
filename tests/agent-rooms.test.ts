@@ -19,6 +19,7 @@ let roomA: string;
 let roomB: string;
 let channelId: string;
 let guestId: string;
+let amenityId: string;
 
 function makeGet(path: string, params: Record<string, string>, token?: string): Request {
   const url = new URL(`http://localhost${path}`);
@@ -35,10 +36,21 @@ beforeAll(async () => {
     data: { name: `${TAG}-type`, baseRate: 2500, maxOccupancy: 3, rateFloor: 1000, rateCeiling: 6000 },
   });
   roomTypeId = rt.id;
-  roomA = (await prisma.room.create({ data: { roomTypeId, label: `${TAG}-A` } })).id;
+  roomA = (
+    await prisma.room.create({
+      data: {
+        roomTypeId, label: `${TAG}-A`,
+        photos: ["https://example.com/a1.jpg", "https://example.com/a2.jpg"],
+        facing: "East", view: "Pool view",
+      },
+    })
+  ).id;
   roomB = (await prisma.room.create({ data: { roomTypeId, label: `${TAG}-B` } })).id;
   channelId = (await prisma.channel.create({ data: { name: `${TAG}-ch`, commissionPct: 0, collectsPayment: false } })).id;
   guestId = (await prisma.guest.create({ data: { name: `${TAG}-guest`, phone: TAG } })).id;
+  const amenity = await prisma.amenity.create({ data: { name: `${TAG}-wifi` } });
+  amenityId = amenity.id;
+  await prisma.roomTypeAmenity.create({ data: { roomTypeId, amenityId } });
 
   // Room A is booked 2031-05-10 → 2031-05-12.
   await prisma.reservation.create({
@@ -53,6 +65,8 @@ afterAll(async () => {
   await prisma.reservation.deleteMany({ where: { roomId: { in: [roomA, roomB] } } });
   await prisma.guest.deleteMany({ where: { id: guestId } });
   await prisma.channel.deleteMany({ where: { id: channelId } });
+  await prisma.roomTypeAmenity.deleteMany({ where: { roomTypeId } });
+  await prisma.amenity.deleteMany({ where: { id: amenityId } });
   await prisma.room.deleteMany({ where: { id: { in: [roomA, roomB] } } });
   await prisma.roomType.deleteMany({ where: { id: roomTypeId } });
   await prisma.$disconnect();
@@ -79,8 +93,13 @@ describe("agent rooms seam (P1)", () => {
       roomTypeName: `${TAG}-type`,
       maxOccupancy: 3,
       baseRate: 2500,
+      photos: ["https://example.com/a1.jpg", "https://example.com/a2.jpg"],
+      facing: "East",
+      view: "Pool view",
+      amenities: [`${TAG}-wifi`],
     });
-    expect(data.some((r: { id: string }) => r.id === roomB)).toBe(true);
+    const b = data.find((r: { id: string }) => r.id === roomB);
+    expect(b).toMatchObject({ photos: [], facing: null, view: null, amenities: [`${TAG}-wifi`] });
   });
 
   it("room-level availability: booked room busy, sibling free; roomIds filter works", async () => {

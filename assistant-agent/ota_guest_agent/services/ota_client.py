@@ -61,7 +61,8 @@ class OtaClient:
 
     # ── Read tools (Phase 2) ────────────────────────────────────────────────
     async def rooms(self) -> list[dict[str, Any]]:
-        """GET /api/agent/rooms — catalog: id, label, roomTypeId, roomTypeName, maxOccupancy, baseRate."""
+        """GET /api/agent/rooms — catalog: id, label, roomTypeId, roomTypeName, maxOccupancy,
+        baseRate, photos, facing, view, amenities."""
         return await self._get("/api/agent/rooms", {})
 
     async def room_availability(self, check_in: str, check_out: str, room_ids: list[str] | None = None) -> list[dict[str, Any]]:

@@ -25,6 +25,10 @@ def rooms_component(rooms: list[dict[str, Any]], check_in: str, check_out: str) 
                 "maxOccupancy": r.get("maxOccupancy", 0),
                 "rate": r.get("rate", r.get("baseRate", 0)),
                 "free": True,
+                "photos": r.get("photos") or [],
+                "facing": r.get("facing"),
+                "view": r.get("view"),
+                "amenities": r.get("amenities") or [],
             }
             for r in rooms
         ],

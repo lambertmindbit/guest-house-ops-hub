@@ -50,7 +50,16 @@ async def check_availability(tool_context: ToolContext, check_in: str, check_out
     return {
         "status": "success",
         "available_count": len(free),
-        "rooms": [{"id": r["id"], "label": r["label"], "type": r["roomTypeName"], "rate": r["rate"]} for r in free],
+        # facing/view/amenities are given as text so the model can answer
+        # "does it face east / is it poolside / what's included" directly;
+        # photo URLs are UI-only (rendered by the card, not read by the model).
+        "rooms": [
+            {
+                "id": r["id"], "label": r["label"], "type": r["roomTypeName"], "rate": r["rate"],
+                "facing": r.get("facing"), "view": r.get("view"), "amenities": r.get("amenities") or [],
+            }
+            for r in free
+        ],
     }
 
 
@@ -173,7 +182,7 @@ async def request_booking_change(
 
 
 async def _availability_with_rates(check_in: str, check_out: str) -> list[dict[str, Any]]:
-    """Free rooms enriched with rate/occupancy from the catalog (one call each)."""
+    """Free rooms enriched with rate/occupancy/content from the catalog (one call each)."""
     avail = await _client.room_availability(check_in, check_out)
     catalog = {r["id"]: r for r in await _client.rooms()}
     free: list[dict[str, Any]] = []
@@ -188,6 +197,10 @@ async def _availability_with_rates(check_in: str, check_out: str) -> list[dict[s
                 "roomTypeName": a["roomTypeName"],
                 "rate": cat.get("baseRate", 0),
                 "maxOccupancy": cat.get("maxOccupancy", 0),
+                "photos": cat.get("photos") or [],
+                "facing": cat.get("facing"),
+                "view": cat.get("view"),
+                "amenities": cat.get("amenities") or [],
             }
         )
     return free

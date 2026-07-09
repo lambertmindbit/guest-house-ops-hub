@@ -621,6 +621,12 @@ model Room {
   // housekeeping, and the new-booking picker, but their history is preserved
   // (FKs are RESTRICT — a used room can never be hard-deleted, only archived).
   archivedAt        DateTime?          @map("archived_at")
+  // Guest-facing content the assistant shows when listing rooms: photo URLs
+  // (owner-pasted, same pattern as FaqEntry.media), and free-text facing/view
+  // ("East", "Pool view") the owner authors per physical room.
+  photos            Json?              @map("photos")
+  facing            String?            @map("facing")
+  view              String?            @map("view")
   roomType          RoomType           @relation(fields: [roomTypeId], references: [id])
   reservations      Reservation[]
   blocks            Block[]
