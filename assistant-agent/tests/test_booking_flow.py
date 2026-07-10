@@ -96,3 +96,37 @@ async def test_confirm_rechecks_availability_before_filing(fake_ota):
 async def test_quote_card_is_deterministic(fake_ota):
     _, chunks = await post_chat(f"/quote {RID} {CI} {CO}", sid(), "public")
     assert "quote" in cards(chunks)
+
+
+async def test_public_double_confirm_files_only_one_request(fake_ota):
+    # A second /confirm on the same session must NOT file a duplicate request —
+    # the first confirm claims (clears) the pending booking.
+    s = sid()
+    await post_chat(f"/bookdetails {RID} {CI} {CO} 9876543210 Asha Rao", s, "public")
+    await post_chat("/confirm", s, "public")
+    _, chunks = await post_chat("/confirm", s, "public")
+    assert len(fake_ota.created_escalations) == 1  # not 2
+    assert any("start again" in t.lower() or "don't have a booking" in t.lower() for t in texts(chunks))
+
+
+async def test_owner_double_confirm_writes_only_one_reservation(fake_ota):
+    s = sid()
+    await post_chat(f"/bookdetails {RID} {CI} {CO} 9876543210 Walkin Guest", s, "owner")
+    await post_chat("/confirm", s, "owner")
+    await post_chat("/confirm", s, "owner")
+    assert len(fake_ota.created_reservations) == 1  # not 2
+
+
+async def test_transient_send_failure_restores_pending_for_retry(fake_ota):
+    # If filing the request fails transiently, the pending booking is put back so
+    # the guest can retry — the retry then succeeds (no lost booking).
+    s = sid()
+    await post_chat(f"/bookdetails {RID} {CI} {CO} 9876543210 Asha Rao", s, "public")
+    fake_ota.escalation_fails = True
+    _, chunks = await post_chat("/confirm", s, "public")
+    assert len(fake_ota.created_escalations) == 0
+    assert any("try again" in t.lower() for t in texts(chunks))
+    # Retry now works — pending was restored.
+    fake_ota.escalation_fails = False
+    await post_chat("/confirm", s, "public")
+    assert len(fake_ota.created_escalations) == 1
