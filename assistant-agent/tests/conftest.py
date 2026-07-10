@@ -23,7 +23,7 @@ os.environ.setdefault("OTA_CHANNEL_ID", "test-channel")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ota_guest_agent import server  # noqa: E402
-from ota_guest_agent.services.ota_client import RoomJustTaken  # noqa: E402
+from ota_guest_agent.services.ota_client import OtaError, RoomJustTaken  # noqa: E402
 
 
 DEFAULT_ROOMS = [
@@ -45,6 +45,7 @@ class FakeOta:
         self.rooms_data = list(DEFAULT_ROOMS)
         self.free = True            # what room_availability reports
         self.conflict = False       # create_reservation raises RoomJustTaken
+        self.escalation_fails = False  # create_escalation raises OtaError (transient)
         self.created_reservations: list[dict] = []
         self.created_escalations: list[dict] = []
         self.logged_turns: list[dict] = []
@@ -67,6 +68,8 @@ class FakeOta:
         return res
 
     async def create_escalation(self, body):
+        if self.escalation_fails:
+            raise OtaError("simulated transient failure")
         esc = {"id": f"esc-{len(self.created_escalations) + 1}", **body}
         self.created_escalations.append(esc)
         return esc

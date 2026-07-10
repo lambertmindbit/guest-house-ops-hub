@@ -243,13 +243,19 @@ async def _confirm_pending(session_id: str, mode: str) -> AsyncIterator[str]:
         yield _line({"type": "done"})
         return
 
+    # Claim this confirmation up front: clear _pending immediately so a duplicate
+    # /confirm (a fast double-tap, or a reconnect that resends) finds nothing to
+    # confirm instead of filing a second request / attempting a second write. If a
+    # TRANSIENT error below means the guest should be able to retry, we restore it.
+    await _set_state(session, {"_pending": None})
+
     if mode == "public":
         # Last-moment re-check — the guest may have spent a while on the form.
         # Catching it here means "sorry, that's gone" arrives as part of booking,
         # not days later when the owner tries to approve a request that can no
         # longer be honoured.
         if not await _room_still_free(pending["roomId"], pending["checkIn"], pending["checkOut"]):
-            await _set_state(session, {"_pending": None})
+            # _pending already cleared above — the room's gone, don't offer a retry.
             yield _line({"type": "text", "delta": f"Sorry — {pending['roomLabel']} is no longer available for those dates. Want to check other options?"})
             yield _line({"type": "done"})
             return
@@ -278,10 +284,12 @@ async def _confirm_pending(session_id: str, mode: str) -> AsyncIterator[str]:
                 },
             })
         except OtaError as exc:
+            # Transient — let the guest retry: put the pending booking back.
+            await _set_state(session, {"_pending": pending})
             yield _line({"type": "text", "delta": f"I couldn't send your request ({exc}). Please try again."})
             yield _line({"type": "done"})
             return
-        await _set_state(session, {"_pending": None})
+        # _pending already cleared above.
         yield _line({"type": "text", "delta": f"Thank you, {pending['guestName']}! 🙏 I've sent your request for {pending['roomLabel']} ({pending['checkIn']} → {pending['checkOut']}) to the property. They'll confirm availability and reach you on {pending['guestPhone']} shortly."})
         yield _line({"type": "done"})
         return
@@ -297,16 +305,18 @@ async def _confirm_pending(session_id: str, mode: str) -> AsyncIterator[str]:
         reservation = await _ota.create_reservation(body)
     except RoomJustTaken:
         # The GiST no-double-booking constraint rejected it — never retry.
-        await _set_state(session, {"_pending": None})
+        # _pending already cleared above.
         yield _line({"type": "text", "delta": f"Those dates are no longer free for {pending['roomLabel']} — it was just booked. Want to try other dates or another room?"})
         yield _line({"type": "done"})
         return
     except OtaError as exc:
+        # Transient — let the owner retry: put the pending booking back.
+        await _set_state(session, {"_pending": pending})
         yield _line({"type": "text", "delta": f"I couldn't complete the booking ({exc})."})
         yield _line({"type": "done"})
         return
 
-    await _set_state(session, {"_pending": None})
+    # _pending already cleared above.
     yield _line({"type": "text", "delta": f"✅ Booked! #{reservation.get('id')} — {pending['roomLabel']}, {pending['checkIn']} → {pending['checkOut']} for {pending['guestName']} ({pending['guestPhone']}), ₹{pending['total']}."})
     yield _line({"type": "done"})
 
