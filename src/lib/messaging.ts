@@ -6,6 +6,7 @@ import {
 } from "@/lib/message-templates";
 import { displayDate, displayINR } from "@/lib/format";
 import { todayDateOnly, parseDateOnly, addDays } from "@/lib/dates";
+import { isUniqueViolation } from "@/lib/db-errors";
 
 export type LogMessageOpts = {
   source: MessageSource;
@@ -43,24 +44,39 @@ export function setMessageAdapter(adapter: MessageAdapter) {
 // API seam (POST /api/agent/messages) and the property's own triggers both call
 // this, so the outbox is complete regardless of the send path.
 export async function logMessage(opts: LogMessageOpts) {
+  // Claim the (reservation, template) slot FIRST, before sending. A partial
+  // unique index on (reservation_id, template) rejects a concurrent duplicate as
+  // P2002 — so two overlapping trigger runs can't both send/log the same
+  // confirmation or reminder (the old check-then-write raced). Free-form messages
+  // (null template) aren't de-duplicated. Insert as `queued`, then record the
+  // adapter's result — so the claim happens before any real provider delivers.
+  let row;
+  try {
+    row = await prisma.outboundMessage.create({
+      data: {
+        source: opts.source,
+        channel: opts.channel,
+        to: opts.to,
+        body: opts.body,
+        template: opts.template ?? null,
+        status: "queued",
+        guestId: opts.guestId,
+        reservationId: opts.reservationId,
+        // Only set propertyId when explicitly given; otherwise leave the key absent
+        // so the tenant extension injects the active property. (Passing an explicit
+        // `undefined` would override the injected value and store NULL.)
+        ...(opts.propertyId ? { propertyId: opts.propertyId } : {}),
+      },
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) return null; // already claimed by another run — skip
+    throw error;
+  }
+
   const result = await activeAdapter.send({ channel: opts.channel, to: opts.to, body: opts.body });
-  return prisma.outboundMessage.create({
-    data: {
-      source: opts.source,
-      channel: opts.channel,
-      to: opts.to,
-      body: opts.body,
-      template: opts.template ?? null,
-      status: result.status,
-      sentAt: result.sentAt ?? null,
-      error: result.error ?? null,
-      guestId: opts.guestId,
-      reservationId: opts.reservationId,
-      // Only set propertyId when explicitly given; otherwise leave the key absent
-      // so the tenant extension injects the active property. (Passing an explicit
-      // `undefined` would override the injected value and store NULL.)
-      ...(opts.propertyId ? { propertyId: opts.propertyId } : {}),
-    },
+  return prisma.outboundMessage.update({
+    where: { id: row.id },
+    data: { status: result.status, sentAt: result.sentAt ?? null, error: result.error ?? null },
   });
 }
 

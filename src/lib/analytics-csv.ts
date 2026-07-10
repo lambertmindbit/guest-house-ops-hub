@@ -7,11 +7,14 @@ import type { Analytics } from "@/lib/analytics";
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-// RFC-4180 escaping: wrap in quotes and double any embedded quote when a field
-// contains a comma, quote, or newline.
+// RFC-4180 escaping + a spreadsheet formula-injection guard (matches
+// src/lib/csv.ts): a string cell (e.g. an owner-authored channel or room-type
+// name) starting with = + - @ tab or CR is treated as a formula by Excel/Sheets,
+// so prefix a tab to force plain text. Numbers are emitted verbatim.
 function cell(value: string | number): string {
-  const s = String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  let s = String(value);
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(s)) s = `\t${s}`;
+  return /[",\n\r\t]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 function row(...cells: (string | number)[]): string {

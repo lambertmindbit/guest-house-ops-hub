@@ -43,5 +43,9 @@ export async function POST(req: Request) {
     reservationId: parsed.data.reservationId,
   });
 
+  // null → a de-duplicated lifecycle message (already sent for this
+  // reservation+template). Free-form agent messages carry no template, so this
+  // path normally always logs; treat a dedup as a benign idempotent no-op.
+  if (!msg) return ok({ deduped: true }, 200);
   return ok({ id: msg.id, status: msg.status }, 201);
 }
