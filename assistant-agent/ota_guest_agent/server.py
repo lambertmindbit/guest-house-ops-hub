@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import re
+import time
 import uuid
 from typing import AsyncIterator
 
@@ -85,6 +86,32 @@ _owner_fallback_runner = Runner(
     session_service=_session_service,
 )
 _ota = OtaClient()
+
+# ── Session eviction ─────────────────────────────────────────────────────────
+# InMemorySessionService keeps every session's full event history in this
+# process's RAM forever. The public widget mints a fresh session per guest, so
+# without eviction memory grows monotonically until the (single, pinned) instance
+# restarts. We track last-seen per session and, opportunistically on each request,
+# drop sessions idle past a TTL. Web chat is short-lived, so a couple of hours is
+# ample; a returning guest just starts a fresh session (their client keeps the id,
+# and a missing session is recreated cleanly by the flow).
+SESSION_TTL_SECONDS = float(os.getenv("SESSION_TTL_SECONDS", str(2 * 60 * 60)))
+_session_last_seen: dict[tuple[str, str, str], float] = {}
+
+
+async def _touch_and_evict(app_name: str, user_id: str, session_id: str) -> None:
+    """Record activity for this session and evict any idle past the TTL."""
+    now = time.monotonic()
+    _session_last_seen[(app_name, user_id, session_id)] = now
+    if len(_session_last_seen) <= 1:
+        return
+    stale = [key for key, seen in _session_last_seen.items() if now - seen > SESSION_TTL_SECONDS]
+    for key in stale:
+        _session_last_seen.pop(key, None)
+        try:
+            await _session_service.delete_session(app_name=key[0], user_id=key[1], session_id=key[2])
+        except Exception:  # best-effort — never fail a request on cleanup
+            pass
 
 
 def _line(obj: dict) -> str:
@@ -499,6 +526,8 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     # re-rendered. Pending is stored in this mode's session namespace so /confirm
     # (below) reads it back.
     book_app, book_user = (OWNER_APP_NAME, OWNER_USER_ID) if mode == "owner" else (APP_NAME, USER_ID)
+    # Mark this session active + sweep idle sessions so memory can't grow forever.
+    await _touch_and_evict(book_app, book_user, session_id)
     booking = await _handle_booking_step(message, session_id, book_app, book_user)
     if booking is not None:
         return StreamingResponse(_logged(booking, message, session_id, mode), media_type="application/x-ndjson")
