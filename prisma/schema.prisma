@@ -1337,6 +1337,10 @@ model OutboundMessage {
   @@index([guestId, createdAt])
   @@index([reservationId])
   @@index([status, createdAt])
+  // At most one message per (reservation, template) — the DB-level guarantee
+  // behind the trigger de-dup (free-form messages have null template/reservation
+  // and are unaffected; Postgres treats NULLs as distinct). The partial predicate
+  // lives in the raw migration since Prisma can't express a WHERE on an index.
   @@map("outbound_messages")
 }
 

@@ -224,7 +224,10 @@ export default async function ReservationDetailPage({
           <Link href={`/reservations/${r.id}/invoice`} className="btn btn--ghost" style={{ flex: 1 }}>
             <Icon name="receipt" size={15} /> Invoice
           </Link>
-          {r.status === "confirmed" && <ReservationOverflow id={r.id} />}
+          {r.status === "confirmed" &&
+            !r.checkedInAt &&
+            !r.checkedOutAt &&
+            formatDateOnly(r.checkOut) > todayDateOnly() && <ReservationOverflow id={r.id} />}
         </div>
       </div>
     </main>

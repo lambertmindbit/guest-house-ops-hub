@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { displayINR, displayDMY } from "@/lib/format";
 import type { UIComponent } from "@/lib/assistant/types";
 
@@ -118,6 +118,27 @@ function RoomsCards({ c, onAction, disabled }: { c: Extract<UIComponent, { type:
 function RoomLightbox({ photos, index, label, onIndex, onClose }: { photos: string[]; index: number; label: string; onIndex: (i: number) => void; onClose: () => void }) {
   const prev = () => onIndex((index - 1 + photos.length) % photos.length);
   const next = () => onIndex((index + 1) % photos.length);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Keyboard support + focus management: Escape closes, arrows navigate; move
+  // focus into the dialog on open and restore it on close. Without this a
+  // keyboard/screen-reader user could open the gallery but never dismiss it.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { e.preventDefault(); onClose(); }
+      else if (e.key === "ArrowLeft" && photos.length > 1) prev();
+      else if (e.key === "ArrowRight" && photos.length > 1) next();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      previouslyFocused?.focus?.();
+    };
+    // prev/next close over `index`; re-bind when it changes so arrows step correctly.
+  }, [index, photos.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div
       role="dialog"
@@ -126,7 +147,7 @@ function RoomLightbox({ photos, index, label, onIndex, onClose }: { photos: stri
       onClick={onClose}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
     >
-      <button type="button" onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "#fff", fontSize: 28, lineHeight: 1, cursor: "pointer", padding: 6 }}>×</button>
+      <button ref={closeRef} type="button" onClick={onClose} aria-label="Close" style={{ position: "absolute", top: 14, right: 14, background: "none", border: "none", color: "#fff", fontSize: 28, lineHeight: 1, cursor: "pointer", padding: 6 }}>×</button>
       {photos.length > 1 && (
         <button type="button" onClick={(e) => { e.stopPropagation(); prev(); }} aria-label="Previous photo" style={{ position: "absolute", left: 6, background: "none", border: "none", color: "#fff", fontSize: 32, cursor: "pointer", padding: 10 }}>‹</button>
       )}

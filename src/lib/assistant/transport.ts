@@ -20,20 +20,32 @@ function stubStream(message: string): Response {
   return new Response(stream, { headers: NDJSON_HEADERS });
 }
 
+// If the agent hasn't started responding within this window (cold start, an
+// overloaded single instance, a stuck upstream), abort and fall back to the stub
+// rather than making the guest wait out the platform function timeout. The abort
+// only bounds time-to-first-byte: fetch resolves when the response HEADERS
+// arrive, after which the NDJSON body streams unbounded (a long turn is fine).
+const AGENT_CONNECT_TIMEOUT_MS = 15_000;
+
 async function proxyToAgent(message: string, sessionId: string | undefined, mode: "owner" | "public"): Promise<Response | null> {
   const url = process.env.ASSISTANT_AGENT_URL;
   if (!url) return null;
   const token = process.env.ASSISTANT_AGENT_TOKEN;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AGENT_CONNECT_TIMEOUT_MS);
   try {
     const upstream = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ message, sessionId, mode }),
+      signal: controller.signal,
     });
     if (!upstream.ok || !upstream.body) return null;
     return new Response(upstream.body, { headers: NDJSON_HEADERS });
   } catch {
-    return null;
+    return null; // network error, or aborted on timeout → caller uses the stub
+  } finally {
+    clearTimeout(timer);
   }
 }
 

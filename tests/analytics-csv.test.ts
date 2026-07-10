@@ -43,8 +43,19 @@ describe("analyticsCsv", () => {
   it("quotes a channel name containing a comma", () => {
     const withComma = analyticsCsv({
       ...sample,
-      sourceMix: [{ channel: "Agoda, Inc", bookings: 1, roomNights: 1, sharePct: 100 }],
+      sourceMix: [{ channel: "Agoda, Inc", bookings: 1, roomNights: 1, sharePct: 100, revenue: 0 }],
     });
     expect(withComma).toContain('"Agoda, Inc",1,1,100');
+  });
+
+  it("neutralises a formula-injection channel name (F4)", () => {
+    const evil = analyticsCsv({
+      ...sample,
+      sourceMix: [{ channel: "=HYPERLINK(1)", bookings: 1, roomNights: 1, sharePct: 100, revenue: 0 }],
+    });
+    // Tab-prefixed so a spreadsheet renders it as text (and quoted, since it now
+    // contains a tab) — never emitted as a live leading-"=" formula.
+    expect(evil).toContain('"\t=HYPERLINK(1)"');
+    expect(evil).not.toMatch(/\n=HYPERLINK/);
   });
 });
