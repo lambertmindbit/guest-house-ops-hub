@@ -16,11 +16,29 @@ export function formatDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-// Today's calendar date as YYYY-MM-DD, in the property's local timezone.
+// The property's IANA timezone. The app is single-property; the calendar date
+// that matters is the PROPERTY's, not the server's. On Vercel the Node runtime
+// is UTC, so deriving "today" from the server's offset silently returned the
+// wrong day during the small hours in +offset zones (e.g. 00:00–05:30 IST).
+// Configure via APP_TIMEZONE; defaults to PropertySettings.timezone's default.
+const APP_TIMEZONE = process.env.APP_TIMEZONE || "Asia/Kolkata";
+
+// The calendar date (YYYY-MM-DD) an instant falls on in a given IANA timezone.
+// `en-CA` renders a date as YYYY-MM-DD, and the `timeZone` option makes Intl
+// resolve the wall-clock date in that zone wherever the code runs.
+export function dateInTimeZone(instant: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
+}
+
+// Today's calendar date as YYYY-MM-DD, in the PROPERTY's timezone (not the
+// server's).
 export function todayDateOnly(): string {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
+  return dateInTimeZone(new Date(), APP_TIMEZONE);
 }
 
 export function addDays(value: string, days: number): string {

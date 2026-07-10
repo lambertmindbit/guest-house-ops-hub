@@ -14,6 +14,13 @@ describe("authz", () => {
     expect(isOwnerOnlyPath("/housekeeping")).toBe(false);
   });
 
+  it("money-export APIs are owner-only (page path differs from API path)", () => {
+    // Regression: these must be gated even though the pages are at /analytics /finance.
+    expect(isOwnerOnlyPath("/api/analytics/export")).toBe(true);
+    expect(isOwnerOnlyPath("/api/export/payments.csv")).toBe(true);
+    expect(isOwnerOnlyPath("/api/export/reservations.csv")).toBe(true);
+  });
+
   it("housekeeping pages are limited to today + cleaning", () => {
     expect(housekeepingCanAccessPage("/")).toBe(true);
     expect(housekeepingCanAccessPage("/housekeeping")).toBe(true);

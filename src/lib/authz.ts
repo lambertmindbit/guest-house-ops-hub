@@ -11,6 +11,10 @@ const OWNER_ONLY_PREFIXES = [
   "/finance", "/analytics", "/pricing", "/settings", "/users",
   "/api/pricing", "/api/settings", "/api/seasons", "/api/expenses",
   "/api/flagged-numbers", "/api/users", "/api/import", "/api/id-documents",
+  // Money data endpoints — same "money only for owners" rule as the pages above.
+  // Easy to miss: the page path (/analytics, /finance) differs from the API path,
+  // so these must be listed explicitly or a non-owner could fetch the CSVs directly.
+  "/api/analytics", "/api/export",
   // Community sharing config is the owner's call (later slices may open specific
   // sub-paths like referrals to reception). Scam reporting is owner-only too.
   "/api/community/connections", "/api/community/sharing", "/api/community/scam",
