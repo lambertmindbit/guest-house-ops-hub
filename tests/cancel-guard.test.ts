@@ -9,10 +9,11 @@ import { addDays, todayDateOnly, parseDateOnly } from "@/lib/dates";
 
 const TAG = `cancelguard-${Date.now()}`;
 let roomTypeId = "";
-let roomId = "";
 let channelId = "";
 let guestId = "";
 const ids: string[] = [];
+const roomIds: string[] = [];
+let roomN = 0;
 
 function ctx(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -23,9 +24,13 @@ function req() {
 async function makeReservation(overrides: {
   checkIn: string; checkOut: string; checkedInAt?: Date | null; checkedOutAt?: Date | null;
 }) {
+  // A fresh room per booking so overlapping test date ranges never trip the
+  // no-double-booking exclusion constraint.
+  const room = await prisma.room.create({ data: { roomTypeId, label: `${TAG}-r${roomN++}` } });
+  roomIds.push(room.id);
   const r = await prisma.reservation.create({
     data: {
-      roomId, guestId, channelId,
+      roomId: room.id, guestId, channelId,
       checkIn: parseDateOnly(overrides.checkIn), checkOut: parseDateOnly(overrides.checkOut),
       checkedInAt: overrides.checkedInAt ?? null, checkedOutAt: overrides.checkedOutAt ?? null,
     },
@@ -37,7 +42,6 @@ async function makeReservation(overrides: {
 beforeAll(async () => {
   const rt = await prisma.roomType.create({ data: { name: `${TAG}-type`, baseRate: 2000, maxOccupancy: 2, rateFloor: 500, rateCeiling: 5000 } });
   roomTypeId = rt.id;
-  roomId = (await prisma.room.create({ data: { roomTypeId, label: `${TAG}-201` } })).id;
   channelId = (await prisma.channel.create({ data: { name: `${TAG}-ch`, commissionPct: 0, collectsPayment: false } })).id;
   guestId = (await prisma.guest.create({ data: { name: `${TAG}-guest`, phone: TAG } })).id;
 });
@@ -46,7 +50,7 @@ afterAll(async () => {
   await prisma.reservation.deleteMany({ where: { id: { in: ids } } });
   await prisma.guest.deleteMany({ where: { phone: TAG } });
   await prisma.channel.deleteMany({ where: { name: `${TAG}-ch` } });
-  await prisma.room.deleteMany({ where: { id: roomId } });
+  await prisma.room.deleteMany({ where: { id: { in: roomIds } } });
   await prisma.roomType.deleteMany({ where: { id: roomTypeId } });
   await prisma.$disconnect();
 });
