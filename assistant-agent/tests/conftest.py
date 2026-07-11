@@ -20,6 +20,9 @@ import pytest
 os.environ.setdefault("OTA_BASE_URL", "http://test.invalid")
 os.environ.setdefault("OTA_AGENT_TOKEN", "test-seam-token")
 os.environ.setdefault("OTA_CHANNEL_ID", "test-channel")
+# /chat now fails closed without a token; post_chat sends this by default so
+# tests authenticate. The auth tests override it or pass token=None explicitly.
+os.environ.setdefault("ASSISTANT_AGENT_TOKEN", "test-agent-token")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ota_guest_agent import server  # noqa: E402
@@ -86,11 +89,18 @@ def fake_ota(monkeypatch):
     return fake
 
 
-async def post_chat(message: str, session_id: str, mode: str = "public", token: str | None = None):
+_DEFAULT_TOKEN = object()  # sentinel: "caller didn't specify" vs explicit None
+
+
+async def post_chat(message: str, session_id: str, mode: str = "public", token=_DEFAULT_TOKEN):
     """Drive POST /chat and return the parsed list of StreamChunk dicts."""
     import json
     import httpx
 
+    # Default: send the configured token so the request authenticates. An explicit
+    # token=None means "send no header" (the missing-token auth test).
+    if token is _DEFAULT_TOKEN:
+        token = os.environ.get("ASSISTANT_AGENT_TOKEN")
     headers = {"content-type": "application/json"}
     if token is not None:
         headers["authorization"] = f"Bearer {token}"

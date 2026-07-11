@@ -23,6 +23,7 @@ GEMINI_API_KEY before it will serve. See README.md.
 
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import os
@@ -508,18 +509,23 @@ async def _logged(stream: AsyncIterator[str], message: str, session_id: str, mod
 
 @api.post("/chat")
 async def chat(request: Request, authorization: str | None = Header(default=None)) -> StreamingResponse:
+    # Fail CLOSED: without a configured token the endpoint refuses all traffic
+    # (matches the app-side seam). Constant-time compare avoids a token timing leak.
     expected = os.getenv("ASSISTANT_AGENT_TOKEN")
-    if expected:
-        got = (authorization or "").removeprefix("Bearer ").strip()
-        if got != expected:
-            raise HTTPException(status_code=401, detail="unauthorized")
+    if not expected:
+        raise HTTPException(status_code=503, detail="agent auth not configured")
+    got = (authorization or "").removeprefix("Bearer ").strip()
+    if not hmac.compare_digest(got, expected):
+        raise HTTPException(status_code=401, detail="unauthorized")
 
     body = await request.json()
     message = (body or {}).get("message", "").strip()
     if not message:
         raise HTTPException(status_code=422, detail="message is required")
     session_id = (body or {}).get("sessionId") or f"web-{uuid.uuid4().hex}"
-    mode = "public" if (body or {}).get("mode") == "public" else "owner"
+    # Default to the least-privileged guest agent; owner mode requires an explicit
+    # opt-in (the app's owner transport sends it). Never fall into owner by default.
+    mode = "owner" if (body or {}).get("mode") == "owner" else "public"
 
     # The Book button flow (/book → name/phone form → /bookdetails → confirm card)
     # is fully deterministic in BOTH modes — no LLM, so the room list is never

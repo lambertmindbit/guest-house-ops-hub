@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { httpUrl } from "@/lib/url-guard";
 
 // Owner-managed FAQ the guest assistant answers from. Tenant-scoped CRUD; the
 // agent reads only ACTIVE entries via GET /api/agent/faq.
@@ -12,8 +13,10 @@ export type FaqMedia = { photos?: string[]; mapLink?: string };
 // modules may only export request handlers).
 export const faqMediaSchema = z
   .object({
-    photos: z.array(z.string().url().max(1000)).max(8).optional(),
-    mapLink: z.string().url().max(1000).optional(),
+    // http(s) only — mapLink is rendered as a clickable anchor in guest chat, so
+    // a javascript: URL here would be stored XSS.
+    photos: z.array(httpUrl()).max(8).optional(),
+    mapLink: httpUrl().optional(),
   })
   .nullable()
   .optional();

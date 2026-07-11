@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, readSession } from "@/lib/auth";
-import { isOwnerOnlyPath, housekeepingCanAccessPage } from "@/lib/authz";
+import { isOwnerOnlyPath, housekeepingCanAccessPage, housekeepingCanAccessApi } from "@/lib/authz";
 
 // Gate the whole app behind a valid session, then enforce roles from the signed
 // token claims (tamper-proof; no DB at the edge):
 //   - non-owner    → blocked from money/config paths (finance/analytics/pricing/
 //                    settings/users + their APIs). "Money only for owners."
-//   - housekeeping → limited to Today + Cleaning pages; everything else → Today.
+//   - housekeeping → limited to Today + Cleaning pages AND the few APIs those
+//                    screens call; every other page → Today, every other API → 403.
 // Token-gated machine seams: no login cookie, their own shared secret. Middleware
 // runs on them only to STRIP any client-supplied x-ota-tenant so it can't be
 // spoofed into the tenant extension — these routes resolve their own property.
@@ -30,8 +31,15 @@ export async function middleware(request: NextRequest) {
   if (claims.role !== "owner" && isOwnerOnlyPath(path)) {
     return NextResponse.redirect(home);
   }
-  if (claims.role === "housekeeping" && !path.startsWith("/api/") && !housekeepingCanAccessPage(path)) {
-    return NextResponse.redirect(home);
+  if (claims.role === "housekeeping") {
+    if (path.startsWith("/api/")) {
+      // APIs aren't pages — a redirect would hand an API client HTML, so deny hard.
+      if (!housekeepingCanAccessApi(path)) {
+        return NextResponse.json({ error: "Not allowed for your role." }, { status: 403 });
+      }
+    } else if (!housekeepingCanAccessPage(path)) {
+      return NextResponse.redirect(home);
+    }
   }
 
   // Bind the acting property for downstream Prisma queries. The tenant extension

@@ -2,6 +2,7 @@ import * as nodeIcal from "node-ical";
 import type { IcalFeed } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseDateOnly } from "@/lib/dates";
+import { assertPublicHttpUrl } from "@/lib/url-guard";
 
 export type SyncResult = {
   feedId: string;
@@ -25,6 +26,9 @@ function toDateOnly(date: Date): string {
 // the OTA disappears here too). Manual blocks and other feeds are untouched.
 export async function syncFeed(feed: IcalFeed): Promise<SyncResult> {
   try {
+    // Re-validate at fetch time: a feed stored before this guard existed (or one
+    // whose host now resolves to a private address) must not be fetched (SSRF).
+    await assertPublicHttpUrl(feed.url);
     const data = await nodeIcal.async.fromURL(feed.url);
     const rows = Object.values(data)
       .filter((e): e is nodeIcal.VEvent => (e as { type?: string }).type === "VEVENT")

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { isOwnerOnlyPath, housekeepingCanAccessPage, canSeeNav, canSeeMoney } from "@/lib/authz";
+import {
+  isOwnerOnlyPath,
+  housekeepingCanAccessPage,
+  housekeepingCanAccessApi,
+  canSeeNav,
+  canSeeMoney,
+} from "@/lib/authz";
 
 describe("authz", () => {
   it("owner-only paths cover money + config, not operational APIs", () => {
@@ -26,6 +32,31 @@ describe("authz", () => {
     expect(housekeepingCanAccessPage("/housekeeping")).toBe(true);
     expect(housekeepingCanAccessPage("/calendar")).toBe(false);
     expect(housekeepingCanAccessPage("/reservations")).toBe(false);
+  });
+
+  it("the owner console (assistant) is owner-only — it speaks finances", () => {
+    // SEC-1: the in-app assistant always runs the owner agent (finance tools), so
+    // reception/housekeeping must not reach the page or its transport.
+    expect(isOwnerOnlyPath("/assistant")).toBe(true);
+    expect(isOwnerOnlyPath("/api/assistant/message")).toBe(true);
+    expect(canSeeNav("reception", "assistant")).toBe(false);
+  });
+
+  it("feed config + sync are owner-only (server-side fetch of a URL)", () => {
+    expect(isOwnerOnlyPath("/api/feeds")).toBe(true);
+    expect(isOwnerOnlyPath("/api/sync")).toBe(true);
+  });
+
+  it("housekeeping APIs are limited to its own screens' calls", () => {
+    // SEC-1: allowed — mark-clean, tasks, nav property switch.
+    expect(housekeepingCanAccessApi("/api/rooms/abc")).toBe(true);
+    expect(housekeepingCanAccessApi("/api/housekeeping/tasks")).toBe(true);
+    expect(housekeepingCanAccessApi("/api/session/property")).toBe(true);
+    // denied — guest PII, ID documents, and booking mutations are out of scope.
+    expect(housekeepingCanAccessApi("/api/guests/abc")).toBe(false);
+    expect(housekeepingCanAccessApi("/api/guests/abc/id-document")).toBe(false);
+    expect(housekeepingCanAccessApi("/api/reservations")).toBe(false);
+    expect(housekeepingCanAccessApi("/api/assistant/message")).toBe(false);
   });
 
   it("nav visibility per role", () => {
