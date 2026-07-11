@@ -15,6 +15,15 @@ const OWNER_ONLY_PREFIXES = [
   // Easy to miss: the page path (/analytics, /finance) differs from the API path,
   // so these must be listed explicitly or a non-owner could fetch the CSVs directly.
   "/api/analytics", "/api/export",
+  // The in-app assistant IS the owner console: it always runs the owner agent,
+  // which exposes finance/summary tools. So both the page and its transport are
+  // owner-only, same as the Finance/Analytics screens — otherwise reception (or
+  // housekeeping, via a direct call) could read revenue through the assistant.
+  "/assistant", "/api/assistant",
+  // iCal feed config + on-demand sync trigger a server-side fetch of an
+  // owner-supplied URL. Keep that owner-only (and see assertPublicHttpUrl, which
+  // blocks internal targets regardless of who calls).
+  "/api/feeds", "/api/sync",
   // Community sharing config is the owner's call (later slices may open specific
   // sub-paths like referrals to reception). Scam reporting is owner-only too.
   "/api/community/connections", "/api/community/sharing", "/api/community/scam",
@@ -34,8 +43,20 @@ export function housekeepingCanAccessPage(pathname: string): boolean {
   return HOUSEKEEPING_PAGES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-// Nav visibility (drives NavShell): which nav ids a role may see.
-const RECEPTION_HIDDEN = new Set(["finance", "analytics", "pricing", "settings"]);
+// APIs housekeeping's own screens actually call: mark-a-room-clean (/api/rooms),
+// housekeeping tasks, and the nav property switcher (/api/session). Everything
+// else is out of its scope, so a direct call is refused — the API is the real
+// trust boundary, not just which buttons the UI renders. (auth is exempt from the
+// middleware matcher entirely, so it needs no entry here.)
+const HOUSEKEEPING_APIS = ["/api/rooms", "/api/housekeeping", "/api/session"];
+
+export function housekeepingCanAccessApi(pathname: string): boolean {
+  return HOUSEKEEPING_APIS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+// Nav visibility (drives NavShell): which nav ids a role may see. The Owner
+// console (assistant) is owner-only — it speaks the property's finances.
+const RECEPTION_HIDDEN = new Set(["finance", "analytics", "pricing", "settings", "assistant"]);
 const HOUSEKEEPING_VISIBLE = new Set(["today", "housekeeping", "help"]);
 
 export function canSeeNav(role: Role, navId: string): boolean {
