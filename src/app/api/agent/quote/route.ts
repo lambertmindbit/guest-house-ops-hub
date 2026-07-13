@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { quoteRoomType } from "@/lib/pricing";
@@ -22,7 +22,7 @@ const schema = z
     message: "checkOut must be after checkIn",
   });
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   const { searchParams } = new URL(req.url);
@@ -40,3 +40,5 @@ export async function GET(req: Request) {
   const quote = await quoteRoomType(room.roomTypeId, parsed.data.checkIn, parsed.data.checkOut);
   return ok(quote);
 }
+
+export const GET = withRoute(handleGET);

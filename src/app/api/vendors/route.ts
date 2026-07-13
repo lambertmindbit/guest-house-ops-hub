@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { listVendors, createVendor } from "@/lib/vendors";
 
-export async function GET() {
+async function handleGET() {
   return ok(await listVendors());
 }
 
@@ -13,9 +13,12 @@ const schema = z.object({
   rating: z.number().int().min(1).max(5).nullable().optional(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
   return ok(await createVendor(parsed.data), 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

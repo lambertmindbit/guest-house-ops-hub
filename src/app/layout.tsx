@@ -8,21 +8,29 @@ import { getSession } from "@/lib/session";
 import { listUserProperties } from "@/lib/properties";
 import { unstable_cache } from "next/cache";
 import { getConflicts } from "@/lib/conflicts";
-import { prisma } from "@/lib/prisma";
+import { unscopedPrisma } from "@/lib/prisma";
 
 // Nav badge counts sit in the layout — they'd otherwise run on EVERY navigation.
 // Cache both at ~60s; a slightly stale badge count is fine.
-const getCachedConflictCount = unstable_cache(
-  async () => (await getConflicts()).length,
-  ["nav-conflict-count"],
-  { revalidate: 60 },
-);
+//
+// Keyed BY propertyId, and scoped explicitly to it: unstable_cache runs its
+// callback outside request scope, so the `x-ota-tenant` header the tenant layer
+// normally reads isn't available in here. Without the propertyId in both the key
+// AND the query, a multi-property deployment would serve (and cache) one tenant's
+// counts to another. Hence the unscoped client + an explicit propertyId filter.
+const getCachedConflictCount = (propertyId: string) =>
+  unstable_cache(
+    async () => (await getConflicts(propertyId)).length,
+    ["nav-conflict-count", propertyId],
+    { revalidate: 60 },
+  )();
 
-const getCachedEscalationCount = unstable_cache(
-  async () => prisma.escalation.count({ where: { status: "open" } }),
-  ["nav-escalation-count"],
-  { revalidate: 60 },
-);
+const getCachedEscalationCount = (propertyId: string) =>
+  unstable_cache(
+    async () => unscopedPrisma.escalation.count({ where: { status: "open", propertyId } }),
+    ["nav-escalation-count", propertyId],
+    { revalidate: 60 },
+  )();
 
 // Redesign type system: Plus Jakarta Sans (UI/body), Fraunces (display titles),
 // JetBrains Mono (numerals / times / eyebrow micro-labels).
@@ -85,14 +93,18 @@ export default async function RootLayout({
   let escalationCount = 0;
   let properties: { id: string; name: string }[] = [];
   if (session) {
-    try {
-      [conflictCount, escalationCount] = await Promise.all([
-        getCachedConflictCount(),
-        getCachedEscalationCount(),
-      ]);
-    } catch {
-      conflictCount = 0;
-      escalationCount = 0;
+    // Badge counts are per-property and cached outside request scope, so they need
+    // an explicit propertyId (see the cache helpers above); skip them if unbound.
+    if (session.propertyId) {
+      try {
+        [conflictCount, escalationCount] = await Promise.all([
+          getCachedConflictCount(session.propertyId),
+          getCachedEscalationCount(session.propertyId),
+        ]);
+      } catch {
+        conflictCount = 0;
+        escalationCount = 0;
+      }
     }
     try {
       properties = await listUserProperties(session.sub, session.propertyId);

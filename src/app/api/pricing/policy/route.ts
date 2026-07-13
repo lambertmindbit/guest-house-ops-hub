@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 
 // The pricing policy is a single row. GET returns it (creating defaults on first
 // access); PATCH upserts the owner's edits.
@@ -9,7 +9,7 @@ async function getOrCreate() {
   return existing ?? prisma.pricingPolicy.create({ data: {} });
 }
 
-export async function GET() {
+async function handleGET() {
   return ok(await getOrCreate());
 }
 
@@ -28,7 +28,7 @@ const updateSchema = z
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -37,3 +37,6 @@ export async function PATCH(request: Request) {
   const policy = await prisma.pricingPolicy.update({ where: { id: current.id }, data: parsed.data });
   return ok(policy);
 }
+
+export const GET = withRoute(handleGET);
+export const PATCH = withRoute(handlePATCH);

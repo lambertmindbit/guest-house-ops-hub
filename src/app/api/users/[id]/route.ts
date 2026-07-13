@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { isLastActiveOwner } from "@/lib/users";
 import { hashPassword } from "@/lib/password";
@@ -14,7 +14,7 @@ const schema = z
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   return ok(user);
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleDELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await getSession();
   if (session?.sub === id) return fail("You can't delete your own account.", 400);
@@ -53,3 +53,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   await recordAudit("user.delete", "user", id, `Removed ${existing.email}`).catch(() => {});
   return ok({ deleted: true });
 }
+
+export const PATCH = withRoute(handlePATCH);
+export const DELETE = withRoute(handleDELETE);

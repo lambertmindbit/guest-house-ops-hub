@@ -1,3 +1,4 @@
+import { withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { toCsv, csvResponse } from "@/lib/csv";
 import { parseDateOnly, formatDateOnly } from "@/lib/dates";
@@ -6,7 +7,7 @@ const isDate = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.t
 const nights = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 86_400_000);
 
 // Bookings export for the accountant. Honours an optional from/to (by check-in).
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
@@ -41,3 +42,5 @@ export async function GET(request: Request) {
   const range = isDate(from) && isDate(to) ? `_${from}_${to}` : "";
   return csvResponse(`reservations${range}.csv`, toCsv(headers, rows));
 }
+
+export const GET = withRoute(handleGET);

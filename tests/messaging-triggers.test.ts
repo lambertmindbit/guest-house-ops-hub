@@ -64,9 +64,9 @@ describe("messaging triggers", () => {
   it("routes status through the active adapter (BSP-ready seam)", async () => {
     setMessageAdapter({ name: "fake", async send() { return { status: "sent", sentAt: new Date() }; } });
     const msg = await logMessage({ source: "system", channel: "whatsapp", to: TAG, body: "hi", reservationId: r1, template: "bookingConfirmation" });
-    expect(msg.status).toBe("sent");
+    expect(msg?.status).toBe("sent");
     setMessageAdapter(LogAdapter);
     const logged = await logMessage({ source: "system", channel: "whatsapp", to: TAG, body: "hi", reservationId: r1 });
-    expect(logged.status).toBe("logged");
+    expect(logged?.status).toBe("logged");
   });
 });

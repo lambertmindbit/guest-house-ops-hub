@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 
 // PropertySettings is a single-row table. Read returns the row (creating it with
 // defaults on first access); PATCH upserts the owner's edits onto that one row.
@@ -9,7 +9,7 @@ async function getOrCreate() {
   return existing ?? prisma.propertySettings.create({ data: {} });
 }
 
-export async function GET() {
+async function handleGET() {
   return ok(await getOrCreate());
 }
 
@@ -31,7 +31,7 @@ const updateSchema = z
     message: "no fields to update",
   });
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -43,3 +43,6 @@ export async function PATCH(request: Request) {
   });
   return ok(settings);
 }
+
+export const GET = withRoute(handleGET);
+export const PATCH = withRoute(handlePATCH);

@@ -8,6 +8,7 @@
     "build": "prisma generate && next build",
     "start": "next start -p 3100",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "db:migrate": "prisma migrate deploy",

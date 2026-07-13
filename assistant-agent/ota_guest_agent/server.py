@@ -67,13 +67,34 @@ FALLBACK_MODEL = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
 logger = logging.getLogger(__name__)
 
 api = FastAPI(title="OTA Guest Assistant")
-# Sessions (conversation + the pending-booking `_pending` state) live in THIS
-# process's memory. That makes the Cloud Run service stateful: it MUST run at
-# most one instance (`--max-instances=1`). A second instance would serve a
-# guest's follow-up turn from a different memory and lose their pending booking
-# mid-flow. Scaling past 1 requires a persistent ADK session service first
-# (see the architecture upgrade plan, decision D1).
-_session_service = InMemorySessionService()
+
+
+def _make_session_service():
+    """Choose where session state (conversation + pending-booking `_pending`) lives.
+
+    Default — InMemorySessionService: state lives in THIS process's memory, which
+    makes the service stateful and forces `--max-instances=1` (a second instance
+    would serve a guest's follow-up turn from different memory and lose their
+    pending booking). This is the safe default and needs no extra infra.
+
+    Opt-in — set SESSION_DB_URL to an async SQLAlchemy URL (e.g.
+    `postgresql+asyncpg://…`) and sessions persist in that database and are shared
+    across instances, so the single-instance pin can be lifted. Enabling it is an
+    infra decision (provision/point a DB, add the secret, `pip install` the async
+    driver + SQLAlchemy, then raise max-instances) — see decision D1 in the
+    architecture upgrade plan. The DatabaseSessionService import is lazy so the
+    default path never needs SQLAlchemy installed.
+    """
+    url = os.getenv("SESSION_DB_URL")
+    if not url:
+        return InMemorySessionService()
+    from google.adk.sessions import DatabaseSessionService  # lazy: needs SQLAlchemy
+
+    logger.info("Using DatabaseSessionService (persistent sessions; multi-instance safe)")
+    return DatabaseSessionService(db_url=url)
+
+
+_session_service = _make_session_service()
 _runner = Runner(app_name=APP_NAME, agent=guest_agent, session_service=_session_service)
 _owner_runner = Runner(app_name=OWNER_APP_NAME, agent=owner_agent, session_service=_session_service)
 # Fallback-model twins share the SAME app_name/session namespace as their primary

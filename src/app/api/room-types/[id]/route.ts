@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 
 const updateSchema = z
   .object({
@@ -14,7 +14,7 @@ const updateSchema = z
     message: "no fields to update",
   });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -35,7 +35,7 @@ export async function PATCH(
   return ok(type);
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -49,3 +49,6 @@ export async function DELETE(
   await prisma.roomType.delete({ where: { id } });
   return ok({ deleted: true });
 }
+
+export const PATCH = withRoute(handlePATCH);
+export const DELETE = withRoute(handleDELETE);

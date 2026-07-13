@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly } from "@/lib/dates";
 import { freeRooms } from "@/lib/availability";
 import { agentTokenOk } from "@/lib/agent-auth";
@@ -24,7 +24,7 @@ const schema = z
     message: "checkOut must be after checkIn",
   });
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   const { searchParams } = new URL(req.url);
@@ -44,3 +44,5 @@ export async function GET(req: Request) {
 
   return ok(rows);
 }
+
+export const GET = withRoute(handleGET);

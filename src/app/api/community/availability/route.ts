@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { peerAvailability } from "@/lib/community/availability";
 import { recordAudit } from "@/lib/audit";
@@ -14,7 +14,7 @@ const schema = z.object({
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "checkOut must be YYYY-MM-DD"),
 });
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
 
@@ -36,3 +36,5 @@ export async function GET(request: Request) {
     return fail("This property is not sharing availability with you.", 403);
   }
 }
+
+export const GET = withRoute(handleGET);

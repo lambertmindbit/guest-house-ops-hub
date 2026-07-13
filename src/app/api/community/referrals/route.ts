@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { proposeReferral, listReferrals } from "@/lib/community/referrals";
 import { recordAudit } from "@/lib/audit";
@@ -7,7 +7,7 @@ import { recordAudit } from "@/lib/audit";
 // Overflow referrals. Owner + reception (reception handles overflow). Acting
 // property is always the session's — never the request body.
 
-export async function GET() {
+async function handleGET() {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
   return ok(await listReferrals(session.propertyId));
@@ -23,7 +23,7 @@ const schema = z.object({
   note: z.string().optional(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
 
@@ -38,3 +38,6 @@ export async function POST(request: Request) {
   await recordAudit("community.referral.propose", "referral", result.referralId, `Referred ${input.guestName} to a peer`).catch(() => {});
   return ok({ id: result.referralId }, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

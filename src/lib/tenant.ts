@@ -20,3 +20,21 @@ export function withTenant<T>(propertyId: string, fn: () => Promise<T>): Promise
 export function tenantFromContext(): string | null {
   return als.getStore()?.propertyId ?? null;
 }
+
+// The acting property for hand-written raw SQL (which the Prisma tenant extension
+// can't rewrite): an explicit id if the caller has one, else the ALS context, else
+// the request header the middleware stamps. Null when none apply (scripts/tests) →
+// callers leave the query unscoped, matching the extension's passthrough. Mirrors
+// the resolution order in prisma.ts so raw SQL scopes the same way as the ORM.
+export async function requestPropertyId(explicit?: string | null): Promise<string | null> {
+  if (explicit) return explicit;
+  const ctx = tenantFromContext();
+  if (ctx) return ctx;
+  try {
+    const { headers } = await import("next/headers");
+    const value = (await headers()).get("x-ota-tenant");
+    return value && value.length > 0 ? value : null;
+  } catch {
+    return null; // not in a request context
+  }
+}

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ok, fail } from "@/lib/api";
+import { ok, fail, withRoute } from "@/lib/api";
 import { isStorageConfigured, uploadObject, signedUrl, deleteObject } from "@/lib/storage";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -21,7 +21,7 @@ function sniffType(buf: ArrayBuffer): string | null {
 }
 
 // Upload (or replace) a guest's scanned ID document.
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isStorageConfigured()) return fail("ID document storage isn't configured.", 503);
   const { id } = await params;
   const guest = await prisma.guest.findUnique({ where: { id } });
@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 }
 
 // Return a short-lived signed URL to view the document.
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleGET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isStorageConfigured()) return fail("ID document storage isn't configured.", 503);
   const { id } = await params;
   const guest = await prisma.guest.findUnique({ where: { id } });
@@ -62,7 +62,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   return ok({ url: await signedUrl(guest.idDocumentPath) });
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleDELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const guest = await prisma.guest.findUnique({ where: { id } });
   if (!guest?.idDocumentPath) return fail("no document on file", 404);
@@ -70,3 +70,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   await prisma.guest.update({ where: { id }, data: { idDocumentPath: null, idUploaded: false, idUploadedAt: null } });
   return ok({ deleted: true });
 }
+
+export const POST = withRoute(handlePOST);
+export const GET = withRoute(handleGET);
+export const DELETE = withRoute(handleDELETE);

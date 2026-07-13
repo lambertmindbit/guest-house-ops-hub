@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { ingestEmail } from "@/lib/inbound";
 
 // Token-gated webhook entry point for AUTOMATED ingestion. This is the seam the
@@ -10,7 +10,7 @@ import { ingestEmail } from "@/lib/inbound";
 // Until the inbox exists, nothing calls this — the owner pastes via /api/inbound.
 const schema = z.object({ raw: z.string().min(1) });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const secret = process.env.INGEST_TOKEN;
   const provided = request.headers.get("x-ingest-token") ?? new URL(request.url).searchParams.get("token");
   if (!secret || provided !== secret) {
@@ -24,3 +24,5 @@ export async function POST(request: Request) {
   const inbound = await ingestEmail(parsed.data.raw);
   return ok({ id: inbound.id, status: inbound.status }, 201);
 }
+
+export const POST = withRoute(handlePOST);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { grantsFor, setGrant, SHARE_TYPES } from "@/lib/community/network";
 import { recordAudit } from "@/lib/audit";
@@ -7,7 +7,7 @@ import { recordAudit } from "@/lib/audit";
 // Per-peer, per-data-type sharing toggles. Owner-only. Grantor is always the
 // acting property from the session.
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
   const peer = new URL(request.url).searchParams.get("peer");
@@ -21,7 +21,7 @@ const schema = z.object({
   enabled: z.boolean(),
 });
 
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const session = await getSession();
   if (!session || session.role !== "owner") return fail("Owners only.", 403);
   const propertyId = session.propertyId;
@@ -42,3 +42,6 @@ export async function PATCH(request: Request) {
   ).catch(() => {});
   return ok({ ok: true });
 }
+
+export const GET = withRoute(handleGET);
+export const PATCH = withRoute(handlePATCH);

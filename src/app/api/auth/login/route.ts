@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { zodFail } from "@/lib/api";
+import { zodFail, withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { createSessionToken, verifyCredentials, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
@@ -15,7 +15,7 @@ const schema = z.object({
 const LIMIT = 10;
 const WINDOW_MS = 5 * 60 * 1000;
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const limit = rateLimit(`login:${clientIp(request)}`, LIMIT, WINDOW_MS);
   if (!limit.ok) {
     return NextResponse.json(
@@ -50,3 +50,5 @@ export async function POST(request: Request) {
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return response;
 }
+
+export const POST = withRoute(handlePOST);

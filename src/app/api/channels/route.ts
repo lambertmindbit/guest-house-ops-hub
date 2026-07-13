@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 
-export async function GET() {
+async function handleGET() {
   const channels = await prisma.channel.findMany({
     include: { _count: { select: { reservations: true } } },
     orderBy: { name: "asc" },
@@ -16,7 +16,7 @@ const createSchema = z.object({
   collectsPayment: z.boolean(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -24,3 +24,6 @@ export async function POST(request: Request) {
   const channel = await prisma.channel.create({ data: parsed.data });
   return ok(channel, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

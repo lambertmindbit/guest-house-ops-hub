@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { syncFeed } from "@/lib/ical-import";
 
 const patchSchema = z.object({ active: z.boolean() });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -28,7 +28,7 @@ export async function PATCH(
 }
 
 // Deleting a feed cascades to its imported blocks (FK onDelete: Cascade).
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -38,3 +38,6 @@ export async function DELETE(
   await prisma.icalFeed.delete({ where: { id } });
   return ok({ deleted: true });
 }
+
+export const PATCH = withRoute(handlePATCH);
+export const DELETE = withRoute(handleDELETE);

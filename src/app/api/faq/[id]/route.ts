@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { updateFaq, deleteFaq, faqMediaSchema } from "@/lib/faq";
 
 const schema = z
@@ -13,7 +13,7 @@ const schema = z
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -23,9 +23,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   return ok(updated);
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleDELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const deleted = await deleteFaq(id);
   if (!deleted) return fail("FAQ not found", 404);
   return ok({ deleted: true });
 }
+
+export const PATCH = withRoute(handlePATCH);
+export const DELETE = withRoute(handleDELETE);

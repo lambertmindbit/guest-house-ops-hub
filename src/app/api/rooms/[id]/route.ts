@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { roomPhotosSchema, roomFacingSchema, roomViewSchema } from "@/lib/rooms";
 
 // One PATCH serves two callers:
@@ -23,7 +23,7 @@ const schema = z
     message: "no fields to update",
   });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -58,7 +58,7 @@ export async function PATCH(
 
 // Hard-delete is only allowed for a room with no history; otherwise the owner
 // must archive it (the FKs are RESTRICT, and we want finance/analytics intact).
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -77,3 +77,6 @@ export async function DELETE(
   await prisma.room.delete({ where: { id } });
   return ok({ deleted: true });
 }
+
+export const PATCH = withRoute(handlePATCH);
+export const DELETE = withRoute(handleDELETE);

@@ -45,6 +45,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # Type-check the WHOLE tree, tests included. `next build` only checks the
+      # app graph, and vitest doesn't type-check at all, so without this a type
+      # error in a test file ships silently.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
       - name: Apply database migrations
         run: npx prisma migrate deploy
 

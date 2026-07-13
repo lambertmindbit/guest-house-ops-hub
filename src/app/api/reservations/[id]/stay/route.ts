@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
 
 // Arrival/departure stamps for a confirmed booking. These don't touch `status`
@@ -10,7 +10,7 @@ import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
 //   undo     -> step back one stage (clear departure, else clear arrival)
 const schema = z.object({ action: z.enum(["checkin", "checkout", "undo"]) });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -51,3 +51,5 @@ export async function PATCH(
   const reservation = await prisma.reservation.update({ where: { id }, data });
   return ok(reservation);
 }
+
+export const PATCH = withRoute(handlePATCH);

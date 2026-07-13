@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 
 // Record a refund against a booking. Owner-committed (this route is cookie-gated);
 // agents never refund. Created as `requested`; the owner then approves / marks
@@ -10,7 +10,7 @@ const schema = z.object({
   reason: z.string().trim().min(1).nullable().optional(),
 });
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -36,3 +36,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   });
   return ok(refund, 201);
 }
+
+export const POST = withRoute(handlePOST);

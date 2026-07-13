@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { listPolicies, upsertPolicy, POLICY_INTENTS } from "@/lib/policies";
 
 // GET  /api/policies — all assistant policies (owner Settings screen).
 // POST /api/policies — upsert one intent's instructions / active flag.
 // Owner-gated by the edge middleware, like the other /api/* app routes.
 
-export async function GET() {
+async function handleGET() {
   return ok(await listPolicies());
 }
 
@@ -18,7 +18,7 @@ const schema = z.object({
   active: z.boolean().optional(),
 });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -26,3 +26,6 @@ export async function POST(req: Request) {
   const row = await upsertPolicy(intent, patch);
   return ok({ id: row.id, intent: row.intent, instructions: row.instructions, active: row.active });
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

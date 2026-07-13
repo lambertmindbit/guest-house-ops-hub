@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getEscalation, transitionEscalation } from "@/lib/escalations";
 
 // GET   /api/escalations/[id] — fetch one (owner cookie)
@@ -8,7 +8,7 @@ import { getEscalation, transitionEscalation } from "@/lib/escalations";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: Request, { params }: Ctx) {
+async function handleGET(_req: Request, { params }: Ctx) {
   const { id } = await params;
   const e = await getEscalation(id);
   if (!e) return fail("Escalation not found", 404);
@@ -24,7 +24,7 @@ const PatchBody = z
   })
   .refine((b) => Object.keys(b).length > 0, { message: "No changes supplied" });
 
-export async function PATCH(req: Request, { params }: Ctx) {
+async function handlePATCH(req: Request, { params }: Ctx) {
   const { id } = await params;
 
   let body: unknown;
@@ -40,3 +40,6 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (!updated) return fail("Escalation not found", 404);
   return ok(updated);
 }
+
+export const GET = withRoute(handleGET);
+export const PATCH = withRoute(handlePATCH);

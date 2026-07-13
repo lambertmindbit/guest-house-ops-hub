@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { agentTokenOk } from "@/lib/agent-auth";
 import { logMessage } from "@/lib/messaging";
 
@@ -22,7 +22,7 @@ const schema = z.object({
   propertyRef: z.string().optional(),
 });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   let body: unknown;
@@ -49,3 +49,5 @@ export async function POST(req: Request) {
   if (!msg) return ok({ deduped: true }, 200);
   return ok({ id: msg.id, status: msg.status }, 201);
 }
+
+export const POST = withRoute(handlePOST);

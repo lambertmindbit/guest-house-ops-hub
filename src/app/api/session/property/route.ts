@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { fail, zodFail } from "@/lib/api";
+import { fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { userCanAccessProperty } from "@/lib/properties";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
@@ -11,7 +11,7 @@ import { recordAudit } from "@/lib/audit";
 
 const schema = z.object({ propertyId: z.string().min(1) });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const session = await getSession();
   if (!session) return fail("Not signed in.", 401);
 
@@ -29,3 +29,5 @@ export async function POST(request: Request) {
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return response;
 }
+
+export const POST = withRoute(handlePOST);

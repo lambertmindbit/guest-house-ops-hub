@@ -1,3 +1,4 @@
+import { withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { buildIcsFeed, type IcalEvent } from "@/lib/ical";
 import { icalTokenValid } from "@/lib/ical-token";
@@ -9,7 +10,7 @@ import { todayDateOnly, parseDateOnly } from "@/lib/dates";
 // confirm whether a room exists.
 const notFound = () => new Response("Not found", { status: 404 });
 
-export async function GET(
+async function handleGET(
   _request: Request,
   { params }: { params: Promise<{ token: string; room: string }> },
 ) {
@@ -59,3 +60,5 @@ export async function GET(
     },
   });
 }
+
+export const GET = withRoute(handleGET);

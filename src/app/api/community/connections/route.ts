@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { invitePeer, listPeers } from "@/lib/community/network";
 import { recordAudit } from "@/lib/audit";
@@ -7,7 +7,7 @@ import { recordAudit } from "@/lib/audit";
 // Trusted-network connections. Owner-only (also gated in middleware). The acting
 // property comes from the session — never from the request body.
 
-export async function GET() {
+async function handleGET() {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
   return ok(await listPeers(session.propertyId));
@@ -15,7 +15,7 @@ export async function GET() {
 
 const inviteSchema = z.object({ connectCode: z.string().min(1) });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const session = await getSession();
   if (!session || session.role !== "owner") return fail("Owners only.", 403);
   const propertyId = session.propertyId;
@@ -30,3 +30,6 @@ export async function POST(request: Request) {
   await recordAudit("community.invite", "network_connection", result.connectionId, "Invited a peer property").catch(() => {});
   return ok({ id: result.connectionId }, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

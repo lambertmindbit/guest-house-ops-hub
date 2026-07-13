@@ -1,4 +1,4 @@
-import { ok, fail } from "@/lib/api";
+import { ok, fail, withRoute } from "@/lib/api";
 import { agentTokenOk } from "@/lib/agent-auth";
 import { listEscalations } from "@/lib/escalations";
 
@@ -8,7 +8,7 @@ import { listEscalations } from "@/lib/escalations";
 // still needing the owner), flattened to what the console agent speaks from.
 // Owner-only, behind the agent token.
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   const [open, inProgress] = await Promise.all([
@@ -30,3 +30,5 @@ export async function GET(req: Request) {
 
   return ok({ count: items.length, items });
 }
+
+export const GET = withRoute(handleGET);

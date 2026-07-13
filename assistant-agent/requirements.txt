@@ -7,3 +7,10 @@ fastapi>=0.110
 uvicorn[standard]>=0.29
 python-dotenv>=1.0
 aiohttp>=3.10          # google-genai needs ClientConnectorDNSError (added in 3.10)
+
+# Optional — persistent sessions (lifts the single-instance limit; see
+# SESSION_DB_URL in server.py). Uncomment + set SESSION_DB_URL to enable, then you
+# can raise Cloud Run max-instances above 1. Left off by default so the base image
+# stays lean and the default in-memory path needs no DB.
+# sqlalchemy[asyncio]>=2.0
+# asyncpg>=0.29         # async driver for a postgresql+asyncpg:// SESSION_DB_URL

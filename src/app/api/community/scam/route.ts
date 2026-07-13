@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { reportScam, listMyScamReports, sharedScamListFor, lookupScam } from "@/lib/community/scam";
 import { recordAudit } from "@/lib/audit";
@@ -7,7 +7,7 @@ import { recordAudit } from "@/lib/audit";
 // Owner-only (see OWNER_ONLY_PREFIXES). Lists my reports + peers' shared reports;
 // ?lookup=phone matches by hash. CSV export lives at ./export.csv.
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
   const url = new URL(request.url);
@@ -28,7 +28,7 @@ const schema = z.object({
   evidenceNote: z.string().optional(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
 
@@ -41,3 +41,6 @@ export async function POST(request: Request) {
   await recordAudit("community.scam.report", "shared_scam_report", result.id, "Filed a scam report").catch(() => {});
   return ok({ id: result.id }, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

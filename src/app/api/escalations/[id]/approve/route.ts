@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail } from "@/lib/api";
+import { ok, fail, withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { isOverlapError } from "@/lib/db-errors";
@@ -27,7 +27,7 @@ const metaSchema = z.object({
   total: z.number().optional(),
 });
 
-export async function POST(_req: Request, { params }: Ctx) {
+async function handlePOST(_req: Request, { params }: Ctx) {
   const { id } = await params;
 
   const escalation = await prisma.escalation.findUnique({ where: { id } });
@@ -100,3 +100,5 @@ export async function POST(_req: Request, { params }: Ctx) {
     throw error;
   }
 }
+
+export const POST = withRoute(handlePOST);

@@ -1,3 +1,4 @@
+import { withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { toCsv, csvResponse } from "@/lib/csv";
 import { parseDateOnly } from "@/lib/dates";
@@ -5,7 +6,7 @@ import { parseDateOnly } from "@/lib/dates";
 const isDate = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
 // Payments export for the accountant. Honours an optional from/to (by paid date).
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const from = searchParams.get("from");
   const to = searchParams.get("to");
@@ -29,3 +30,5 @@ export async function GET(request: Request) {
   const range = isDate(from) && isDate(to) ? `_${from}_${to}` : "";
   return csvResponse(`payments${range}.csv`, toCsv(headers, rows));
 }
+
+export const GET = withRoute(handleGET);

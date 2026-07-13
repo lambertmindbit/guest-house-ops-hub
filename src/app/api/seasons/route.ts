@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 
-export async function GET() {
+async function handleGET() {
   const seasons = await prisma.season.findMany({ orderBy: { startDate: "asc" } });
   return ok(seasons);
 }
@@ -17,7 +17,7 @@ const createSchema = z
   })
   .refine((d) => d.endDate >= d.startDate, { path: ["endDate"], message: "end must be on/after start" });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -28,3 +28,6 @@ export async function POST(request: Request) {
   });
   return ok(season, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);
