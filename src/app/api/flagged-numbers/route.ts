@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 
 // GET  /api/flagged-numbers          — list all flagged numbers
 // GET  /api/flagged-numbers?check=X  — quick scam check by phone (returns { flagged, reason })
@@ -12,7 +12,7 @@ const createSchema = z.object({
   reason: z.string().trim().min(1).optional(),
 });
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const phone = searchParams.get("check");
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   return ok(numbers);
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -40,3 +40,6 @@ export async function POST(request: Request) {
     throw error;
   }
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

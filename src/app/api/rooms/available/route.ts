@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { dateOnly } from "@/lib/dates";
 import { freeRooms } from "@/lib/availability";
 
@@ -19,7 +19,7 @@ const schema = z
     message: "`checkOut` must be after `checkIn`",
   });
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = schema.safeParse({
     checkIn: searchParams.get("checkIn") ?? undefined,
@@ -33,3 +33,5 @@ export async function GET(request: Request) {
   // Shape unchanged from before the lib extraction (roomTypeId added harmlessly).
   return ok(rows);
 }
+
+export const GET = withRoute(handleGET);

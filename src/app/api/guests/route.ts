@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { syncBlacklistToScamList } from "@/lib/blacklist-sync";
 
 const schema = z.object({ q: z.string().optional() });
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = schema.safeParse({ q: searchParams.get("q") ?? undefined });
   if (!parsed.success) return zodFail(parsed.error);
@@ -84,7 +84,7 @@ const createSchema = z.object({
   ...cformFields,
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -106,3 +106,6 @@ export async function POST(request: Request) {
     throw error;
   }
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { verifyScamReport, disputeScamReport } from "@/lib/community/scam";
 import { recordAudit } from "@/lib/audit";
 
 const schema = z.object({ action: z.enum(["verify", "dispute"]) });
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
 
@@ -22,3 +22,5 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   await recordAudit(`community.scam.${parsed.data.action}`, "shared_scam_report", id).catch(() => {});
   return ok({ ok: true });
 }
+
+export const PATCH = withRoute(handlePATCH);

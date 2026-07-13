@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { setRoomTypeAmenity } from "@/lib/amenities";
 
 const schema = z.object({
@@ -8,7 +8,7 @@ const schema = z.object({
   on: z.boolean(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -16,3 +16,5 @@ export async function POST(request: Request) {
   await setRoomTypeAmenity(roomTypeId, amenityId, on);
   return ok({ ok: true });
 }
+
+export const POST = withRoute(handlePOST);

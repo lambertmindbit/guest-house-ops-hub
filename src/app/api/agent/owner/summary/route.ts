@@ -1,4 +1,4 @@
-import { ok, fail } from "@/lib/api";
+import { ok, fail, withRoute } from "@/lib/api";
 import { agentTokenOk } from "@/lib/agent-auth";
 import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
 import { formatDateOnly } from "@/lib/dates";
@@ -24,7 +24,7 @@ function shape(r: SummaryReservation) {
   };
 }
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   const s = await getTodaySummary();
@@ -45,3 +45,5 @@ export async function GET(req: Request) {
     arrivalsNext7: s.arrivalsNext7.map(shape),
   });
 }
+
+export const GET = withRoute(handleGET);

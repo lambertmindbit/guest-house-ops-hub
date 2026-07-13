@@ -1,4 +1,4 @@
-import { fail, ok } from "@/lib/api";
+import { fail, ok, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { noShowStats, isRepeatOffender } from "@/lib/community/reliability";
@@ -11,7 +11,7 @@ import { formatDateOnly } from "@/lib/dates";
 // threshold can't be gamed. The alert enters the normal bad-guest workflow
 // (submitted → the owner verifies to share → appealable).
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "owner") return fail("Owners only.", 403);
   if (!session.propertyId) return fail("No property is bound to your account.", 400);
@@ -44,3 +44,5 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   await recordAudit("community.reliability.flag", "shared_guest_alert", result.id, `Flagged ${guest.name} as a repeat no-show`).catch(() => {});
   return ok({ id: result.id }, 201);
 }
+
+export const POST = withRoute(handlePOST);

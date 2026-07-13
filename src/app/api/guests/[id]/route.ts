@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { syncBlacklistToScamList } from "@/lib/blacklist-sync";
 import { recordAudit } from "@/lib/audit";
@@ -44,7 +44,7 @@ const updateSchema = z
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -104,3 +104,5 @@ export async function PATCH(
 
   return ok(guest);
 }
+
+export const PATCH = withRoute(handlePATCH);

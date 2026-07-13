@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 
 const schema = z
   .object({
@@ -12,7 +12,7 @@ const schema = z
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return zodFail(parsed.error);
@@ -21,10 +21,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   return ok(await prisma.tour.update({ where: { id }, data: parsed.data }));
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleDELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const existing = await prisma.tour.findUnique({ where: { id } });
   if (!existing) return fail("tour not found", 404);
   await prisma.tour.delete({ where: { id } });
   return ok({ deleted: true });
 }
+
+export const PATCH = withRoute(handlePATCH);
+export const DELETE = withRoute(handleDELETE);

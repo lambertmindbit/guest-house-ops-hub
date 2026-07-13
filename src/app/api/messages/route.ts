@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { listMessages } from "@/lib/messaging";
 
 // GET /api/messages?guestId=&reservationId=&limit=
@@ -11,7 +11,7 @@ const schema = z.object({
   limit: z.coerce.number().int().min(1).max(500).optional(),
 });
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = schema.safeParse({
     guestId: searchParams.get("guestId") ?? undefined,
@@ -23,3 +23,5 @@ export async function GET(request: Request) {
   const messages = await listMessages(parsed.data);
   return ok(messages);
 }
+
+export const GET = withRoute(handleGET);

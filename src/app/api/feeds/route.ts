@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { assertPublicHttpUrl, UnsafeUrlError } from "@/lib/url-guard";
 
-export async function GET() {
+async function handleGET() {
   const feeds = await prisma.icalFeed.findMany({
     include: { room: true },
     orderBy: { createdAt: "desc" },
@@ -17,7 +17,7 @@ const createSchema = z.object({
   url: z.string().url(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -34,3 +34,6 @@ export async function POST(request: Request) {
   const feed = await prisma.icalFeed.create({ data: parsed.data, include: { room: true } });
   return ok(feed, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

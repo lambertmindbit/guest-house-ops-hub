@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { createEscalation } from "@/lib/escalations";
 import { agentTokenOk } from "@/lib/agent-auth";
 
@@ -52,7 +52,7 @@ const AgentBody = z.object({
   propertyRef: z.string().max(64).optional(),
 });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   let body: unknown;
@@ -88,3 +88,5 @@ export async function POST(req: Request) {
   // 200 on a de-dupe hit (idempotent), 201 on a fresh create.
   return ok({ id: escalation.id, status: escalation.status, deduped }, deduped ? 200 : 201);
 }
+
+export const POST = withRoute(handlePOST);

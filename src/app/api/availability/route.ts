@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { dateOnly } from "@/lib/dates";
 import { getAvailability } from "@/lib/availability";
 
@@ -14,7 +14,7 @@ const schema = z
     message: "`to` must be after `from`",
   });
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = schema.safeParse({
     roomTypeId: searchParams.get("roomTypeId") ?? undefined,
@@ -27,3 +27,5 @@ export async function GET(request: Request) {
   const nights = await getAvailability(roomTypeId, from, to);
   return ok(nights);
 }
+
+export const GET = withRoute(handleGET);

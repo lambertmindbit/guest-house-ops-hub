@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseDateOnly, todayDateOnly } from "@/lib/dates";
+import { requestPropertyId } from "@/lib/tenant";
 
 function num(value: { toString(): string } | null): number {
   return value === null ? 0 : Number(value);
@@ -63,7 +64,15 @@ export async function getFinanceSummary(from: string, to: string): Promise<Finan
         status: "confirmed",
         checkIn: { gte: parseDateOnly(from), lt: parseDateOnly(to) },
       },
-      include: { channel: true, guest: true, room: true, payments: true },
+      // Only the fields the aggregation below reads — not whole related rows.
+      select: {
+        id: true,
+        grossAmount: true,
+        channel: { select: { name: true, commissionPct: true } },
+        guest: { select: { name: true } },
+        room: { select: { label: true } },
+        payments: { select: { amount: true } },
+      },
       orderBy: { checkIn: "asc" },
     }),
     prisma.expense.findMany({
@@ -162,15 +171,25 @@ export function sumOutstanding(
 }
 
 export async function getPendingPayments(): Promise<PendingPayments> {
-  const rows = await prisma.reservation.findMany({
-    where: { status: "confirmed" },
-    select: { grossAmount: true, payments: { select: { amount: true } } },
-  });
-  return sumOutstanding(
-    rows.map((r) => ({
-      grossAmount: num(r.grossAmount),
-      collected: r.payments.reduce((s, p) => s + num(p.amount), 0),
-      status: "confirmed",
-    })),
-  );
+  // All-time (no date bound), so this is the one finance query that grows without
+  // limit — and it runs on every Today dashboard load. Aggregate in the DB instead
+  // of streaming every confirmed reservation + its payments into Node. Mirrors
+  // sumOutstanding exactly (positive balances only; NULL gross treated as 0). Raw
+  // SQL bypasses the tenant extension, so scope by the acting property ourselves;
+  // dashboard-pending.test.ts pins both the total AND multi-tenant isolation.
+  const pid = await requestPropertyId();
+  const rows = await prisma.$queryRaw<{ total: number; count: number }[]>`
+    SELECT
+      COALESCE(SUM(balance) FILTER (WHERE balance > 0), 0)::float8 AS total,
+      COUNT(*) FILTER (WHERE balance > 0)::int AS count
+    FROM (
+      SELECT COALESCE(r.gross_amount, 0) - COALESCE(SUM(p.amount), 0) AS balance
+        FROM reservations r
+        LEFT JOIN payments p ON p.reservation_id = r.id
+       WHERE r.status = 'confirmed'
+         AND (${pid}::text IS NULL OR r.property_id = ${pid})
+       GROUP BY r.id, r.gross_amount
+    ) balances;
+  `;
+  return { total: Number(rows[0]?.total ?? 0), count: Number(rows[0]?.count ?? 0) };
 }

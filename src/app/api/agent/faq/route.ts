@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { listActiveFaqs } from "@/lib/faq";
 import { agentTokenOk } from "@/lib/agent-auth";
 
@@ -8,7 +8,7 @@ import { agentTokenOk } from "@/lib/agent-auth";
 
 const schema = z.object({ propertyRef: z.string().optional() });
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   const { searchParams } = new URL(req.url);
@@ -18,3 +18,5 @@ export async function GET(req: Request) {
   const faqs = await listActiveFaqs();
   return ok(faqs.map((f) => ({ id: f.id, question: f.question, answer: f.answer, category: f.category, media: f.media ?? null })));
 }
+
+export const GET = withRoute(handleGET);

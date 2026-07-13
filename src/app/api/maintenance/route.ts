@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { listRequests, createRequest } from "@/lib/maintenance";
 
 const STATUS = z.enum(["open", "in_progress", "done"]);
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = STATUS.safeParse(searchParams.get("status") ?? undefined);
   return ok(await listRequests(status.success ? status.data : undefined));
@@ -20,9 +20,12 @@ const schema = z.object({
   cost: z.number().nonnegative().nullable().optional(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
   return ok(await createRequest(parsed.data), 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

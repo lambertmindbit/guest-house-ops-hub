@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { getCancellationPolicy } from "@/lib/cancellation";
 
 const schema = z
@@ -11,12 +11,12 @@ const schema = z
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), { message: "no fields to update" });
 
-export async function GET() {
+async function handleGET() {
   return ok(await getCancellationPolicy());
 }
 
 // Single-row policy: update the existing row or create the first one.
-export async function PATCH(request: Request) {
+async function handlePATCH(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -32,3 +32,6 @@ export async function PATCH(request: Request) {
     freeCancelDaysPeak: row.freeCancelDaysPeak,
   });
 }
+
+export const GET = withRoute(handleGET);
+export const PATCH = withRoute(handlePATCH);

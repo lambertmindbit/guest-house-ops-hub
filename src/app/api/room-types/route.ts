@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 
-export async function GET() {
+async function handleGET() {
   const types = await prisma.roomType.findMany({
     include: { _count: { select: { rooms: true } } },
     orderBy: { name: "asc" },
@@ -24,7 +24,7 @@ const createSchema = z
     message: "floor must be ≤ ceiling",
   });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -32,3 +32,6 @@ export async function POST(request: Request) {
   const type = await prisma.roomType.create({ data: parsed.data });
   return ok(type, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

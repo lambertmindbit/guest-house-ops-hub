@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 
 const schema = z.object({
@@ -11,7 +11,7 @@ const schema = z.object({
   note: z.string().optional(),
 });
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -55,3 +55,5 @@ export async function POST(
   });
   return ok(payment, 201);
 }
+
+export const POST = withRoute(handlePOST);

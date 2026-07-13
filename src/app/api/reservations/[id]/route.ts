@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { updateReservation, OverlapError, StaleWriteError } from "@/lib/reservations";
 
@@ -10,7 +10,7 @@ const include = {
   room: { include: { roomType: true } },
 } as const;
 
-export async function GET(
+async function handleGET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -40,7 +40,7 @@ const updateSchema = z
     message: "check-out must be after check-in",
   });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -81,3 +81,6 @@ export async function PATCH(
     throw error;
   }
 }
+
+export const GET = withRoute(handleGET);
+export const PATCH = withRoute(handlePATCH);

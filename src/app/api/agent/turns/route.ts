@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { agentTokenOk } from "@/lib/agent-auth";
 import { prisma } from "@/lib/prisma";
 
@@ -24,7 +24,7 @@ const schema = z.object({
     .optional(),
 });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   let body: unknown;
@@ -44,3 +44,5 @@ export async function POST(req: Request) {
   });
   return ok({ id: turn.id }, 201);
 }
+
+export const POST = withRoute(handlePOST);

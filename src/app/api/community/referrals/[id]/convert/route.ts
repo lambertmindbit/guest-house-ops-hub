@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { convertReferral } from "@/lib/community/referrals";
 import { recordAudit } from "@/lib/audit";
@@ -9,7 +9,7 @@ import { recordAudit } from "@/lib/audit";
 
 const schema = z.object({ reservationId: z.string().min(1) });
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
 
@@ -23,3 +23,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   await recordAudit("community.referral.convert", "referral", id, "Linked a booking to a referral").catch(() => {});
   return ok({ ok: true });
 }
+
+export const POST = withRoute(handlePOST);

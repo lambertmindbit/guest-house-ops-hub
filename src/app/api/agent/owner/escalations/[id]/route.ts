@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { agentTokenOk } from "@/lib/agent-auth";
 import { transitionEscalation } from "@/lib/escalations";
 
@@ -15,7 +15,7 @@ const schema = z.object({
   resolutionNote: z.string().max(2000).optional(),
 });
 
-export async function POST(req: Request, { params }: Ctx) {
+async function handlePOST(req: Request, { params }: Ctx) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
   const { id } = await params;
 
@@ -32,3 +32,5 @@ export async function POST(req: Request, { params }: Ctx) {
   if (!updated) return fail("Request not found", 404);
   return ok({ id: updated.id, status: updated.status, title: updated.title });
 }
+
+export const POST = withRoute(handlePOST);

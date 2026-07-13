@@ -1,4 +1,4 @@
-import { ok, fail } from "@/lib/api";
+import { ok, fail, withRoute } from "@/lib/api";
 import { listActivePolicies } from "@/lib/policies";
 import { agentTokenOk } from "@/lib/agent-auth";
 
@@ -7,7 +7,9 @@ import { agentTokenOk } from "@/lib/agent-auth";
 // token-gated. The agent applies these on top of its fixed rules — they may
 // tighten behavior, never override the security/safety guardrails.
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
   return ok(await listActivePolicies());
 }
+
+export const GET = withRoute(handleGET);

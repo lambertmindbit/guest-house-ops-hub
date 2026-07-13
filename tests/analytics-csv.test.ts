@@ -15,7 +15,7 @@ const sample: Analytics = {
   avgLengthOfStay: 2.5,
   cancellationPct: 11.11,
   bookingsArriving: 3,
-  sourceMix: [{ channel: "Booking.com", bookings: 2, roomNights: 3, sharePct: 75 }],
+  sourceMix: [{ channel: "Booking.com", bookings: 2, roomNights: 3, sharePct: 75, revenue: 5550 }],
   trend: [
     { date: "2026-07-01", occupancyPct: 40 },
     { date: "2026-07-02", occupancyPct: 40 },

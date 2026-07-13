@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { ok, fail } from "@/lib/api";
+import { ok, fail, withRoute } from "@/lib/api";
 import { recordAudit } from "@/lib/audit";
 import { todayDateOnly, formatDateOnly } from "@/lib/dates";
 
 // Cancelling sets status to 'cancelled', which drops the row out of the
 // exclusion-constraint predicate and frees the dates for re-booking.
-export async function POST(
+async function handlePOST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -36,3 +36,5 @@ export async function POST(
   await recordAudit("reservation.cancel", "reservation", id, `Cancelled booking — ${reservation.guest.name}`).catch(() => {});
   return ok(reservation);
 }
+
+export const POST = withRoute(handlePOST);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fail, zodFail } from "@/lib/api";
+import { fail, zodFail, withRoute } from "@/lib/api";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { assistantStream } from "@/lib/assistant/transport";
 
@@ -19,7 +19,7 @@ const schema = z.object({
 const LIMIT = 20;
 const WINDOW_MS = 10 * 60 * 1000;
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (process.env.PUBLIC_CHAT_ENABLED !== "true") return fail("Not found", 404);
 
   const limit = rateLimit(`public-assistant:${clientIp(req)}`, LIMIT, WINDOW_MS);
@@ -36,3 +36,5 @@ export async function POST(req: Request) {
 
   return assistantStream(parsed.data.message, parsed.data.sessionId, "public");
 }
+
+export const POST = withRoute(handlePOST);

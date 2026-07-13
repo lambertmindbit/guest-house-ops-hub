@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { reportGuestAlert, listMyGuestAlerts, sharedGuestAlertsFor, lookupGuestAlert, ALERT_CATEGORIES } from "@/lib/community/badguest";
 import { recordAudit } from "@/lib/audit";
@@ -7,7 +7,7 @@ import { recordAudit } from "@/lib/audit";
 // Owner-only. Lists my alerts + peers' shared alerts; ?lookup=phone matches by
 // hash. CSV export lives at ./export.csv.
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
   const url = new URL(request.url);
@@ -30,7 +30,7 @@ const schema = z.object({
   evidenceNote: z.string().optional(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
 
@@ -47,3 +47,6 @@ export async function POST(request: Request) {
   await recordAudit("community.badguest.report", "shared_guest_alert", result.id, "Filed a bad-guest alert").catch(() => {});
   return ok({ id: result.id }, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

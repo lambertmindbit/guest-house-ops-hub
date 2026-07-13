@@ -55,11 +55,18 @@ export async function getAnalytics(from: string, to: string): Promise<Analytics>
   const nights = nightsBetween(fromDate, toDate);
 
   const [roomList, overlapping, arriving] = await Promise.all([
-    prisma.room.findMany({ include: { roomType: true } }),
+    prisma.room.findMany({ select: { roomType: { select: { name: true } } } }),
     // Confirmed stays overlapping the window drive occupancy/ADR/RevPAR/mix.
+    // Select only the fields the loop below reads, not whole related rows.
     prisma.reservation.findMany({
       where: { status: "confirmed", checkIn: { lt: toDate }, checkOut: { gt: fromDate } },
-      include: { channel: true, room: { include: { roomType: true } } },
+      select: {
+        checkIn: true,
+        checkOut: true,
+        grossAmount: true,
+        channel: { select: { name: true } },
+        room: { select: { roomType: { select: { name: true } } } },
+      },
     }),
     // Everything arriving in the window drives cancellation rate + avg LOS.
     prisma.reservation.findMany({

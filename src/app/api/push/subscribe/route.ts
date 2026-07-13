@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { saveSubscription, deleteSubscription } from "@/lib/push";
 
 // POST   /api/push/subscribe   — store a browser's Web Push subscription
@@ -11,7 +11,7 @@ const subscribeSchema = z.object({
   keys: z.object({ p256dh: z.string().max(500), auth: z.string().max(500) }),
 });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = subscribeSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -22,10 +22,13 @@ export async function POST(req: Request) {
 
 const unsubscribeSchema = z.object({ endpoint: z.string().url().max(1000) });
 
-export async function DELETE(req: Request) {
+async function handleDELETE(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = unsubscribeSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
   await deleteSubscription(parsed.data.endpoint);
   return ok({ unsubscribed: true });
 }
+
+export const POST = withRoute(handlePOST);
+export const DELETE = withRoute(handleDELETE);

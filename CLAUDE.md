@@ -19,8 +19,22 @@ A single small property *cannot* get direct real-time API access to Booking.com,
 
 ---
 
-## WHAT — current scope: Phase 1 (MVP) ONLY
-Build only Phase 1 now. Know the later phases (below) so your choices stay forward-compatible, but do not build them yet.
+## WHAT — original brief (Phase 1 MVP); the app is now well beyond it
+
+> **⚠️ Status (kept current): this section is the ORIGINAL Phase-1 brief, preserved
+> for context. It no longer describes the live system.** All six product
+> milestones plus three gap-analysis phases and the AI-agent work are built and in
+> production on `main` — bookings, calendar, guests, housekeeping, **pricing,
+> finance, analytics, check-in/out, guest CRM, staff/attendance, inventory,
+> vendors, transport, tours, complaints, reviews, a regional community network,
+> multi-property tenancy + RBAC, and a token-gated AI agent seam** (55 Prisma
+> models). For what's actually built vs. deferred, read [README.md](README.md#status)
+> and [docs/ROADMAP.md](docs/ROADMAP.md) — those are the source of truth for
+> current scope. **Do not treat "build only Phase 1" below as a live instruction.**
+> The parts of this file that ARE still binding: the WHY, the **Hard "do NOT"
+> rules**, the tech stack, and the data-model correctness core.
+
+The original Phase-1 deliverables and forward-looking roadmap follow, unchanged.
 
 **Phase 1 deliverables (in scope):**
 1. Project scaffold (stack below), runnable with one command, with a local Postgres via Docker Compose.

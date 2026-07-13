@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 
 const updateSchema = z
@@ -12,7 +12,7 @@ const updateSchema = z
   })
   .refine((d) => d.endDate >= d.startDate, { path: ["endDate"], message: "end must be on/after start" });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -32,7 +32,7 @@ export async function PATCH(
   return ok(season);
 }
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -43,3 +43,6 @@ export async function DELETE(
   await prisma.season.delete({ where: { id } });
   return ok({ deleted: true });
 }
+
+export const PATCH = withRoute(handlePATCH);
+export const DELETE = withRoute(handleDELETE);

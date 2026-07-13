@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 import { recordAudit } from "@/lib/audit";
@@ -9,7 +9,7 @@ import { recordAudit } from "@/lib/audit";
 // Owner-only (enforced by the middleware for /api/users). Users belong to the
 // owner's property.
 
-export async function GET() {
+async function handleGET() {
   const session = await getSession();
   const users = await prisma.user.findMany({
     where: session?.propertyId ? { propertyId: session.propertyId } : {},
@@ -25,7 +25,7 @@ const createSchema = z.object({
   role: z.enum(["owner", "reception", "housekeeping"]),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const session = await getSession();
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
@@ -45,3 +45,6 @@ export async function POST(request: Request) {
     throw error;
   }
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

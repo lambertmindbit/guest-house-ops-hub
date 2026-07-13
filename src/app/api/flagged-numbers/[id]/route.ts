@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { ok, fail } from "@/lib/api";
+import { ok, fail, withRoute } from "@/lib/api";
 
 // DELETE /api/flagged-numbers/[id] — remove a number from the scam list
 
-export async function DELETE(
+async function handleDELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -13,3 +13,5 @@ export async function DELETE(
   await prisma.flaggedNumber.delete({ where: { id } });
   return ok({ id });
 }
+
+export const DELETE = withRoute(handleDELETE);

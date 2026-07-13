@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import {
   listEscalations,
   createEscalation,
@@ -23,7 +23,7 @@ const Category = z.enum([
 const Severity = z.enum(["low", "medium", "high", "critical"]);
 const RelatedType = z.enum(["reservation", "guest", "trip", "none"]);
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   const url = new URL(req.url);
   const parse = z
     .object({
@@ -61,7 +61,7 @@ const CreateBody = z.object({
   relatedId: z.string().max(64).optional(),
 });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   let body: unknown;
   try {
     body = await req.json();
@@ -77,3 +77,6 @@ export async function POST(req: Request) {
   });
   return ok(escalation, 201);
 }
+
+export const GET = withRoute(handleGET);
+export const POST = withRoute(handlePOST);

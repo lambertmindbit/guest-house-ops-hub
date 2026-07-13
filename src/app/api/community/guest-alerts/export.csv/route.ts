@@ -1,4 +1,4 @@
-import { fail } from "@/lib/api";
+import { fail, withRoute } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { toCsv, csvResponse } from "@/lib/csv";
 import { listMyGuestAlerts } from "@/lib/community/badguest";
@@ -7,7 +7,7 @@ import { recordAudit } from "@/lib/audit";
 // CSV export of a property's own bad-guest alerts (owner-only via the
 // /api/community/guest-alerts/ prefix).
 
-export async function GET() {
+async function handleGET() {
   const session = await getSession();
   if (!session?.propertyId) return fail("No property is bound to your account.", 400);
 
@@ -19,3 +19,5 @@ export async function GET() {
   );
   return csvResponse("bad-guest-alerts.csv", body);
 }
+
+export const GET = withRoute(handleGET);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { agentTokenOk } from "@/lib/agent-auth";
@@ -24,7 +24,7 @@ const schema = z
     message: "end date must be after start date",
   });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
 
   let body: unknown;
@@ -58,3 +58,5 @@ export async function POST(req: Request) {
     201,
   );
 }
+
+export const POST = withRoute(handlePOST);

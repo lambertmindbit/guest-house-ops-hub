@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { applyMovement } from "@/lib/inventory";
 
 const schema = z.object({
@@ -7,7 +7,7 @@ const schema = z.object({
   reason: z.string().trim().min(1).nullable().optional(),
 });
 
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -19,3 +19,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   return ok(result.item);
 }
+
+export const POST = withRoute(handlePOST);

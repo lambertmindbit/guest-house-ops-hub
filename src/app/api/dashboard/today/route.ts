@@ -1,6 +1,8 @@
-import { ok } from "@/lib/api";
+import { ok, withRoute } from "@/lib/api";
 import { getTodaySummary } from "@/lib/dashboard";
 
-export async function GET() {
+async function handleGET() {
   return ok(await getTodaySummary());
 }
+
+export const GET = withRoute(handleGET);

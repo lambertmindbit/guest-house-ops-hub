@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { dateOnly } from "@/lib/dates";
 import { createTrip } from "@/lib/transport";
 
@@ -14,9 +14,11 @@ const schema = z.object({
   note: z.string().trim().min(1).nullable().optional(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
   return ok(await createTrip(parsed.data), 201);
 }
+
+export const POST = withRoute(handlePOST);

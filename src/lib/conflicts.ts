@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatDateOnly } from "@/lib/dates";
+import { requestPropertyId } from "@/lib/tenant";
 
 export type Conflict = {
   reservationId: string;
@@ -17,7 +18,8 @@ export type Conflict = {
 // nights. The DB already prevents two confirmed stays from overlapping, so this
 // is the realistic clash — e.g. an imported OTA date landing on top of a direct
 // booking. We find them with the daterange overlap (&&) and intersection (*).
-export async function getConflicts(): Promise<Conflict[]> {
+export async function getConflicts(propertyId?: string | null): Promise<Conflict[]> {
+  const pid = await requestPropertyId(propertyId);
   const rows = await prisma.$queryRaw<
     {
       reservation_id: string;
@@ -46,6 +48,8 @@ export async function getConflicts(): Promise<Conflict[]> {
     JOIN guests g  ON g.id = r.guest_id
     JOIN rooms rm  ON rm.id = r.room_id
     WHERE r.status = 'confirmed'
+      -- Tenant scope: filter to the acting property, or all when unscoped (null).
+      AND (${pid}::text IS NULL OR r.property_id = ${pid})
     ORDER BY ov_start;
   `;
 

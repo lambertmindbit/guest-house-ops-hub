@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, zodFail } from "@/lib/api";
+import { ok, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 
 // Pin or clear a manual nightly rate for a room type on one date (rate calendar).
@@ -10,7 +10,7 @@ const upsertSchema = z.object({
   rate: z.number().positive(),
 });
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = upsertSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
 const deleteSchema = z.object({ roomTypeId: z.string().min(1), date: dateOnly });
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = deleteSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -35,3 +35,6 @@ export async function DELETE(request: Request) {
   await prisma.rateOverride.deleteMany({ where: { roomTypeId, date: parseDateOnly(date) } });
   return ok({ deleted: true });
 }
+
+export const POST = withRoute(handlePOST);
+export const DELETE = withRoute(handleDELETE);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { isOverlapError } from "@/lib/db-errors";
 import { notifyBookingConfirmation } from "@/lib/messaging";
@@ -50,7 +50,7 @@ const reservationInclude = {
   room: { include: { roomType: true } },
 } as const;
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
@@ -117,7 +117,7 @@ const listSchema = z.object({
   to: dateOnly.optional(),
 });
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = listSchema.safeParse({
     from: searchParams.get("from") ?? undefined,
@@ -148,3 +148,6 @@ export async function GET(request: Request) {
   });
   return ok(reservations);
 }
+
+export const POST = withRoute(handlePOST);
+export const GET = withRoute(handleGET);

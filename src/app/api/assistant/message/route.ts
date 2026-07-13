@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zodFail } from "@/lib/api";
+import { zodFail, withRoute } from "@/lib/api";
 import { assistantStream } from "@/lib/assistant/transport";
 
 // POST /api/assistant/message — the in-app (owner/reception) assistant transport.
@@ -11,9 +11,11 @@ const schema = z.object({
   sessionId: z.string().max(128).optional(),
 });
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
   return assistantStream(parsed.data.message, parsed.data.sessionId, "owner");
 }
+
+export const POST = withRoute(handlePOST);

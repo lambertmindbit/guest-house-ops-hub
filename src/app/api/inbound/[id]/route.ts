@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { ok, fail, zodFail } from "@/lib/api";
+import { ok, fail, zodFail, withRoute } from "@/lib/api";
 
 // Update a staged inbound booking's status after review:
 //   imported  — the owner created the real reservation (we link its id)
@@ -10,7 +10,7 @@ const schema = z.object({
   reservationId: z.string().optional(),
 });
 
-export async function PATCH(
+async function handlePATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -35,3 +35,5 @@ export async function PATCH(
   });
   return ok(updated);
 }
+
+export const PATCH = withRoute(handlePATCH);

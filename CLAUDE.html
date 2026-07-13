@@ -54,8 +54,22 @@ A single small property <em>cannot</em> get direct real-time API access to Booki
 <li><strong>Do NOT add heavy dependencies or new services without asking first.</strong></li>
 </ul>
 <hr>
-<h2>WHAT — current scope: Phase 1 (MVP) ONLY</h2>
-<p>Build only Phase 1 now. Know the later phases (below) so your choices stay forward-compatible, but do not build them yet.</p>
+<h2>WHAT — original brief (Phase 1 MVP); the app is now well beyond it</h2>
+<blockquote>
+<p><strong>⚠️ Status (kept current): this section is the ORIGINAL Phase-1 brief, preserved
+for context. It no longer describes the live system.</strong> All six product
+milestones plus three gap-analysis phases and the AI-agent work are built and in
+production on <code>main</code> — bookings, calendar, guests, housekeeping, <strong>pricing,
+finance, analytics, check-in/out, guest CRM, staff/attendance, inventory,
+vendors, transport, tours, complaints, reviews, a regional community network,
+multi-property tenancy + RBAC, and a token-gated AI agent seam</strong> (55 Prisma
+models). For what&#39;s actually built vs. deferred, read <a href="README.html#status">README.md</a>
+and <a href="docs/ROADMAP.html">docs/ROADMAP.md</a> — those are the source of truth for
+current scope. <strong>Do not treat &quot;build only Phase 1&quot; below as a live instruction.</strong>
+The parts of this file that ARE still binding: the WHY, the <strong>Hard &quot;do NOT&quot;
+rules</strong>, the tech stack, and the data-model correctness core.</p>
+</blockquote>
+<p>The original Phase-1 deliverables and forward-looking roadmap follow, unchanged.</p>
 <p><strong>Phase 1 deliverables (in scope):</strong></p>
 <ol>
 <li>Project scaffold (stack below), runnable with one command, with a local Postgres via Docker Compose.</li>
