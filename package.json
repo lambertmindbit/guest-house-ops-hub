@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:new": "node scripts/migrate.mjs",
     "db:seed": "prisma db seed",
+    "db:demo": "node scripts/demo-data.mjs",
     "db:studio": "prisma studio",
     "shots": "node scripts/screenshots.mjs",
     "docs:html": "node scripts/md-to-html.mjs"
