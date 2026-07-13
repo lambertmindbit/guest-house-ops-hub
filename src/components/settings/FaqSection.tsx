@@ -108,6 +108,18 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
           {loadingPack ? "Loading…" : "Load starter pack"}
         </button>
       </div>
+
+      <div className="card card--pad" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: "var(--fs-small)" }}>Send these to the property to fill in</div>
+          <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>
+            Downloads every question — live and hidden — as a spreadsheet (opens in Excel or Google Sheets).
+          </div>
+        </div>
+        <a className="btn btn--ghost btn--sm" style={{ flex: "none" }} href="/api/faq/export.csv" download>
+          Export to spreadsheet
+        </a>
+      </div>
       {packMsg && (
         <p style={{ fontSize: "var(--fs-small)", color: "var(--green-text)", marginTop: 0 }}>{packMsg}</p>
       )}
