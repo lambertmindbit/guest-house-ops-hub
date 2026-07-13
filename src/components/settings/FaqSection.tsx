@@ -10,7 +10,10 @@ type Faq = { id: string; question: string; answer: string; category: string | nu
 
 const EMPTY = { question: "", answer: "", category: "", photos: "", mapLink: "" };
 
-export function FaqSection({ faqs }: { faqs: Faq[] }) {
+type ImportRow = { row: number; status: "created" | "updated" | "error"; message: string };
+type ImportPreview = { csv: string; fileName: string; created: number; updated: number; errors: number; results: ImportRow[] };
+
+export function FaqSection({ faqs, propertyName }: { faqs: Faq[]; propertyName?: string | null }) {
   const router = useRouter();
   const { confirm } = useConfirm();
   const [nf, setNf] = useState(EMPTY);
@@ -19,6 +22,8 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
   const [error, setError] = useState<string | null>(null);
   const [loadingPack, setLoadingPack] = useState(false);
   const [packMsg, setPackMsg] = useState<string | null>(null);
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [importing, setImporting] = useState(false);
 
   async function call(url: string, body: unknown, method = "POST") {
     setError(null);
@@ -44,6 +49,58 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
   async function saveEdit(id: string) {
     if (!edit.question.trim() || !edit.answer.trim()) return;
     if (await call(`/api/faq/${id}`, toBody(edit), "PATCH")) setEditId(null);
+  }
+
+  // Step 1: read the client's sheet and DRY-RUN it. Nothing is written — the owner
+  // sees exactly what would be added vs overwritten (and any bad rows) first.
+  async function pickImportFile(file: File) {
+    setError(null);
+    setPackMsg(null);
+    setPreview(null);
+    const csv = await file.text();
+    setImporting(true);
+    const res = await fetch("/api/import", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "faqs", csv, dryRun: true }),
+    });
+    setImporting(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setError(j.error ?? "Couldn't read that file. Is it the exported FAQ spreadsheet (saved as CSV)?");
+      return;
+    }
+    const j = await res.json();
+    setPreview({ csv, fileName: file.name, ...j.data });
+  }
+
+  // Step 2: apply for real, after the owner confirms the preview.
+  async function applyImport() {
+    if (!preview) return;
+    const okToApply = await confirm({
+      title: `Import ${preview.created + preview.updated} FAQ${preview.created + preview.updated === 1 ? "" : "s"}?`,
+      message:
+        `${preview.updated} existing answer${preview.updated === 1 ? "" : "s"} will be OVERWRITTEN and ${preview.created} new one${preview.created === 1 ? "" : "s"} added` +
+        (propertyName ? `, for “${propertyName}”.` : ".") +
+        " Nothing is deleted — if the sheet is wrong you can re-import a corrected one.",
+      confirmLabel: "Import",
+    });
+    if (!okToApply) return;
+    setImporting(true);
+    const res = await fetch("/api/import", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "faqs", csv: preview.csv, dryRun: false }),
+    });
+    setImporting(false);
+    if (!res.ok) {
+      setError("Import failed. Nothing was changed.");
+      return;
+    }
+    const j = await res.json();
+    setPreview(null);
+    setPackMsg(`Imported: ${j.data.updated} updated, ${j.data.created} added${j.data.errors ? `, ${j.data.errors} row(s) skipped` : ""}.`);
+    router.refresh();
   }
 
   async function loadStarterPack() {
@@ -120,6 +177,76 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
           Export to spreadsheet
         </a>
       </div>
+
+      <div className="card card--pad" style={{ marginBottom: 12 }}>
+        <div className="row" style={{ gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: "var(--fs-small)" }}>Upload the filled-in sheet</div>
+            <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>
+              Rows keep their <b>ID</b> to update an answer; leave the ID blank to add a new question.
+              You&apos;ll see exactly what changes before anything is saved.
+              {propertyName && <> Imports into <b>{propertyName}</b>.</>}
+            </div>
+          </div>
+          <label className="btn btn--ghost btn--sm" style={{ flex: "none", cursor: "pointer" }}>
+            {importing ? "Reading…" : "Choose CSV file"}
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              style={{ display: "none" }}
+              disabled={importing}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) pickImportFile(f);
+                e.target.value = ""; // allow re-picking the same file
+              }}
+            />
+          </label>
+        </div>
+
+        {preview && (
+          <div style={{ marginTop: 12, borderTop: "1px solid var(--border-subtle)", paddingTop: 12 }}>
+            <div style={{ fontWeight: 600, fontSize: "var(--fs-small)" }}>
+              {preview.fileName} — nothing saved yet
+            </div>
+            <div className="row" style={{ gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+              <span className="badge badge--good">{preview.created} to add</span>
+              <span className="badge badge--warn">{preview.updated} to overwrite</span>
+              {preview.errors > 0 && <span className="badge badge--danger">{preview.errors} bad row{preview.errors === 1 ? "" : "s"}</span>}
+            </div>
+
+            {preview.errors > 0 && (
+              <ul className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 8, paddingLeft: 18 }}>
+                {preview.results
+                  .filter((r) => r.status === "error")
+                  .slice(0, 8)
+                  .map((r) => (
+                    <li key={r.row}>Row {r.row}: {r.message}</li>
+                  ))}
+              </ul>
+            )}
+
+            <div className="row" style={{ gap: 7, marginTop: 10 }}>
+              <button
+                className="btn btn--primary btn--sm"
+                disabled={importing || preview.created + preview.updated === 0}
+                onClick={applyImport}
+              >
+                {importing ? "Importing…" : `Import ${preview.created + preview.updated}`}
+              </button>
+              <button className="btn btn--ghost btn--sm" disabled={importing} onClick={() => setPreview(null)}>
+                Cancel
+              </button>
+            </div>
+            {preview.errors > 0 && (
+              <p className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 8 }}>
+                Bad rows are skipped — the good ones still import.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       {packMsg && (
         <p style={{ fontSize: "var(--fs-small)", color: "var(--green-text)", marginTop: 0 }}>{packMsg}</p>
       )}

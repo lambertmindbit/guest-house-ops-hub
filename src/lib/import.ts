@@ -7,9 +7,9 @@ import { parseDateOnly } from "@/lib/dates";
 // so it inherits the no_overlapping_confirmed_stays 409 — the importer can NEVER
 // bypass the double-booking guarantee.
 
-export type ImportType = "guests" | "bookings";
-export type ImportRowResult = { row: number; status: "created" | "error"; message: string };
-export type ImportResult = { results: ImportRowResult[]; created: number; errors: number };
+export type ImportType = "guests" | "bookings" | "faqs";
+export type ImportRowResult = { row: number; status: "created" | "updated" | "error"; message: string };
+export type ImportResult = { results: ImportRowResult[]; created: number; updated: number; errors: number };
 
 // Minimal RFC-4180-ish parser: quoted fields, embedded commas/newlines, "" escapes.
 export function parseCsv(text: string): string[][] {
@@ -50,7 +50,7 @@ export async function importCsv(
 ): Promise<ImportResult> {
   const rows = parseCsv(csvText);
   if (rows.length < 2) {
-    return { results: [{ row: 1, status: "error", message: "No data rows found (need a header + at least one row)." }], created: 0, errors: 1 };
+    return { results: [{ row: 1, status: "error", message: "No data rows found (need a header + at least one row)." }], created: 0, updated: 0, errors: 1 };
   }
 
   const header = rows[0].map((h) => h.trim().toLowerCase());
@@ -61,6 +61,29 @@ export async function importCsv(
     }
     return -1;
   };
+
+  // Header lookup that tolerates a client renaming a column slightly — the FAQ
+  // sheet ships with "Answer (property to confirm / correct)", and people add
+  // notes to headers. Falls back to the first header STARTING with the name.
+  const colLike = (name: string) => {
+    const exact = col(name);
+    if (exact >= 0) return exact;
+    return header.findIndex((h) => h.startsWith(name));
+  };
+
+  // Preload the property's FAQs so a round-tripped sheet matches existing rows
+  // without a query per line — by ID, and ALSO by question text. The question
+  // fallback matters: a sheet that wasn't exported from the app (or lost its ID
+  // column in Excel) would otherwise re-add all 40 questions as duplicates, and a
+  // duplicated FAQ is exactly what confuses the guest bot.
+  const faqIds = new Set<string>();
+  const faqIdByQuestion = new Map<string, string>();
+  if (type === "faqs") {
+    for (const f of await prisma.faqEntry.findMany({ select: { id: true, question: true } })) {
+      faqIds.add(f.id);
+      faqIdByQuestion.set(f.question.trim().toLowerCase(), f.id);
+    }
+  }
 
   // Preload rooms/channels for booking resolution.
   const roomByLabel = new Map<string, string>();
@@ -103,6 +126,55 @@ export async function importCsv(
         };
         await prisma.guest.upsert({ where: { phone }, update: fields, create: { phone, ...fields } });
         results.push({ row: rowNo, status: "created", message: name });
+      } else if (type === "faqs") {
+        // Round-trip of the FAQ export: a row with an ID UPDATES that FAQ, a row
+        // with a blank ID ADDS one. Nothing is ever deleted, so a bad sheet can be
+        // corrected by re-importing rather than losing content.
+        const rawId = get(colLike("id"));
+        const question = get(colLike("question"));
+        const answer = get(colLike("answer"));
+        const category = get(colLike("category"));
+        const statusRaw = get(colLike("status")).toLowerCase();
+        // Anything that isn't clearly "live" stays hidden from guests — the safe
+        // default, since a blank/garbled status must never silently go live.
+        const active = /^(live|active|yes|true|on|show)/.test(statusRaw);
+
+        if (!question || !answer) {
+          results.push({ row: rowNo, status: "error", message: "Question and Answer are both required" });
+          continue;
+        }
+        if (rawId && !faqIds.has(rawId)) {
+          results.push({
+            row: rowNo,
+            status: "error",
+            message: `unknown ID "${rawId}" — clear the ID cell to add this as a new FAQ`,
+          });
+          continue;
+        }
+        // No ID? Fall back to matching the question, so re-importing a sheet
+        // updates in place instead of duplicating the whole FAQ.
+        const id = rawId || faqIdByQuestion.get(question.trim().toLowerCase()) || "";
+
+        const label = `${active ? "Live" : "Hidden"} · ${question.slice(0, 60)}`;
+        if (id) {
+          if (!opts.dryRun) {
+            await prisma.faqEntry.update({
+              where: { id },
+              data: { question, answer, category: category || null, active },
+            });
+          }
+          results.push({ row: rowNo, status: "updated", message: label });
+        } else {
+          if (!opts.dryRun) {
+            const made = await prisma.faqEntry.create({
+              data: { question, answer, category: category || null, active },
+            });
+            // Guard against the same question appearing twice in ONE sheet.
+            faqIds.add(made.id);
+            faqIdByQuestion.set(question.trim().toLowerCase(), made.id);
+          }
+          results.push({ row: rowNo, status: "created", message: label });
+        }
       } else {
         const phone = get(col("phone", "guestphone", "guest_phone"));
         const name = get(col("name", "guestname", "guest_name")) || phone;
@@ -169,6 +241,7 @@ export async function importCsv(
   }
 
   const created = results.filter((r) => r.status === "created").length;
+  const updated = results.filter((r) => r.status === "updated").length;
   const errors = results.filter((r) => r.status === "error").length;
-  return { results, created, errors };
+  return { results, created, updated, errors };
 }
