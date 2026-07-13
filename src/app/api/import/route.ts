@@ -5,7 +5,7 @@ import { importCsv } from "@/lib/import";
 // Owner-only (cookie-gated). Runs the guided CSV import; dryRun previews without
 // writing. Booking rows go through the guarded create path (409 on overlap).
 const schema = z.object({
-  type: z.enum(["guests", "bookings"]),
+  type: z.enum(["guests", "bookings", "faqs"]),
   csv: z.string().min(1),
   dryRun: z.boolean().optional(),
 });
