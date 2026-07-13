@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { EscalationView, EscalationStats } from "@/lib/escalations";
 import { displayINR, displayDMY } from "@/lib/format";
 import { useConfirm } from "@/components/ConfirmProvider";
+import { Icon, PageHead, EmptyState } from "@/components/ui";
 
-// A booking-request escalation's structured payload (see the Escalation.metadata
-// schema comment). Parsed loosely here — the server is the source of truth on
-// whether it's complete enough to approve; this just decides which UI to show.
+// Escalations queue: KPI strip → filterable ticket table → detail drawer.
+// Everything shown is real data on the Escalation model; there is deliberately NO
+// "reply to guest" composer, because the messaging outbox does not deliver yet —
+// a Send button that silently reaches nobody is worse than none. The drawer
+// instead offers tap-to-call / WhatsApp on the contact we DO have.
+
 type BookingMeta = {
   roomLabel?: string;
   roomTypeName?: string;
@@ -30,24 +34,19 @@ function bookingMeta(e: EscalationView): BookingMeta | null {
   return rec as BookingMeta;
 }
 
-// Escalations queue (matches the DPR Escalations screen — KPI strip + tabbed
-// ticket table + per-ticket triage). Uses only documented design-system classes
-// (.card .kpi .tbl .pill .btn .segmented .select .textarea .empty) and status
-// tokens, so it slots into globals.css without new dependencies.
-
 type Tab = "all" | "customer" | "driver";
 
-const SEVERITY_TONE: Record<string, { bg: string; fg: string }> = {
-  low: { bg: "var(--sys-fill)", fg: "var(--sys-label-2)" },
-  medium: { bg: "var(--warn-fill)", fg: "var(--warn-text)" },
-  high: { bg: "var(--clay-fill, var(--warn-fill))", fg: "var(--clay-text, var(--warn-text))" },
-  critical: { bg: "var(--danger-fill)", fg: "var(--danger-text)" },
+const SEVERITY_CLASS: Record<string, string> = {
+  low: "badge--neutral",
+  medium: "badge--warn",
+  high: "badge--danger",
+  critical: "badge--danger",
 };
-const STATUS_TONE: Record<string, { bg: string; fg: string }> = {
-  open: { bg: "var(--warn-fill)", fg: "var(--warn-text)" },
-  in_progress: { bg: "var(--tint-fill)", fg: "var(--tint-text)" },
-  resolved: { bg: "var(--good-fill)", fg: "var(--good-text)" },
-  dismissed: { bg: "var(--sys-fill)", fg: "var(--sys-label-3)" },
+const STATUS_CLASS: Record<string, string> = {
+  open: "badge--warn",
+  in_progress: "badge--sent",
+  resolved: "badge--good",
+  dismissed: "badge--neutral",
 };
 const STATUS_LABEL: Record<string, string> = {
   open: "Open",
@@ -62,12 +61,14 @@ const SOURCE_LABEL: Record<string, string> = {
   manual: "Manual",
 };
 
-function Pill({ tone, children }: { tone: { bg: string; fg: string }; children: React.ReactNode }) {
-  return (
-    <span className="badge" style={{ background: tone.bg, color: tone.fg }}>
-      {children}
-    </span>
-  );
+function ticketNo(id: string): string {
+  return `#${id.slice(-6).toUpperCase()}`;
+}
+
+function initials(name: string | null): string {
+  const n = (name ?? "").trim();
+  if (!n) return "?";
+  return n.split(/\s+/).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("");
 }
 
 function timeAgo(iso: string): string {
@@ -77,6 +78,19 @@ function timeAgo(iso: string): string {
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.round(hrs / 24)}d ago`;
+}
+
+function fmtMins(mins: number): string {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+// Digits only — what tel:/wa.me need.
+function dial(contact: string | null): string | null {
+  const d = (contact ?? "").replace(/\D/g, "");
+  return d.length >= 7 ? d : null;
 }
 
 export default function EscalationsClient({
@@ -89,8 +103,10 @@ export default function EscalationsClient({
   const router = useRouter();
   const [items, setItems] = useState<EscalationView[]>(initialItems);
   const [tab, setTab] = useState<Tab>("all");
-  const [showResolved, setShowResolved] = useState(false);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [statusF, setStatusF] = useState("active"); // active = open + in_progress
+  const [severityF, setSeverityF] = useState("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const stats = initialStats;
@@ -119,9 +135,8 @@ export default function EscalationsClient({
     [refetch],
   );
 
-  // Distinct from patch: POSTs to /approve (creates the reservation), and
-  // returns an error string on failure so the booking card can show it inline
-  // (a 409 room-conflict must NOT look like a silent no-op).
+  // Distinct from patch: POSTs to /approve (creates the reservation) and returns
+  // an error string on failure so a 409 room-conflict never looks like a no-op.
   const approveBooking = useCallback(
     async (id: string): Promise<string | null> => {
       setBusy(id);
@@ -140,56 +155,73 @@ export default function EscalationsClient({
     [refetch],
   );
 
-  const visible = items.filter((e) => {
-    if (!showResolved && (e.status === "resolved" || e.status === "dismissed")) return false;
-    if (tab === "customer") return e.category === "customer" || e.category === "booking" || e.category === "payment";
-    if (tab === "driver") return e.category === "driver";
-    return true;
-  });
+  const visible = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return items.filter((e) => {
+      if (statusF === "active" && (e.status === "resolved" || e.status === "dismissed")) return false;
+      if (statusF !== "active" && statusF !== "all" && e.status !== statusF) return false;
+      if (severityF !== "all" && e.severity !== severityF) return false;
+      if (tab === "customer" && !["customer", "booking", "payment"].includes(e.category)) return false;
+      if (tab === "driver" && e.category !== "driver") return false;
+      if (needle) {
+        const hay = `${e.title} ${e.raisedByName ?? ""} ${e.raisedByContact ?? ""} ${ticketNo(e.id)}`.toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      return true;
+    });
+  }, [items, q, statusF, severityF, tab]);
+
+  // Keep the drawer's ticket in sync with refetched data; close it if it vanishes.
+  const selected = selectedId ? items.find((e) => e.id === selectedId) ?? null : null;
+
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") setSelectedId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
 
   return (
     <main className="app-main">
-      <header style={{ marginBottom: 14 }}>
-        <h1 style={{ margin: 0, fontSize: "var(--fs-h2)" }}>Escalations</h1>
-        <p style={{ margin: "4px 0 0", color: "var(--sys-label-2)", fontSize: "var(--fs-body)" }}>
-          Requests the AI agents handed to a human, plus anything you raise by hand.
-        </p>
-      </header>
+      <PageHead
+        title="Escalations"
+        sub="Requests the AI agents handed to a human, plus anything you raise by hand."
+        right={
+          <button className="btn btn--ghost btn--sm" onClick={refetch}>
+            Refresh
+          </button>
+        }
+      />
 
-      {/* KPI strip */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          gap: 10,
-          marginBottom: 16,
-        }}
-      >
-        <div className="kpi">
-          <span className="kpi-label">Open</span>
-          <span className="kpi-value">{stats.openTotal}</span>
+      <div className="kpi-strip" style={{ marginTop: 14, marginBottom: 16 }}>
+        <div className="kpi-panel">
+          <div className="kpi-eyebrow">Open</div>
+          <div className="kpi-num">{stats.openTotal}</div>
+          <div className="kpi-ctx">waiting on you</div>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">In progress</span>
-          <span className="kpi-value">{stats.inProgress}</span>
+        <div className="kpi-panel">
+          <div className="kpi-eyebrow">In progress</div>
+          <div className="kpi-num">{stats.inProgress}</div>
+          <div className="kpi-ctx">claimed</div>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">Avg response</span>
-          <span className="kpi-value">
-            {stats.avgFirstResponseMins == null ? "—" : fmtMins(stats.avgFirstResponseMins)}
-          </span>
+        <div className="kpi-panel">
+          <div className="kpi-eyebrow">Avg response</div>
+          <div className="kpi-num">{stats.avgFirstResponseMins == null ? "—" : fmtMins(stats.avgFirstResponseMins)}</div>
+          <div className="kpi-ctx">time to first reply</div>
         </div>
-        <div className="kpi" style={stats.critical > 0 ? { borderColor: "var(--danger)" } : undefined}>
-          <span className="kpi-label">Critical</span>
-          <span className="kpi-value" style={stats.critical > 0 ? { color: "var(--danger)" } : undefined}>
+        <div className="kpi-panel">
+          <div className="kpi-eyebrow">Critical</div>
+          <div className="kpi-num" style={stats.critical > 0 ? { color: "var(--red-text)" } : undefined}>
             {stats.critical}
-          </span>
+          </div>
+          <div className="kpi-ctx">{stats.critical > 0 ? "needs attention" : "all clear"}</div>
         </div>
       </div>
 
-      {/* Tabs + show-resolved toggle */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-        <div className="segmented" role="tablist">
+      <div className="esc-toolbar">
+        <div className="esc-tabs" role="tablist">
           {(["all", "customer", "driver"] as Tab[]).map((t) => (
             <button
               key={t}
@@ -202,138 +234,204 @@ export default function EscalationsClient({
             </button>
           ))}
         </div>
-        <label style={{ marginLeft: "auto", display: "flex", gap: 7, alignItems: "center", fontSize: "var(--fs-body)" }}>
-          <input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} />
-          Show resolved
-        </label>
+        <input
+          className="input"
+          style={{ flex: 1, minWidth: 160 }}
+          placeholder="Search guest, title or ticket…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Search escalations"
+        />
+        <select className="select" style={{ width: "auto" }} value={statusF} onChange={(e) => setStatusF(e.target.value)} aria-label="Status">
+          <option value="active">Active</option>
+          <option value="all">All statuses</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="dismissed">Dismissed</option>
+        </select>
+        <select className="select" style={{ width: "auto" }} value={severityF} onChange={(e) => setSeverityF(e.target.value)} aria-label="Severity">
+          <option value="all">All severities</option>
+          {["critical", "high", "medium", "low"].map((s) => (
+            <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>
+          ))}
+        </select>
       </div>
 
       {visible.length === 0 ? (
-        <div className="empty">Nothing in the queue. When an agent escalates something, it lands here.</div>
+        <EmptyState>
+          {items.length === 0
+            ? "Nothing in the queue. When an agent escalates something, it lands here."
+            : "No tickets match those filters."}
+        </EmptyState>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-          {visible.map((e) => {
-            const open = expanded === e.id;
-            return (
-              <div key={e.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                {/* row */}
-                <button
-                  onClick={() => setExpanded(open ? null : e.id)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    background: "none",
-                    border: "none",
-                    padding: "12px 14px",
-                    cursor: "pointer",
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "flex-start",
+        <div className="tbl-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Ticket</th>
+                <th>Guest</th>
+                <th>Title</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((e) => (
+                <tr
+                  key={e.id}
+                  className={`esc-row${selectedId === e.id ? " is-sel" : ""}`}
+                  onClick={() => setSelectedId(e.id)}
+                  tabIndex={0}
+                  onKeyDown={(ev) => {
+                    if (ev.key === "Enter" || ev.key === " ") {
+                      ev.preventDefault();
+                      setSelectedId(e.id);
+                    }
                   }}
                 >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
-                      <Pill tone={SEVERITY_TONE[e.severity]}>{e.severity}</Pill>
-                      <Pill tone={STATUS_TONE[e.status]}>{STATUS_LABEL[e.status]}</Pill>
-                      <span style={{ fontSize: "var(--fs-meta)", color: "var(--sys-label-3)", fontWeight: 600 }}>
-                        {SOURCE_LABEL[e.source]}
+                  <td className="strong">{ticketNo(e.id)}</td>
+                  <td>
+                    <span className="esc-who">
+                      <span className="avatar" aria-hidden="true">{initials(e.raisedByName)}</span>
+                      <span style={{ minWidth: 0 }}>
+                        <span className="strong">{e.raisedByName || "Unknown"}</span>
+                        {e.raisedByContact && (
+                          <span className="muted" style={{ display: "block", fontSize: "var(--fs-meta)" }}>
+                            {e.raisedByContact}
+                          </span>
+                        )}
                       </span>
-                    </div>
-                    <div style={{ fontWeight: 600, fontSize: "var(--fs-body)", marginTop: 4 }}>{e.title}</div>
-                    <div style={{ fontSize: "var(--fs-small)", color: "var(--sys-label-2)", marginTop: 2 }}>
-                      {e.raisedByName || "Unknown"}
-                      {e.raisedByContact ? ` · ${e.raisedByContact}` : ""}
-                      {e.raisedByLang && e.raisedByLang !== "en" ? ` · ${e.raisedByLang.toUpperCase()}` : ""}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: "var(--fs-meta)", color: "var(--sys-label-3)", whiteSpace: "nowrap" }}>
-                    {timeAgo(e.createdAt)}
-                  </div>
-                </button>
-
-                {/* detail + actions */}
-                {open && (
-                  <div style={{ padding: "0 14px 14px", display: "grid", gap: 10 }}>
-                    {bookingMeta(e) ? (
-                      <BookingRequestCard
-                        e={e}
-                        meta={bookingMeta(e)!}
-                        busy={busy === e.id}
-                        onApprove={() => approveBooking(e.id)}
-                        onDecline={(note) => patch(e.id, { status: "dismissed", resolutionNote: note || "Declined" })}
-                      />
-                    ) : (
-                      <>
-                        <div style={{ fontSize: "var(--fs-body)", lineHeight: 1.5 }}>{e.summary}</div>
-
-                        {e.reason && (
-                          <div
-                            className="banner"
-                            style={{ fontSize: "var(--fs-small)", background: "var(--warn-fill)", color: "var(--warn-text)" }}
-                          >
-                            <strong>Why escalated:</strong> {e.reason}
-                          </div>
-                        )}
-
-                        {(e.originalText || e.translatedText) && (
-                          <div
-                            style={{
-                              fontSize: "var(--fs-small)",
-                              border: "1px solid var(--line)",
-                              borderRadius: "var(--r-md, 10px)",
-                              padding: "10px 12px",
-                              background: "var(--sys-fill)",
-                            }}
-                          >
-                            {e.originalText && (
-                              <div>
-                                <span style={{ color: "var(--sys-label-3)", fontWeight: 600 }}>
-                                  Original{e.raisedByLang ? ` (${e.raisedByLang.toUpperCase()})` : ""}:
-                                </span>{" "}
-                                {e.originalText}
-                              </div>
-                            )}
-                            {e.translatedText && (
-                              <div style={{ marginTop: e.originalText ? 6 : 0 }}>
-                                <span style={{ color: "var(--sys-label-3)", fontWeight: 600 }}>Translation:</span>{" "}
-                                {e.translatedText}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {e.relatedType !== "none" && e.relatedId && (
-                          <a
-                            href={relatedHref(e.relatedType, e.relatedId)}
-                            className="btn btn--outline btn--sm"
-                            style={{ justifySelf: "start" }}
-                          >
-                            Open {e.relatedType}
-                          </a>
-                        )}
-
-                        <TriageActions
-                          e={e}
-                          busy={busy === e.id}
-                          onPatch={(body) => patch(e.id, body)}
-                        />
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                    </span>
+                  </td>
+                  <td className="esc-title">{e.title}</td>
+                  <td><span className={`badge ${SEVERITY_CLASS[e.severity]}`}>{e.severity}</span></td>
+                  <td><span className={`badge ${STATUS_CLASS[e.status]}`}>{STATUS_LABEL[e.status]}</span></td>
+                  <td className="muted">{timeAgo(e.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      {selected && (
+        <>
+          <div className="esc-backdrop" onClick={() => setSelectedId(null)} />
+          <aside className="esc-drawer" role="dialog" aria-modal="true" aria-label={selected.title}>
+            <div className="esc-drawer__hd">
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: "var(--fs-h3)" }}>{selected.title}</div>
+                <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 3 }}>
+                  Ticket {ticketNo(selected.id)} · {SOURCE_LABEL[selected.source]} · {timeAgo(selected.createdAt)}
+                </div>
+              </div>
+              <button className="btn btn--quiet btn--icon btn--sm" onClick={() => setSelectedId(null)} aria-label="Close">
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+
+            <div className="esc-drawer__bd">
+              <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                <span className={`badge ${SEVERITY_CLASS[selected.severity]}`}>{selected.severity}</span>
+                <span className={`badge ${STATUS_CLASS[selected.status]}`}>{STATUS_LABEL[selected.status]}</span>
+              </div>
+
+              <div className="esc-block">
+                <div className="esc-block__lbl">Context summary</div>
+                <div style={{ fontSize: "var(--fs-small)", lineHeight: 1.55 }}>{selected.summary}</div>
+              </div>
+
+              {selected.reason && (
+                <div className="banner banner--warn" style={{ fontSize: "var(--fs-small)" }}>
+                  <span className="banner__txt"><strong>Why escalated:</strong> {selected.reason}</span>
+                </div>
+              )}
+
+              <GuestMessage e={selected} />
+              <GuestContact e={selected} />
+
+              {selected.relatedType !== "none" && selected.relatedId && (
+                <Link href={relatedHref(selected.relatedType, selected.relatedId)} className="btn btn--outline btn--sm" style={{ justifySelf: "start" }}>
+                  Open {selected.relatedType}
+                </Link>
+              )}
+
+              {bookingMeta(selected) ? (
+                <BookingRequestCard
+                  e={selected}
+                  meta={bookingMeta(selected)!}
+                  busy={busy === selected.id}
+                  onApprove={() => approveBooking(selected.id)}
+                  onDecline={(note) => patch(selected.id, { status: "dismissed", resolutionNote: note || "Declined" })}
+                />
+              ) : (
+                <TriageActions e={selected} busy={busy === selected.id} onPatch={(body) => patch(selected.id, body)} />
+              )}
+            </div>
+          </aside>
+        </>
       )}
     </main>
   );
 }
 
-// A booking request from the public widget: structured detail + a direct
-// decision (Approve & book creates the reservation right here; Decline sends
-// it to dismissed) — no severity dropdown or generic Claim/Resolve, which
-// don't mean anything for "should I take this booking or not."
+// The guest's own words. When we have both the original (often Khasi/Hindi) and a
+// translation, let the reader flip between them — the local-language moat.
+function GuestMessage({ e }: { e: EscalationView }) {
+  const both = !!e.originalText && !!e.translatedText;
+  const [local, setLocal] = useState(false);
+  if (!e.originalText && !e.translatedText) return null;
+
+  const lang = e.raisedByLang ? e.raisedByLang.toUpperCase() : "Original";
+  const text = both ? (local ? e.originalText : e.translatedText) : (e.translatedText ?? e.originalText);
+
+  return (
+    <div className="esc-block">
+      <div className="spread" style={{ alignItems: "center", marginBottom: 5 }}>
+        <div className="esc-block__lbl" style={{ marginBottom: 0 }}>What the guest said</div>
+        {both && (
+          <div className="esc-tabs" style={{ padding: 2 }}>
+            <button className={!local ? "is-active" : ""} onClick={() => setLocal(false)}>EN</button>
+            <button className={local ? "is-active" : ""} onClick={() => setLocal(true)}>{lang}</button>
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: "var(--fs-small)", lineHeight: 1.55 }}>{text}</div>
+    </div>
+  );
+}
+
+// No reply composer on purpose (the outbox doesn't deliver yet). What the owner
+// actually does is phone the guest — so surface that, on the contact we have.
+function GuestContact({ e }: { e: EscalationView }) {
+  const d = dial(e.raisedByContact);
+  if (!e.raisedByName && !e.raisedByContact) return null;
+
+  return (
+    <div className="esc-block">
+      <div className="esc-block__lbl">Guest</div>
+      <div style={{ fontSize: "var(--fs-small)", fontWeight: 600 }}>{e.raisedByName || "Unknown"}</div>
+      {e.raisedByContact && (
+        <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>{e.raisedByContact}</div>
+      )}
+      {d && (
+        <div className="row" style={{ gap: 6, marginTop: 9 }}>
+          <a className="btn btn--outline btn--sm" href={`tel:${d}`}>
+            <Icon name="phone" size={14} /> Call
+          </a>
+          <a className="btn btn--outline btn--sm" href={`https://wa.me/${d}`} target="_blank" rel="noopener noreferrer">
+            WhatsApp
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A booking request from the public widget: structured detail + a direct decision
+// (Approve & book creates the reservation right here; Decline dismisses it).
 function BookingRequestCard({
   e,
   meta,
@@ -378,51 +476,40 @@ function BookingRequestCard({
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <div
-        style={{
-          border: "1px solid var(--line)",
-          borderRadius: "var(--r-md, 10px)",
-          padding: "10px 12px",
-          display: "grid",
-          gap: 4,
-          fontSize: "var(--fs-small)",
-        }}
-      >
+      <div className="esc-block">
+        <div className="esc-block__lbl">Booking request</div>
         <div style={{ fontWeight: 700, fontSize: "var(--fs-body)" }}>
-          {meta.roomLabel} <span style={{ fontWeight: 400, color: "var(--sys-label-2)" }}>· {meta.roomTypeName}</span>
+          {meta.roomLabel} <span className="muted" style={{ fontWeight: 400 }}>· {meta.roomTypeName}</span>
         </div>
-        <div>{meta.checkIn && displayDMY(meta.checkIn)} → {meta.checkOut && displayDMY(meta.checkOut)}{meta.nights ? ` · ${meta.nights} night${meta.nights === 1 ? "" : "s"}` : ""}</div>
-        <div>{meta.guestName} · {meta.guestPhone}</div>
+        <div style={{ fontSize: "var(--fs-small)", marginTop: 3 }}>
+          {meta.checkIn && displayDMY(meta.checkIn)} → {meta.checkOut && displayDMY(meta.checkOut)}
+          {meta.nights ? ` · ${meta.nights} night${meta.nights === 1 ? "" : "s"}` : ""}
+        </div>
         {typeof meta.total === "number" && (
-          <div style={{ fontWeight: 600 }}>{displayINR(meta.total)}</div>
+          <div style={{ fontWeight: 600, marginTop: 3 }}>{displayINR(meta.total)}</div>
         )}
       </div>
 
       {terminal ? (
         <div style={{ fontSize: "var(--fs-small)" }}>
           {e.status === "resolved" ? (
-            <div style={{ color: "var(--good-text)", fontWeight: 600 }}>
+            <div style={{ color: "var(--green-text)", fontWeight: 600 }}>
               ✓ Booked
               {e.relatedType === "reservation" && e.relatedId && (
-                <>
-                  {" — "}
-                  <Link href={`/reservations/${e.relatedId}`} className="btn btn--outline btn--sm" style={{ marginLeft: 6 }}>
-                    Open reservation
-                  </Link>
-                </>
+                <Link href={`/reservations/${e.relatedId}`} className="btn btn--outline btn--sm" style={{ marginLeft: 8 }}>
+                  Open reservation
+                </Link>
               )}
             </div>
           ) : (
-            <div style={{ color: "var(--sys-label-2)" }}>
-              Declined{e.resolutionNote ? ` — ${e.resolutionNote}` : ""}
-            </div>
+            <div className="muted">Declined{e.resolutionNote ? ` — ${e.resolutionNote}` : ""}</div>
           )}
         </div>
       ) : (
         <>
           {error && (
-            <div className="banner" style={{ fontSize: "var(--fs-small)", background: "var(--danger-fill)", color: "var(--danger-text)" }}>
-              {error}
+            <div className="banner banner--danger" style={{ fontSize: "var(--fs-small)" }}>
+              <span className="banner__txt">{error}</span>
             </div>
           )}
           {declining ? (
@@ -434,14 +521,14 @@ function BookingRequestCard({
                 onChange={(ev) => setNote(ev.target.value)}
                 rows={2}
               />
-              <div style={{ display: "flex", gap: 7 }}>
+              <div className="row" style={{ gap: 7 }}>
                 <button className="btn btn--danger btn--sm" disabled={busy} onClick={handleDecline}>Confirm decline</button>
                 <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => setDeclining(false)}>Back</button>
               </div>
             </div>
           ) : (
-            <div style={{ display: "flex", gap: 7 }}>
-              <button className="btn btn--good btn--sm" disabled={busy} onClick={handleApprove}>
+            <div className="row" style={{ gap: 7 }}>
+              <button className="btn btn--success btn--sm" disabled={busy} onClick={handleApprove}>
                 {busy ? "Booking…" : "Approve & book"}
               </button>
               <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => setDeclining(true)}>Decline</button>
@@ -466,34 +553,28 @@ function TriageActions({
   const terminal = e.status === "resolved" || e.status === "dismissed";
 
   return (
-    <div style={{ display: "grid", gap: 8 }}>
-      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
-        <label style={{ fontSize: "var(--fs-small)", color: "var(--sys-label-3)" }}>Severity</label>
+    <div style={{ display: "grid", gap: 9 }}>
+      <div className="row" style={{ gap: 7, flexWrap: "wrap", alignItems: "center" }}>
+        <label className="muted" style={{ fontSize: "var(--fs-small)" }}>Severity</label>
         <select
           className="select"
           value={e.severity}
           disabled={busy}
           onChange={(ev) => onPatch({ severity: ev.target.value })}
-          style={{ width: "auto", padding: "5px 8px", fontSize: "var(--fs-small)" }}
+          style={{ width: "auto" }}
         >
           {["low", "medium", "high", "critical"].map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
+            <option key={s} value={s}>{s}</option>
           ))}
         </select>
 
         {e.status === "open" && (
-          <button className="btn btn--sm" disabled={busy} onClick={() => onPatch({ status: "in_progress" })}>
+          <button className="btn btn--primary btn--sm" disabled={busy} onClick={() => onPatch({ status: "in_progress" })}>
             Claim
           </button>
         )}
         {!terminal && (
-          <button
-            className="btn btn--ghost btn--sm"
-            disabled={busy}
-            onClick={() => onPatch({ status: "dismissed" })}
-          >
+          <button className="btn btn--ghost btn--sm" disabled={busy} onClick={() => onPatch({ status: "dismissed" })}>
             Dismiss
           </button>
         )}
@@ -505,18 +586,18 @@ function TriageActions({
       </div>
 
       {!terminal && (
-        <div style={{ display: "flex", gap: 7, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div style={{ display: "grid", gap: 7 }}>
           <textarea
             className="textarea"
             placeholder="Resolution note (optional)"
             value={note}
             onChange={(ev) => setNote(ev.target.value)}
             rows={2}
-            style={{ flex: 1, minWidth: 200 }}
           />
           <button
-            className="btn btn--good btn--sm"
+            className="btn btn--success btn--sm"
             disabled={busy}
+            style={{ justifySelf: "start" }}
             onClick={() => onPatch({ status: "resolved", resolutionNote: note || null })}
           >
             Resolve
@@ -525,7 +606,7 @@ function TriageActions({
       )}
 
       {terminal && e.resolutionNote && (
-        <div style={{ fontSize: "var(--fs-small)", color: "var(--sys-label-2)" }}>
+        <div className="muted" style={{ fontSize: "var(--fs-small)" }}>
           <strong>Resolution:</strong> {e.resolutionNote}
         </div>
       )}
@@ -537,11 +618,4 @@ function relatedHref(type: string, id: string): string {
   if (type === "reservation") return `/reservations/${id}`;
   if (type === "guest") return `/guests/${id}`;
   return "#";
-}
-
-function fmtMins(mins: number): string {
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
 }

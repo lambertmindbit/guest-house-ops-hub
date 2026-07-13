@@ -15,7 +15,10 @@ button { cursor: pointer; }
    for the fixed tab bar (refined in the redesign shell rules below). */
 .app-main { width: 100%; max-width: 1120px; margin: 0 auto; padding: 18px 17px 96px; }
 @media (min-width: 900px) {
-  .app-main { margin: 0 0 0 230px; max-width: 1230px; padding: 76px 40px 56px; }
+  /* width:auto (not the base 100%) — with the 230px margin clearing the fixed
+     sidebar, 100% would resolve to the full viewport and push the page 230px
+     wider than the screen, clipping every page's right edge on a <1460px laptop. */
+  .app-main { width: auto; margin: 0 0 0 230px; max-width: 1230px; padding: 76px 40px 56px; }
 }
 
 /* simple KPI grid (2-up phone, 4-up desktop) for standalone KPI cards */
@@ -647,3 +650,34 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .navmock { display: flex; gap: 4px; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 7px 9px; margin: 8px 0; }
 .navmock i { flex: 1; text-align: center; font-size: 11px; color: var(--text-muted); font-style: normal; }
 .navmock .fabm { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+
+/* ── Escalations queue ─────────────────────────────────────────────────────
+   Triage table + a detail drawer (side panel on desktop, bottom sheet on the
+   phone). Built on the existing tokens/badges — the old screen referenced a
+   pre-redesign token set that no longer exists, so its pills and KPIs rendered
+   unstyled. */
+.esc-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.esc-tabs { display: inline-flex; background: var(--surface-3); border-radius: var(--r-md); padding: 3px; gap: 2px; }
+.esc-tabs button { border: 0; background: transparent; padding: 6px 12px; border-radius: var(--r-sm);
+  font-size: var(--fs-small); font-weight: 600; color: var(--text-muted); cursor: pointer; }
+.esc-tabs button.is-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-xs); }
+.esc-row { cursor: pointer; }
+.esc-row.is-sel td { background: var(--accent-bg); }
+.esc-who { display: flex; align-items: center; gap: 8px; }
+.esc-title { white-space: normal; max-width: 34ch; }
+
+.esc-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(11, 28, 48, 0.4); }
+.esc-drawer { position: fixed; z-index: 71; background: var(--surface); display: flex; flex-direction: column;
+  box-shadow: var(--shadow-lg); }
+@media (min-width: 900px) {
+  .esc-drawer { top: 0; right: 0; bottom: 0; width: min(460px, 92vw); border-left: 1px solid var(--border); }
+}
+@media (max-width: 899px) {
+  .esc-drawer { left: 0; right: 0; bottom: 0; max-height: 88vh; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+}
+.esc-drawer__hd { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px;
+  border-bottom: 1px solid var(--border-subtle); flex: none; }
+.esc-drawer__bd { padding: 16px 18px 24px; overflow-y: auto; display: grid; gap: 14px; }
+.esc-block { border: 1px solid var(--border); border-radius: var(--r-md); padding: 11px 13px; background: var(--surface-2); }
+.esc-block__lbl { font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-subtle); margin-bottom: 5px; }
