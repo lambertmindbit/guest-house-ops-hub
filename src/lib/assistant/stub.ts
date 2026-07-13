@@ -33,6 +33,54 @@ async function roomCards(checkIn: string, checkOut: string): Promise<RoomCardDat
     });
 }
 
+// Word tokens for FAQ matching: lowercase, drop a trailing plural 's', drop
+// common stop-words so "is there a pool?" reduces to {pool}.
+const STOP = new Set([
+  "is", "are", "do", "does", "did", "the", "a", "an", "you", "your", "our", "have",
+  "has", "there", "any", "some", "can", "could", "would", "i", "we", "to", "of",
+  "in", "on", "for", "with", "and", "or", "at", "it", "this", "that", "get", "me",
+  "my", "please", "here", "about", "will", "was", "how", "what", "when", "where",
+]);
+function faqTokens(s: string): Set<string> {
+  const out = new Set<string>();
+  for (let w of s.toLowerCase().match(/[a-z]+/g) ?? []) {
+    if (w.length > 3 && w.endsWith("s")) w = w.slice(0, -1);
+    if (w.length >= 2 && !STOP.has(w)) out.add(w);
+  }
+  return out;
+}
+
+// Pure matcher (exported for tests): pick the answer whose question+category
+// shares the most content words with the guest's message. Requires at least one
+// meaningful overlap, so an unrelated message returns null rather than a random FAQ.
+export function bestFaqMatch(
+  message: string,
+  faqs: { question: string; answer: string; category?: string | null }[],
+): string | null {
+  const q = faqTokens(message);
+  if (q.size === 0) return null;
+  let best: { score: number; answer: string } | null = null;
+  for (const f of faqs) {
+    const hay = faqTokens(`${f.question} ${f.category ?? ""}`);
+    let score = 0;
+    for (const w of q) if (hay.has(w)) score += 1;
+    if (score > 0 && (!best || score > best.score)) best = { score, answer: f.answer };
+  }
+  return best ? best.answer : null;
+}
+
+// Best-effort FAQ answer from the owner's ACTIVE FAQ (the same content the real
+// agent uses). Keeps the fallback useful when the agent is briefly unreachable
+// (e.g. a cold start) — before this, any non-booking question got a canned line.
+async function matchFaqAnswer(message: string): Promise<string | null> {
+  if (faqTokens(message).size === 0) return null;
+  const faqs = await prisma.faqEntry.findMany({
+    where: { active: true },
+    select: { question: true, answer: true, category: true },
+  });
+  return bestFaqMatch(message, faqs);
+}
+
 const GREETING =
   "Namaste! 👋 I can check which rooms are free, quote a price, and start a booking. " +
   "Try: *rooms free 2026-08-01 to 2026-08-03*.";
@@ -115,8 +163,20 @@ export async function buildTurn(message: string): Promise<StreamChunk[]> {
         text("✅ In the live assistant this books the room through the PMS — with the double-booking check and an owner-visible record. This preview doesn't save a booking yet.");
         break;
 
-      default:
-        text("I can help with **availability**, **prices**, and **bookings**. Try *rooms free 2026-08-01 to 2026-08-03*.");
+      default: {
+        // Try to answer a property question ("is there a pool?") from the owner's
+        // FAQ before falling back to the generic capability line.
+        const answer = await matchFaqAnswer(message);
+        if (answer) {
+          text(answer);
+        } else {
+          text(
+            "I can check **room availability**, quote a **price**, and start a **booking** — " +
+              "try *rooms free 2026-08-01 to 2026-08-03*. For anything else about the property, " +
+              "I'll pass your question to the host.",
+          );
+        }
+      }
     }
   } catch {
     out.length = 0;

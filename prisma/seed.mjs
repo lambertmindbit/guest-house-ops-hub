@@ -1,7 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import { scryptSync, randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 const prisma = new PrismaClient();
+
+// The comprehensive traveller-FAQ starter pack (shared with the app's in-app
+// loader). Seeded as INACTIVE drafts — the owner reviews each and switches on the
+// ones true for their property, so the bot never speaks an unverified default.
+const STARTER_FAQS = JSON.parse(
+  readFileSync(new URL("../src/lib/faq-starter.json", import.meta.url), "utf8"),
+);
 
 // Mirrors src/lib/password.ts (scrypt$salt$hash). Inlined because the seed is
 // plain .mjs and can't import the TS helper.
@@ -272,7 +280,17 @@ async function ensureBy(model, where, data) {
 }
 
 async function seedFaqs(propertyId) {
+  // The core few, active out of the box.
   for (const f of FAQS) await ensureBy("faqEntry", { question: f.question, propertyId }, { ...f, propertyId });
+  // The comprehensive pack, as inactive drafts for the owner to review + switch on.
+  let sortOrder = 100;
+  for (const f of STARTER_FAQS) {
+    await ensureBy(
+      "faqEntry",
+      { question: f.question, propertyId },
+      { question: f.question, answer: f.answer, category: f.category, active: false, sortOrder: sortOrder++, propertyId },
+    );
+  }
 }
 
 async function seedAssistantPolicies(propertyId) {

@@ -18,11 +18,16 @@ REGION="${REGION:-asia-south1}"
 SERVICE="${SERVICE:-ota-guest-agent}"
 # Safe default 1 (in-memory sessions). Only raise this WITH SESSION_DB_URL set.
 MAX_INSTANCES="${MAX_INSTANCES:-1}"
+# MIN_INSTANCES=1 keeps one instance warm so the FIRST guest question after an idle
+# spell doesn't hit a cold start (which times out and drops to the limited Phase-1
+# fallback). Default 0 = scale-to-zero (cheapest); set 1 for a snappy always-on bot.
+MIN_INSTANCES="${MIN_INSTANCES:-0}"
 
-echo "▸ Deploying ${SERVICE} to ${REGION} with max-instances=${MAX_INSTANCES}…"
+echo "▸ Deploying ${SERVICE} to ${REGION} (min=${MIN_INSTANCES}, max=${MAX_INSTANCES})…"
 gcloud run deploy "${SERVICE}" \
   --source . \
   --region "${REGION}" \
+  --min-instances="${MIN_INSTANCES}" \
   --max-instances="${MAX_INSTANCES}" \
   --quiet
 
