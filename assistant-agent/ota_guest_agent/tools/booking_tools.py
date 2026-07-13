@@ -48,6 +48,46 @@ async def _file_escalation(body: dict[str, Any]) -> dict[str, Any]:
 _client = OtaClient()
 
 
+def _capacity(rooms: list[dict[str, Any]]) -> tuple[int, int, int]:
+    """(room_count, whole-property sleeps, largest single room) — the real limits.
+
+    Without this the tools only compared a party against ONE room, so a request for
+    60 people at a 7-room, 20-bed homestay came back with "try two rooms" — which is
+    nonsense. Knowing the TOTAL lets the agent say plainly what it can't do.
+    """
+    if not rooms:
+        return (0, 0, 0)
+    occ = [int(r.get("maxOccupancy") or 0) for r in rooms]
+    return (len(rooms), sum(occ), max(occ))
+
+
+def _over_capacity(guests: int, rooms: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """A party the whole property cannot host, no matter the dates. Returns the
+    tool result to send back, or None when the group does fit somehow."""
+    count, total, largest = _capacity(rooms)
+    if total and guests > total:
+        return {
+            "status": "over_capacity",
+            "party_size": guests,
+            "property_sleeps": total,
+            "property_rooms": count,
+            "largest_room_sleeps": largest,
+            # No rooms are offered for an impossible party. Both callers' count
+            # fields are pinned to 0 so nothing downstream (or the model) can read
+            # a CAPACITY number as a number of rooms being shown.
+            "room_count": 0,
+            "available_count": 0,
+            "message": (
+                f"The WHOLE property sleeps {total} across {count} rooms (largest room "
+                f"sleeps {largest}), so a group of {guests} cannot be hosted — not on any "
+                f"dates, not by combining rooms. Tell the guest this plainly, with these "
+                f"real numbers. Do NOT imply extra rooms or other dates could work, and do "
+                f"NOT show rooms. Offer to pass the enquiry to the property."
+            ),
+        }
+    return None
+
+
 def _push_ui(tool_context: ToolContext, component: dict[str, Any]) -> None:
     # Re-ASSIGN the whole list (not an in-place append): ADK records state changes
     # as deltas keyed by __setitem__, so an in-place mutation of a nested list is
@@ -87,12 +127,25 @@ async def list_rooms(tool_context: ToolContext, guests: int = 0) -> dict[str, An
         for r in rooms
     ]
     if guests > 0:
-        rooms = sorted((r for r in rooms if r["maxOccupancy"] >= guests), key=lambda r: r["maxOccupancy"])
-        if not rooms:
+        blocked = _over_capacity(guests, rooms)
+        if blocked:
+            return blocked
+        count, total, largest = _capacity(rooms)
+        fitting = sorted((r for r in rooms if r["maxOccupancy"] >= guests), key=lambda r: r["maxOccupancy"])
+        if not fitting:
+            # Fits in the property overall, just not in ONE room.
             return {
-                "status": "success", "room_count": 0,
-                "message": f"No room sleeps {guests} — the largest fits fewer. Suggest a smaller group size or two rooms.",
+                "status": "needs_multiple_rooms",
+                "party_size": guests,
+                "largest_room_sleeps": largest,
+                "property_sleeps": total,
+                "message": (
+                    f"No single room sleeps {guests} (the largest sleeps {largest}), but the "
+                    f"property sleeps {total} in total, so the group would need SEVERAL rooms. "
+                    f"Say that, and offer to pass it to the property to arrange."
+                ),
             }
+        rooms = fitting
 
     # Empty dates → the card renders as a browse gallery (no Book buttons); the
     # guest picks dates before booking. Mirrors the reference's rooms_get_details.
@@ -128,14 +181,33 @@ async def check_availability(tool_context: ToolContext, check_in: str, check_out
         return {"status": "error", "message": str(e)}
 
     if guests > 0:
+        # Capacity is a property fact, so it must come from the FULL catalog — the
+        # free list alone would make a fully-booked night look "over capacity".
+        try:
+            catalog = await _client.rooms()
+        except OtaError:
+            catalog = free  # best effort; the filter below still applies
+        blocked = _over_capacity(guests, catalog)
+        if blocked:
+            return blocked
+
         # Smallest room that still fits first — a group of 2 shouldn't see the
         # 6-person suite ahead of a room sized for them.
-        free = sorted((r for r in free if r["maxOccupancy"] >= guests), key=lambda r: r["maxOccupancy"])
-        if not free:
+        fitting = sorted((r for r in free if r["maxOccupancy"] >= guests), key=lambda r: r["maxOccupancy"])
+        if not fitting:
+            _, total, largest = _capacity(catalog)
             return {
-                "status": "success", "available_count": 0,
-                "message": f"No room sleeps {guests} for {check_in} to {check_out} — the largest fits fewer. Want me to check a smaller group size, or suggest booking two rooms?",
+                "status": "needs_multiple_rooms",
+                "available_count": 0,
+                "party_size": guests,
+                "largest_room_sleeps": largest,
+                "message": (
+                    f"No single free room sleeps {guests} for {check_in} to {check_out} (the "
+                    f"largest sleeps {largest}; the property sleeps {total} in total). The group "
+                    f"would need several rooms — say so and offer to pass it to the property."
+                ),
             }
+        free = fitting
 
     if not free:
         return {"status": "success", "available_count": 0, "message": f"No rooms are free for {check_in} to {check_out}."}

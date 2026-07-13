@@ -20,12 +20,18 @@ function stubStream(message: string): Response {
   return new Response(stream, { headers: NDJSON_HEADERS });
 }
 
-// If the agent hasn't started responding within this window (cold start, an
-// overloaded single instance, a stuck upstream), abort and fall back to the stub
-// rather than making the guest wait out the platform function timeout. The abort
-// only bounds time-to-first-byte: fetch resolves when the response HEADERS
-// arrive, after which the NDJSON body streams unbounded (a long turn is fine).
-const AGENT_CONNECT_TIMEOUT_MS = 15_000;
+// If the agent hasn't started responding within this window, abort and fall back
+// to the stub. The abort only bounds time-to-first-byte: fetch resolves when the
+// response HEADERS arrive, after which the NDJSON body streams unbounded.
+//
+// This was 15s, which was far too tight: a WARM, single-tool turn measured ~10s,
+// so a cold start or a multi-tool turn silently blew the budget and dropped the
+// guest onto the Phase-1 stub — which knows nothing about the property and
+// answered a "60 people + pool" question with "which room and dates?". The stub is
+// a much worse outcome than waiting a few more seconds for the real agent, so give
+// the agent room. (Keeping the agent warm — Cloud Run min-instances=1 — is what
+// actually prevents the cold start; this is the safety margin behind it.)
+const AGENT_CONNECT_TIMEOUT_MS = 30_000;
 
 async function proxyToAgent(message: string, sessionId: string | undefined, mode: "owner" | "public"): Promise<Response | null> {
   const url = process.env.ASSISTANT_AGENT_URL;
