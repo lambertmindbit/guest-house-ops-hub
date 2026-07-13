@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { displayINR, displayDMY } from "@/lib/format";
-import type { UIComponent } from "@/lib/assistant/types";
+import type { UIComponent, MetricsCardData } from "@/lib/assistant/types";
+
+// Charts (Recharts) are OWNER-console only, so they load lazily — a guest asking
+// about the pool must not pull a charting library into the public chat bundle.
+const ChartCard = dynamic(() => import("./ConsoleCharts").then((m) => m.ChartCard), {
+  ssr: false,
+  loading: () => <div className="card card--pad muted" style={{ fontSize: "var(--fs-small)" }}>Drawing chart…</div>,
+});
 
 // The generative-UI registry: maps an assistant-emitted descriptor { type, data }
 // to a React component, built on the existing design system (card / btn / badge /
@@ -27,7 +35,42 @@ export function RenderComponent({ component, onAction, disabled }: { component: 
       return <FaqMediaCard c={component} />;
     case "availability":
       return <AvailabilityCard c={component} />;
+    case "metrics":
+      return <MetricsCard data={component.data} />;
+    case "chart":
+      return <ChartCard data={component.data} />;
   }
+}
+
+// Headline numbers as tiles. The agent sends values PRE-FORMATTED (₹, %, counts)
+// so the UI never re-does the maths and can never disagree with what it said.
+const TONE_CLASS: Record<string, string> = {
+  good: "console-tile--good",
+  warn: "console-tile--warn",
+  danger: "console-tile--danger",
+};
+
+function MetricsCard({ data }: { data: MetricsCardData }) {
+  if (!data.tiles?.length) return null;
+  return (
+    <div className="card card--pad console-card">
+      <div className="console-card__hd">
+        <div>
+          <div className="console-card__title">{data.title}</div>
+          {data.subtitle && <div className="console-card__sub">{data.subtitle}</div>}
+        </div>
+      </div>
+      <div className="console-tiles">
+        {data.tiles.map((t) => (
+          <div key={t.label} className={`console-tile ${t.tone ? TONE_CLASS[t.tone] ?? "" : ""}`}>
+            <div className="console-tile__label">{t.label}</div>
+            <div className="console-tile__value">{t.value}</div>
+            {t.context && <div className="console-tile__ctx">{t.context}</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function FaqMediaCard({ c }: { c: Extract<UIComponent, { type: "faq_media" }> }) {

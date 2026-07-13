@@ -99,3 +99,35 @@ def otp_component(note: str, demo_code: str | None = None) -> dict[str, Any]:
     if demo_code is not None:
         data["demoCode"] = demo_code
     return {"type": "otp", "data": data}
+
+
+# ── Owner console ───────────────────────────────────────────────────────────
+# The owner agent used to answer only in prose, so the console read like a chat
+# log rather than a dashboard. These let it RENDER the answer. Values are
+# pre-formatted HERE (₹, %, counts) so the UI never re-does the maths and can
+# never show a number that disagrees with what the agent just said.
+
+
+def metrics_component(
+    title: str, tiles: list[dict[str, Any]], subtitle: str | None = None
+) -> dict[str, Any]:
+    """Headline numbers as tiles. Each tile: {label, value, context?, tone?}."""
+    data: dict[str, Any] = {"title": title, "tiles": tiles}
+    if subtitle:
+        data["subtitle"] = subtitle
+    return {"type": "metrics", "data": data}
+
+
+def chart_component(
+    title: str,
+    points: list[dict[str, Any]],
+    subtitle: str | None = None,
+    value_prefix: str | None = None,
+) -> dict[str, Any]:
+    """A bar chart. Each point: {label, value}. `value_prefix` e.g. "₹"."""
+    data: dict[str, Any] = {"title": title, "points": points}
+    if subtitle:
+        data["subtitle"] = subtitle
+    if value_prefix:
+        data["valuePrefix"] = value_prefix
+    return {"type": "chart", "data": data}

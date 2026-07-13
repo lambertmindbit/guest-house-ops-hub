@@ -64,6 +64,28 @@ export type BookingFormData = {
 // Photos and/or a map link the assistant shows with a FAQ answer.
 export type FaqMediaData = { caption?: string; photos?: string[]; mapLink?: string };
 
+// ── Owner-console components ────────────────────────────────────────────────
+// The owner agent used to answer purely in prose ("occupancy is 62%…"), so the
+// console read like a chat log instead of a dashboard. These let it RENDER its
+// answer: headline numbers as tiles, and a comparison as a chart.
+
+export type MetricTile = {
+  label: string;
+  value: string; // pre-formatted by the agent (₹, %, counts) — the UI never does maths
+  context?: string; // small caption under the number
+  tone?: "default" | "good" | "warn" | "danger";
+};
+export type MetricsCardData = { title: string; subtitle?: string; tiles: MetricTile[] };
+
+export type ChartPoint = { label: string; value: number };
+export type ChartCardData = {
+  title: string;
+  subtitle?: string;
+  points: ChartPoint[];
+  /** Prefixed onto axis/tooltip values, e.g. "₹". */
+  valuePrefix?: string;
+};
+
 // A generative-UI descriptor the assistant emits; the client renders each via a
 // small type→component registry (src/components/assistant/registry.tsx).
 export type UIComponent =
@@ -73,7 +95,9 @@ export type UIComponent =
   | { type: "confirm_booking"; data: ConfirmCardData }
   | { type: "otp"; data: OtpCardData }
   | { type: "faq_media"; data: FaqMediaData }
-  | { type: "availability"; data: AvailabilityCardData };
+  | { type: "availability"; data: AvailabilityCardData }
+  | { type: "metrics"; data: MetricsCardData }
+  | { type: "chart"; data: ChartCardData };
 
 // The streaming wire protocol: the route emits one JSON object per line (NDJSON).
 // Phase 1 emits whole text + ui chunks; Phase 2's LLM streams text token-by-token
