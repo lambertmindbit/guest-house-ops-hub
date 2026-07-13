@@ -36,6 +36,13 @@ export type PushPayload = { title: string; body: string; url?: string; tag?: str
 // Fan out a notification to every stored subscription. Dead subscriptions
 // (410 Gone / 404) are pruned so the list self-heals. Best-effort: callers wrap
 // this so a push failure never breaks the action that triggered it.
+// Per-endpoint send budget. web-push has no reliable built-in timeout, and a
+// stale/unreachable push endpoint can otherwise hang the request. Callers await
+// this (e.g. filing an escalation), so an unbounded hang would blow the caller's
+// own timeout — which surfaced to guests as "there was an issue with the system"
+// and made the agent retry, filing duplicate tickets. Cap each send instead.
+const PUSH_SEND_TIMEOUT_MS = 3000;
+
 export async function sendOwnerPush(payload: PushPayload): Promise<{ sent: number; pruned: number }> {
   if (!ensureConfigured()) return { sent: 0, pruned: 0 };
 
@@ -47,12 +54,14 @@ export async function sendOwnerPush(payload: PushPayload): Promise<{ sent: numbe
   await Promise.all(
     subs.map(async (s) => {
       try {
-        await webpush.sendNotification(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          body,
-        );
+        await Promise.race([
+          webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("push-timeout")), PUSH_SEND_TIMEOUT_MS)),
+        ]);
         sent += 1;
       } catch (err) {
+        // A gone/expired subscription (404/410) is pruned; a timeout is just
+        // skipped this round (the endpoint may simply be slow, not dead).
         const status = (err as { statusCode?: number }).statusCode;
         if (status === 404 || status === 410) dead.push(s.endpoint);
       }
