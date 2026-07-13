@@ -6,31 +6,29 @@ import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { PwaRuntime } from "@/components/PwaRuntime";
 import { getSession } from "@/lib/session";
 import { listUserProperties } from "@/lib/properties";
-import { unstable_cache } from "next/cache";
-import { getConflicts } from "@/lib/conflicts";
+import { countConflicts } from "@/lib/conflicts";
 import { unscopedPrisma } from "@/lib/prisma";
 
-// Nav badge counts sit in the layout — they'd otherwise run on EVERY navigation.
-// Cache both at ~60s; a slightly stale badge count is fine.
+// The "Needs you" badge counts, computed LIVE on each render.
 //
-// Keyed BY propertyId, and scoped explicitly to it: unstable_cache runs its
-// callback outside request scope, so the `x-ota-tenant` header the tenant layer
-// normally reads isn't available in here. Without the propertyId in both the key
-// AND the query, a multi-property deployment would serve (and cache) one tenant's
-// counts to another. Hence the unscoped client + an explicit propertyId filter.
-const getCachedConflictCount = (propertyId: string) =>
-  unstable_cache(
-    async () => (await getConflicts(propertyId)).length,
-    ["nav-conflict-count", propertyId],
-    { revalidate: 60 },
-  )();
-
-const getCachedEscalationCount = (propertyId: string) =>
-  unstable_cache(
-    async () => unscopedPrisma.escalation.count({ where: { status: "open", propertyId } }),
-    ["nav-escalation-count", propertyId],
-    { revalidate: 60 },
-  )();
+// These used to be wrapped in unstable_cache(revalidate: 60). That made the badge
+// lie: the pages it points at are force-dynamic, so the moment you resolved or
+// dismissed an item the page updated but the badge kept serving a stale cached
+// number (and stale-while-revalidate could keep handing back the old value). A
+// "Needs you" badge that disagrees with the queue is worse than no badge — the
+// whole point is that the number is trustworthy. So correctness wins, and the
+// cost is kept down instead: both are COUNT queries run in parallel (countConflicts
+// rather than materialising every conflict row just to read .length).
+//
+// Both are scoped explicitly to the acting property: the raw-SQL conflicts query
+// bypasses the Prisma tenant extension, so a multi-property deployment would
+// otherwise leak one tenant's counts into another's badge.
+async function navCounts(propertyId: string): Promise<[number, number]> {
+  return Promise.all([
+    countConflicts(propertyId),
+    unscopedPrisma.escalation.count({ where: { status: "open", propertyId } }),
+  ]);
+}
 
 // Redesign type system: Plus Jakarta Sans (UI/body), Fraunces (display titles),
 // JetBrains Mono (numerals / times / eyebrow micro-labels).
@@ -97,10 +95,7 @@ export default async function RootLayout({
     // an explicit propertyId (see the cache helpers above); skip them if unbound.
     if (session.propertyId) {
       try {
-        [conflictCount, escalationCount] = await Promise.all([
-          getCachedConflictCount(session.propertyId),
-          getCachedEscalationCount(session.propertyId),
-        ]);
+        [conflictCount, escalationCount] = await navCounts(session.propertyId);
       } catch {
         conflictCount = 0;
         escalationCount = 0;

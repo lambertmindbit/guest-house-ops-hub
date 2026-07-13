@@ -2,6 +2,21 @@ import { prisma } from "@/lib/prisma";
 import { formatDateOnly } from "@/lib/dates";
 import { requestPropertyId } from "@/lib/tenant";
 
+// Just the number, for the "Needs you" nav badge — which renders on EVERY page.
+// getConflicts() materialises full rows and joins guests + rooms to render the
+// list; the badge needs none of that. Same tenant scoping, same overlap rule.
+export async function countConflicts(propertyId?: string | null): Promise<number> {
+  const pid = await requestPropertyId(propertyId);
+  const rows = await prisma.$queryRaw<{ n: number }[]>`
+    SELECT count(*)::int AS n
+      FROM reservations r
+      JOIN blocks b ON b.room_id = r.room_id AND r.stay && b.period
+     WHERE r.status = 'confirmed'
+       AND (${pid}::text IS NULL OR r.property_id = ${pid});
+  `;
+  return rows[0]?.n ?? 0;
+}
+
 export type Conflict = {
   reservationId: string;
   guestName: string;
