@@ -17,6 +17,8 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
   const [editId, setEditId] = useState<string | null>(null);
   const [edit, setEdit] = useState(EMPTY);
   const [error, setError] = useState<string | null>(null);
+  const [loadingPack, setLoadingPack] = useState(false);
+  const [packMsg, setPackMsg] = useState<string | null>(null);
 
   async function call(url: string, body: unknown, method = "POST") {
     setError(null);
@@ -44,6 +46,33 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
     if (await call(`/api/faq/${id}`, toBody(edit), "PATCH")) setEditId(null);
   }
 
+  async function loadStarterPack() {
+    const okToLoad = await confirm({
+      title: "Load the starter FAQ pack?",
+      message:
+        "Adds ~35 common traveller questions — pool, AC, hot water, location, food, payment, policies, safety and more — as HIDDEN drafts. They stay hidden from guests until you review each answer for your property and tap Show. Questions you already have are skipped.",
+      confirmLabel: "Load drafts",
+    });
+    if (!okToLoad) return;
+    setLoadingPack(true);
+    setPackMsg(null);
+    setError(null);
+    const res = await fetch("/api/faq/starter", { method: "POST" });
+    setLoadingPack(false);
+    if (!res.ok) {
+      setError("Couldn't load the starter pack. Please try again.");
+      return;
+    }
+    const j = await res.json();
+    const added: number = j.data?.added ?? 0;
+    const skipped: number = j.data?.skipped ?? 0;
+    setPackMsg(
+      `Added ${added} hidden draft${added === 1 ? "" : "s"}${skipped ? `, skipped ${skipped} you already have` : ""}. ` +
+        "Review each below, edit the answer for your property, then tap Show to make it live.",
+    );
+    router.refresh();
+  }
+
   function fields(f: typeof EMPTY, set: (v: typeof EMPTY) => void) {
     return (
       <div className="col" style={{ gap: 8 }}>
@@ -67,6 +96,21 @@ export function FaqSection({ faqs }: { faqs: Faq[] }) {
       <p className="muted" style={{ fontSize: "var(--fs-small)", marginTop: 0 }}>
         These power the guest chat assistant — it answers common questions from what you write here.
       </p>
+
+      <div className="card card--pad" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: "var(--fs-small)" }}>New here? Load the starter pack</div>
+          <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>
+            ~35 common traveller questions added as hidden drafts for you to review and switch on.
+          </div>
+        </div>
+        <button className="btn btn--ghost btn--sm" style={{ flex: "none" }} onClick={loadStarterPack} disabled={loadingPack}>
+          {loadingPack ? "Loading…" : "Load starter pack"}
+        </button>
+      </div>
+      {packMsg && (
+        <p style={{ fontSize: "var(--fs-small)", color: "var(--green-text)", marginTop: 0 }}>{packMsg}</p>
+      )}
 
       <div className="card card--pad" style={{ marginBottom: 12 }}>
         {fields(nf, setNf)}

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { httpUrl } from "@/lib/url-guard";
+import { STARTER_FAQS } from "@/lib/faq-starter";
 
 // Owner-managed FAQ the guest assistant answers from. Tenant-scoped CRUD; the
 // agent reads only ACTIVE entries via GET /api/agent/faq.
@@ -56,4 +57,22 @@ export async function deleteFaq(id: string) {
   const current = await prisma.faqEntry.findUnique({ where: { id } });
   if (!current) return null;
   return prisma.faqEntry.delete({ where: { id } });
+}
+
+// Install the starter FAQ pack as INACTIVE drafts. Idempotent: any question the
+// property already has (case-insensitively) is skipped, so it's safe to run more
+// than once and never clobbers an owner's edited answer. Loaded inactive so the
+// bot won't speak a draft to a guest until the owner reviews and switches it on.
+export async function installStarterFaqs(): Promise<{ added: number; skipped: number }> {
+  const existing = await prisma.faqEntry.findMany({ select: { question: true } });
+  const have = new Set(existing.map((f) => f.question.trim().toLowerCase()));
+
+  const toAdd = STARTER_FAQS.filter((f) => !have.has(f.question.trim().toLowerCase()));
+  let sortOrder = 100; // starter drafts sort after any hand-authored FAQs
+  for (const f of toAdd) {
+    await prisma.faqEntry.create({
+      data: { question: f.question, answer: f.answer, category: f.category, active: false, sortOrder: sortOrder++ },
+    });
+  }
+  return { added: toAdd.length, skipped: STARTER_FAQS.length - toAdd.length };
 }
