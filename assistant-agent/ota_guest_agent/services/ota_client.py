@@ -40,8 +40,13 @@ class OtaClient:
         return {"x-agent-token": self.token}
 
     async def _get(self, path: str, params: dict[str, Any]) -> Any:
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            res = await client.get(f"{self.base_url}{path}", params=params, headers=self._headers())
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                res = await client.get(f"{self.base_url}{path}", params=params, headers=self._headers())
+        except httpx.RequestError as e:
+            # Timeout / connection failure — surface as OtaError so tools handle it
+            # gracefully instead of the raw exception crashing the turn.
+            raise OtaError(f"GET {path} could not reach the app ({e.__class__.__name__}).") from e
         if res.status_code == 401:
             raise OtaError("Unauthorized — OTA_AGENT_TOKEN does not match the OTA app.")
         if res.status_code >= 400:
@@ -49,8 +54,11 @@ class OtaClient:
         return res.json().get("data")
 
     async def _post(self, path: str, body: dict[str, Any]) -> Any:
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            res = await client.post(f"{self.base_url}{path}", json=body, headers=self._headers())
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                res = await client.post(f"{self.base_url}{path}", json=body, headers=self._headers())
+        except httpx.RequestError as e:
+            raise OtaError(f"POST {path} could not reach the app ({e.__class__.__name__}).") from e
         if res.status_code == 409:
             raise RoomJustTaken()
         if res.status_code == 401:

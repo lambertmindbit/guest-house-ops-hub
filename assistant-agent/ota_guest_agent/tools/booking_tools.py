@@ -11,6 +11,7 @@ read (it cannot create a booking yet).
 
 from __future__ import annotations
 
+import hashlib
 import re
 from typing import Any
 
@@ -18,6 +19,31 @@ from google.adk.tools.tool_context import ToolContext
 
 from ..services.ota_client import OtaClient, OtaError
 from ..services import ui
+
+
+def _external_id(tool_context: ToolContext, kind: str, key: str) -> str:
+    """A stable idempotency key so re-filing the SAME request — an internal retry,
+    or the model calling again in a later turn — de-dupes at the app (which keys
+    escalations on externalId) instead of creating a duplicate ticket. Keyed by
+    the session + request kind + a slug of the request text."""
+    sess = getattr(tool_context, "session", None)
+    sid = getattr(sess, "id", None) or getattr(tool_context, "invocation_id", "") or "s"
+    slug = hashlib.sha1(key.strip().lower().encode("utf-8")).hexdigest()[:12]
+    return f"assist-{kind}-{sid}-{slug}"[:128]
+
+
+async def _file_escalation(body: dict[str, Any]) -> dict[str, Any]:
+    """File an escalation with ONE automatic retry. Safe to retry because the body
+    carries a stable externalId (the app de-dupes), so a transient blip — a slow
+    response, a cold start — never creates a duplicate and never surfaces a raw
+    error to the guest. Raises OtaError only if BOTH attempts fail."""
+    last_error: OtaError | None = None
+    for _ in range(2):
+        try:
+            return await _client.create_escalation(body)
+        except OtaError as e:
+            last_error = e
+    raise last_error if last_error else OtaError("could not file the request")
 
 _client = OtaClient()
 
@@ -239,14 +265,19 @@ async def request_booking_change(
     if who:
         summary += f" — guest: {who}"
     try:
-        result = await _client.create_escalation({
+        result = await _file_escalation({
             "source": "assistant", "category": "booking", "severity": "medium",
             "title": title[:160], "summary": summary[:4000],
             "raisedBy": {"name": guest_name.strip() or None, "contact": guest_phone.strip() or None},
+            "externalId": _external_id(tool_context, "change", booking_ref or details or change),
         })
-    except OtaError as e:
-        return {"status": "error", "message": str(e)}
-    return {"status": "filed", "escalation": result}
+    except OtaError:
+        return {"status": "pending", "message":
+                "The request could NOT be filed just now. Do not tell the guest it "
+                "was filed — apologise briefly and ask them to try again shortly or "
+                "contact the property directly."}
+    return {"status": "filed", "escalation": result,
+            "message": "Filed once. Tell the guest it's passed on; do NOT file it again."}
 
 
 async def pass_to_property(
@@ -272,15 +303,20 @@ async def pass_to_property(
     if who:
         summary += f" — guest: {who}"
     try:
-        result = await _client.create_escalation({
+        result = await _file_escalation({
             "source": "assistant", "category": "customer", "severity": "medium",
             "title": title[:160], "summary": summary[:4000],
             "raisedBy": {"name": guest_name.strip() or None, "contact": guest_phone.strip() or None},
+            "externalId": _external_id(tool_context, "req", topic or details),
         })
-    except OtaError as e:
-        return {"status": "error", "message": str(e)}
+    except OtaError:
+        return {"status": "pending", "message":
+                "The request could NOT be filed just now. Do not tell the guest it "
+                "was filed — apologise briefly and ask them to try again shortly or "
+                "contact the property directly."}
     return {"status": "filed", "escalation": result,
-            "message": "Filed for the property. Tell the guest it's been passed on and they'll be contacted."}
+            "message": "Filed for the property (once). Tell the guest it's been "
+                       "passed on and they'll be contacted. Do NOT file it again."}
 
 
 async def _availability_with_rates(check_in: str, check_out: str) -> list[dict[str, Any]]:
