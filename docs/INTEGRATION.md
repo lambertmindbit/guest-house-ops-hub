@@ -143,5 +143,4 @@ carries `propertyRef`, so agents don't change — you just start persisting it.
 It is the smallest seam that connects all three agents to the deterministic core
 without giving any agent write access to bookings, money, or guests. Build it
 first, point one agent at it, and you've proven the agent↔core contract before
-investing in the larger consolidation. See `ROOT_Consolidation_Review.html` for
-where it sits in the overall plan.
+investing in the larger consolidation.

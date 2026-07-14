@@ -140,6 +140,6 @@ build → test**. Green CI is required before merging. See [DEPLOYMENT.md](DEPLO
 
 ## Known concerns / tech debt
 
-A standing list (with file/line references and what's intentional vs. worth fixing)
-lives in [`.planning/codebase/CONCERNS.md`](../.planning/codebase/CONCERNS.md).
-Skim it before a large refactor.
+A standing list (what's intentional vs. worth fixing) lives under
+[Known concerns](ROADMAP.md#known-concerns--tech-debt). Skim it before a large
+refactor.
