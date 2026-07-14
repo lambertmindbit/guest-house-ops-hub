@@ -147,6 +147,20 @@ npm run test:watch  # watch mode
 <p><a href="../.github/workflows/ci.yml"><code>.github/workflows/ci.yml</code></a> runs on every push/PR:
 spins up an ephemeral <code>postgres:16</code>, then <strong>lint → <code>prisma migrate deploy</code> →
 build → test</strong>. Green CI is required before merging. See <a href="DEPLOYMENT.html">DEPLOYMENT.md</a>.</p>
+<h2>Docs</h2>
+<p>The <code>.html</code> docs are <strong>generated</strong> — <code>npm run docs:html</code> renders them from the
+Markdown, which is the source of truth. Never hand-edit a generated <code>.html</code>; your
+change is overwritten on the next run. (<code>USER-GUIDE.html</code>, <code>WORKFLOW.html</code> and
+<code>CHANNEL-SYNC.html</code> are the exceptions: hand-authored visual docs with CSS
+diagrams and screenshots, with no Markdown source. Edit those directly.)</p>
+<p>CI enforces two things, both of which broke in the past:</p>
+<ul>
+<li><strong>No broken links.</strong> <code>npm run docs:check</code> walks every relative link in every
+Markdown file. Deleting a doc leaves references behind, and grep misses them.</li>
+<li><strong>The generated HTML matches its Markdown.</strong> Edit a <code>.md</code>, forget
+<code>npm run docs:html</code>, and the published HTML quietly keeps saying the old thing.</li>
+</ul>
+<p>So: after editing any <code>.md</code>, run <code>npm run docs:html</code> and commit the result.</p>
 <h2>Security hygiene</h2>
 <ul>
 <li>Never commit secrets. <code>.env</code> is git-ignored; document new vars in <code>.env.example</code>

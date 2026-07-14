@@ -51,6 +51,21 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # Docs rot silently. Deleting a doc leaves every reference to it dangling,
+      # and the .html set is GENERATED — edit a .md, forget `npm run docs:html`,
+      # and the published HTML quietly says something the Markdown no longer does.
+      # Both failures shipped before this step existed.
+      - name: Docs
+        run: |
+          node scripts/check-docs.mjs
+          npm run docs:html
+          if ! git diff --quiet -- '*.html'; then
+            echo "::error::Generated HTML is stale. Run 'npm run docs:html' and commit the result."
+            git diff --stat -- '*.html'
+            exit 1
+          fi
+          echo "✓ generated HTML matches the Markdown"
+
       - name: Apply database migrations
         run: npx prisma migrate deploy
 

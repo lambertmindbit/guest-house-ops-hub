@@ -17,7 +17,8 @@
     "db:demo": "node scripts/demo-data.mjs",
     "db:studio": "prisma studio",
     "shots": "node scripts/screenshots.mjs",
-    "docs:html": "node scripts/md-to-html.mjs"
+    "docs:html": "node scripts/md-to-html.mjs",
+    "docs:check": "node scripts/check-docs.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
