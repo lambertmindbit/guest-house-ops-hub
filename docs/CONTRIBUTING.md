@@ -129,6 +129,23 @@ npm run test:watch  # watch mode
 spins up an ephemeral `postgres:16`, then **lint → `prisma migrate deploy` →
 build → test**. Green CI is required before merging. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## Docs
+
+The `.html` docs are **generated** — `npm run docs:html` renders them from the
+Markdown, which is the source of truth. Never hand-edit a generated `.html`; your
+change is overwritten on the next run. (`USER-GUIDE.html`, `WORKFLOW.html` and
+`CHANNEL-SYNC.html` are the exceptions: hand-authored visual docs with CSS
+diagrams and screenshots, with no Markdown source. Edit those directly.)
+
+CI enforces two things, both of which broke in the past:
+
+- **No broken links.** `npm run docs:check` walks every relative link in every
+  Markdown file. Deleting a doc leaves references behind, and grep misses them.
+- **The generated HTML matches its Markdown.** Edit a `.md`, forget
+  `npm run docs:html`, and the published HTML quietly keeps saying the old thing.
+
+So: after editing any `.md`, run `npm run docs:html` and commit the result.
+
 ## Security hygiene
 
 - Never commit secrets. `.env` is git-ignored; document new vars in `.env.example`

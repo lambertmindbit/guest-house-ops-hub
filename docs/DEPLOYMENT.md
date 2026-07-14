@@ -134,9 +134,11 @@ PR**:
 2. `npm ci`
 3. **Lint** → `npm run lint`
 4. **Typecheck** → `npx tsc --noEmit`
-5. **Apply migrations** → `npx prisma migrate deploy`
-6. **Build** → `npm run build`
-7. **Test** → `npm test`
+5. **Docs** → `npm run docs:check` (no broken links) + regenerates the HTML and
+   fails if the committed HTML no longer matches its Markdown
+6. **Apply migrations** → `npx prisma migrate deploy`
+7. **Build** → `npm run build`
+8. **Test** → `npm test`
 
 **`agent-tests` job** — the Python assistant sidecar: installs
 `assistant-agent/requirements-dev.txt` and runs `pytest -q`.

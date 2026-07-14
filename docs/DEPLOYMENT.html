@@ -201,6 +201,8 @@ isolated, no secrets, no production data.</li>
 <li><code>npm ci</code></li>
 <li><strong>Lint</strong> → <code>npm run lint</code></li>
 <li><strong>Typecheck</strong> → <code>npx tsc --noEmit</code></li>
+<li><strong>Docs</strong> → <code>npm run docs:check</code> (no broken links) + regenerates the HTML and
+fails if the committed HTML no longer matches its Markdown</li>
 <li><strong>Apply migrations</strong> → <code>npx prisma migrate deploy</code></li>
 <li><strong>Build</strong> → <code>npm run build</code></li>
 <li><strong>Test</strong> → <code>npm test</code></li>
