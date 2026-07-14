@@ -2,10 +2,12 @@ import { listStaff, listShiftsFrom, attendanceForDate } from "@/lib/staff";
 import { todayDateOnly, formatDateOnly } from "@/lib/dates";
 import { PageHead } from "@/components/ui";
 import { StaffBoard } from "@/components/StaffBoard";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function StaffPage() {
+  await requireModule("staff");
   const today = todayDateOnly();
   const [staff, shifts, attendance] = await Promise.all([
     listStaff(),

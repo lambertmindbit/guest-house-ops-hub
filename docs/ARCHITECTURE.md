@@ -356,10 +356,72 @@ guard proving a room card never leaks into a later turn that didn't ask for one.
 Conversational LLM behaviour itself is verified live, not in CI. See
 [`assistant-agent/README.md`](../assistant-agent/README.md) for local run/test/deploy commands.
 
+## Deployment isolation — one client, one everything
+
+> **This is the architectural decision the rest of this section depends on. Read it
+> before reasoning about tenancy.**
+
+**Every client gets their own deployment, their own database, and their own AI
+agent.** Nothing is shared between clients — not a server, not a row, not a model.
+
+```
+Client A (Lawei)                     Client B (Pine Air)
+├── web app     ops-hub-lawei        ├── web app     ops-hub-pineair
+├── database    (its own Postgres)   ├── database    (its own Postgres)
+└── AI agent    (its own Cloud Run)  └── AI agent    (its own Cloud Run)
+        ↑                                    ↑
+        └──── no shared anything ────────────┘
+```
+
+**Why it is worth the extra $20/month per client:** a cross-tenant leak between
+clients is not a bug we have to prevent in code — it is a thing that *cannot
+happen*, because Lawei's rows are not in Pine Air's database. The entire class of
+"one query forgot its `WHERE property_id`" is confined to a single client's own
+data. Physics does the work instead of vigilance.
+
+**What multi-tenancy is still for.** A single client may own **several
+properties** (two guest houses under one owner). That is what the per-property
+scoping below handles, and what the property switcher is for. So:
+
+| Boundary | Enforced by |
+|---|---|
+| Client ↔ client | **Separate databases.** Nothing in the app. |
+| Property ↔ property (same client) | The Prisma tenant extension (below) |
+
+**The consequence for `unscopedPrisma`.** "Unscoped" means *every property in this
+database* — which is *one client's properties*, never another client's. That is why
+the vendor console (`/admin`) may use it safely. It would be a very different
+statement in a shared-database architecture.
+
+**The consequence for raw SQL.** The tenant extension cannot see raw SQL, so any
+raw query must filter `property_id` **by hand, forever** — see
+[`src/lib/availability.ts`](../src/lib/availability.ts). A miss there does not leak
+across clients, but it *does* leak across one client's own properties, which is how
+the owner ends up being offered the wrong guest house's rooms.
+
+### The vendor console (`/admin`)
+
+`User.isPlatformAdmin` marks the vendor (MindBit), not the client. It is
+deliberately **not** a `UserRole`: `role` says what you may do *inside* a property;
+this says you sit *above* the property and may choose which modules the client gets
+(`PropertySettings.disabledModules`, registry in
+[`src/lib/modules.ts`](../src/lib/modules.ts)).
+
+- It is checked against the **database on every request** (`getSession()`), never
+  from a cookie claim — revoking it must bite immediately.
+- `/admin` **404s** for everyone else, including the client's own owner: a console
+  they cannot use should not announce itself as a locked door.
+- It grants **no cross-client power**, because there is no cross-client to grant.
+  Separate databases, again.
+- Core modules (Today, Calendar, Bookings, Guests, Housekeeping, Needs you, Finance,
+  Pricing, Analytics, Settings) are **not in the registry**, so they can never be
+  switched off — not even by a hand-edited database row.
+
 ## Multi-tenancy & the community seam
 
-The app is **tenant-scoped** (Phase 2), with a deliberately narrow **cross-tenant
-seam** for the community network (Phase 3).
+Within **one client's database**, the app is **tenant-scoped per property**
+(Phase 2), with a deliberately narrow **cross-tenant seam** for the community
+network (Phase 3).
 
 - **Auto-scoping client.** [`src/lib/prisma.ts`](../src/lib/prisma.ts) wraps Prisma
   in a client extension that injects the active `propertyId` into every read/write

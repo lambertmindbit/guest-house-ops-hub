@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { NavShell } from "@/components/NavShell";
+import { disabledModules } from "@/lib/module-gate";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { PwaRuntime } from "@/components/PwaRuntime";
 import { getSession } from "@/lib/session";
@@ -90,6 +91,9 @@ export default async function RootLayout({
   let conflictCount = 0;
   let escalationCount = 0;
   let properties: { id: string; name: string }[] = [];
+  // Modules the vendor switched off for this property. Read once here so both the
+  // sidebar and the phone "More" hub hide the same things.
+  let hiddenModules: string[] = [];
   if (session) {
     // Badge counts are per-property and cached outside request scope, so they need
     // an explicit propertyId (see the cache helpers above); skip them if unbound.
@@ -106,6 +110,11 @@ export default async function RootLayout({
     } catch {
       properties = [];
     }
+    try {
+      hiddenModules = [...(await disabledModules())];
+    } catch {
+      hiddenModules = []; // a failed read must never hide the product
+    }
   }
 
   return (
@@ -113,7 +122,7 @@ export default async function RootLayout({
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {session && (
-          <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session.propertyId ?? null} />
+          <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session.propertyId ?? null} hiddenModules={hiddenModules} />
         )}
         <ConfirmProvider>{children}</ConfirmProvider>
         <PwaRuntime />

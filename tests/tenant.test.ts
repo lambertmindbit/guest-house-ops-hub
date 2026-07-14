@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma, prismaForTenant, __resetTenantResolution } from "@/lib/prisma";
 import { freeRooms } from "@/lib/availability";
+import { disabledModules } from "@/lib/module-gate";
 
 // Tenant isolation: two properties, a room in each. A read/write bound to
 // property A must never see property B's rows — and writes auto-stamp the tenant.
@@ -56,15 +57,38 @@ describe("tenant isolation", () => {
     expect(seenFromB?.id).toBe(bRoom.id);
   });
 
+  // Module visibility is per property, so a client with two guest houses can buy
+  // Inventory for one and not the other.
+  //
+  // This test earned its keep immediately: the first implementation read the row
+  // with propertySettings.findFirst(), which LOOKS tenant-scoped and is not —
+  // PropertySettings is the tenant ROOT and is absent from TENANT_MODELS, so
+  // findFirst() returns whichever row comes first. It passed with one property and
+  // would have silently applied one guest house's module list to the other.
+  it("module toggles are per property, not per database", async () => {
+    await prisma.propertySettings.update({
+      where: { id: propA },
+      data: { disabledModules: ["inventory", "vendors"] },
+    });
+
+    // Exercise the real helper, not a hand-rolled read — a hand-rolled read is
+    // precisely what was wrong.
+    const a = await disabledModules(propA);
+    const b = await disabledModules(propB);
+
+    expect([...a].sort()).toEqual(["inventory", "vendors"]);
+    expect([...b]).toEqual([]); // untouched — and empty means "show everything"
+  });
+
   // freeRooms() is RAW SQL, and the tenant extension cannot see raw SQL — it only
   // intercepts model operations. So this query has to filter property_id itself,
   // and until 2026-07-14 it did not: it returned every room in the DATABASE.
   //
-  // That is not a cosmetic leak. freeRooms backs the owner's booking-form room
-  // picker AND the AI agent's availability tool, so a second property would have
-  // been offered the first one's rooms as bookable — and a booking written against
-  // a room owned by another property would NOT be caught by the GiST exclusion
-  // constraint, which is keyed per room, not per property.
+  // Not a cosmetic leak. freeRooms backs the owner's booking-form room picker AND
+  // the AI agent's availability tool, so a second property would have been offered
+  // the first one's rooms as bookable — and a booking written against a room owned
+  // by another property would NOT be caught by the GiST exclusion constraint,
+  // which is keyed per room, not per property.
   it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
     const checkIn = "2031-03-01";
     const checkOut = "2031-03-03";

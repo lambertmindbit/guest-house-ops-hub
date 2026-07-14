@@ -2,10 +2,12 @@ import { requireRole } from "@/lib/session";
 import { listPartners } from "@/lib/partners";
 import { PageHead } from "@/components/ui";
 import { PartnersBoard } from "@/components/PartnersBoard";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function PartnersPage() {
+  await requireModule("partners");
   await requireRole(["owner", "reception"]);
   const partners = await listPartners();
 

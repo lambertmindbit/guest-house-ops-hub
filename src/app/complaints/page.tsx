@@ -3,6 +3,7 @@ import { listComplaints, complaintReport } from "@/lib/complaints";
 import { PageHead, SectionLabel, EmptyState } from "@/components/ui";
 import { ComplaintForm } from "@/components/ComplaintForm";
 import { displayShortDate } from "@/lib/format";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function ComplaintsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  await requireModule("complaints");
   const { status } = await searchParams;
   const [rows, report] = await Promise.all([
     listComplaints({ status: status as "open" | "in_progress" | "resolved" | undefined }),

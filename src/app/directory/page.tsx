@@ -2,6 +2,7 @@ import { getSession, requireRole } from "@/lib/session";
 import { PageHead } from "@/components/ui";
 import { searchDirectory, DIRECTORY_NEEDS, PRICE_BANDS } from "@/lib/community/directory";
 import { DirectoryClient } from "@/components/DirectoryClient";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function DirectoryPage({
 }: {
   searchParams: Promise<{ need?: string | string[]; priceBand?: string }>;
 }) {
+  await requireModule("directory");
   await requireRole(["owner", "reception"]);
   const session = await getSession();
   const sp = await searchParams;

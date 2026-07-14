@@ -1,10 +1,12 @@
 import { getSession, requireRole } from "@/lib/session";
 import { PageHead } from "@/components/ui";
 import { sharedVendors, sharedDrivers } from "@/lib/community/directories";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function DirectoriesPage() {
+  await requireModule("directory");
   await requireRole(["owner", "reception"]);
   const session = await getSession();
   const pid = session?.propertyId ?? null;

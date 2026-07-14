@@ -2,10 +2,12 @@ import { listVendors, listPurchaseOrders, listVendorPayments, procurementSummary
 import { formatDateOnly } from "@/lib/dates";
 import { PageHead } from "@/components/ui";
 import { VendorsBoard } from "@/components/VendorsBoard";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function VendorsPage() {
+  await requireModule("vendors");
   const [vendors, pos, payments] = await Promise.all([listVendors(), listPurchaseOrders(), listVendorPayments()]);
   const summary = procurementSummary(
     pos.map((p) => ({ amount: Number(p.amount), status: p.status })),

@@ -1,10 +1,12 @@
 import { listReviews, reviewSummary } from "@/lib/reviews";
 import { PageHead } from "@/components/ui";
 import { ReviewsBoard } from "@/components/ReviewsBoard";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReviewsPage() {
+  await requireModule("reviews");
   const reviews = await listReviews();
   const summary = reviewSummary(reviews.map((r) => ({ status: r.status, rating: r.rating })));
 

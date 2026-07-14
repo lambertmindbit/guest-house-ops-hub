@@ -2,10 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { formatDateOnly } from "@/lib/dates";
 import { PageHead } from "@/components/ui";
 import { InboxReview } from "@/components/InboxReview";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function InboxPage() {
+  await requireModule("inbox");
   const [items, rooms, channels] = await Promise.all([
     prisma.inboundBooking.findMany({ where: { status: "pending" }, orderBy: { createdAt: "desc" } }),
     prisma.room.findMany({ where: { archivedAt: null }, include: { roomType: true }, orderBy: { label: "asc" } }),

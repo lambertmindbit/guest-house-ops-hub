@@ -44,13 +44,18 @@ enum UserRole {
 // known); each user belongs to one property via propertyId. Owner is seeded from
 // OWNER_EMAIL/OWNER_PASSWORD on first login.
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  role         UserRole @default(reception)
-  active       Boolean  @default(true)
-  propertyId   String?  @map("property_id")
-  createdAt    DateTime @default(now()) @map("created_at")
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String   @map("password_hash")
+  role            UserRole @default(reception)
+  active          Boolean  @default(true)
+  // The vendor (MindBit), not the client. Deliberately NOT a UserRole value:
+  // `role` says what you may do INSIDE a property; this says you sit above the
+  // property — you may see /admin and toggle which modules the client gets.
+  // It grants NO cross-database power, because each client has their own database.
+  isPlatformAdmin Boolean  @default(false) @map("is_platform_admin")
+  propertyId      String?  @map("property_id")
+  createdAt       DateTime @default(now()) @map("created_at")
 
   @@map("users")
 }
@@ -390,12 +395,12 @@ enum TourStatus {
 /// A tour/activity partner or guide (with an optional commission %). Mirrors the
 /// Vendor directory. Tenant-scoped.
 model TourPartner {
-  id            String       @id @default(cuid())
+  id            String        @id @default(cuid())
   name          String
   contact       String?
-  commissionPct Int?         @map("commission_pct")
-  propertyId    String?      @map("property_id")
-  createdAt     DateTime     @default(now()) @map("created_at")
+  commissionPct Int?          @map("commission_pct")
+  propertyId    String?       @map("property_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
   tours         Tour[]
   bookings      TourBooking[]
 
@@ -405,16 +410,16 @@ model TourPartner {
 /// An activity the property offers (sightseeing, trek, …), optionally run by a
 /// partner. Advisory price only; never touches reservations/availability.
 model Tour {
-  id         String       @id @default(cuid())
-  name       String
+  id          String        @id @default(cuid())
+  name        String
   description String?
-  price      Decimal?     @db.Decimal(10, 2)
-  partnerId  String?      @map("partner_id")
-  active     Boolean      @default(true)
-  propertyId String?      @map("property_id")
-  createdAt  DateTime     @default(now()) @map("created_at")
-  partner    TourPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
-  bookings   TourBooking[]
+  price       Decimal?      @db.Decimal(10, 2)
+  partnerId   String?       @map("partner_id")
+  active      Boolean       @default(true)
+  propertyId  String?       @map("property_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  partner     TourPartner?  @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  bookings    TourBooking[]
 
   @@map("tours")
 }
@@ -934,39 +939,44 @@ model RateOverride {
 // the first save creates the row. Used by invoices/receipts and as defaults
 // (check-in/out times) elsewhere.
 model PropertySettings {
-  id           String   @id @default(cuid())
-  name         String   @default("My Guest House")
-  checkInTime  String   @default("14:00") @map("check_in_time")
-  checkOutTime String   @default("11:00") @map("check_out_time")
-  currency     String   @default("INR")
-  timezone     String   @default("Asia/Kolkata")
-  address      String?
-  gstNumber    String?  @map("gst_number")
+  id                  String   @id @default(cuid())
+  name                String   @default("My Guest House")
+  checkInTime         String   @default("14:00") @map("check_in_time")
+  checkOutTime        String   @default("11:00") @map("check_out_time")
+  currency            String   @default("INR")
+  timezone            String   @default("Asia/Kolkata")
+  address             String?
+  gstNumber           String?  @map("gst_number")
   // UPI VPA (e.g. name@bank) used to build a pay-to-me UPI link/QR for guests.
-  upiVpa       String?  @map("upi_vpa")
+  upiVpa              String?  @map("upi_vpa")
   // Days to keep a guest's scanned ID document before the retention purge deletes
   // it. Null = keep indefinitely (no auto-purge).
-  idRetentionDays Int?  @map("id_retention_days")
+  idRetentionDays     Int?     @map("id_retention_days")
   // How strictly to enforce guest-ID collection at check-in: 'block' (default,
   // refuse check-in without ID), 'warn' (allow but warn), or 'off'. And whether
   // an ID is also required to SAVE a booking (walk-in-only properties).
-  idPolicy            String  @default("block") @map("id_policy")
-  idRequiredAtBooking Boolean @default(false) @map("id_required_at_booking")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+  idPolicy            String   @default("block") @map("id_policy")
+  idRequiredAtBooking Boolean  @default(false) @map("id_required_at_booking")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Community directory profile (Phase 3). Opt-in; blank/false until the owner
   // fills them in. `isDiscoverable` is the master switch to appear in the peer
   // directory at all (used by slice b). PropertySettings is the tenant ROOT, so
   // these live here rather than on a scoped table.
-  publicName     String?  @map("public_name")
-  bio            String?
-  locality       String?
-  contactPhone   String?  @map("contact_phone")
-  photoPaths     String[] @map("photo_paths")
-  priceBand      String?  @map("price_band")
-  lat            Float?
-  lng            Float?
-  isDiscoverable Boolean  @default(false) @map("is_discoverable")
+  publicName      String?  @map("public_name")
+  bio             String?
+  locality        String?
+  contactPhone    String?  @map("contact_phone")
+  photoPaths      String[] @map("photo_paths")
+  priceBand       String?  @map("price_band")
+  lat             Float?
+  lng             Float?
+  isDiscoverable  Boolean  @default(false) @map("is_discoverable")
+  // Modules hidden from this property. Stores what is DISABLED, not what is
+  // enabled, so that an empty array — and every new property — shows the whole
+  // product rather than a blank app. See src/lib/modules.ts; CORE modules are
+  // refused even if listed here.
+  disabledModules String[] @default([]) @map("disabled_modules")
 
   @@map("property_settings")
 }
@@ -1041,20 +1051,20 @@ enum ReferralStatus {
 /// recipient's property and only LINKED here (resultingReservationId) — this
 /// table never creates a reservation, so the GiST 409 guarantee is untouched.
 model Referral {
-  id                    String         @id @default(cuid())
-  fromPropertyId        String         @map("from_property_id")
-  toPropertyId          String         @map("to_property_id")
-  guestName             String         @map("guest_name")
-  guestPhone            String?        @map("guest_phone")
-  checkIn               DateTime       @map("check_in") @db.Date
-  checkOut              DateTime       @map("check_out") @db.Date
-  roomTypeNeed          String?        @map("room_type_need")
-  note                  String?
-  status                ReferralStatus @default(proposed)
-  resultingReservationId String?       @map("resulting_reservation_id")
-  attributedRevenue     Decimal?       @map("attributed_revenue") @db.Decimal(10, 2)
-  createdAt             DateTime       @default(now()) @map("created_at")
-  respondedAt           DateTime?      @map("responded_at")
+  id                     String         @id @default(cuid())
+  fromPropertyId         String         @map("from_property_id")
+  toPropertyId           String         @map("to_property_id")
+  guestName              String         @map("guest_name")
+  guestPhone             String?        @map("guest_phone")
+  checkIn                DateTime       @map("check_in") @db.Date
+  checkOut               DateTime       @map("check_out") @db.Date
+  roomTypeNeed           String?        @map("room_type_need")
+  note                   String?
+  status                 ReferralStatus @default(proposed)
+  resultingReservationId String?        @map("resulting_reservation_id")
+  attributedRevenue      Decimal?       @map("attributed_revenue") @db.Decimal(10, 2)
+  createdAt              DateTime       @default(now()) @map("created_at")
+  respondedAt            DateTime?      @map("responded_at")
 
   @@index([toPropertyId])
   @@index([fromPropertyId])
