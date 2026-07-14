@@ -12,25 +12,31 @@
 //      (`npm run shots`); a guide pointing at a PNG that no longer exists just
 //      renders a broken image.
 //
-// Deliberately zero dependencies, so it can run as the first thing in CI.
+// Deliberately zero npm dependencies, so it can run as the first thing in CI.
 
-import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, existsSync } from "node:fs";
 import { join, dirname, normalize } from "node:path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 
-// Everything a human reads. Tooling docs under .claude/ are vendored, not ours.
-const SKIP_DIRS = new Set(["node_modules", ".git", ".next", ".claude", ".planning"]);
-
-function markdownFiles(dir = ROOT, found = []) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) markdownFiles(join(dir, entry.name), found);
-    } else if (entry.name.endsWith(".md")) {
-      found.push(join(dir, entry.name));
-    }
-  }
-  return found;
+/**
+ * Only files git tracks.
+ *
+ * Walking the filesystem instead would sweep in whatever happens to be sitting
+ * in the working tree — a Python venv's vendored READMEs, scratch folders, an
+ * unrelated repo someone dropped in. A guard that fails on a broken link inside
+ * `site-packages` is a guard people switch off, so it must see exactly what CI
+ * sees: the committed docs, nothing else.
+ *
+ * `.claude/` is excluded — it is a vendored tooling framework, not our docs.
+ */
+function markdownFiles() {
+  const out = execFileSync("git", ["ls-files", "-z", "*.md"], { cwd: ROOT, encoding: "utf8" });
+  return out
+    .split("\0")
+    .filter((f) => f && !f.startsWith(".claude/"))
+    .map((f) => join(ROOT, f));
 }
 
 // [text](target) — skipping absolute URLs, anchors and mailto:.
