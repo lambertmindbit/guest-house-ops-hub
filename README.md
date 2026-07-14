@@ -108,7 +108,7 @@ Detailed setup (Supabase connection-string nuances, the separate test database):
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Dev workflow, conventions, the safe migration process, testing, PRs |
 | [docs/API.md](docs/API.md) | HTTP endpoint reference |
 | [docs/INTEGRATION.md](docs/INTEGRATION.md) | The AI agent ↔ core contract — the escalation seam + per-agent mapping |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel + Supabase + cron + CI |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel + Supabase + cron + CI — and DigitalOcean, on the `deploy/digitalocean` branch |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | What's built, what's deferred, and why |
 | [docs/STATUS.html](docs/STATUS.html) | At-a-glance status report (open in a browser) — delivered phases, deferred items, concerns, first tasks |
 | [docs/USER-GUIDE.html](docs/USER-GUIDE.html) | **Day-to-day user guide** (open in a browser) — how operators use every screen of the app |
