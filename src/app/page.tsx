@@ -8,11 +8,12 @@ import { currentRole } from "@/lib/session";
 import { canSeeMoney } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { ChannelBadge, Icon } from "@/components/ui";
-import { Collapsible } from "@/components/Collapsible";
 import { displayDate, displayShortDate, displayINR } from "@/lib/format";
 import { parseDateOnly } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
+
+const RAIL_ROWS = 4; // a rail is for glancing; past this it stops being one
 
 // Payment status for a Today row: paid / advance-paid (balance) / unpaid.
 function PayBadge({ r }: { r: SummaryReservation }) {
@@ -52,123 +53,153 @@ export default async function DashboardPage() {
           <div className="pagehead__sub">{heading}</div>
         </div>
 
-        {needsN > 0 && (
-          <Link href="/needs-you" className="banner banner--danger">
-            <span className="banner__icon"><Icon name="alert" size={18} /></span>
-            <span className="banner__txt">
-              <b>{needsN} thing{needsN === 1 ? "" : "s"} need{needsN === 1 ? "s" : ""} you</b> — {needsParts}
-            </span>
-            <span className="banner__arrow"><Icon name="arrowR" size={17} /></span>
-          </Link>
-        )}
-
-        <div style={{ height: 16 }} />
-
-        {/* Verdict-first 3-up: Occupancy (navy) · Arrivals · Departures. The day's
-            to-do (arrivals + cleaning) wins the screen below, not four KPI blocks. */}
-        <div className="kpi-strip kpi-strip--3">
-          <div className="kpi-panel kpi-panel--verdict">
-            <div className="kpi-eyebrow">Occupancy</div>
-            <div className="kpi-num">{s.occupancyPct}%</div>
-            <div className="kpi-ctx">{s.occupiedRooms} of {s.totalRooms} rooms</div>
-          </div>
-          <div className="kpi-panel">
-            <div className="kpi-eyebrow">Arrivals</div>
-            <div className="kpi-num">{s.checkInsToday.length}</div>
-            <div className="kpi-ctx">today</div>
-          </div>
-          <div className="kpi-panel">
-            <div className="kpi-eyebrow">Departures</div>
-            <div className="kpi-num">{s.checkOutsToday.length}</div>
-            <div className="kpi-ctx">today</div>
-          </div>
-        </div>
-
-        {/* Pending-payments card — money still owed across confirmed bookings.
-            Owner only (canSeeMoney). Total is derived via sumOutstanding. */}
-        {showMoney && (
-          <Link
-            href="/finance"
-            className="card card--pad"
-            style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, textDecoration: "none", color: "inherit" }}
-          >
-            <span className="kpi-eyebrow" style={{ display: "grid", placeItems: "center", width: 40, height: 40, borderRadius: 12, background: pending.count > 0 ? "var(--warn-bg)" : "var(--surface-2, #f4f4f5)", color: pending.count > 0 ? "var(--warn-text)" : "var(--text-subtle)" }}>
-              <Icon name="wallet" size={18} />
-            </span>
-            <span style={{ flex: 1 }}>
-              <span className="kpi-eyebrow" style={{ display: "block" }}>Pending payments</span>
-              <b style={{ fontSize: "var(--fs-h3, 1.1rem)" }}>{displayINR(pending.total)}</b>
-              <span className="kpi-ctx" style={{ display: "block" }}>
-                {pending.count > 0 ? `across ${pending.count} booking${pending.count === 1 ? "" : "s"}` : "all settled"}
+        <div className="dash">
+          {/* Sole alert. On desktop it heads the rail; on a phone the grid hoists
+              it above everything, because an alarm you scroll to is not an alarm. */}
+          {needsN > 0 && (
+            <Link href="/needs-you" className="dash__alert railcard railcard--alert">
+              <span className="railcard__ic"><Icon name="alert" size={18} /></span>
+              <span className="railcard__m">
+                <span className="railcard__k">Needs you</span>
+                <span className="railcard__v">{needsN} thing{needsN === 1 ? "" : "s"}</span>
+                <span className="railcard__s">{needsParts}</span>
               </span>
-            </span>
-            <Icon name="arrowR" size={17} />
-          </Link>
-        )}
-
-        {/* Arrivals / Departures are the day's to-do. */}
-        <SectionHead title="Arrivals today" count={s.checkInsToday.length} />
-        <List items={s.checkInsToday} empty="No arrivals today." showTime showArrived showPayment />
-
-        {/* Promoted housekeeping — the morning routine belongs on the dashboard. */}
-        <SectionHead
-          title="To clean"
-          count={housekeeping.toCleanCount}
-          action={<Link href="/housekeeping" className="section-label__a">Housekeeping <Icon name="arrowR" size={13} /></Link>}
-        />
-        {toClean.length === 0 ? (
-          <div className="empty">All rooms clean.</div>
-        ) : (
-          <div className="card card--pad clean-card">
-            <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)" }}>Clean before tonight’s arrivals.</div>
-            <div className="room-chips">
-              {toClean.map((r) => (
-                <div key={r.id} className={`room-chip${r.highPriority ? " room-chip--prio" : ""}`}>
-                  <b>{r.label}</b>
-                  <small>{r.highPriority ? "Arriving soon" : "Checked out"}</small>
-                </div>
-              ))}
-            </div>
-            <Link href="/housekeeping" className="btn btn--primary btn--block" style={{ marginTop: 12 }}>
-              <Icon name="check" size={16} /> Mark a room clean
+              <Icon name="arrowR" size={17} />
             </Link>
+          )}
+
+          {/* Verdict first: occupancy is the day's headline, arrivals/departures its shape. */}
+          <div className="dash__kpis kpi-strip kpi-strip--3">
+            <div className="kpi-panel kpi-panel--verdict">
+              <div className="kpi-eyebrow">Occupancy</div>
+              <div className="kpi-num">{s.occupancyPct}%</div>
+              <div className="kpi-ctx">{s.occupiedRooms} of {s.totalRooms} rooms</div>
+            </div>
+            <div className="kpi-panel">
+              <div className="kpi-eyebrow">Arrivals</div>
+              <div className="kpi-num">{s.checkInsToday.length}</div>
+              <div className="kpi-ctx">today</div>
+            </div>
+            <div className="kpi-panel">
+              <div className="kpi-eyebrow">Departures</div>
+              <div className="kpi-num">{s.checkOutsToday.length}</div>
+              <div className="kpi-ctx">today</div>
+            </div>
           </div>
-        )}
 
-        <SectionHead title="Departures today" count={s.checkOutsToday.length} />
-        <List items={s.checkOutsToday} empty="No departures today." showDeparted showPayment />
+          {/* THE DAY'S WORK — read top to bottom, it is the running order of the
+              day: who arrives, the rooms that must be ready for them, who leaves. */}
+          <div className="dash__work">
+            <Panel title="Arrivals today" count={s.checkInsToday.length}>
+              <List items={s.checkInsToday} empty="No arrivals today." showTime showArrived showPayment />
+            </Panel>
 
-        {/* In-house is the only full list of who's staying — collapsed so it
-            no longer duplicates Arrivals at a glance. */}
-        <Collapsible title="In-house now" count={s.inHouse.length}>
-          <List items={s.inHouse} empty="Nobody checked in." />
-        </Collapsible>
+            <Panel
+              title="To clean"
+              count={housekeeping.toCleanCount}
+              action={<Link href="/housekeeping" className="section-label__a">Housekeeping <Icon name="arrowR" size={13} /></Link>}
+              flush={false}
+            >
+              {toClean.length === 0 ? (
+                <div style={{ color: "var(--text-subtle)", fontSize: "var(--fs-meta)" }}>All rooms clean.</div>
+              ) : (
+                <>
+                  <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)" }}>Clean before tonight’s arrivals.</div>
+                  <div className="room-chips">
+                    {toClean.map((r) => (
+                      <div key={r.id} className={`room-chip${r.highPriority ? " room-chip--prio" : ""}`}>
+                        <b>{r.label}</b>
+                        <small>{r.highPriority ? "Arriving soon" : "Checked out"}</small>
+                      </div>
+                    ))}
+                  </div>
+                  <Link href="/housekeeping" className="btn btn--primary btn--block" style={{ marginTop: 12 }}>
+                    <Icon name="check" size={16} /> Mark a room clean
+                  </Link>
+                </>
+              )}
+            </Panel>
 
-        <SectionHead
-          title="Next 7 days"
-          count={s.arrivalsNext7.length}
-          action={<Link href="/calendar" className="section-label__a">Calendar <Icon name="arrowR" size={13} /></Link>}
-        />
-        <List items={s.arrivalsNext7.slice(0, 3)} empty="Nothing booked yet." showDate />
-        {s.arrivalsNext7.length > 3 && (
-          <Link href="/calendar" className="section-label__a" style={{ display: "inline-flex", marginTop: 12 }}>
-            +{s.arrivalsNext7.length - 3} more arriving <Icon name="arrowR" size={13} />
-          </Link>
-        )}
+            <Panel title="Departures today" count={s.checkOutsToday.length}>
+              <List items={s.checkOutsToday} empty="No departures today." showDeparted showPayment />
+            </Panel>
+          </div>
+
+          {/* THE RAIL — things you check, not things you do. */}
+          <aside className="dash__rail">
+            {showMoney && (
+              <Link href="/finance" className="railcard railcard--money">
+                <span className="railcard__ic"><Icon name="wallet" size={18} /></span>
+                <span className="railcard__m">
+                  <span className="railcard__k">Pending payments</span>
+                  <span className="railcard__v">{displayINR(pending.total)}</span>
+                  <span className="railcard__s">
+                    {pending.count > 0 ? `across ${pending.count} booking${pending.count === 1 ? "" : "s"}` : "all settled"}
+                  </span>
+                </span>
+                <span className="railcard__go"><Icon name="arrowR" size={17} /></span>
+              </Link>
+            )}
+
+            <Panel title="In-house now" count={s.inHouse.length}>
+              <List items={s.inHouse.slice(0, RAIL_ROWS)} empty="Nobody checked in." compact />
+              {s.inHouse.length > RAIL_ROWS && (
+                <Link href="/reservations" className="panel__more">
+                  +{s.inHouse.length - RAIL_ROWS} more in house <Icon name="arrowR" size={13} />
+                </Link>
+              )}
+            </Panel>
+
+            <Panel
+              title="Next 7 days"
+              count={s.arrivalsNext7.length}
+              action={<Link href="/calendar" className="section-label__a">Calendar <Icon name="arrowR" size={13} /></Link>}
+            >
+              <List items={s.arrivalsNext7.slice(0, RAIL_ROWS)} empty="Nothing booked yet." showDate compact />
+              {s.arrivalsNext7.length > RAIL_ROWS && (
+                <Link href="/calendar" className="panel__more">
+                  +{s.arrivalsNext7.length - RAIL_ROWS} more arriving <Icon name="arrowR" size={13} />
+                </Link>
+              )}
+            </Panel>
+          </aside>
+        </div>
       </div>
     </main>
   );
 }
 
-function SectionHead({ title, count, action }: { title: string; count: number; action?: ReactNode }) {
+/**
+ * A titled container.
+ *
+ * `flush` (the default) means the body has no padding, so a row list reads as one
+ * divided table rather than a stack of cards inside a card. Pass `flush={false}`
+ * for free-form content that needs its own breathing room.
+ */
+function Panel({
+  title,
+  count,
+  action,
+  flush = true,
+  children,
+}: {
+  title: string;
+  count: number;
+  action?: ReactNode;
+  flush?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className="section-label">
-      <div className="section-label__l">
-        <span className="section-label__t">{title}</span>
-        <span className="section-label__c">{count}</span>
+    <section className="panel">
+      <div className="panel__hd">
+        <div className="panel__l">
+          <span className="panel__t">{title}</span>
+          <span className="panel__c">{count}</span>
+        </div>
+        {action}
       </div>
-      {action}
-    </div>
+      <div className={flush ? "panel__rows" : "panel__bd"}>{children}</div>
+    </section>
   );
 }
 
@@ -180,6 +211,7 @@ function List({
   showDeparted,
   showDate,
   showPayment,
+  compact,
 }: {
   items: SummaryReservation[];
   empty: string;
@@ -188,8 +220,10 @@ function List({
   showDeparted?: boolean;
   showDate?: boolean;
   showPayment?: boolean;
+  /** Rail width: drop the channel badge so the name and room stay readable. */
+  compact?: boolean;
 }) {
-  if (items.length === 0) return <div className="empty">{empty}</div>;
+  if (items.length === 0) return <div className="panel__empty">{empty}</div>;
   return (
     <>
       {items.map((r) => (
@@ -200,7 +234,7 @@ function List({
             <div className="rowcard__meta">Room {r.room.label} · {r.room.roomType.name}</div>
           </div>
           <div className="rowcard__right">
-            <ChannelBadge name={r.channel.name} />
+            {!compact && <ChannelBadge name={r.channel.name} />}
             {showPayment && <PayBadge r={r} />}
             {showArrived && r.checkedInAt && <span className="badge badge--good">Arrived</span>}
             {showDeparted && r.checkedOutAt && <span className="badge badge--good">Departed</span>}
