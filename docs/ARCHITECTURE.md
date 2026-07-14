@@ -215,8 +215,7 @@ README in [`integrations/`](../integrations/).
 
 **History, so the naming makes sense:** the seam below (`/api/agent/*`) was
 originally designed for **ROOT** — a separately-hosted third-party agent
-service. That plan was superseded on 2026-07-04
-([`docs/AGENT-GENUI-PLAN.md`](AGENT-GENUI-PLAN.md)): instead of waiting on an
+service. That plan was superseded on 2026-07-04: instead of waiting on an
 externally-run agent, the AI brain was brought **in-repo** as
 [`assistant-agent/`](../assistant-agent) — a Python sidecar, deployed
 separately from the Next.js app but living in the same monorepo. It talks to

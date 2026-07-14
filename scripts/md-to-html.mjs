@@ -20,7 +20,6 @@ const FILES = [
   "docs/ARCHITECTURE.md",
   "docs/CONTRIBUTING.md",
   "docs/DEPLOYMENT.md",
-  "docs/DESIGN-HANDOFF.md",
   "docs/ROADMAP.md",
   "docs/SETUP.md",
 ];
