@@ -57,20 +57,11 @@ describe("tenant isolation", () => {
     expect(seenFromB?.id).toBe(bRoom.id);
   });
 
-  // freeRooms() is RAW SQL, and the tenant extension cannot see raw SQL — it only
-  // intercepts model operations. So this query has to filter property_id itself,
-  // and until 2026-07-14 it did not: it returned every room in the DATABASE.
-  //
-  // That is not a cosmetic leak. freeRooms backs the owner's booking-form room
-  // picker AND the AI agent's availability tool, so a second property would have
-  // been offered the first one's rooms as bookable — and a booking written against
-  // a room owned by another property would NOT be caught by the GiST exclusion
-  // constraint, which is keyed per room, not per property.
   // Module visibility is per property, so a client with two guest houses can buy
   // Inventory for one and not the other.
   //
-  // This test already earned its keep: the first implementation read the settings
-  // with propertySettings.findFirst(), which looks tenant-scoped but is NOT —
+  // This test earned its keep immediately: the first implementation read the row
+  // with propertySettings.findFirst(), which LOOKS tenant-scoped and is not —
   // PropertySettings is the tenant ROOT and is absent from TENANT_MODELS, so
   // findFirst() returns whichever row comes first. It passed with one property and
   // would have silently applied one guest house's module list to the other.
@@ -89,6 +80,15 @@ describe("tenant isolation", () => {
     expect([...b]).toEqual([]); // untouched — and empty means "show everything"
   });
 
+  // freeRooms() is RAW SQL, and the tenant extension cannot see raw SQL — it only
+  // intercepts model operations. So this query has to filter property_id itself,
+  // and until 2026-07-14 it did not: it returned every room in the DATABASE.
+  //
+  // Not a cosmetic leak. freeRooms backs the owner's booking-form room picker AND
+  // the AI agent's availability tool, so a second property would have been offered
+  // the first one's rooms as bookable — and a booking written against a room owned
+  // by another property would NOT be caught by the GiST exclusion constraint,
+  // which is keyed per room, not per property.
   it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
     const checkIn = "2031-03-01";
     const checkOut = "2031-03-03";
