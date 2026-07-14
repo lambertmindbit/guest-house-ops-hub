@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatDateOnly } from "@/lib/dates";
+import { requestPropertyId } from "@/lib/tenant";
 
 export type NightAvailability = {
   date: string;
@@ -74,11 +75,23 @@ export type RoomFreedom = {
 // block overlaps the half-open range. `excludeReservationId` lets edit-mode
 // ignore the reservation being edited. This is the ONLY room-level availability
 // SQL — both the owner form (/api/rooms/available) and the agent seam wrap it.
+//
+// TENANT SCOPING IS BY HAND, ON PURPOSE. The Prisma client extension that
+// auto-injects `propertyId` everywhere else CANNOT see raw SQL — it only
+// intercepts model operations. So this query must filter `rm.property_id`
+// itself, forever. Without it, it returns every room in the DATABASE: a second
+// property would see the first one's rooms offered as bookable, and a booking
+// could be written against a room belonging to another property — which the GiST
+// exclusion constraint would NOT catch, because it is keyed per room, not per
+// property. (Its sibling getAvailability() above already scopes by hand; this
+// one was missed.)
 export async function freeRooms(
   checkIn: string,
   checkOut: string,
   excludeReservationId = "",
+  propertyId?: string | null,
 ): Promise<RoomFreedom[]> {
+  const pid = await requestPropertyId(propertyId);
   return prisma.$queryRaw<RoomFreedom[]>`
     WITH rng AS (SELECT daterange(${checkIn}::date, ${checkOut}::date, '[)') AS r)
     SELECT rm.id,
@@ -100,6 +113,7 @@ export async function freeRooms(
       FROM rooms rm
       JOIN room_types rt ON rt.id = rm.room_type_id
      WHERE rm.archived_at IS NULL
+       AND (${pid}::text IS NULL OR rm.property_id = ${pid})
      ORDER BY rt.name, rm.label;
   `;
 }

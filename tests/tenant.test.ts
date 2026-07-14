@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma, prismaForTenant, __resetTenantResolution } from "@/lib/prisma";
+import { freeRooms } from "@/lib/availability";
 
 // Tenant isolation: two properties, a room in each. A read/write bound to
 // property A must never see property B's rows — and writes auto-stamp the tenant.
@@ -53,5 +54,32 @@ describe("tenant isolation", () => {
     expect(seenFromA).toBeNull(); // A cannot read B's row by id
     const seenFromB = await prismaForTenant(propB).room.findUnique({ where: { id: bRoom.id } });
     expect(seenFromB?.id).toBe(bRoom.id);
+  });
+
+  // freeRooms() is RAW SQL, and the tenant extension cannot see raw SQL — it only
+  // intercepts model operations. So this query has to filter property_id itself,
+  // and until 2026-07-14 it did not: it returned every room in the DATABASE.
+  //
+  // That is not a cosmetic leak. freeRooms backs the owner's booking-form room
+  // picker AND the AI agent's availability tool, so a second property would have
+  // been offered the first one's rooms as bookable — and a booking written against
+  // a room owned by another property would NOT be caught by the GiST exclusion
+  // constraint, which is keyed per room, not per property.
+  it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
+    const checkIn = "2031-03-01";
+    const checkOut = "2031-03-03";
+
+    const forA = await freeRooms(checkIn, checkOut, "", propA);
+    expect(forA.length).toBeGreaterThan(0);
+    expect(forA.some((r) => r.label === `${A}-101`)).toBe(true);
+    expect(forA.some((r) => r.label === `${B}-101`)).toBe(false); // ← the bug
+
+    const forB = await freeRooms(checkIn, checkOut, "", propB);
+    expect(forB.some((r) => r.label === `${B}-101`)).toBe(true);
+    expect(forB.some((r) => r.label === `${A}-101`)).toBe(false);
+
+    // Every row must actually belong to the property that asked for it.
+    const aIds = new Set((await prismaForTenant(propA).room.findMany()).map((r) => r.id));
+    expect(forA.every((r) => aIds.has(r.id))).toBe(true);
   });
 });
