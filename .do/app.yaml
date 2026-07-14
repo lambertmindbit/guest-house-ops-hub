@@ -1,7 +1,9 @@
 # DigitalOcean App Platform spec.
 #
 # Not used by Vercel — this file only matters if/when the app is deployed to
-# DigitalOcean. Import it with:
+# DigitalOcean. It lives on the `deploy/digitalocean` branch, which is `main`
+# plus the DigitalOcean-specific bits; sync it with `git merge main` before a
+# deploy. Import it with:
 #
 #   doctl apps create --spec .do/app.yaml
 #   doctl apps update <app-id> --spec .do/app.yaml
@@ -53,10 +55,28 @@ envs:
     type: SECRET
     value: REPLACE_IN_CONSOLE
 
+  # Guest ID-document upload. OPTIONAL — leave these unset and the feature shows
+  # a "not configured" hint while everything else works. To enable, create a
+  # PRIVATE Spaces bucket and a key under API → Spaces Keys.
+  - key: SPACES_KEY
+    scope: RUN_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+  - key: SPACES_SECRET
+    scope: RUN_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+
   # ── Safe to keep in the repo ───────────────────────────────────────────────
   - key: APP_TIMEZONE
     scope: RUN_TIME
     value: Asia/Kolkata
+  - key: SPACES_REGION
+    scope: RUN_TIME
+    value: blr1
+  - key: SPACES_BUCKET
+    scope: RUN_TIME
+    value: guest-ids
   # A bindable variable: App Platform substitutes the app's own public URL. The
   # scheduled jobs below call back into the app, so they need to know it.
   - key: APP_URL
@@ -67,7 +87,7 @@ services:
   - name: web
     github:
       repo: lambertmindbit/guest-house-ops-hub
-      branch: main
+      branch: deploy/digitalocean
       deploy_on_push: true
     environment_slug: node-js
     build_command: npm ci && npm run build
@@ -97,7 +117,7 @@ jobs:
     kind: PRE_DEPLOY
     github:
       repo: lambertmindbit/guest-house-ops-hub
-      branch: main
+      branch: deploy/digitalocean
       deploy_on_push: true
     environment_slug: node-js
     # Override the default build (which would run the whole Next build) — this
@@ -119,7 +139,7 @@ jobs:
       time_zone: Asia/Kolkata
     github:
       repo: lambertmindbit/guest-house-ops-hub
-      branch: main
+      branch: deploy/digitalocean
     environment_slug: node-js
     build_command: echo "cron job — no build step needed"
     run_command: node scripts/cron-ping.mjs sync
@@ -132,7 +152,7 @@ jobs:
       time_zone: Asia/Kolkata
     github:
       repo: lambertmindbit/guest-house-ops-hub
-      branch: main
+      branch: deploy/digitalocean
     environment_slug: node-js
     build_command: echo "cron job — no build step needed"
     run_command: node scripts/cron-ping.mjs messaging
@@ -145,7 +165,7 @@ jobs:
       time_zone: Asia/Kolkata
     github:
       repo: lambertmindbit/guest-house-ops-hub
-      branch: main
+      branch: deploy/digitalocean
     environment_slug: node-js
     build_command: echo "cron job — no build step needed"
     run_command: node scripts/cron-ping.mjs purge-ids
