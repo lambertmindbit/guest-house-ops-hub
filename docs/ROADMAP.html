@@ -44,10 +44,10 @@ guide to enabling the not-yet-wired features</strong>, open
 <p>The app shipped its original scope across six product milestones, then a large
 <strong>gap-analysis programme</strong> (against MindBit&#39;s ROOT/Lawei review) added three more
 phases — <strong>all in production on <code>main</code></strong>. The original product brief lives in
-<a href="../CLAUDE.html">CLAUDE.md</a>; the gap-analysis phases are summarised in their status
-notes: <a href="PHASE-1-GAP-STATUS.html">Phase 1</a> (close the core), <a href="PHASE-2-STATUS.html">Phase 2</a>
-(complete the PMS &amp; team — multi-tenancy, RBAC, staff/ops modules), and
-<a href="PHASE-3-STATUS.html">Phase 3</a> (the regional community network).</p>
+<a href="../CLAUDE.html">CLAUDE.md</a>. The three gap-analysis phases were: <strong>Phase 1</strong> (close
+the core), <strong>Phase 2</strong> (complete the PMS &amp; team — multi-tenancy, RBAC, staff/ops
+modules), and <strong>Phase 3</strong> (the regional community network). All shipped; what
+follows is the living record of what&#39;s built and what&#39;s deferred.</p>
 <p>Two cross-cutting passes followed the feature work:</p>
 <ul>
 <li><strong>UI/UX redesign</strong> (shipped 2026-06-05) — a warmer navy/teal/mint design system
@@ -198,9 +198,7 @@ phase scoping). They are <strong>not</strong> bugs:</p>
 </tr>
 </tbody></table>
 <h2>Known concerns / tech debt</h2>
-<p>Tracked with file/line references in
-<a href="../.planning/codebase/CONCERNS.md"><code>.planning/codebase/CONCERNS.md</code></a>. Highlights
-worth a new team&#39;s attention:</p>
+<p>This is the canonical list — what a new team should know:</p>
 <ul>
 <li><strong>Migration discipline</strong> is load-bearing: the generated <code>DATERANGE</code> columns +
 GiST constraint require the safe <code>db:migrate:new</code> helper. Most fragile area of
@@ -222,7 +220,7 @@ at small scale).</li>
 <a href="CONTRIBUTING.html">CONTRIBUTING.md</a> (migration safety) first.</li>
 <li>Get a local env up (<a href="SETUP.html">SETUP.md</a>) and run <code>npm test</code> to confirm the DB
 wiring.</li>
-<li>Skim <a href="../.planning/codebase/CONCERNS.md"><code>.planning/codebase/CONCERNS.md</code></a>.</li>
+<li>Skim <strong>Known concerns / tech debt</strong> above.</li>
 <li>Good first improvements: route-level tests for the booking/overlap path; a
 housekeeping-derivation test; rotate the single iCal token to per-feed tokens if
 feed privacy matters.</li>

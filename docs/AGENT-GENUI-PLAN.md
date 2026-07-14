@@ -6,10 +6,10 @@ kept for the reasoning; it is no longer a to-do list. The generative-UI registry
 the Python ADK sidecar (`assistant-agent/`) all shipped. For what exists now, read
 [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
 **Date:** 2026-07-04 (status corrected 2026-07-14)
-**Supersedes:** the "the conversational LLM agent is a *separate* ROOT service; do
-NOT add an LLM SDK here" scope line in `docs/ROOT-INTEGRATION-HANDOFF.md` §3, and
-the P2/P3 "separate repo" framing in `docs/ROOT-INTEGRATION-PLAN.md` (the shipped
-`/api/agent/*` seam remains the tool contract — see below).
+**Supersedes:** the earlier ROOT-integration docs, which assumed the conversational
+LLM agent would be a *separate* ROOT service and that no LLM SDK belonged in this
+repo. That direction was reversed and those docs have since been deleted; the
+shipped `/api/agent/*` seam remains the tool contract — see below.
 **Reference (inspiration only):** `/Tourism Agent` — `tenant_2_agent.py` (guest),
 `playground_agent.py` (owner console), the resilient LLM stack, `agent-admin` GenUI.
 

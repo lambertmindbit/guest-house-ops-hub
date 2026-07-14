@@ -398,7 +398,7 @@ npm run deploy</code></pre>
 
   <!-- ============ CONCERNS ============ -->
   <h2><span class="em">▲</span> Known concerns &amp; tech debt</h2>
-  <p>Tracked with file/line references in <code>.planning/codebase/CONCERNS.md</code>. None are blockers; the most important to understand are flagged ◆.</p>
+  <p>Tracked with file/line references in <code>docs/ROADMAP.md</code> &sect; Known concerns. None are blockers; the most important to understand are flagged ◆.</p>
 
   <table>
     <tr><th>Area</th><th>What &amp; why it matters</th><th>Severity</th></tr>
@@ -445,7 +445,7 @@ npm run deploy</code></pre>
     <li><strong>Read in order:</strong> <code>docs/ARCHITECTURE.md</code> (the correctness core) → <code>docs/CONTRIBUTING.md</code> (migration safety) → <code>docs/SETUP.md</code> (get a local env up and run <code>npm test</code>).</li>
     <li><strong>Close the biggest test gap:</strong> add a route-level test for the create-overlap → <code>409</code> path, plus a housekeeping-derivation test. These cover the highest-risk untested code.</li>
     <li><strong>Harden the constraint guard:</strong> add a standalone “exclusion constraint exists” check to the suite so an accidental migration can’t silently drop it.</li>
-    <li><strong>Skim the debt list:</strong> <code>.planning/codebase/CONCERNS.md</code> before any large refactor.</li>
+    <li><strong>Skim the debt list:</strong> <code>docs/ROADMAP.md</code> &sect; Known concerns before any large refactor.</li>
     <li><strong>Optional privacy hardening:</strong> move the single shared iCal token to per-feed tokens so rotating one feed doesn’t invalidate all OTA subscriptions.</li>
   </ol>
 
