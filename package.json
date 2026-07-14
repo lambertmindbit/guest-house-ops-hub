@@ -6,7 +6,7 @@
     "postinstall": "prisma generate",
     "dev": "next dev -p 3100",
     "build": "prisma generate && next build",
-    "start": "next start -p 3100",
+    "start": "next start -p ${PORT:-3100}",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
@@ -22,11 +22,15 @@
   "prisma": {
     "seed": "node prisma/seed.mjs"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
     "@prisma/client": "^6.5.0",
     "date-fns": "^4.1.0",
     "next": "^15.2.0",
     "node-ical": "^0.26.1",
+    "prisma": "^6.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^2.15.4",
@@ -46,7 +50,6 @@
     "marked": "^18.0.5",
     "playwright": "^1.60.0",
     "postcss": "^8.5.0",
-    "prisma": "^6.5.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

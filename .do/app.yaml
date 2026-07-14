@@ -1,0 +1,152 @@
+# DigitalOcean App Platform spec.
+#
+# Not used by Vercel — this file only matters if/when the app is deployed to
+# DigitalOcean. Import it with:
+#
+#   doctl apps create --spec .do/app.yaml
+#   doctl apps update <app-id> --spec .do/app.yaml
+#
+# The secret values below are placeholders on purpose. Set the real ones in the
+# DO console (Settings → App-Level Environment Variables) and mark them
+# encrypted; never commit them here.
+#
+# See ~/Desktop/OTA-Deploy-DigitalOcean.html for the full runbook.
+
+name: guest-house-ops-hub
+
+# Bangalore. The database cluster must be in this same region, or every query
+# pays a cross-region round trip.
+region: blr
+
+envs:
+  # ── Set these for real in the console ──────────────────────────────────────
+  # On App Platform the app is one long-lived Node process, not a swarm of
+  # serverless functions, so there is no need for a transaction pooler: Prisma
+  # keeps its own pool. DATABASE_URL and DIRECT_URL can both be the direct
+  # connection string. DIRECT_URL must still be set — schema.prisma requires it.
+  - key: DATABASE_URL
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+  - key: DIRECT_URL
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+  - key: AUTH_SECRET
+    scope: RUN_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+  - key: CRON_SECRET
+    scope: RUN_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+  - key: ICAL_FEED_TOKEN
+    scope: RUN_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+  - key: OWNER_EMAIL
+    scope: RUN_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+  - key: OWNER_PASSWORD
+    scope: RUN_TIME
+    type: SECRET
+    value: REPLACE_IN_CONSOLE
+
+  # ── Safe to keep in the repo ───────────────────────────────────────────────
+  - key: APP_TIMEZONE
+    scope: RUN_TIME
+    value: Asia/Kolkata
+  # A bindable variable: App Platform substitutes the app's own public URL. The
+  # scheduled jobs below call back into the app, so they need to know it.
+  - key: APP_URL
+    scope: RUN_TIME
+    value: ${APP_URL}
+
+services:
+  - name: web
+    github:
+      repo: lambertmindbit/guest-house-ops-hub
+      branch: main
+      deploy_on_push: true
+    environment_slug: node-js
+    build_command: npm ci && npm run build
+    # `npm start` binds to $PORT, which App Platform injects.
+    run_command: npm start
+    http_port: 8080
+    instance_size_slug: basic-xxs
+    instance_count: 1
+    health_check:
+      # NOT "/" — every page is behind auth, so an unauthenticated request to /
+      # is redirected to /login by the middleware. A health check that expects a
+      # 200 on / can read that redirect as unhealthy and restart-loop the app.
+      # /login returns a clean 200.
+      http_path: /login
+      initial_delay_seconds: 30
+      period_seconds: 10
+      failure_threshold: 5
+
+jobs:
+  # Applies pending migrations before the new version takes traffic. This is what
+  # scripts/vercel-build.sh does on Vercel (gated on VERCEL_ENV, which does not
+  # exist here) — without it the app would boot against a schema-less database.
+  #
+  # A failing PRE_DEPLOY job aborts the deploy, which is what we want: a bad
+  # migration should stop the release rather than half-apply and serve traffic.
+  - name: migrate
+    kind: PRE_DEPLOY
+    github:
+      repo: lambertmindbit/guest-house-ops-hub
+      branch: main
+      deploy_on_push: true
+    environment_slug: node-js
+    # Override the default build (which would run the whole Next build) — this
+    # job only needs node_modules. `prisma` is a runtime dependency precisely so
+    # that the CLI survives the buildpack's devDependency pruning and is present
+    # here.
+    build_command: echo "migrate job — no build step needed"
+    run_command: npx prisma migrate deploy
+    instance_size_slug: basic-xxs
+
+  # Vercel Hobby allows one cron job, which is why only /api/cron/sync is
+  # scheduled in vercel.json and the other two have never run in production.
+  # Here all three run. cron-ping.mjs uses only the Node standard library, so
+  # these jobs need no dependencies and no build.
+  - name: cron-sync
+    kind: SCHEDULED
+    schedule:
+      cron: "0 2 * * *"
+      time_zone: Asia/Kolkata
+    github:
+      repo: lambertmindbit/guest-house-ops-hub
+      branch: main
+    environment_slug: node-js
+    build_command: echo "cron job — no build step needed"
+    run_command: node scripts/cron-ping.mjs sync
+    instance_size_slug: basic-xxs
+
+  - name: cron-messaging
+    kind: SCHEDULED
+    schedule:
+      cron: "30 2 * * *"
+      time_zone: Asia/Kolkata
+    github:
+      repo: lambertmindbit/guest-house-ops-hub
+      branch: main
+    environment_slug: node-js
+    build_command: echo "cron job — no build step needed"
+    run_command: node scripts/cron-ping.mjs messaging
+    instance_size_slug: basic-xxs
+
+  - name: cron-purge-ids
+    kind: SCHEDULED
+    schedule:
+      cron: "0 3 * * *"
+      time_zone: Asia/Kolkata
+    github:
+      repo: lambertmindbit/guest-house-ops-hub
+      branch: main
+    environment_slug: node-js
+    build_command: echo "cron job — no build step needed"
+    run_command: node scripts/cron-ping.mjs purge-ids
+    instance_size_slug: basic-xxs
