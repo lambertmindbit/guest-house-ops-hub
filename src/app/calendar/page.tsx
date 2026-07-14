@@ -1,6 +1,8 @@
 import { getCalendar } from "@/lib/calendar";
 import { todayDateOnly, parseDateOnly, addDays } from "@/lib/dates";
 import { displayShortDate } from "@/lib/format";
+import { currentRole } from "@/lib/session";
+import { canSeeMoney } from "@/lib/authz";
 import { CalendarBoard, type CalView } from "@/components/CalendarBoard";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +47,10 @@ export default async function CalendarPage({
     next = addDays(start, days);
   }
 
-  const cal = await getCalendar(start, days);
+  // Balances are only computed into the payload for roles allowed to see money —
+  // housekeeping/reception must not be able to read them out of the page source.
+  const includeMoney = canSeeMoney(await currentRole());
+  const cal = await getCalendar(start, days, { includeMoney });
   const sub = `${displayShortDate(parseDateOnly(cal.dates[0]))} – ${displayShortDate(
     parseDateOnly(cal.dates[cal.dates.length - 1]),
   )} · ${cal.rows.length} rooms`;

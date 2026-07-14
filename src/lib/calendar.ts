@@ -1,16 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { addDays, formatDateOnly } from "@/lib/dates";
 
-export type CellState = "vacant" | "occupied" | "blocked" | "conflict";
+// The pure grid shape (cells, segments, toSegments) lives in ./calendar-grid so
+// the client-side CalendarBoard can import it without dragging Prisma into the
+// browser bundle. Re-exported here so server callers have one import site.
+export type { CellState, CalendarCell, CalendarSegment } from "./calendar-grid";
+export { toSegments } from "./calendar-grid";
 
-export type CalendarCell = {
-  date: string;
-  state: CellState;
-  arriving: boolean;
-  departing: boolean;
-  reservation?: { id: string; guestName: string; channelName: string };
-  blockReason?: string | null;
-};
+import type { CalendarCell, CellState } from "./calendar-grid";
 
 export type CalendarRow = {
   id: string;
@@ -31,7 +28,11 @@ export type Calendar = {
 // A cell is a "conflict" (red) when the same room is BOTH reserved and blocked
 // on the same night; the DB already prevents two confirmed stays from
 // overlapping, so that's the realistic clash the owner needs flagged.
-export async function getCalendar(start: string, days: number): Promise<Calendar> {
+export async function getCalendar(
+  start: string,
+  days: number,
+  { includeMoney = false }: { includeMoney?: boolean } = {},
+): Promise<Calendar> {
   const end = addDays(start, days);
   const dates = Array.from({ length: days }, (_, i) => addDays(start, i));
 
@@ -47,7 +48,7 @@ export async function getCalendar(start: string, days: number): Promise<Calendar
         checkIn: { lt: new Date(`${end}T00:00:00.000Z`) },
         checkOut: { gt: new Date(`${start}T00:00:00.000Z`) },
       },
-      include: { guest: true, channel: true },
+      include: { guest: true, channel: true, payments: true },
     }),
     prisma.block.findMany({
       where: {
@@ -59,14 +60,24 @@ export async function getCalendar(start: string, days: number): Promise<Calendar
 
   // Pre-stringify the ranges once so per-cell checks are simple string compares
   // (YYYY-MM-DD sorts lexicographically, half-open [in, out)).
-  const res = reservations.map((r) => ({
-    id: r.id,
-    roomId: r.roomId,
-    checkIn: formatDateOnly(r.checkIn),
-    checkOut: formatDateOnly(r.checkOut),
-    guestName: r.guest.name,
-    channelName: r.channel.name,
-  }));
+  const DAY_MS = 86_400_000;
+  const res = reservations.map((r) => {
+    const collected = r.payments.reduce((s, p) => s + Number(p.amount), 0);
+    const balance = Number(r.grossAmount ?? 0) - collected;
+    return {
+      id: r.id,
+      roomId: r.roomId,
+      checkIn: formatDateOnly(r.checkIn),
+      checkOut: formatDateOnly(r.checkOut),
+      guestName: r.guest.name,
+      channelName: r.channel.name,
+      nights: Math.round((r.checkOut.getTime() - r.checkIn.getTime()) / DAY_MS),
+      // Payments are always read (they're a handful of rows), but the figure only
+      // reaches the client for roles allowed to see money — a housekeeping login
+      // must not be able to read balances out of the page payload.
+      balanceDue: includeMoney && balance > 0 ? balance : undefined,
+    };
+  });
   const blk = blocks.map((b) => ({
     roomId: b.roomId,
     start: formatDateOnly(b.startDate),
@@ -96,7 +107,13 @@ export async function getCalendar(start: string, days: number): Promise<Calendar
         arriving,
         departing,
         reservation: occupying
-          ? { id: occupying.id, guestName: occupying.guestName, channelName: occupying.channelName }
+          ? {
+              id: occupying.id,
+              guestName: occupying.guestName,
+              channelName: occupying.channelName,
+              nights: occupying.nights,
+              balanceDue: occupying.balanceDue,
+            }
           : undefined,
         blockReason: block?.reason,
       };
