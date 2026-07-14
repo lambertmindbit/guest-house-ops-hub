@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma, prismaForTenant, __resetTenantResolution } from "@/lib/prisma";
 import { freeRooms } from "@/lib/availability";
+import { disabledModules } from "@/lib/module-gate";
 
 // Tenant isolation: two properties, a room in each. A read/write bound to
 // property A must never see property B's rows — and writes auto-stamp the tenant.
@@ -66,19 +67,26 @@ describe("tenant isolation", () => {
   // a room owned by another property would NOT be caught by the GiST exclusion
   // constraint, which is keyed per room, not per property.
   // Module visibility is per property, so a client with two guest houses can buy
-  // Inventory for one and not the other. If this read were not tenant-scoped, the
-  // vendor's switch on one property would silently reshape the other one's app.
+  // Inventory for one and not the other.
+  //
+  // This test already earned its keep: the first implementation read the settings
+  // with propertySettings.findFirst(), which looks tenant-scoped but is NOT —
+  // PropertySettings is the tenant ROOT and is absent from TENANT_MODELS, so
+  // findFirst() returns whichever row comes first. It passed with one property and
+  // would have silently applied one guest house's module list to the other.
   it("module toggles are per property, not per database", async () => {
     await prisma.propertySettings.update({
       where: { id: propA },
       data: { disabledModules: ["inventory", "vendors"] },
     });
 
-    const a = await prismaForTenant(propA).propertySettings.findFirst({ select: { disabledModules: true } });
-    const b = await prismaForTenant(propB).propertySettings.findFirst({ select: { disabledModules: true } });
+    // Exercise the real helper, not a hand-rolled read — a hand-rolled read is
+    // precisely what was wrong.
+    const a = await disabledModules(propA);
+    const b = await disabledModules(propB);
 
-    expect(a?.disabledModules.sort()).toEqual(["inventory", "vendors"]);
-    expect(b?.disabledModules).toEqual([]); // untouched — and empty means "show everything"
+    expect([...a].sort()).toEqual(["inventory", "vendors"]);
+    expect([...b]).toEqual([]); // untouched — and empty means "show everything"
   });
 
   it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
