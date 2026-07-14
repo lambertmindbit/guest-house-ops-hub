@@ -118,15 +118,24 @@ in <strong>Sydney (<code>ap-southeast-2</code>)</strong>, so functions are pinne
 <a href="../vercel.json"><code>vercel.json</code></a> (<code>&quot;regions&quot;: [&quot;syd1&quot;]</code>), which takes precedence on
 git-driven deploys. If you move the database, update both to match.</p>
 <h3>Applying migrations to production</h3>
-<p>Migrations are <strong>not</strong> auto-applied on deploy. Apply them against the production
-database before/at release:</p>
-<pre><code class="language-bash"># migrations read DIRECT_URL — point it at the production direct connection (5432)
-DIRECT_URL=&quot;&lt;prod direct 5432 URL&gt;&quot; npx prisma migrate deploy
-</code></pre>
-<p>Or run <code>npm run db:migrate</code> locally with the prod <code>DATABASE_URL</code>. Because
-migrations are additive (new nullable columns / new tables), this is safe to run
-without downtime. <strong>Never</strong> run <code>prisma migrate dev</code> against production — see
-<a href="CONTRIBUTING.html#database-migrations-read-this-first">CONTRIBUTING</a>.</p>
+<p><strong>Don&#39;t.</strong> The production build does it — see <em>Migrations apply on deploy</em> above.
+Merging a migration to <code>main</code> ships it; there is no manual step.</p>
+<blockquote>
+<p><strong>This section used to say the opposite</strong> (&quot;migrations are not auto-applied…
+apply them by hand&quot;). It was left behind when the build script started
+migrating, and following it is actively harmful: hand-applying SQL out of band
+leaves <code>_prisma_migrations</code> disagreeing with the migration files, and the next
+Vercel build fails on a migration Postgres says is already applied.</p>
+</blockquote>
+<p>Two rules that still hold:</p>
+<ul>
+<li><strong>Never</strong> run <code>prisma migrate dev</code> against a real database — it offers to
+<strong>reset</strong> it. Use <code>npm run db:migrate:new &lt;name&gt;</code> to author a migration and
+<code>prisma migrate deploy</code> to apply one. See
+<a href="CONTRIBUTING.html#database-migrations-read-this-first">CONTRIBUTING</a>.</li>
+<li>Migrations are additive (new nullable columns / new tables), so they apply
+without downtime and a code rollback needs no schema change.</li>
+</ul>
 <h2>Vercel Cron</h2>
 <p><a href="../vercel.json"><code>vercel.json</code></a> pins the function region and schedules a daily
 iCal import:</p>
@@ -138,6 +147,41 @@ iCal import:</p>
 <p>Runs at <strong>02:00 UTC</strong> daily, hitting <code>GET /api/cron/sync</code>, which is gated by
 <code>CRON_SECRET</code> (returns 401 if the secret is unset or mismatched). The owner can
 also trigger an import manually from the Feeds page (<code>POST /api/sync</code>).</p>
+<blockquote>
+<h3>⚠️ Two of the three cron routes are not scheduled</h3>
+<p>The codebase has <strong>three</strong> cron endpoints, all gated by <code>CRON_SECRET</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Does</th>
+<th>Scheduled on Vercel?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/api/cron/sync</code></td>
+<td>iCal import</td>
+<td><strong>Yes</strong> — daily 02:00 UTC</td>
+</tr>
+<tr>
+<td><code>/api/cron/messaging</code></td>
+<td>Pre-arrival + payment-reminder messages</td>
+<td><strong>No</strong></td>
+</tr>
+<tr>
+<td><code>/api/cron/purge-ids</code></td>
+<td>ID-document retention purge</td>
+<td><strong>No</strong></td>
+</tr>
+</tbody></table>
+<p><code>vercel.json</code> schedules only <code>sync</code> (Hobby plans cap the number of cron jobs),
+so <strong>messaging triggers and the ID-retention purge have never run
+automatically in production</strong>. Both routes work — nothing calls them.</p>
+<p>If ID retention matters legally, this needs a decision: raise the Vercel plan
+and add them to <code>vercel.json</code>, point any external scheduler at the two URLs
+with the <code>Authorization: Bearer $CRON_SECRET</code> header, or move to a host with
+unrestricted cron (see <em>DigitalOcean</em> below, where all three are scheduled).</p>
+</blockquote>
 <h2>Supabase</h2>
 <ul>
 <li>A managed Postgres project. <code>btree_gist</code> (required by the exclusion constraint)
@@ -149,27 +193,71 @@ the test suite at production.</li>
 <h2>CI — GitHub Actions</h2>
 <p><a href="../.github/workflows/ci.yml"><code>.github/workflows/ci.yml</code></a> runs on <strong>every push and
 PR</strong>:</p>
+<p><strong><code>test</code> job</strong> — the app:</p>
 <ol>
 <li>Spins up an ephemeral <strong><code>postgres:16</code></strong> service (ships <code>btree_gist</code>), with
 <code>DATABASE_URL</code>, <code>DIRECT_URL</code>, and <code>TEST_DATABASE_URL</code> all pointing at it — fully
 isolated, no secrets, no production data.</li>
 <li><code>npm ci</code></li>
 <li><strong>Lint</strong> → <code>npm run lint</code></li>
+<li><strong>Typecheck</strong> → <code>npx tsc --noEmit</code></li>
 <li><strong>Apply migrations</strong> → <code>npx prisma migrate deploy</code></li>
 <li><strong>Build</strong> → <code>npm run build</code></li>
 <li><strong>Test</strong> → <code>npm test</code></li>
 </ol>
+<p><strong><code>agent-tests</code> job</strong> — the Python assistant sidecar: installs
+<code>assistant-agent/requirements-dev.txt</code> and runs <code>pytest -q</code>.</p>
 <p>Green CI gates merges. Because CI migrates a fresh DB each run, it also continually
 verifies that the hand-edited migrations (generated columns + exclusion constraint)
 apply cleanly from scratch.</p>
 <h2>Release checklist</h2>
 <ol>
 <li>Branch → PR → CI green → review the Vercel <strong>preview</strong> deploy.</li>
-<li>If the PR includes a migration, apply it to the <strong>production</strong> DB
-(<code>prisma migrate deploy</code>).</li>
-<li>Merge to <code>main</code> → Vercel deploys production.</li>
+<li>Merge to <code>main</code> → Vercel deploys production, applying any migration in the
+build. <strong>Nothing to apply by hand.</strong></li>
 <li>Smoke-test production (log in, open the calendar, create a test booking).</li>
 </ol>
+<h2>DigitalOcean (alternative host)</h2>
+<p>The app is <strong>not</strong> Vercel-specific: it runs as a long-lived Node server, and
+DigitalOcean Managed Postgres supports <code>btree_gist</code>, so the no-double-booking
+exclusion constraint survives unchanged. A complete, importable App Platform spec
+lives at <a href="../.do/app.yaml"><code>.do/app.yaml</code></a> — web service, migrate job, cron jobs,
+health check, Bangalore region.</p>
+<p><strong>The DigitalOcean deployment lives on its own branch: <code>deploy/digitalocean</code>.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Branch</th>
+<th>Holds</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>main</code></td>
+<td>The <code>$PORT</code> fix, <code>prisma</code> in <code>dependencies</code>, <a href="../scripts/cron-ping.mjs"><code>scripts/cron-ping.mjs</code></a>, <code>.do/app.yaml</code></td>
+<td>Host-agnostic. Vercel never reads <code>.do/</code>, never runs <code>npm start</code> for a Next app, and nothing imports <code>cron-ping</code> — these cannot affect the Vercel deploy.</td>
+</tr>
+<tr>
+<td><code>deploy/digitalocean</code></td>
+<td>The DO Spaces storage adapter (<code>src/lib/storage.ts</code> + <code>src/lib/sigv4.ts</code>)</td>
+<td>This <em>would</em> clash: <code>storage.ts</code> is the one file the Vercel/Supabase deployment actively uses, and the DO version replaces its internals. It must not touch <code>main</code>.</td>
+</tr>
+</tbody></table>
+<p>Three things that differ from Vercel and will bite if missed:</p>
+<ul>
+<li><strong>Migrations need a <code>PRE_DEPLOY</code> job.</strong> <code>scripts/vercel-build.sh</code> only migrates
+when <code>VERCEL_ENV=production</code>, which never fires off Vercel — the app would boot
+against a schema-less database. The spec&#39;s <code>migrate</code> job replaces it.</li>
+<li><strong>The health check must point at <code>/login</code>, not <code>/</code>.</strong> Every page is behind auth,
+so <code>/</code> returns a 307 redirect, which a health check can read as unhealthy and
+restart-loop the app.</li>
+<li><strong>Sync the branch before every deploy</strong> — <code>git merge main</code>. A deploy branch
+nobody merges into is how you ship month-old code without noticing. The merge
+stays clean because nothing was removed from <code>main</code> to create the branch.</li>
+</ul>
+<p>Cron is a genuine upgrade there: App Platform schedules <strong>all three</strong> routes (see
+the warning above), driven by <code>scripts/cron-ping.mjs</code>, which signs the request
+with <code>CRON_SECRET</code> the way Vercel Cron does for you.</p>
 <h2>Rollback</h2>
 <ul>
 <li><strong>Code:</strong> revert the merge commit on <code>main</code> (or redeploy a previous deployment
