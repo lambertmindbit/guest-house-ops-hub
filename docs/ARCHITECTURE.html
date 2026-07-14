@@ -99,9 +99,8 @@ does this in one raw SQL query using the daterange <code>@&gt;</code> containmen
 (archived rooms excluded). This prevents drift and is the source of truth for
 occupancy and pricing-occupancy signals.</p>
 <h2>Data model</h2>
-<p>The schema has grown to <strong>55 models</strong> across three gap-analysis phases (see the
-<a href="PHASE-1-GAP-STATUS.html">PHASE-1</a> / <a href="PHASE-2-STATUS.html">PHASE-2</a> /
-<a href="PHASE-3-STATUS.html">PHASE-3</a> status notes and
+<p>The schema has grown to <strong>55 models</strong> across three gap-analysis phases (see
+<a href="ROADMAP.html">ROADMAP.md</a> and
 <a href="../prisma/schema.prisma"><code>prisma/schema.prisma</code></a>). The <strong>Phase 1 operations
 core</strong> below is the correctness heart; later phases layered on team/ops modules
 (staff, housekeeping tasks, maintenance, inventory, vendors, transport, groups,
@@ -199,8 +198,8 @@ round-trips through Postgres <code>DATE</code> columns without timezone drift
 is the reference.</li>
 <li><strong>Money</strong> is <code>DECIMAL(10,2)</code> in the DB. Prisma <code>Decimal</code> is converted to a JS
 <code>number</code> at the server boundary before passing to client components. Amounts are
-whole-rupee (INR) in practice. (See the rounding note in
-<a href="../.planning/codebase/CONCERNS.md"><code>.planning/codebase/CONCERNS.md</code></a>.)</li>
+whole-rupee (INR) in practice. (See the rounding note under
+<a href="ROADMAP.html#known-concerns--tech-debt">Known concerns</a>.)</li>
 </ul>
 <h2>Domain logic — <code>src/lib/</code></h2>
 <p>All business logic lives here (not in routes or components), so it&#39;s reusable by
@@ -358,8 +357,7 @@ README in <a href="../integrations/"><code>integrations/</code></a>.</p>
 <h2>AI agent architecture</h2>
 <p><strong>History, so the naming makes sense:</strong> the seam below (<code>/api/agent/*</code>) was
 originally designed for <strong>ROOT</strong> — a separately-hosted third-party agent
-service. That plan was superseded on 2026-07-04
-(<a href="AGENT-GENUI-PLAN.md"><code>docs/AGENT-GENUI-PLAN.md</code></a>): instead of waiting on an
+service. That plan was superseded on 2026-07-04: instead of waiting on an
 externally-run agent, the AI brain was brought <strong>in-repo</strong> as
 <a href="../assistant-agent"><code>assistant-agent/</code></a> — a Python sidecar, deployed
 separately from the Next.js app but living in the same monorepo. It talks to
@@ -568,9 +566,7 @@ route only. Colours are CSS custom properties (<code>var(--accent)</code>, …),
 follow the live theme with no JS. Pin stays at <code>recharts@2.x</code>: the <code>3.x</code> line&#39;s
 <code>ResponsiveContainer</code> measured zero width in testing and rendered nothing.</li>
 </ul>
-<p>For the directory layout and per-file map, see
-<a href="../.planning/codebase/STRUCTURE.md"><code>.planning/codebase/STRUCTURE.md</code></a>.
-For the full API surface, see <a href="API.html">API.md</a>.</p>
+<p>For the full API surface, see <a href="API.html">API.md</a>.</p>
 
 </div>
 </body>

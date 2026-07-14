@@ -82,9 +82,8 @@ occupancy and pricing-occupancy signals.
 
 ## Data model
 
-The schema has grown to **55 models** across three gap-analysis phases (see the
-[PHASE-1](PHASE-1-GAP-STATUS.md) / [PHASE-2](PHASE-2-STATUS.md) /
-[PHASE-3](PHASE-3-STATUS.md) status notes and
+The schema has grown to **55 models** across three gap-analysis phases (see
+[ROADMAP.md](ROADMAP.md) and
 [`prisma/schema.prisma`](../prisma/schema.prisma)). The **Phase 1 operations
 core** below is the correctness heart; later phases layered on team/ops modules
 (staff, housekeeping tasks, maintenance, inventory, vendors, transport, groups,
@@ -129,8 +128,8 @@ Enums: `ReservationStatus` (confirmed/cancelled/no_show), `BlockSource`
   is the reference.
 - **Money** is `DECIMAL(10,2)` in the DB. Prisma `Decimal` is converted to a JS
   `number` at the server boundary before passing to client components. Amounts are
-  whole-rupee (INR) in practice. (See the rounding note in
-  [`.planning/codebase/CONCERNS.md`](../.planning/codebase/CONCERNS.md).)
+  whole-rupee (INR) in practice. (See the rounding note under
+  [Known concerns](ROADMAP.md#known-concerns--tech-debt).)
 
 ## Domain logic — `src/lib/`
 
@@ -216,8 +215,7 @@ README in [`integrations/`](../integrations/).
 
 **History, so the naming makes sense:** the seam below (`/api/agent/*`) was
 originally designed for **ROOT** — a separately-hosted third-party agent
-service. That plan was superseded on 2026-07-04
-([`docs/AGENT-GENUI-PLAN.md`](AGENT-GENUI-PLAN.md)): instead of waiting on an
+service. That plan was superseded on 2026-07-04: instead of waiting on an
 externally-run agent, the AI brain was brought **in-repo** as
 [`assistant-agent/`](../assistant-agent) — a Python sidecar, deployed
 separately from the Next.js app but living in the same monorepo. It talks to
@@ -445,6 +443,4 @@ Domain queries themselves are already parallelized (`Promise.all` in
   follow the live theme with no JS. Pin stays at `recharts@2.x`: the `3.x` line's
   `ResponsiveContainer` measured zero width in testing and rendered nothing.
 
-For the directory layout and per-file map, see
-[`.planning/codebase/STRUCTURE.md`](../.planning/codebase/STRUCTURE.md).
 For the full API surface, see [API.md](API.md).

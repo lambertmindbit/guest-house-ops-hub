@@ -60,18 +60,23 @@ git-driven deploys. If you move the database, update both to match.
 
 ### Applying migrations to production
 
-Migrations are **not** auto-applied on deploy. Apply them against the production
-database before/at release:
+**Don't.** The production build does it — see *Migrations apply on deploy* above.
+Merging a migration to `main` ships it; there is no manual step.
 
-```bash
-# migrations read DIRECT_URL — point it at the production direct connection (5432)
-DIRECT_URL="<prod direct 5432 URL>" npx prisma migrate deploy
-```
+> **This section used to say the opposite** ("migrations are not auto-applied…
+> apply them by hand"). It was left behind when the build script started
+> migrating, and following it is actively harmful: hand-applying SQL out of band
+> leaves `_prisma_migrations` disagreeing with the migration files, and the next
+> Vercel build fails on a migration Postgres says is already applied.
 
-Or run `npm run db:migrate` locally with the prod `DATABASE_URL`. Because
-migrations are additive (new nullable columns / new tables), this is safe to run
-without downtime. **Never** run `prisma migrate dev` against production — see
-[CONTRIBUTING](CONTRIBUTING.md#database-migrations-read-this-first).
+Two rules that still hold:
+
+- **Never** run `prisma migrate dev` against a real database — it offers to
+  **reset** it. Use `npm run db:migrate:new <name>` to author a migration and
+  `prisma migrate deploy` to apply one. See
+  [CONTRIBUTING](CONTRIBUTING.md#database-migrations-read-this-first).
+- Migrations are additive (new nullable columns / new tables), so they apply
+  without downtime and a code rollback needs no schema change.
 
 ## Vercel Cron
 
@@ -89,6 +94,25 @@ Runs at **02:00 UTC** daily, hitting `GET /api/cron/sync`, which is gated by
 `CRON_SECRET` (returns 401 if the secret is unset or mismatched). The owner can
 also trigger an import manually from the Feeds page (`POST /api/sync`).
 
+> ### ⚠️ Two of the three cron routes are not scheduled
+>
+> The codebase has **three** cron endpoints, all gated by `CRON_SECRET`:
+>
+> | Route | Does | Scheduled on Vercel? |
+> |---|---|---|
+> | `/api/cron/sync` | iCal import | **Yes** — daily 02:00 UTC |
+> | `/api/cron/messaging` | Pre-arrival + payment-reminder messages | **No** |
+> | `/api/cron/purge-ids` | ID-document retention purge | **No** |
+>
+> `vercel.json` schedules only `sync` (Hobby plans cap the number of cron jobs),
+> so **messaging triggers and the ID-retention purge have never run
+> automatically in production**. Both routes work — nothing calls them.
+>
+> If ID retention matters legally, this needs a decision: raise the Vercel plan
+> and add them to `vercel.json`, point any external scheduler at the two URLs
+> with the `Authorization: Bearer $CRON_SECRET` header, or move to a host with
+> unrestricted cron (see *DigitalOcean* below, where all three are scheduled).
+
 ## Supabase
 
 - A managed Postgres project. `btree_gist` (required by the exclusion constraint)
@@ -102,14 +126,20 @@ also trigger an import manually from the Feeds page (`POST /api/sync`).
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on **every push and
 PR**:
 
+**`test` job** — the app:
+
 1. Spins up an ephemeral **`postgres:16`** service (ships `btree_gist`), with
    `DATABASE_URL`, `DIRECT_URL`, and `TEST_DATABASE_URL` all pointing at it — fully
    isolated, no secrets, no production data.
 2. `npm ci`
 3. **Lint** → `npm run lint`
-4. **Apply migrations** → `npx prisma migrate deploy`
-5. **Build** → `npm run build`
-6. **Test** → `npm test`
+4. **Typecheck** → `npx tsc --noEmit`
+5. **Apply migrations** → `npx prisma migrate deploy`
+6. **Build** → `npm run build`
+7. **Test** → `npm test`
+
+**`agent-tests` job** — the Python assistant sidecar: installs
+`assistant-agent/requirements-dev.txt` and runs `pytest -q`.
 
 Green CI gates merges. Because CI migrates a fresh DB each run, it also continually
 verifies that the hand-edited migrations (generated columns + exclusion constraint)
@@ -118,10 +148,40 @@ apply cleanly from scratch.
 ## Release checklist
 
 1. Branch → PR → CI green → review the Vercel **preview** deploy.
-2. If the PR includes a migration, apply it to the **production** DB
-   (`prisma migrate deploy`).
-3. Merge to `main` → Vercel deploys production.
-4. Smoke-test production (log in, open the calendar, create a test booking).
+2. Merge to `main` → Vercel deploys production, applying any migration in the
+   build. **Nothing to apply by hand.**
+3. Smoke-test production (log in, open the calendar, create a test booking).
+
+## DigitalOcean (alternative host)
+
+The app is **not** Vercel-specific: it runs as a long-lived Node server, and
+DigitalOcean Managed Postgres supports `btree_gist`, so the no-double-booking
+exclusion constraint survives unchanged. A complete, importable App Platform spec
+lives at [`.do/app.yaml`](../.do/app.yaml) — web service, migrate job, cron jobs,
+health check, Bangalore region.
+
+**The DigitalOcean deployment lives on its own branch: `deploy/digitalocean`.**
+
+| Branch | Holds | Why |
+|---|---|---|
+| `main` | The `$PORT` fix, `prisma` in `dependencies`, [`scripts/cron-ping.mjs`](../scripts/cron-ping.mjs), `.do/app.yaml` | Host-agnostic. Vercel never reads `.do/`, never runs `npm start` for a Next app, and nothing imports `cron-ping` — these cannot affect the Vercel deploy. |
+| `deploy/digitalocean` | The DO Spaces storage adapter (`src/lib/storage.ts` + `src/lib/sigv4.ts`) | This *would* clash: `storage.ts` is the one file the Vercel/Supabase deployment actively uses, and the DO version replaces its internals. It must not touch `main`. |
+
+Three things that differ from Vercel and will bite if missed:
+
+- **Migrations need a `PRE_DEPLOY` job.** `scripts/vercel-build.sh` only migrates
+  when `VERCEL_ENV=production`, which never fires off Vercel — the app would boot
+  against a schema-less database. The spec's `migrate` job replaces it.
+- **The health check must point at `/login`, not `/`.** Every page is behind auth,
+  so `/` returns a 307 redirect, which a health check can read as unhealthy and
+  restart-loop the app.
+- **Sync the branch before every deploy** — `git merge main`. A deploy branch
+  nobody merges into is how you ship month-old code without noticing. The merge
+  stays clean because nothing was removed from `main` to create the branch.
+
+Cron is a genuine upgrade there: App Platform schedules **all three** routes (see
+the warning above), driven by `scripts/cron-ping.mjs`, which signs the request
+with `CRON_SECRET` the way Vercel Cron does for you.
 
 ## Rollback
 

@@ -16,17 +16,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FILES = [
   "README.md",
   "CLAUDE.md",
-  "UI-INVENTORY.md",
   "docs/API.md",
   "docs/ARCHITECTURE.md",
   "docs/CONTRIBUTING.md",
   "docs/DEPLOYMENT.md",
-  "docs/DESIGN-HANDOFF.md",
   "docs/ROADMAP.md",
   "docs/SETUP.md",
-  "docs/PHASE-1-GAP-STATUS.md",
-  "docs/PHASE-2-STATUS.md",
-  "docs/PHASE-3-STATUS.md",
 ];
 const CONVERTED = new Set(FILES.map((f) => basename(f, ".md")));
 
@@ -93,7 +88,7 @@ for (const rel of FILES) {
     CONVERTED.has(path.split("/").pop()) ? `href="${path}.html${hash || ""}"` : m,
   );
   const out = join(ROOT, rel.replace(/\.md$/, ".html"));
-  // README/CLAUDE/UI-INVENTORY sit at root, so their "../README.html" note link
+  // README/CLAUDE sit at root, so their "../README.html" note link
   // would 404 — point those at ./README.html instead.
   const html = rel.includes("/")
     ? page(titleFrom(md, rel), body, basename(rel))

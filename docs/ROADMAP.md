@@ -1,18 +1,14 @@
 # Roadmap & Project Status
 
-> 📄 For a consolidated, shareable view of everything below **plus a step-by-step
-> guide to enabling the not-yet-wired features**, open
-> [docs/STATUS.html](STATUS.html) in a browser.
-
 ## Where we are
 
 The app shipped its original scope across six product milestones, then a large
 **gap-analysis programme** (against MindBit's ROOT/Lawei review) added three more
 phases — **all in production on `main`**. The original product brief lives in
-[CLAUDE.md](../CLAUDE.md); the gap-analysis phases are summarised in their status
-notes: [Phase 1](PHASE-1-GAP-STATUS.md) (close the core), [Phase 2](PHASE-2-STATUS.md)
-(complete the PMS & team — multi-tenancy, RBAC, staff/ops modules), and
-[Phase 3](PHASE-3-STATUS.md) (the regional community network).
+[CLAUDE.md](../CLAUDE.md). The three gap-analysis phases were: **Phase 1** (close
+the core), **Phase 2** (complete the PMS & team — multi-tenancy, RBAC, staff/ops
+modules), and **Phase 3** (the regional community network). All shipped; what
+follows is the living record of what's built and what's deferred.
 
 Two cross-cutting passes followed the feature work:
 
@@ -147,9 +143,7 @@ phase scoping). They are **not** bugs:
 
 ## Known concerns / tech debt
 
-Tracked with file/line references in
-[`.planning/codebase/CONCERNS.md`](../.planning/codebase/CONCERNS.md). Highlights
-worth a new team's attention:
+This is the canonical list — what a new team should know:
 
 - **Migration discipline** is load-bearing: the generated `DATERANGE` columns +
   GiST constraint require the safe `db:migrate:new` helper. Most fragile area of
@@ -171,7 +165,7 @@ worth a new team's attention:
    [CONTRIBUTING.md](CONTRIBUTING.md) (migration safety) first.
 2. Get a local env up ([SETUP.md](SETUP.md)) and run `npm test` to confirm the DB
    wiring.
-3. Skim [`.planning/codebase/CONCERNS.md`](../.planning/codebase/CONCERNS.md).
+3. Skim **Known concerns / tech debt** above.
 4. Good first improvements: route-level tests for the booking/overlap path; a
    housekeeping-derivation test; rotate the single iCal token to per-feed tokens if
    feed privacy matters.
