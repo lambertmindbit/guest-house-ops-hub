@@ -357,8 +357,7 @@ README in <a href="../integrations/"><code>integrations/</code></a>.</p>
 <h2>AI agent architecture</h2>
 <p><strong>History, so the naming makes sense:</strong> the seam below (<code>/api/agent/*</code>) was
 originally designed for <strong>ROOT</strong> — a separately-hosted third-party agent
-service. That plan was superseded on 2026-07-04
-(<a href="AGENT-GENUI-PLAN.md"><code>docs/AGENT-GENUI-PLAN.md</code></a>): instead of waiting on an
+service. That plan was superseded on 2026-07-04: instead of waiting on an
 externally-run agent, the AI brain was brought <strong>in-repo</strong> as
 <a href="../assistant-agent"><code>assistant-agent/</code></a> — a Python sidecar, deployed
 separately from the Next.js app but living in the same monorepo. It talks to

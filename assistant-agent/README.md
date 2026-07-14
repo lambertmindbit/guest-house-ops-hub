@@ -4,7 +4,7 @@ The Gemini-powered brain behind the OTA app's `/assistant` chat. It's a **separa
 Python process** in this monorepo (the Next.js app ships no LLM SDK). Its tools
 call the PMS **only** through the `/api/agent/*` seam, so the database stays the
 single source of truth and the GiST no-double-booking guarantee governs every
-write. See `docs/AGENT-GENUI-PLAN.md`.
+write. See [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md#root-agent-seam).
 
 ```
 ota_guest_agent/
