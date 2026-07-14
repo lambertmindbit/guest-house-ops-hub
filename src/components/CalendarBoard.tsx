@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { parseDateOnly } from "@/lib/dates";
-import type { CalendarCell } from "@/lib/calendar";
+import { toSegments, type CalendarCell, type CalendarSegment } from "@/lib/calendar-grid";
+import { displayINR } from "@/lib/format";
 import { ChannelBadge, Icon } from "@/components/ui";
 
 export type CalView = "day" | "week" | "2wk" | "month";
@@ -232,37 +233,12 @@ function GridView({ dates, rows, today }: { dates: string[]; rows: Row[]; today:
             {rows.map((r) => (
               <tr key={r.id}>
                 <td className="roomcell"><span className="n">{r.label}</span><br /><span className="t">{r.roomTypeName.split(" ")[0]}</span></td>
-                {r.cells.map((c, i) => {
-                  const cls =
-                    c.state === "occupied" ? "calcell--occ" :
-                    c.state === "conflict" ? "calcell--conflict" :
-                    c.state === "blocked" ? "calcell--blocked" : "";
-                  const inner = (
-                    <>
-                      {c.arriving && <span className="cal-arr" />}
-                      {c.departing && <span className="cal-dep" />}
-                      {c.state === "occupied" && c.reservation && (
-                        <span className="g"><span className="cdot" style={{ background: CH_DOT[c.reservation.channelName] ?? "var(--accent)" }} />{c.reservation.guestName}</span>
-                      )}
-                      {c.state === "conflict" && <span className="g">Conflict</span>}
-                    </>
-                  );
-                  if (c.state === "occupied" && c.reservation) {
-                    return (
-                      <td key={i} className={`calcell ${cls}`}>
-                        <Link href={`/reservations/${c.reservation.id}`} style={{ position: "absolute", inset: 0, padding: "6px 7px" }}>{inner}</Link>
-                      </td>
-                    );
-                  }
-                  if (c.state === "conflict") {
-                    return (
-                      <td key={i} className={`calcell ${cls}`}>
-                        <Link href="/needs-you" style={{ position: "absolute", inset: 0, padding: "6px 7px" }}>{inner}</Link>
-                      </td>
-                    );
-                  }
-                  return <td key={i} className={`calcell ${cls}`}>{inner}</td>;
-                })}
+                {/* One <td> per SEGMENT, not per night: a stay is a single bar
+                    spanning its nights, so the guest's name is read once instead
+                    of being truncated into every cell it touches. */}
+                {toSegments(r.cells).map((seg) => (
+                  <Cell key={seg.start} seg={seg} roomId={r.id} />
+                ))}
               </tr>
             ))}
           </tbody>
@@ -277,5 +253,66 @@ function GridView({ dates, rows, today }: { dates: string[]; rows: Row[]; today:
         <span><i style={{ background: "var(--orange)", width: 4 }} />Departs</span>
       </div>
     </>
+  );
+}
+
+function Cell({ seg, roomId }: { seg: CalendarSegment; roomId: string }) {
+  const c = seg.cell;
+  const edges = (
+    <>
+      {c.arriving && <span className="cal-arr" />}
+      {c.departing && <span className="cal-dep" />}
+    </>
+  );
+
+  if (c.state === "occupied" && c.reservation) {
+    const res = c.reservation;
+    return (
+      <td className="calcell" colSpan={seg.span}>
+        {edges}
+        <Link href={`/reservations/${res.id}`} className="calbar">
+          <span className="cdot" style={{ background: CH_DOT[res.channelName] ?? "var(--accent)" }} />
+          <span className="calbar__name">{res.guestName}</span>
+          <span className="calbar__meta">{res.nights}n</span>
+          {res.balanceDue != null && <span className="calbar__due">{displayINR(res.balanceDue)} due</span>}
+        </Link>
+      </td>
+    );
+  }
+
+  if (c.state === "conflict") {
+    return (
+      <td className="calcell" colSpan={seg.span}>
+        {edges}
+        <Link href="/needs-you" className="calbar calbar--conflict">
+          <span className="calbar__name">Conflict</span>
+          <span className="calbar__meta">Resolve</span>
+        </Link>
+      </td>
+    );
+  }
+
+  if (c.state === "blocked") {
+    return (
+      <td className="calcell calcell--blocked" colSpan={seg.span}>
+        {edges}
+        <span className="calbar calbar--blocked">{c.blockReason || "Blocked"}</span>
+      </td>
+    );
+  }
+
+  // Vacant. Each empty night is its own cell so it can be booked directly — the
+  // Day view already offers this; the grid used to be a dead end.
+  return (
+    <td className="calcell" colSpan={seg.span}>
+      {edges}
+      <Link
+        href={`/reservations/new?roomId=${roomId}&date=${c.date}`}
+        className="calcell__add"
+        aria-label={`Book this room on ${c.date}`}
+      >
+        <Icon name="plus" size={13} />
+      </Link>
+    </td>
   );
 }

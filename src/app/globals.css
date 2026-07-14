@@ -539,15 +539,40 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .calgrid td.roomcell .n { font-weight: 700; color: var(--ink); font-size: var(--fs-small); }
 .calgrid td.roomcell .t { font-size: var(--fs-eyebrow); color: var(--text-faint); text-transform: uppercase; }
 .calcell { position: relative; height: 50px; padding: 6px 7px; vertical-align: middle; }
-.calcell--occ { background: var(--accent-bg); }
 .calcell a { text-decoration: none; }
-.calcell--occ .g { font-weight: 600; color: var(--ink); font-size: var(--fs-micro); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.calcell--occ .cdot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 .calcell--blocked { background: repeating-linear-gradient(135deg, var(--blocked-bg), var(--blocked-bg) 6px, var(--blocked-line) 6px, var(--blocked-line) 12px); }
-.calcell--conflict { background: var(--red); }
-.calcell--conflict .g { color: #fff; font-weight: 700; }
 .cal-arr { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--green); }
 .cal-dep { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; background: var(--orange); }
+
+/* A stay is ONE bar spanning its nights (the <td> carries colSpan), so the guest's
+   name is read once instead of being truncated into every night it touches. The
+   colour lives on the bar, not the cell, which leaves a hairline gap between
+   back-to-back stays — you can see where one ends and the next begins. */
+.calbar { display: flex; align-items: center; gap: 6px; height: 100%; min-height: 34px; padding: 0 9px;
+  border-radius: var(--r-sm); background: var(--accent-bg); border: 1px solid #cfe7e1;
+  color: var(--ink); overflow: hidden; }
+.calbar .cdot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.calbar__name { font-weight: 600; font-size: var(--fs-micro); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; min-width: 0; }
+.calbar__meta { font-size: var(--fs-eyebrow); color: var(--text-subtle); flex: none; font-variant-numeric: tabular-nums; }
+/* Money owed, right-aligned at the far end of the bar — makes the calendar answer
+   "who still owes me" without opening anything. Owner-only (see getCalendar). */
+.calbar__due { margin-left: auto; flex: none; font-size: var(--fs-eyebrow); font-weight: 700;
+  color: var(--amber-text); background: var(--amber-bg); border-radius: var(--r-round); padding: 1px 6px; }
+a.calbar:hover { border-color: var(--teal); }
+.calbar--conflict { background: var(--red); border-color: var(--red); color: #fff; }
+.calbar--conflict .calbar__name { font-weight: 700; }
+.calbar--conflict .calbar__meta { color: rgba(255,255,255,0.85); margin-left: auto; }
+.calbar--blocked { background: transparent; border: 0; font-style: italic; font-size: var(--fs-micro);
+  color: var(--text-muted); }
+
+/* An empty night is a booking waiting to happen: tap it to open New booking with
+   the room and date prefilled. The Day view already did this; the grid was a dead end. */
+.calcell__add { position: absolute; inset: 3px; display: grid; place-items: center; border-radius: var(--r-sm);
+  color: var(--text-faint); opacity: 0; transition: opacity var(--fast), background var(--fast); }
+.calcell__add:hover, .calcell__add:focus-visible { opacity: 1; background: var(--surface-3); }
+/* Touch has no hover, so leave a faint hint rather than an invisible target. */
+@media (hover: none) { .calcell__add { opacity: 0.3; } }
 
 .legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 2px 0; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-micro); color: var(--text-muted); }
