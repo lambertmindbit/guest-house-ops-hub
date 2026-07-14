@@ -113,6 +113,7 @@ export async function freeRooms(
       FROM rooms rm
       JOIN room_types rt ON rt.id = rm.room_type_id
      WHERE rm.archived_at IS NULL
+       AND (${pid}::text IS NULL OR rm.property_id = ${pid})
      ORDER BY rt.name, rm.label;
   `;
 }
