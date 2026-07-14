@@ -86,32 +86,42 @@ iCal import:
 ```json
 {
   "regions": ["syd1"],
-  "crons": [ { "path": "/api/cron/sync", "schedule": "0 2 * * *" } ]
+  "crons": [
+    { "path": "/api/cron/sync",       "schedule": "0 2 * * *"  },
+    { "path": "/api/cron/messaging",  "schedule": "30 2 * * *" },
+    { "path": "/api/cron/purge-ids",  "schedule": "0 3 * * *"  }
+  ]
 }
 ```
 
-Runs at **02:00 UTC** daily, hitting `GET /api/cron/sync`, which is gated by
-`CRON_SECRET` (returns 401 if the secret is unset or mismatched). The owner can
-also trigger an import manually from the Feeds page (`POST /api/sync`).
+All three are gated by `CRON_SECRET` (401 if the secret is unset or mismatched).
+Vercel sends it as a Bearer token on each invocation.
 
-> ### ⚠️ Two of the three cron routes are not scheduled
+| Route | Does | Runs |
+|---|---|---|
+| `/api/cron/sync` | iCal import | 02:00 UTC daily |
+| `/api/cron/messaging` | Pre-arrival + payment-reminder messages | 02:30 UTC daily |
+| `/api/cron/purge-ids` | ID-document retention purge | 03:00 UTC daily |
+
+The owner can also trigger an import by hand from the Feeds page (`POST /api/sync`).
+
+> **Two of these were unscheduled until 2026-07-14**, so guest messaging and the
+> ID-retention purge had never run in production. The reason recorded here was
+> wrong: it claimed Vercel's Hobby plan caps the *number* of cron jobs. It does
+> not — **Hobby allows 100 cron jobs per project**. The only Hobby restriction is
+> *frequency*: a job may run **at most once per day**, and an expression that
+> would fire more often (`0 * * * *`, `*/30 * * * *`) **fails at deploy time**.
+> All three schedules above are daily, so all three are allowed.
 >
-> The codebase has **three** cron endpoints, all gated by `CRON_SECRET`:
->
-> | Route | Does | Scheduled on Vercel? |
-> |---|---|---|
-> | `/api/cron/sync` | iCal import | **Yes** — daily 02:00 UTC |
-> | `/api/cron/messaging` | Pre-arrival + payment-reminder messages | **No** |
-> | `/api/cron/purge-ids` | ID-document retention purge | **No** |
->
-> `vercel.json` schedules only `sync` (Hobby plans cap the number of cron jobs),
-> so **messaging triggers and the ID-retention purge have never run
-> automatically in production**. Both routes work — nothing calls them.
->
-> If ID retention matters legally, this needs a decision: raise the Vercel plan
-> and add them to `vercel.json`, point any external scheduler at the two URLs
-> with the `Authorization: Bearer $CRON_SECRET` header, or move to a host with
-> unrestricted cron (see *DigitalOcean* below, where all three are scheduled).
+> Keep that in mind before adding a fourth: on Hobby, sub-daily schedules don't
+> degrade — they break the deployment.
+
+### The retention purge is a no-op until you configure it
+
+`purgeExpiredIdDocuments()` reads `PropertySettings.idRetentionDays` and returns
+immediately when it is unset or ≤ 0. Scheduling the job therefore deletes nothing
+by itself. **Set a retention window in Settings to actually enforce it** — until
+then, scanned guest IDs are kept indefinitely.
 
 ## Supabase
 
@@ -181,9 +191,12 @@ Three things that differ from Vercel and will bite if missed:
   nobody merges into is how you ship month-old code without noticing. The merge
   stays clean because nothing was removed from `main` to create the branch.
 
-Cron is a genuine upgrade there: App Platform schedules **all three** routes (see
-the warning above), driven by `scripts/cron-ping.mjs`, which signs the request
-with `CRON_SECRET` the way Vercel Cron does for you.
+`.do/app.yaml` schedules the same three cron routes, driven by
+[`scripts/cron-ping.mjs`](../scripts/cron-ping.mjs), which signs the request with
+`CRON_SECRET` the way Vercel Cron does for you. The one real difference: App
+Platform allows sub-daily schedules (minimum 15 minutes), whereas Vercel Hobby
+caps every job at once per day. That only matters if a job ever needs to run more
+often than daily — none does today.
 
 ## Rollback
 
