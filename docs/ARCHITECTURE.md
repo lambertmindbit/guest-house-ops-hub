@@ -409,8 +409,10 @@ this says you sit *above* the property and may choose which modules the client g
 
 - It is checked against the **database on every request** (`getSession()`), never
   from a cookie claim — revoking it must bite immediately.
-- `/admin` **404s** for everyone else, including the client's own owner: a console
-  they cannot use should not announce itself as a locked door.
+- `/admin` shows **not-found** for everyone else, including the client's own owner:
+  a console they cannot use should not announce itself as a locked door. (The page
+  is not rendered; the HTTP status stays 200 because `app/loading.tsx` streams the
+  shell first — see the note in `src/lib/module-gate.ts`.)
 - It grants **no cross-client power**, because there is no cross-client to grant.
   Separate databases, again.
 - Core modules (Today, Calendar, Bookings, Guests, Housekeeping, Needs you, Finance,

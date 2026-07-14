@@ -538,8 +538,10 @@ this says you sit <em>above</em> the property and may choose which modules the c
 <ul>
 <li>It is checked against the <strong>database on every request</strong> (<code>getSession()</code>), never
 from a cookie claim — revoking it must bite immediately.</li>
-<li><code>/admin</code> <strong>404s</strong> for everyone else, including the client&#39;s own owner: a console
-they cannot use should not announce itself as a locked door.</li>
+<li><code>/admin</code> shows <strong>not-found</strong> for everyone else, including the client&#39;s own owner:
+a console they cannot use should not announce itself as a locked door. (The page
+is not rendered; the HTTP status stays 200 because <code>app/loading.tsx</code> streams the
+shell first — see the note in <code>src/lib/module-gate.ts</code>.)</li>
 <li>It grants <strong>no cross-client power</strong>, because there is no cross-client to grant.
 Separate databases, again.</li>
 <li>Core modules (Today, Calendar, Bookings, Guests, Housekeeping, Needs you, Finance,
