@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/session";
 import { PageHead } from "@/components/ui";
 import { AssistantChat } from "@/components/assistant/AssistantChat";
 import { PushToggle } from "@/components/PushToggle";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 // generated workspace (KPI tiles, charts) beside the conversation on a desktop, so
 // it needs the width. On a phone it collapses to a single column.
 export default async function AssistantPage() {
+  await requireModule("assistant");
   await requireRole(["owner"]);
 
   return (

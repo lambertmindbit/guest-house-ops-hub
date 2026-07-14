@@ -3,10 +3,12 @@ import { listStaff } from "@/lib/staff";
 import { todayDateOnly, formatDateOnly } from "@/lib/dates";
 import { PageHead } from "@/components/ui";
 import { MaintenanceBoard } from "@/components/MaintenanceBoard";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function MaintenancePage() {
+  await requireModule("maintenance");
   const today = todayDateOnly();
   const [requests, assets, staff] = await Promise.all([listRequests(), listAssets(), listStaff()]);
 

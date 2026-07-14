@@ -8,6 +8,10 @@ export type Role = "owner" | "reception" | "housekeeping";
 // config/admin APIs. Deliberately excludes operational APIs that staff need
 // (e.g. /api/rooms, used by the housekeeping "mark clean" action).
 const OWNER_ONLY_PREFIXES = [
+  // Vendor console. requirePlatformAdmin() in the page/route is the real gate —
+  // this only keeps non-owner roles from getting that far.
+  "/admin",
+  "/api/admin",
   "/finance", "/analytics", "/pricing", "/settings", "/users",
   "/api/pricing", "/api/settings", "/api/seasons", "/api/expenses",
   "/api/flagged-numbers", "/api/users", "/api/import", "/api/id-documents",

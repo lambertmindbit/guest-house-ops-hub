@@ -5,6 +5,8 @@ import { getConflicts } from "@/lib/conflicts";
 import { escalationStats } from "@/lib/escalations";
 import { Icon } from "@/components/ui";
 import { LogoutButton } from "@/components/LogoutButton";
+import { disabledModules } from "@/lib/module-gate";
+import { moduleForRoute } from "@/lib/modules";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +79,19 @@ export default async function MorePage() {
     },
   ];
 
+  // Same module gate as the sidebar, driven off the row's own href — so the phone
+  // hub can never drift out of sync with the desktop nav.
+  const hidden = await disabledModules();
+  const visibleGroups = groups
+    .map((g) => ({
+      ...g,
+      rows: g.rows.filter((r) => {
+        const m = moduleForRoute(r.href);
+        return !m || !hidden.has(m);
+      }),
+    }))
+    .filter((g) => g.rows.length > 0);
+
   return (
     <main className="app-main">
       <div className="entrance">
@@ -85,7 +100,7 @@ export default async function MorePage() {
           <div className="pagehead__sub">Everything else — grouped, not a wall of links.</div>
         </div>
 
-        {groups.map((g) => (
+        {visibleGroups.map((g) => (
           <div key={g.label} className="setgroup">
             <div className="setgroup__label">{g.label}</div>
             <div className="setlist">

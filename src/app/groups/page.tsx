@@ -2,10 +2,12 @@ import Link from "next/link";
 import { listGroups } from "@/lib/groups";
 import { PageHead, SectionLabel, EmptyState, Icon } from "@/components/ui";
 import { GroupCreate } from "@/components/GroupsClient";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function GroupsPage() {
+  await requireModule("groups");
   const groups = await listGroups();
 
   return (

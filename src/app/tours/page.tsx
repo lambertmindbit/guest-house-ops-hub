@@ -3,10 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { formatDateOnly } from "@/lib/dates";
 import { PageHead } from "@/components/ui";
 import { ToursBoard } from "@/components/ToursBoard";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function ToursPage() {
+  await requireModule("tours");
   const [tours, partners, bookings, guests] = await Promise.all([
     listTours(), listTourPartners(), listTourBookings(),
     prisma.guest.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),

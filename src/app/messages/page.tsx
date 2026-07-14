@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listMessages } from "@/lib/messaging";
 import { displayDate } from "@/lib/format";
 import { PageHead, SectionLabel, EmptyState } from "@/components/ui";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default async function MessagesPage() {
+  await requireModule("messages");
   const messages = await listMessages({ limit: 200 });
 
   return (

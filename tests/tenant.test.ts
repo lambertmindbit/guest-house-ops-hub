@@ -65,6 +65,22 @@ describe("tenant isolation", () => {
   // been offered the first one's rooms as bookable — and a booking written against
   // a room owned by another property would NOT be caught by the GiST exclusion
   // constraint, which is keyed per room, not per property.
+  // Module visibility is per property, so a client with two guest houses can buy
+  // Inventory for one and not the other. If this read were not tenant-scoped, the
+  // vendor's switch on one property would silently reshape the other one's app.
+  it("module toggles are per property, not per database", async () => {
+    await prisma.propertySettings.update({
+      where: { id: propA },
+      data: { disabledModules: ["inventory", "vendors"] },
+    });
+
+    const a = await prismaForTenant(propA).propertySettings.findFirst({ select: { disabledModules: true } });
+    const b = await prismaForTenant(propB).propertySettings.findFirst({ select: { disabledModules: true } });
+
+    expect(a?.disabledModules.sort()).toEqual(["inventory", "vendors"]);
+    expect(b?.disabledModules).toEqual([]); // untouched — and empty means "show everything"
+  });
+
   it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
     const checkIn = "2031-03-01";
     const checkOut = "2031-03-03";

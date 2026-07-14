@@ -3,10 +3,12 @@ import { PageHead } from "@/components/ui";
 import { formatDateOnly } from "@/lib/dates";
 import { listPartners, listReferrals, referralSummary } from "@/lib/partners";
 import { ReferralLogBoard } from "@/components/ReferralLogBoard";
+import { requireModule } from "@/lib/module-gate";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReferralsPage() {
+  await requireModule("referrals");
   await requireRole(["owner", "reception"]);
   const [partners, referrals] = await Promise.all([listPartners(), listReferrals()]);
   const summary = referralSummary(referrals.map((r) => ({ status: r.status })));

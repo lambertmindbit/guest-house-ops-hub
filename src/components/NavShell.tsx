@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
 import { canSeeNav, type Role } from "@/lib/authz";
+import { isToggleable } from "@/lib/modules";
 
 // One config drives BOTH the phone tabs and the desktop sidebar.
 // Round-2 IA consolidation: ~24 destinations → a small primary set + shallow
@@ -109,13 +110,20 @@ export function NavShell({
   role = "owner",
   properties = [],
   currentPropertyId = null,
+  hiddenModules = [],
 }: {
   conflictCount?: number;
   escalationCount?: number;
   role?: Role;
   properties?: { id: string; name: string }[];
   currentPropertyId?: string | null;
+  /** Modules the vendor switched off for this property (src/lib/modules.ts). */
+  hiddenModules?: string[];
 }) {
+  // Only toggleable ids can hide anything — a stray value in the database can
+  // never make the calendar disappear. Widened to string because nav ids (NavId)
+  // are a superset of module ids: the core destinations have no module to hide them.
+  const hidden = new Set<string>(hiddenModules.filter(isToggleable));
   const pathname = usePathname();
   const router = useRouter();
   const [panel, setPanel] = useState(false);
@@ -224,7 +232,7 @@ export function NavShell({
           <span className="brandmark"><Icon name="door" size={17} /></span>
           <span><b>Ops Hub</b><span>Guest House</span></span>
         </Link>
-        {SIDEBAR_GROUPS.map((g) => ({ ...g, items: g.items.filter((id) => canSeeNav(role, id)) }))
+        {SIDEBAR_GROUPS.map((g) => ({ ...g, items: g.items.filter((id) => canSeeNav(role, id) && !hidden.has(id)) }))
           .filter((g) => g.items.length > 0)
           .map((g) => (
           <div key={g.label}>
