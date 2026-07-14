@@ -287,8 +287,10 @@ a.rowcard:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
 .kpi-strip--3 { grid-template-columns: 1.25fr 1fr 1fr; }
 @media (min-width: 900px) { .kpi-strip--3 { grid-template-columns: 1.25fr 1fr 1fr; } }
 
-/* Promoted housekeeping card on Today — ported from redesign/components.css. */
-.clean-card .room-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
+/* Promoted housekeeping card on Today — ported from redesign/components.css.
+   Not scoped to .clean-card: the chips now live inside a .panel on Today, and a
+   scoped rule left them stacking full-width instead of wrapping. */
+.room-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 11px; }
 .room-chip { display: flex; flex-direction: column; gap: 3px; padding: 9px 12px; border-radius: var(--r-sm);
   border: 1px solid var(--border); background: var(--surface-2); min-width: 76px; }
 .room-chip b { font-size: 15px; font-weight: 700; color: var(--ink); }
@@ -748,3 +750,68 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
 .console-tile--good  .console-tile__value { color: var(--green-text); }
 .console-tile--warn  .console-tile__value { color: var(--amber-text); }
 .console-tile--danger .console-tile__value { color: var(--red-text); }
+
+/* ---------------- Today: a workspace, not a scroll ----------------
+   The dashboard used to be nine sections stacked vertically, so the owner had to
+   read the whole page to find the one thing that mattered. It is now two columns:
+   the day's WORK (arrivals → the rooms they need → departures) holds the wide
+   column, and everything you only WATCH (alerts, money owed, who's in, what's
+   coming) sits in a rail beside it.
+
+   On a phone there is no rail, so the same containers stack in priority order —
+   and the alert is hoisted to the top, where an alarm belongs. That ordering is
+   the whole reason this is grid-template-areas and not two floated columns. */
+.dash { display: grid; gap: 14px; align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "alert" "kpis" "work" "rail"; }
+@media (min-width: 1024px) {
+  .dash { gap: 16px; grid-template-columns: minmax(0, 1.9fr) minmax(272px, 1fr);
+    grid-template-areas: "kpis alert" "work rail"; }
+}
+.dash__alert { grid-area: alert; }
+.dash__kpis  { grid-area: kpis; }
+.dash__work  { grid-area: work; display: grid; gap: 14px; align-content: start; }
+.dash__rail  { grid-area: rail; display: grid; gap: 12px; align-content: start; }
+
+/* A titled container. Body is flush so row lists read as one divided table,
+   rather than cards floating inside a card. */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.panel__hd { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); }
+.panel__l { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.panel__t { font-size: var(--fs-small); font-weight: 700; color: var(--ink); }
+.panel__c { font-size: var(--fs-micro); font-weight: 700; color: var(--text-subtle); background: var(--surface-3);
+  border-radius: var(--r-round); padding: 1px 7px; font-variant-numeric: tabular-nums; }
+.panel__bd { padding: 14px; }
+.panel__rows .rowcard { border: 0; border-radius: 0; margin-top: 0; background: transparent; }
+.panel__rows .rowcard + .rowcard { border-top: 1px solid var(--border-subtle); }
+a.panel__rows .rowcard:hover, .panel__rows a.rowcard:hover { box-shadow: none; background: var(--surface-2); }
+.panel__empty { padding: 20px 14px; text-align: center; color: var(--text-subtle); font-size: var(--fs-meta); }
+.panel__more { display: inline-flex; align-items: center; gap: 4px; padding: 10px 14px;
+  border-top: 1px solid var(--border-subtle); font-size: var(--fs-meta); font-weight: 600;
+  color: var(--accent); text-decoration: none; width: 100%; }
+
+/* Rail cards — one number, one verdict, one tap. Deliberately quieter than the
+   work column: these are things you check, not things you do. */
+.railcard { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-decoration: none; color: inherit;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  transition: border-color var(--fast), box-shadow var(--fast); }
+a.railcard:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
+.railcard__ic { width: 36px; height: 36px; border-radius: var(--r-sm); display: grid; place-items: center; flex: none;
+  background: var(--surface-3); color: var(--text-subtle); }
+/* These are spans (they sit inside an <a>), so they must be made block or the
+   label, the number and the caption run together on one line. */
+.railcard__m { display: block; flex: 1; min-width: 0; }
+.railcard__k { display: block; font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-subtle); }
+.railcard__v { display: block; font-size: var(--fs-h3); font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; margin-top: 3px; }
+.railcard__s { display: block; font-size: var(--fs-micro); color: var(--text-subtle); margin-top: 2px; }
+.railcard__go { color: var(--text-faint); flex: none; }
+
+/* The one loud thing on the page. If nothing needs you, it isn't rendered. */
+.railcard--alert { background: var(--red-bg); border-color: var(--red-border); }
+.railcard--alert .railcard__ic { background: #fff; color: var(--red-text); }
+.railcard--alert .railcard__k { color: var(--red-text); opacity: 0.75; }
+.railcard--alert .railcard__v { color: var(--red-text); }
+.railcard--alert .railcard__s { color: var(--red-text); opacity: 0.8; }
+.railcard--alert .railcard__go { color: var(--red-text); }
+.railcard--money .railcard__ic { background: var(--amber-bg); color: var(--amber-text); }
