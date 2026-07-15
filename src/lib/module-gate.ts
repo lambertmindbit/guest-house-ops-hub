@@ -55,10 +55,23 @@ export async function disabledModules(propertyId?: string | null): Promise<Set<M
 }
 
 /**
- * 404 unless the acting property has this module.
+ * Show the not-found page instead of the module, unless the property has it.
  *
- * Call at the top of a gated page. 404 rather than 403 — a module the client
- * didn't buy shouldn't announce itself as a locked door.
+ * Call at the top of a gated page. Not-found rather than forbidden — a module the
+ * client didn't buy shouldn't announce itself as a locked door.
+ *
+ * ── ONE HONEST CAVEAT ────────────────────────────────────────────────────────
+ * The visitor SEES the 404 page and the module's own content never renders — that
+ * is verified. But the HTTP STATUS stays 200, not 404: `src/app/loading.tsx` puts
+ * every page behind a Suspense boundary, so Next flushes the shell (with its
+ * status) before this component runs, and notFound() can then only swap the UI
+ * inside the stream — it can no longer change the status line.
+ *
+ * That is fine for what this is — a packaging gate, not a security boundary. It
+ * would NOT be fine if we were relying on the status code for anything (uptime
+ * checks, crawlers). Fixing it properly would mean deciding at the edge, which
+ * cannot read the database. Left as-is deliberately, and written down so nobody
+ * later "discovers" the 200 and assumes the gate is broken. It isn't.
  */
 export async function requireModule(id: ModuleId): Promise<void> {
   const disabled = await disabledModules();

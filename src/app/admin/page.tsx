@@ -34,8 +34,8 @@ export default async function AdminPage() {
         <div className="banner banner--warn" style={{ marginBottom: 18 }}>
           <span className="banner__txt">
             <b>Only you see this.</b> The client&rsquo;s owner cannot reach it. Switching a module off hides it from
-            their navigation and makes its pages return 404 — it does not delete any data, and switching it back on
-            restores everything.
+            their navigation and makes its pages show the not-found screen. It deletes no data, and switching it
+            back on restores everything.
           </span>
         </div>
 
