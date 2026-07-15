@@ -443,6 +443,12 @@ never substitute a different facility&#39;s answer for one it doesn&#39;t have),
 so a request is never just verbally &quot;passed on&quot; and lost). The owner agent adds
 5 owner-only tools (briefing, open queue, block a room, resolve a request,
 business summary).</p>
+<p><strong>Property-aware.</strong> Every <code>/chat</code> request carries a <code>propertyId</code>;
+<a href="../assistant-agent/ota_guest_agent/services/ota_client.py"><code>services/ota_client.py</code></a>
+holds a <code>current_property_ref</code> contextvar — the Python twin of the app&#39;s
+<code>withTenant</code> — that <code>server.py</code> sets once per request and every seam GET forwards as
+<code>propertyRef</code>, so a multi-property owner&#39;s agent answers about the right guest house.
+Absent (single-property client) it falls back to the sole property.</p>
 <p><strong>Reliability.</strong> <code>_run</code> in <code>server.py</code> is a 3-attempt chain: primary model →
 primary retry → <code>GEMINI_FALLBACK_MODEL</code> (default <code>gemini-2.5-flash</code>). An empty
 or transient-error attempt falls through; a partial stream that then errors
@@ -557,6 +563,17 @@ network (Phase 3).</p>
 in a client extension that injects the active <code>propertyId</code> into every read/write
 on tenant-scoped models (the <code>TENANT_MODELS</code> set), so domain code never writes
 <code>where: { propertyId }</code>. <code>PropertySettings</code> is the tenant <strong>root</strong> (not scoped).</li>
+<li><strong><code>Guest</code> is deliberately <em>not</em> scoped — guests are shared owner-wide.</strong> One
+database is one owner, and a guest is the same person whichever of the owner&#39;s
+properties they book, so <code>Guest</code> is absent from <code>TENANT_MODELS</code>: repeat-guest
+recognition, lifetime value, and the scam/bad-guest blacklist all span the owner&#39;s
+properties. Bookings, pricing, and finance stay strictly per-property. (This also
+removed a latent bug: every guest write upserts by the globally-<code>@unique</code> phone, so
+scoping <code>Guest</code> turned that into <code>where: { phone, propertyId }</code> and collided across
+properties.) One consequence: the ID-document retention purge
+(<a href="../src/lib/id-retention.ts"><code>src/lib/id-retention.ts</code></a>) can&#39;t belong to one
+property&#39;s window, so it purges against the owner&#39;s <strong>strictest</strong> window — a shared
+ID is never kept longer than any of the owner&#39;s properties permits.</li>
 <li><strong>Per-request binding.</strong> The active property comes from the <code>x-ota-tenant</code>
 header the Edge middleware stamps from the HMAC-verified session (tamper-proof:
 <code>set</code> overwrites any client value). The extension reads it via Next&#39;s request
@@ -570,6 +587,27 @@ an enabled <code>SharingGrant</code> (<code>canRead</code>, default-deny), retur
 public projection — never guest PII, occupancy internals, or finance — and
 audit-logging the access. Everything else stays on the auto-scoped <code>prisma</code> and
 is fully isolated; a cross-tenant leakage test guards the boundary.</li>
+</ul>
+<h3>Multiple properties (one owner)</h3>
+<p>The scoping above is what lets a single owner run <strong>several guest houses</strong> in one
+database. The owner-facing surface for that:</p>
+<ul>
+<li><strong>Add / switch.</strong> Settings → <strong>Properties</strong> (<a href="../src/app/settings/properties/page.tsx"><code>/settings/properties</code></a>)
+lists the owner&#39;s properties, switches the acting one (<code>POST /api/session/property</code>,
+which re-stamps the tenant header so the whole app re-scopes), and creates a new one
+(<code>POST /api/properties</code>, owner / platform-admin only) — seeding its channels (Direct
+/ Phone / WhatsApp / Website / Travel agent — no OTAs) and granting the creator. The
+nav property switcher only appears once there are 2+, so this screen is where the
+second property is born. On a single-property client the whole feature is inert.</li>
+<li><strong>Staff across properties.</strong> <code>UserProperty</code> is a login&#39;s access set;
+<code>PUT /api/users/[id]/properties</code> replaces it wholesale (keeping <code>User.propertyId</code>
+inside the set, so a reshuffle <em>moves</em> the staff member, their home following).
+Settings → Users shows per-staff property chips.</li>
+<li><strong>The agent is property-aware too.</strong> The app sends <code>propertyId</code> with every agent
+request; the Python side mirrors <code>withTenant</code> with a <code>current_property_ref</code>
+contextvar (see below), and agent bookings <strong>derive</strong> the property from the room
+rather than trusting an input — so a booking can never land in the wrong (or no)
+property&#39;s calendar.</li>
 </ul>
 <h2>Auth &amp; request gating</h2>
 <ul>

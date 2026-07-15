@@ -206,6 +206,34 @@ phone, room or channel) and stay-state filtering client-side.</p>
 <td>Property profile (single row, get-or-create)</td>
 </tr>
 </tbody></table>
+<h2>Properties, access &amp; session (multi-property)</h2>
+<p>One owner can run several guest houses in one database (see
+<a href="ARCHITECTURE.html#multiple-properties-one-owner">ARCHITECTURE.md → Multiple properties</a>).
+These manage that; on a single-property client they&#39;re inert.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/properties</code></td>
+<td>List the owner&#39;s properties / <strong>create</strong> one (owner or platform-admin) — seeds its channels (Direct / Phone / WhatsApp / Website / Travel agent) and grants the creator</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/session/property</code></td>
+<td>Switch the acting property (<code>{ propertyId }</code>) — re-stamps the tenant header so the whole app re-scopes</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/users/[id]/properties</code></td>
+<td>Set a login&#39;s full property-access set (replaces <code>UserProperty</code> rows; keeps the user&#39;s home property in the set)</td>
+</tr>
+</tbody></table>
 <h2>Maintenance blocks</h2>
 <table>
 <thead>

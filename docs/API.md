@@ -70,6 +70,18 @@ phone, room or channel) and stay-state filtering client-side.
 | `PATCH` / `DELETE` | `/api/channels/[id]` | Edit / delete (409 if it has bookings) |
 | `GET` / `PATCH` | `/api/settings` | Property profile (single row, get-or-create) |
 
+## Properties, access & session (multi-property)
+
+One owner can run several guest houses in one database (see
+[ARCHITECTURE.md → Multiple properties](ARCHITECTURE.md#multiple-properties-one-owner)).
+These manage that; on a single-property client they're inert.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` / `POST` | `/api/properties` | List the owner's properties / **create** one (owner or platform-admin) — seeds its channels (Direct / Phone / WhatsApp / Website / Travel agent) and grants the creator |
+| `POST` | `/api/session/property` | Switch the acting property (`{ propertyId }`) — re-stamps the tenant header so the whole app re-scopes |
+| `PUT` | `/api/users/[id]/properties` | Set a login's full property-access set (replaces `UserProperty` rows; keeps the user's home property in the set) |
+
 ## Maintenance blocks
 
 | Method | Path | Purpose |

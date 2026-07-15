@@ -127,6 +127,31 @@ The community network is inherently cross-tenant: all peer access goes through a
 single audited, grant-gated seam that never exposes guest PII, occupancy, or
 finance. See [ARCHITECTURE.md → Multi-tenancy](ARCHITECTURE.md#multi-tenancy--the-community-seam).
 
+## Delivered — multi-property (one owner, several guest houses)
+
+The Phase-2 multi-tenancy above scoped the *data* per property, but nothing let an
+owner actually **create or switch** properties. This closes that: a single owner can
+now run several guest houses from one login. It's a verified no-op for the
+single-property clients that exist today — the feature only appears once there are 2+.
+
+- **Add / switch properties.** Settings → **Properties** lists the owner's properties,
+  switches the acting one (the whole app re-scopes), and creates a new one — seeding
+  its channels and granting the creator. The nav property switcher appears once there
+  are 2+.
+- **Shared guest CRM, per-property everything else.** Guests are **shared owner-wide**
+  (one person, whichever property they book) — so repeat-guest recognition and the
+  scam/bad-guest blacklist span properties, while bookings, pricing, and finance stay
+  strictly per-property. (Decided 2026-07-15: keep shared.)
+- **Staff across properties.** A login's property-access set is editable per staff
+  member; a reshuffle moves them, their home property following.
+- **Property-aware AI agent.** Every agent request carries the property; the Python
+  agent mirrors the app's tenant scope, and agent bookings derive the property from
+  the room, so a booking never lands in the wrong calendar.
+- **Isolation model.** Multi-property is *within one client's database*. Different
+  **clients** get entirely separate deployments + databases + agents — nothing is
+  shared between clients. See
+  [ARCHITECTURE.md → Deployment isolation](ARCHITECTURE.md#deployment-isolation--one-client-one-everything).
+
 ## Deferred — by design
 
 These were intentionally left out (see [CLAUDE.md](../CLAUDE.md) "do NOT" rules and
@@ -158,6 +183,17 @@ This is the canonical list — what a new team should know:
   highest-value gap to close is a route-level create-overlap → 409 test.
 - **Pricing rate-calendar** re-fetches global config per room type (mild N+1, fine
   at small scale).
+- **Public-chat rate limiter is per-instance** ([`src/lib/rate-limit.ts`](../src/lib/rate-limit.ts)):
+  in-memory, so on serverless the "20 / 10 min" cap is weaker than it reads. A real
+  fix is a shared store (Upstash Redis) = a new dependency + infra, deferred pending
+  sign-off. Only matters when `PUBLIC_CHAT_ENABLED` is on (off by default).
+- **ID-retention purge is a no-op until configured.** The nightly `purge-ids` cron
+  deletes nothing until a property sets `idRetentionDays` in Settings — guest ID
+  documents are kept indefinitely until then. By design; call it out to new owners.
+- **Raw SQL must scope `property_id` by hand.** The tenant extension can't see
+  `$queryRaw`, so any raw query touching tenant tables must filter `property_id`
+  itself (e.g. [`freeRooms`](../src/lib/availability.ts)) — a miss leaks across one
+  owner's properties (never across clients). The recurring rule for multi-property work.
 
 ## Suggested next steps for a new team
 
