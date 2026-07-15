@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { prisma, unscopedPrisma } from "@/lib/prisma";
 import { isStorageConfigured, deleteObject } from "@/lib/storage";
 
 // ID-document retention (Gap 12). A property may set idRetentionDays; documents
@@ -21,19 +21,32 @@ export function expiredIdDocuments(guests: GuestIdRow[], retentionDays: number |
   return guests.filter((g) => g.idDocumentPath && isIdExpired(g.idUploadedAt, retentionDays, now));
 }
 
+// The owner's ONE retention window, given each property's setting.
+//
+// Guests are shared across an owner's properties (a single record, one ID document
+// owner-wide — see the Guest model), so a document cannot be "owned" by one
+// property's policy. We take the STRICTEST — the shortest positive window — so a
+// scanned ID is never kept longer than ANY of the owner's properties permits, which
+// is the compliance-safe direction. Properties with no window (null / ≤ 0) don't
+// impose one and are ignored; if none set a window, the answer is null (keep
+// indefinitely). With a single property this is exactly that property's window —
+// identical to the old findFirst() — so single-property behaviour is unchanged.
+export function strictestRetentionDays(windows: (number | null)[]): number | null {
+  const positive = windows.filter((d): d is number => typeof d === "number" && d > 0);
+  return positive.length > 0 ? Math.min(...positive) : null;
+}
+
 // Delete the storage object (best-effort) and clear the ID flags for every guest
 // whose document has aged past the property's retention window. No-op when no
 // policy is set. Returns the number of documents purged.
 export async function purgeExpiredIdDocuments(now = new Date()): Promise<{ purged: number }> {
-  // KNOWN multi-property gap, left deliberately: this runs from the daily cron with
-  // no acting property, and reads a SINGLE retention policy. With two properties it
-  // would apply one property's window to everyone. The correct fix is to iterate
-  // properties and purge each under its own policy — a separate change from this
-  // read-resolver slice. findFirst is kept (not the resolver) precisely so this
-  // stays obviously wrong-for-multi rather than silently doing nothing.
-  const settings = await prisma.propertySettings.findFirst({ select: { idRetentionDays: true } });
-  const retentionDays = settings?.idRetentionDays ?? null;
-  if (!retentionDays || retentionDays <= 0) return { purged: 0 };
+  // Runs from the daily cron with no acting property. Guests are owner-wide (shared),
+  // so we purge against the owner's ONE window — the strictest across their
+  // properties (strictestRetentionDays). unscopedPrisma to read EVERY property's
+  // setting; with a single property this is that property's window, unchanged.
+  const properties = await unscopedPrisma.propertySettings.findMany({ select: { idRetentionDays: true } });
+  const retentionDays = strictestRetentionDays(properties.map((p) => p.idRetentionDays));
+  if (!retentionDays) return { purged: 0 };
 
   const guests = await prisma.guest.findMany({
     where: { idDocumentPath: { not: null }, idUploadedAt: { not: null } },

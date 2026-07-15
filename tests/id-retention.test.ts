@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isIdExpired, expiredIdDocuments } from "@/lib/id-retention";
+import { isIdExpired, expiredIdDocuments, strictestRetentionDays } from "@/lib/id-retention";
 
 const now = new Date("2026-07-02T00:00:00Z");
 const daysAgo = (n: number) => new Date(now.getTime() - n * 24 * 60 * 60 * 1000);
@@ -28,3 +28,26 @@ describe("expiredIdDocuments", () => {
     expect(expiredIdDocuments(guests, null, now)).toEqual([]);
   });
 });
+
+describe("strictestRetentionDays (owner-wide window for shared guests)", () => {
+  it("is UNCHANGED for a single property — its own window, exactly like before", () => {
+    expect(strictestRetentionDays([180])).toBe(180);
+    expect(strictestRetentionDays([null])).toBe(null); // no window set → keep forever
+    expect(strictestRetentionDays([0])).toBe(null); // 0 = keep forever
+  });
+
+  it("takes the STRICTEST (shortest positive) window across the owner's properties", () => {
+    expect(strictestRetentionDays([180, 90])).toBe(90); // Lawei 90 wins over Pine 180
+    expect(strictestRetentionDays([90, 180, 365])).toBe(90);
+  });
+
+  it("ignores properties with no window, but honours the ones that set one", () => {
+    expect(strictestRetentionDays([null, 180])).toBe(180); // one strict, one unset → 180
+    expect(strictestRetentionDays([180, 0, null])).toBe(180); // 0 and null impose nothing
+  });
+
+  it("keeps indefinitely when NO property sets a window", () => {
+    expect(strictestRetentionDays([null, 0, null])).toBe(null);
+    expect(strictestRetentionDays([])).toBe(null);
+  });
+})
