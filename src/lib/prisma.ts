@@ -25,7 +25,7 @@ const base = globalForPrisma.basePrisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== "production") globalForPrisma.basePrisma = base;
 
 const TENANT_MODELS = new Set<string>([
-  "RoomType", "Room", "Channel", "Guest", "Reservation", "Payment", "Block", "Expense",
+  "RoomType", "Room", "Channel", "Reservation", "Payment", "Block", "Expense",
   "PricingPolicy", "Season", "RateOverride", "IcalFeed", "InboundBooking", "FlaggedNumber",
   "Escalation", "OutboundMessage", "Complaint", "Refund", "CancellationPolicy",
   "Staff", "Shift", "Attendance", "HousekeepingTask", "Asset", "MaintenanceRequest", "InventoryItem", "StockMovement", "Vendor", "PurchaseOrder", "VendorPayment", "Driver", "Trip", "BookingGroup", "Amenity", "RoomTypeAmenity", "ReviewRequest", "AuditEvent",
