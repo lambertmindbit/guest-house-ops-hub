@@ -1,12 +1,16 @@
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { prisma, unscopedPrisma } from "@/lib/prisma";
 import { ok, zodFail, withRoute } from "@/lib/api";
+import { currentPropertySettings } from "@/lib/property-settings";
 
-// PropertySettings is a single-row table. Read returns the row (creating it with
-// defaults on first access); PATCH upserts the owner's edits onto that one row.
+// Settings for the ACTING property. Resolve it properly rather than findFirst() —
+// with two properties, findFirst() would let the owner edit whichever comes first,
+// not the one they're viewing. This route is owner-gated and always hit with a
+// bound session, so the acting property always resolves; the create-on-empty path
+// is only for a brand-new install.
 async function getOrCreate() {
-  const existing = await prisma.propertySettings.findFirst();
-  return existing ?? prisma.propertySettings.create({ data: {} });
+  const existing = await currentPropertySettings();
+  return existing ?? unscopedPrisma.propertySettings.create({ data: {} });
 }
 
 async function handleGET() {

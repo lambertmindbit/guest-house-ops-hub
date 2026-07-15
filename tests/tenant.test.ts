@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma, prismaForTenant, __resetTenantResolution } from "@/lib/prisma";
 import { freeRooms } from "@/lib/availability";
 import { disabledModules } from "@/lib/module-gate";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 // Tenant isolation: two properties, a room in each. A read/write bound to
 // property A must never see property B's rows — and writes auto-stamp the tenant.
@@ -89,6 +90,23 @@ describe("tenant isolation", () => {
   // the first one's rooms as bookable — and a booking written against a room owned
   // by another property would NOT be caught by the GiST exclusion constraint,
   // which is keyed per room, not per property.
+  // PropertySettings is the tenant ROOT — not auto-scoped — so a bare findFirst()
+  // returns whichever property comes first, not the acting one. That drove the
+  // invoice GSTIN, pricing config and booking ID-policy off the wrong property in a
+  // multi-property setup. currentPropertySettings() must resolve by the acting id.
+  it("currentPropertySettings() returns the acting property's row, not the first", async () => {
+    await prisma.propertySettings.update({ where: { id: propA }, data: { gstNumber: "GST-A" } });
+    await prisma.propertySettings.update({ where: { id: propB }, data: { gstNumber: "GST-B" } });
+
+    const a = await currentPropertySettings(propA);
+    const b = await currentPropertySettings(propB);
+
+    expect(a?.id).toBe(propA);
+    expect(a?.gstNumber).toBe("GST-A");
+    expect(b?.id).toBe(propB);
+    expect(b?.gstNumber).toBe("GST-B");
+  });
+
   it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
     const checkIn = "2031-03-01";
     const checkOut = "2031-03-03";

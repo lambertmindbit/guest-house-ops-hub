@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AssistantChat } from "@/components/assistant/AssistantChat";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function GuestChatPage() {
   if (process.env.PUBLIC_CHAT_ENABLED !== "true") notFound();
 
-  const settings = await prisma.propertySettings.findFirst({ select: { publicName: true, name: true } }).catch(() => null);
+  const settings = await currentPropertySettings().catch(() => null);
   const propertyName = settings?.publicName || settings?.name || "our guest house";
 
   return (

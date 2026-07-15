@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 // Arrival/departure stamps for a confirmed booking. These don't touch `status`
 // or `stay`, so the no-double-booking exclusion constraint is unaffected.
@@ -29,7 +30,7 @@ async function handlePATCH(
   // refuses until ID is on file (and the C-Form for foreign nationals); 'warn'
   // and 'off' allow. Does not affect advance bookings.
   if (parsed.data.action === "checkin") {
-    const settings = await prisma.propertySettings.findFirst({ select: { idPolicy: true } });
+    const settings = await currentPropertySettings();
     const gate = checkInGate(normalizeIdPolicy(settings?.idPolicy), existing.guest);
     if (gate.blocked && gate.reason) return fail(gate.reason, 422);
   }

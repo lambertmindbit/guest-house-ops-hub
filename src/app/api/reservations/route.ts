@@ -4,6 +4,7 @@ import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { isOverlapError } from "@/lib/db-errors";
 import { notifyBookingConfirmation } from "@/lib/messaging";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 // Thrown inside the create transaction when neither a guestId nor guest details
 // resolved to a guest — surfaced as a 422.
@@ -58,7 +59,7 @@ async function handlePOST(request: Request) {
 
   // Walk-in-only properties can require an ID number to save a new booking.
   if (input.guest && !input.guest.idNumber?.trim()) {
-    const settings = await prisma.propertySettings.findFirst({ select: { idRequiredAtBooking: true } });
+    const settings = await currentPropertySettings();
     if (settings?.idRequiredAtBooking) return fail("This property requires a guest ID number to take a booking.", 422);
   }
 

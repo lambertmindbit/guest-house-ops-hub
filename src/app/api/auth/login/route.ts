@@ -37,6 +37,10 @@ async function handlePOST(request: Request) {
     if (!verifyCredentials(email, password)) {
       return NextResponse.json({ error: "Incorrect email or password." }, { status: 401 });
     }
+    // Deliberately findFirst, NOT currentPropertySettings: first-login bootstrap on
+    // a fresh install (no session, no acting property yet) binds the very first owner
+    // to the sole seeded property. New properties are created later by an already
+    // logged-in owner, so this path only ever runs once.
     const property = await prisma.propertySettings.findFirst();
     user = await prisma.user.create({
       data: { email, passwordHash: hashPassword(password), role: "owner", propertyId: property?.id ?? null },

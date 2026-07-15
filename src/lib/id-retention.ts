@@ -25,6 +25,12 @@ export function expiredIdDocuments(guests: GuestIdRow[], retentionDays: number |
 // whose document has aged past the property's retention window. No-op when no
 // policy is set. Returns the number of documents purged.
 export async function purgeExpiredIdDocuments(now = new Date()): Promise<{ purged: number }> {
+  // KNOWN multi-property gap, left deliberately: this runs from the daily cron with
+  // no acting property, and reads a SINGLE retention policy. With two properties it
+  // would apply one property's window to everyone. The correct fix is to iterate
+  // properties and purge each under its own policy — a separate change from this
+  // read-resolver slice. findFirst is kept (not the resolver) precisely so this
+  // stays obviously wrong-for-multi rather than silently doing nothing.
   const settings = await prisma.propertySettings.findFirst({ select: { idRetentionDays: true } });
   const retentionDays = settings?.idRetentionDays ?? null;
   if (!retentionDays || retentionDays <= 0) return { purged: 0 };

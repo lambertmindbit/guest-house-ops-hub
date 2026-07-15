@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ReservationForm, type ReservationFormValues } from "@/components/ReservationForm";
 import { PageHead, Icon } from "@/components/ui";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function NewReservationPage({
   const [rooms, channels, property] = await Promise.all([
     prisma.room.findMany({ where: { archivedAt: null }, include: { roomType: true }, orderBy: { label: "asc" } }),
     prisma.channel.findMany({ orderBy: { name: "asc" } }),
-    prisma.propertySettings.findFirst({ select: { idPolicy: true, idRequiredAtBooking: true } }),
+    currentPropertySettings(),
   ]);
 
   const initial: ReservationFormValues = {
