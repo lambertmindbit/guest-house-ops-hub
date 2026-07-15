@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { zodFail, withRoute } from "@/lib/api";
+import { getSession } from "@/lib/session";
 import { assistantStream } from "@/lib/assistant/transport";
 
 // POST /api/assistant/message — the in-app (owner/reception) assistant transport.
@@ -15,7 +16,9 @@ async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
-  return assistantStream(parsed.data.message, parsed.data.sessionId, "owner");
+  // The owner console acts on the owner's current property (the switched-to one).
+  const session = await getSession();
+  return assistantStream(parsed.data.message, parsed.data.sessionId, "owner", session?.propertyId ?? null);
 }
 
 export const POST = withRoute(handlePOST);

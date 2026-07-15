@@ -33,7 +33,7 @@ function stubStream(message: string): Response {
 // actually prevents the cold start; this is the safety margin behind it.)
 const AGENT_CONNECT_TIMEOUT_MS = 30_000;
 
-async function proxyToAgent(message: string, sessionId: string | undefined, mode: "owner" | "public"): Promise<Response | null> {
+async function proxyToAgent(message: string, sessionId: string | undefined, mode: "owner" | "public", propertyId: string | null): Promise<Response | null> {
   const url = process.env.ASSISTANT_AGENT_URL;
   if (!url) return null;
   const token = process.env.ASSISTANT_AGENT_TOKEN;
@@ -43,7 +43,10 @@ async function proxyToAgent(message: string, sessionId: string | undefined, mode
     const upstream = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ message, sessionId, mode }),
+      // propertyId tells the agent which property this conversation is about, so its
+      // reads scope to the right one when a client runs several. Omitted → the agent
+      // and seam fall back to the sole property (single-property client).
+      body: JSON.stringify({ message, sessionId, mode, propertyId }),
       signal: controller.signal,
     });
     if (!upstream.ok || !upstream.body) return null;
@@ -55,6 +58,6 @@ async function proxyToAgent(message: string, sessionId: string | undefined, mode
   }
 }
 
-export async function assistantStream(message: string, sessionId: string | undefined, mode: "owner" | "public"): Promise<Response> {
-  return (await proxyToAgent(message, sessionId, mode)) ?? stubStream(message);
+export async function assistantStream(message: string, sessionId: string | undefined, mode: "owner" | "public", propertyId: string | null = null): Promise<Response> {
+  return (await proxyToAgent(message, sessionId, mode, propertyId)) ?? stubStream(message);
 }

@@ -12,10 +12,29 @@ Config comes from the environment (see .env.example):
 
 from __future__ import annotations
 
+import contextvars
 import os
 from typing import Any
 
 import httpx
+
+
+# The property this conversation is about, set once per /chat request (server.py)
+# and read here so every read call scopes to it — no threading a property_ref through
+# every tool. This is the Python twin of the app's withTenant() ALS context: one
+# place sets it, one place reads it. None (single-property client, or a request that
+# didn't send a propertyId) → omitted, and the seam falls back to the sole property.
+current_property_ref: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "current_property_ref", default=None
+)
+
+
+def _with_property(params: dict[str, Any]) -> dict[str, Any]:
+    """Add propertyRef from the conversation's context if it isn't already set."""
+    pid = current_property_ref.get()
+    if pid and "propertyRef" not in params:
+        return {**params, "propertyRef": pid}
+    return params
 
 
 class OtaError(Exception):
@@ -42,7 +61,7 @@ class OtaClient:
     async def _get(self, path: str, params: dict[str, Any]) -> Any:
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
-                res = await client.get(f"{self.base_url}{path}", params=params, headers=self._headers())
+                res = await client.get(f"{self.base_url}{path}", params=_with_property(params), headers=self._headers())
         except httpx.RequestError as e:
             # Timeout / connection failure — surface as OtaError so tools handle it
             # gracefully instead of the raw exception crashing the turn.
