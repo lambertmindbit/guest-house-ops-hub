@@ -34,7 +34,8 @@ const schema = z
     arrivalTime: z.string().optional(),
     specialRequests: z.string().optional(),
     grossAmount: z.number().nonnegative().optional(),
-    /** Forward-compatible tenant hint; accepted, not yet persisted. */
+    /** Accepted for compatibility but NOT trusted: the reservation's property is
+     *  derived from the room (below), which is authoritative. */
     propertyRef: z.string().optional(),
   })
   .refine((d) => d.checkOut > d.checkIn, {
@@ -53,6 +54,7 @@ const reservationInclude = {
 } as const;
 
 class MissingGuestError extends Error {}
+class UnknownRoomError extends Error {}
 
 async function handlePOST(req: Request) {
   if (!agentTokenOk(req)) return fail("Unauthorized", 401);
@@ -80,6 +82,19 @@ async function handlePOST(req: Request) {
       }
       if (!guestId) throw new MissingGuestError();
 
+      // The reservation's property is DERIVED FROM THE ROOM, never from anything the
+      // agent sends. This is what makes a shared agent safe across properties: an
+      // agent request carries no session, so without this the reservation is stamped
+      // with the sole-property fallback — which is null once there are two
+      // properties — and lands ORPHANED, in neither property's calendar or finance.
+      // The room already knows its property; that is the single source of truth, and
+      // deriving from it also makes booking a room into the wrong property impossible.
+      const room = await tx.room.findUnique({
+        where: { id: input.roomId },
+        select: { propertyId: true },
+      });
+      if (!room) throw new UnknownRoomError();
+
       return tx.reservation.create({
         data: {
           roomId: input.roomId,
@@ -91,6 +106,7 @@ async function handlePOST(req: Request) {
           arrivalTime: input.arrivalTime,
           specialRequests: input.specialRequests,
           grossAmount: input.grossAmount,
+          propertyId: room.propertyId,
         },
       });
     });
@@ -104,6 +120,7 @@ async function handlePOST(req: Request) {
     return ok(full, 201);
   } catch (error) {
     if (error instanceof MissingGuestError) return fail("provide guestId or guest details", 422);
+    if (error instanceof UnknownRoomError) return fail("No such room.", 404);
     if (isOverlapError(error)) return fail("Those dates are no longer available for this room.", 409);
     throw error;
   }

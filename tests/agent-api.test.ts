@@ -131,6 +131,14 @@ describe("POST /api/agent/reservations", () => {
     const row = await prisma.reservation.findUnique({ where: { id: json.data.id } });
     expect(row).not.toBeNull();
     expect(row?.status).toBe("confirmed");
+
+    // The reservation's property is DERIVED FROM ITS ROOM — never orphaned. Without
+    // this, an agent booking (no session) is stamped with the sole-property fallback,
+    // which is null once a client has two properties, and the booking vanishes from
+    // both calendars. Asserting equality with the room's property holds whatever the
+    // room's property is.
+    const room = await prisma.room.findUnique({ where: { id: roomId }, select: { propertyId: true } });
+    expect(row?.propertyId).toBe(room?.propertyId ?? null);
   });
 
   it("returns 409 when an overlapping confirmed stay exists for the same room", async () => {

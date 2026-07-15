@@ -36,7 +36,12 @@ async function handleGET(req: Request) {
   });
   if (!parsed.success) return zodFail(parsed.error);
 
-  const all = await freeRooms(parsed.data.checkIn, parsed.data.checkOut);
+  // Scope to the property the agent is asking about. Availability has no room to
+  // derive from (it's asking WHICH rooms are free), so the property must come from
+  // the request. With one property freeRooms falls back to the sole one; with
+  // several and no propertyRef it would list all — so a property-aware agent must
+  // send propertyRef, and this is the seam that honours it.
+  const all = await freeRooms(parsed.data.checkIn, parsed.data.checkOut, "", parsed.data.propertyRef);
   const wanted = parsed.data.roomIds
     ? new Set(parsed.data.roomIds.split(",").map((s) => s.trim()).filter(Boolean))
     : null;
