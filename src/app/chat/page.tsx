@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { AssistantChat } from "@/components/assistant/AssistantChat";
 import { currentPropertySettings } from "@/lib/property-settings";
 

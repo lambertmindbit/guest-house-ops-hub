@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 
 type Role = "owner" | "reception" | "housekeeping";
-export type UserRow = { id: string; email: string; role: Role; active: boolean };
+export type UserRow = { id: string; email: string; role: Role; active: boolean; propertyIds: string[] };
+type Property = { id: string; name: string };
 
 const ROLES: Role[] = ["owner", "reception", "housekeeping"];
 const ROLE_HINT: Record<Role, string> = {
@@ -14,9 +15,20 @@ const ROLE_HINT: Record<Role, string> = {
   housekeeping: "Today + cleaning only",
 };
 
-export function UsersSection({ users, currentUserId }: { users: UserRow[]; currentUserId: string | null }) {
+export function UsersSection({
+  users,
+  currentUserId,
+  properties = [],
+}: {
+  users: UserRow[];
+  currentUserId: string | null;
+  properties?: Property[];
+}) {
   const router = useRouter();
   const { confirm } = useConfirm();
+  // Only worth showing property access when there's more than one property.
+  const multiProperty = properties.length > 1;
+  const [accessError, setAccessError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("reception");
@@ -51,6 +63,29 @@ export function UsersSection({ users, currentUserId }: { users: UserRow[]; curre
   async function remove(id: string) {
     if (!(await confirm({ title: "Remove user", message: "Delete this login? They will no longer be able to sign in.", danger: true, confirmLabel: "Delete" }))) return;
     await fetch(`/api/users/${id}`, { method: "DELETE" });
+    router.refresh();
+  }
+
+  // Toggle a property in/out of a user's access set. A user must keep at least one.
+  async function toggleProperty(u: UserRow, propertyId: string) {
+    const next = u.propertyIds.includes(propertyId)
+      ? u.propertyIds.filter((p) => p !== propertyId)
+      : [...u.propertyIds, propertyId];
+    if (next.length === 0) {
+      setAccessError("A user must be able to access at least one property.");
+      return;
+    }
+    setAccessError(null);
+    const res = await fetch(`/api/users/${u.id}/properties`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ propertyIds: next }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setAccessError(j.error ?? "Could not change property access.");
+      return;
+    }
     router.refresh();
   }
 
@@ -101,9 +136,34 @@ export function UsersSection({ users, currentUserId }: { users: UserRow[]; curre
                 )}
               </div>
             </div>
+
+            {/* Property access — reshuffle a login across the owner's properties.
+                Owners implicitly reach everything, so only shown for staff. */}
+            {multiProperty && u.role !== "owner" && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-subtle)" }}>
+                <div className="field-label" style={{ marginBottom: 8 }}>Can access</div>
+                <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+                  {properties.map((p) => {
+                    const on = u.propertyIds.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`chip-toggle${on ? " chip-toggle--on" : ""}`}
+                        onClick={() => toggleProperty(u, p.id)}
+                        aria-pressed={on}
+                      >
+                        {on ? "✓ " : ""}{p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
+      {accessError && <p style={{ color: "var(--red-text)", fontSize: "var(--fs-small)", marginTop: 8 }}>{accessError}</p>}
     </div>
   );
 }

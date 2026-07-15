@@ -856,3 +856,10 @@ a.railcard:hover { border-color: #cbd5e1; box-shadow: var(--shadow-sm); }
 .modrow__t { display: block; font-weight: 600; font-size: var(--fs-small); color: var(--ink); }
 .modrow__s { display: block; font-size: var(--fs-micro); color: var(--text-subtle); margin-top: 2px; }
 .modrow--on .modrow__t { color: var(--teal-pill-text); }
+
+/* Property-access chips in the Users screen — reshuffle a login across properties. */
+.chip-toggle { font-size: var(--fs-meta); font-weight: 600; padding: 5px 11px; border-radius: var(--r-round);
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer;
+  transition: border-color var(--fast), background var(--fast), color var(--fast); }
+.chip-toggle:hover { border-color: #cbd5e1; }
+.chip-toggle--on { background: var(--teal-bg); border-color: var(--teal); color: var(--teal-pill-text); }
