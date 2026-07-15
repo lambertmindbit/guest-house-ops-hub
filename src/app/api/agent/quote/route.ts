@@ -3,6 +3,7 @@ import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { quoteRoomType } from "@/lib/pricing";
+import { withTenant } from "@/lib/tenant";
 import { agentTokenOk } from "@/lib/agent-auth";
 
 // GET /api/agent/quote?roomId=&checkIn=&checkOut=
@@ -37,7 +38,12 @@ async function handleGET(req: Request) {
   const room = await prisma.room.findUnique({ where: { id: parsed.data.roomId } });
   if (!room) return fail("Room not found", 404);
 
-  const quote = await quoteRoomType(room.roomTypeId, parsed.data.checkIn, parsed.data.checkOut);
+  // Price under the ROOM's property, derived from the room rather than trusting the
+  // agent's propertyRef. Pricing reads that property's rules, seasons and floor/
+  // ceiling (all property-scoped) — without this, a quote on a two-property client
+  // would apply whichever property's pricing came first.
+  const priceIt = () => quoteRoomType(room.roomTypeId, parsed.data.checkIn, parsed.data.checkOut);
+  const quote = await (room.propertyId ? withTenant(room.propertyId, priceIt) : priceIt());
   return ok(quote);
 }
 
