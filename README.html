@@ -99,6 +99,12 @@ See <a href="#hard-rules-do-not-break">the hard rules</a> below.</p>
 <p>Plus an all-bookings <strong>Bookings</strong> list (<code>/reservations</code>) — instant search and
 timeline filter (Upcoming / In-house / Past / Cancelled) — alongside the
 calendar and Today board.</p>
+<p><strong>Multi-property</strong> — one owner can run several guest houses from a single login:
+add/switch properties in Settings → Properties, staff assigned per property, and a
+property-aware AI agent. Guests are <strong>shared</strong> owner-wide (repeat-guest recognition +
+scam/bad-guest blacklist span properties); bookings, pricing, and finance stay
+per-property. Inert on single-property clients. Different <strong>clients</strong> get fully
+separate deployments/databases/agents — see <a href="docs/ARCHITECTURE.html#deployment-isolation--one-client-one-everything">docs/ARCHITECTURE.md</a>.</p>
 <p><strong>Keep-ready groundwork</strong> (built behind clean seams, off by default — activate via env):</p>
 <ul>
 <li><strong>OTA email ingestion</strong> — paste a confirmation email into the <strong>Inbox</strong> screen → review → create; a token-gated webhook seam (<code>/api/ingest/email</code>) plus <strong>two ready-to-deploy forwarders</strong> for full automation in <a href="integrations/"><code>integrations/</code></a> (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).</li>

@@ -150,6 +150,30 @@ vendor/driver directories; multi-location property switcher + offline tolerance.
 <p>The community network is inherently cross-tenant: all peer access goes through a
 single audited, grant-gated seam that never exposes guest PII, occupancy, or
 finance. See <a href="ARCHITECTURE.html#multi-tenancy--the-community-seam">ARCHITECTURE.md → Multi-tenancy</a>.</p>
+<h2>Delivered — multi-property (one owner, several guest houses)</h2>
+<p>The Phase-2 multi-tenancy above scoped the <em>data</em> per property, but nothing let an
+owner actually <strong>create or switch</strong> properties. This closes that: a single owner can
+now run several guest houses from one login. It&#39;s a verified no-op for the
+single-property clients that exist today — the feature only appears once there are 2+.</p>
+<ul>
+<li><strong>Add / switch properties.</strong> Settings → <strong>Properties</strong> lists the owner&#39;s properties,
+switches the acting one (the whole app re-scopes), and creates a new one — seeding
+its channels and granting the creator. The nav property switcher appears once there
+are 2+.</li>
+<li><strong>Shared guest CRM, per-property everything else.</strong> Guests are <strong>shared owner-wide</strong>
+(one person, whichever property they book) — so repeat-guest recognition and the
+scam/bad-guest blacklist span properties, while bookings, pricing, and finance stay
+strictly per-property. (Decided 2026-07-15: keep shared.)</li>
+<li><strong>Staff across properties.</strong> A login&#39;s property-access set is editable per staff
+member; a reshuffle moves them, their home property following.</li>
+<li><strong>Property-aware AI agent.</strong> Every agent request carries the property; the Python
+agent mirrors the app&#39;s tenant scope, and agent bookings derive the property from
+the room, so a booking never lands in the wrong calendar.</li>
+<li><strong>Isolation model.</strong> Multi-property is <em>within one client&#39;s database</em>. Different
+<strong>clients</strong> get entirely separate deployments + databases + agents — nothing is
+shared between clients. See
+<a href="ARCHITECTURE.html#deployment-isolation--one-client-one-everything">ARCHITECTURE.md → Deployment isolation</a>.</li>
+</ul>
 <h2>Deferred — by design</h2>
 <p>These were intentionally left out (see <a href="../CLAUDE.html">CLAUDE.md</a> &quot;do NOT&quot; rules and
 phase scoping). They are <strong>not</strong> bugs:</p>
@@ -208,6 +232,17 @@ are tested; route handlers and the <code>quoteRoomType</code> data wrapper are n
 highest-value gap to close is a route-level create-overlap → 409 test.</li>
 <li><strong>Pricing rate-calendar</strong> re-fetches global config per room type (mild N+1, fine
 at small scale).</li>
+<li><strong>Public-chat rate limiter is per-instance</strong> (<a href="../src/lib/rate-limit.ts"><code>src/lib/rate-limit.ts</code></a>):
+in-memory, so on serverless the &quot;20 / 10 min&quot; cap is weaker than it reads. A real
+fix is a shared store (Upstash Redis) = a new dependency + infra, deferred pending
+sign-off. Only matters when <code>PUBLIC_CHAT_ENABLED</code> is on (off by default).</li>
+<li><strong>ID-retention purge is a no-op until configured.</strong> The nightly <code>purge-ids</code> cron
+deletes nothing until a property sets <code>idRetentionDays</code> in Settings — guest ID
+documents are kept indefinitely until then. By design; call it out to new owners.</li>
+<li><strong>Raw SQL must scope <code>property_id</code> by hand.</strong> The tenant extension can&#39;t see
+<code>$queryRaw</code>, so any raw query touching tenant tables must filter <code>property_id</code>
+itself (e.g. <a href="../src/lib/availability.ts"><code>freeRooms</code></a>) — a miss leaks across one
+owner&#39;s properties (never across clients). The recurring rule for multi-property work.</li>
 </ul>
 <h2>Suggested next steps for a new team</h2>
 <ol>

@@ -34,6 +34,13 @@ Plus an all-bookings **Bookings** list (`/reservations`) — instant search and
 timeline filter (Upcoming / In-house / Past / Cancelled) — alongside the
 calendar and Today board.
 
+**Multi-property** — one owner can run several guest houses from a single login:
+add/switch properties in Settings → Properties, staff assigned per property, and a
+property-aware AI agent. Guests are **shared** owner-wide (repeat-guest recognition +
+scam/bad-guest blacklist span properties); bookings, pricing, and finance stay
+per-property. Inert on single-property clients. Different **clients** get fully
+separate deployments/databases/agents — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#deployment-isolation--one-client-one-everything).
+
 **Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
 - **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).
 - **ROOT agent seam** — `/api/agent/*` gated by `AGENT_TOKEN` (fails closed); see [docs/INTEGRATION.md](docs/INTEGRATION.md). The agents are separate services that connect to it.
