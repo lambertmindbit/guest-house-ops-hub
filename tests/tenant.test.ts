@@ -107,6 +107,30 @@ describe("tenant isolation", () => {
     expect(b?.gstNumber).toBe("GST-B");
   });
 
+  // Guests are SHARED across the owner's properties (unified CRM) — Guest was taken
+  // out of TENANT_MODELS. This proves both halves: a guest created while acting as
+  // property A is visible from property B, AND an upsert-by-phone from B reuses that
+  // record instead of colliding on the global-unique phone. The second half is the
+  // dedup bug the old scoped model caused: B couldn't see A's guest, so it tried to
+  // create one and hit the unique constraint.
+  it("guests are shared across properties, and dedup by phone works across them", async () => {
+    const phone = `88${Date.now()}`.slice(0, 12);
+    await prismaForTenant(propA).guest.create({ data: { name: "Priya", phone } });
+
+    const seenFromB = await prismaForTenant(propB).guest.findUnique({ where: { phone } });
+    expect(seenFromB?.name).toBe("Priya"); // shared: B sees A's guest
+
+    const upserted = await prismaForTenant(propB).guest.upsert({
+      where: { phone },
+      update: { name: "Priya Nair" },
+      create: { name: "SHOULD-NOT-CREATE", phone },
+    });
+    expect(upserted.name).toBe("Priya Nair"); // reused + updated, did not duplicate
+    expect(await prisma.guest.count({ where: { phone } })).toBe(1);
+
+    await prisma.guest.deleteMany({ where: { phone } });
+  });
+
   it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
     const checkIn = "2031-03-01";
     const checkOut = "2031-03-03";

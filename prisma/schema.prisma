@@ -710,8 +710,14 @@ model Guest {
   outboundMessages        OutboundMessage[]
   complaints              Complaint[]
 
-  // Tenant (multi-property). Single-property today; backfilled + scoped by the
-  // Prisma tenant extension. See src/lib/tenant.ts.
+  // Guests are SHARED across an owner's properties (a unified CRM): one guest, one
+  // phone, recognised at every property the owner runs. That is why Guest is NOT in
+  // TENANT_MODELS (src/lib/prisma.ts) — it is deliberately un-scoped. Bookings,
+  // payments and finance stay per-property; only the guest identity is shared.
+  //
+  // `phone @unique` is global, which is exactly right for a shared guest and is
+  // what makes cross-property dedup (upsert by phone) work. This column now records
+  // only where a guest was FIRST seen — it is informational, never a scope filter.
   propertyId String? @map("property_id")
 
   @@map("guests")
