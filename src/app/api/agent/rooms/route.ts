@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { withTenant } from "@/lib/tenant";
 import { agentTokenOk } from "@/lib/agent-auth";
 
 // GET /api/agent/rooms
@@ -21,11 +22,20 @@ async function handleGET(req: Request) {
   const parsed = schema.safeParse({ propertyRef: searchParams.get("propertyRef") ?? undefined });
   if (!parsed.success) return zodFail(parsed.error);
 
-  const rooms = await prisma.room.findMany({
-    where: { archivedAt: null },
-    include: { roomType: { include: { amenities: { include: { amenity: true } } } } },
-    orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
-  });
+  const loadRooms = () =>
+    prisma.room.findMany({
+      where: { archivedAt: null },
+      include: { roomType: { include: { amenities: { include: { amenity: true } } } } },
+      orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
+    });
+
+  // Scope to the property the agent is asking about. withTenant sets the ALS
+  // context the tenant extension reads FIRST, so the query scopes to this property
+  // with no manual where-clause. Absent → sole-property fallback (correct for a
+  // single-property client). This is how a shared agent lists only one property's
+  // rooms instead of every property's.
+  const propertyRef = parsed.data.propertyRef;
+  const rooms = await (propertyRef ? withTenant(propertyRef, loadRooms) : loadRooms());
 
   return ok(
     rooms.map((r) => ({

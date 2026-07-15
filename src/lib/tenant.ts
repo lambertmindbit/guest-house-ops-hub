@@ -13,8 +13,16 @@ const als = new AsyncLocalStorage<TenantCtx>();
 
 // Run `fn` with an explicit active property. Everything queried through `prisma`
 // inside the callback is scoped to `propertyId`.
-export function withTenant<T>(propertyId: string, fn: () => Promise<T>): Promise<T> {
-  return als.run({ propertyId }, fn);
+//
+// We AWAIT fn() inside als.run on purpose. A Prisma query is a lazy PrismaPromise:
+// `() => prisma.x.findMany()` merely *builds* it; the query — and the tenant
+// extension that reads this context — runs when it is awaited. Returning the
+// unawaited promise from als.run pops the context before that happens, so the
+// query would run UNSCOPED (verified: it returned every property's rows). Awaiting
+// here keeps the context alive through execution, so callers can pass a plain
+// `() => prisma...` without having to remember to await inside.
+export async function withTenant<T>(propertyId: string, fn: () => Promise<T>): Promise<T> {
+  return als.run({ propertyId }, async () => await fn());
 }
 
 export function tenantFromContext(): string | null {

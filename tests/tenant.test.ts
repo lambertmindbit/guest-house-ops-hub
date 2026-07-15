@@ -3,6 +3,7 @@ import { prisma, prismaForTenant, __resetTenantResolution } from "@/lib/prisma";
 import { freeRooms } from "@/lib/availability";
 import { disabledModules } from "@/lib/module-gate";
 import { currentPropertySettings } from "@/lib/property-settings";
+import { withTenant } from "@/lib/tenant";
 
 // Tenant isolation: two properties, a room in each. A read/write bound to
 // property A must never see property B's rows — and writes auto-stamp the tenant.
@@ -129,6 +130,26 @@ describe("tenant isolation", () => {
     expect(await prisma.guest.count({ where: { phone } })).toBe(1);
 
     await prisma.guest.deleteMany({ where: { phone } });
+  });
+
+  // The agent seam scopes to a property by wrapping its work in withTenant(id) —
+  // the ALS context the tenant extension reads first. This is how one shared agent
+  // serves several properties (rooms, FAQ, policies, pricing) without a manual
+  // where-clause on every query. Proven on FaqEntry (a TENANT_MODEL), same as the
+  // agent /api/agent/faq endpoint now does.
+  it("withTenant scopes a TENANT_MODELS read to the given property", async () => {
+    await prismaForTenant(propA).faqEntry.create({ data: { question: "A-parking?", answer: "Yes, A." } });
+    await prismaForTenant(propB).faqEntry.create({ data: { question: "B-parking?", answer: "Yes, B." } });
+
+    const seenAsA = await withTenant(propA, () => prisma.faqEntry.findMany());
+    expect(seenAsA.some((f) => f.question === "A-parking?")).toBe(true);
+    expect(seenAsA.some((f) => f.question === "B-parking?")).toBe(false);
+
+    const seenAsB = await withTenant(propB, () => prisma.faqEntry.findMany());
+    expect(seenAsB.some((f) => f.question === "B-parking?")).toBe(true);
+    expect(seenAsB.some((f) => f.question === "A-parking?")).toBe(false);
+
+    await prisma.faqEntry.deleteMany({ where: { propertyId: { in: [propA, propB] } } });
   });
 
   it("freeRooms() returns only the bound property's rooms (raw SQL is not auto-scoped)", async () => {
