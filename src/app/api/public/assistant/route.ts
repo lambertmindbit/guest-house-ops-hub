@@ -13,6 +13,9 @@ import { assistantStream } from "@/lib/assistant/transport";
 const schema = z.object({
   message: z.string().min(1).max(2000),
   sessionId: z.string().max(128).optional(),
+  // The property whose website the widget is embedded on. Each property's site
+  // sends its own id, so a shared agent answers about the right one.
+  propertyId: z.string().max(128).optional(),
 });
 
 // Generous enough for a real chat, tight enough to blunt scripted abuse.
@@ -34,7 +37,7 @@ async function handlePOST(req: Request) {
   const parsed = schema.safeParse(body);
   if (!parsed.success) return zodFail(parsed.error);
 
-  return assistantStream(parsed.data.message, parsed.data.sessionId, "public");
+  return assistantStream(parsed.data.message, parsed.data.sessionId, "public", parsed.data.propertyId ?? null);
 }
 
 export const POST = withRoute(handlePOST);

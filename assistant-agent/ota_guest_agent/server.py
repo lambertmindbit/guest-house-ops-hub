@@ -46,7 +46,7 @@ from google.genai import types  # noqa: E402
 from .core_agents.guest_agent import guest_agent, build_guest_agent  # noqa: E402
 from .core_agents.owner_agent import owner_agent, build_owner_agent  # noqa: E402
 from .guardrails import assert_tool_isolation  # noqa: E402
-from .services.ota_client import OtaClient, OtaError, RoomJustTaken  # noqa: E402
+from .services.ota_client import OtaClient, OtaError, RoomJustTaken, current_property_ref  # noqa: E402
 from .services import ui  # noqa: E402
 
 # Refuse to start if the public guest agent was ever wired with an owner tool.
@@ -547,6 +547,14 @@ async def chat(request: Request, authorization: str | None = Header(default=None
     # Default to the least-privileged guest agent; owner mode requires an explicit
     # opt-in (the app's owner transport sends it). Never fall into owner by default.
     mode = "owner" if (body or {}).get("mode") == "owner" else "public"
+
+    # The property this whole conversation is about. Owner mode: the owner's current
+    # property (sent by the app). Public mode: the property whose website the widget
+    # is embedded on. Set it into the request context so every OtaClient read scopes
+    # to it (services/ota_client.current_property_ref). Set here — before the awaited
+    # booking fast-path AND the streamed agent run, all within this one request task,
+    # so both see it. None → the seam's sole-property fallback (single-property client).
+    current_property_ref.set((body or {}).get("propertyId") or None)
 
     # The Book button flow (/book → name/phone form → /bookdetails → confirm card)
     # is fully deterministic in BOTH modes — no LLM, so the room list is never
