@@ -12,6 +12,7 @@ import {
   isForeignNational,
   type RegistrationGuest,
 } from "@/lib/registration";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function RegistrationCardPage({ params }: { params: Promise
   const { id } = await params;
   const [guest, property] = await Promise.all([
     prisma.guest.findUnique({ where: { id } }),
-    prisma.propertySettings.findFirst(),
+    currentPropertySettings(),
   ]);
   if (!guest) notFound();
 

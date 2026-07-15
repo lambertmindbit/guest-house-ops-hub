@@ -10,6 +10,7 @@ import { displayDate, displayMoney } from "@/lib/format";
 import { formatDateOnly, todayDateOnly } from "@/lib/dates";
 import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
 import { getCancellationPolicy, isPeakDate, daysUntil, assessRefund, type SeasonWindow } from "@/lib/cancellation";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +53,7 @@ export default async function ReservationDetailPage({
         refunds: { orderBy: { createdAt: "desc" } },
       },
     }),
-    prisma.propertySettings.findFirst(),
+    currentPropertySettings(),
   ]);
   if (!r) notFound();
 

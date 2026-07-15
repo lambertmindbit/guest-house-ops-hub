@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Icon } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 import { displayDate, displayINR, PAYMENT_MODE_LABELS } from "@/lib/format";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
       where: { id },
       include: { guest: true, room: { include: { roomType: true } }, channel: true, payments: { orderBy: { paidAt: "asc" } } },
     }),
-    prisma.propertySettings.findFirst(),
+    currentPropertySettings(),
   ]);
   if (!r) notFound();
 

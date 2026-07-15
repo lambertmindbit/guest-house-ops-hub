@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getAvailability } from "@/lib/availability";
 import { addDays, parseDateOnly, todayDateOnly, formatDateOnly } from "@/lib/dates";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 // ---------------------------------------------------------------------------
 // Advisory pricing. The engine SUGGESTS a nightly rate; it never pushes to any
@@ -138,7 +139,7 @@ export async function quoteRoomType(roomTypeId: string, checkIn: string, checkOu
       where: { roomTypeId, date: { gte: parseDateOnly(checkIn), lt: parseDateOnly(checkOut) } },
     }),
     getAvailability(roomTypeId, checkIn, checkOut),
-    prisma.propertySettings.findFirst(),
+    currentPropertySettings(),
   ]);
 
   if (!roomType) throw new Error("room type not found");

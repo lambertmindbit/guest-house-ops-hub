@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { SubHeader } from "@/components/settings/SubHeader";
 import { PropertySection } from "@/components/settings/sections";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const s = await prisma.propertySettings.findFirst();
+  const s = await currentPropertySettings();
   const settings = s && {
     name: s.name,
     checkInTime: s.checkInTime,
