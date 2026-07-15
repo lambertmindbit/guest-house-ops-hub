@@ -41,6 +41,7 @@ export function AssistantChat({
   emptyTitle = "What do you want to know?",
   emptySub = "Ask about today, your revenue, or what needs your attention. I'll build the answer.",
   placeholder = "Ask about rooms, dates, prices…",
+  propertyId = null,
 }: {
   endpoint?: string;
   intro?: string;
@@ -49,6 +50,10 @@ export function AssistantChat({
   emptyTitle?: string;
   emptySub?: string;
   placeholder?: string;
+  /** Which property this chat is for — sent with every message so a shared agent
+   *  answers about the right one. Null on single-property clients (the seam then
+   *  falls back to the sole property). */
+  propertyId?: string | null;
 } = {}) {
   const isConsole = variant === "console";
   const wide = useIsWide();
@@ -83,7 +88,7 @@ export function AssistantChat({
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message, sessionId: sessionRef.current }),
+        body: JSON.stringify({ message, sessionId: sessionRef.current, ...(propertyId ? { propertyId } : {}) }),
       });
       if (!res.ok || !res.body) throw new Error("no stream");
 
