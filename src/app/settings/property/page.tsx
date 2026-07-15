@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { SubHeader } from "@/components/settings/SubHeader";
 import { PropertySection } from "@/components/settings/sections";
 import { currentPropertySettings } from "@/lib/property-settings";
