@@ -212,6 +212,14 @@ This is the canonical list — what a new team should know:
   `$queryRaw`, so any raw query touching tenant tables must filter `property_id`
   itself (e.g. [`freeRooms`](../src/lib/availability.ts)) — a miss leaks across one
   owner's properties (never across clients). The recurring rule for multi-property work.
+- **Authorization hardening (unbuilt — from a retired design doc).** Three items
+  from an earlier "Org layer / RBAC v2" design that multi-property shipped *without*
+  (no Organization grouping was needed); these specific gaps remain worth doing:
+  (a) **field-level money masking** — RBAC is page/route-level, so a staff-visible
+  API response can still carry `grossAmount`; mask money fields server-side per role;
+  (b) **Postgres RLS** — isolation is app-layer only (the tenant extension); DB-level
+  row security would be defence in depth; (c) **user invites + password reset** — the
+  owner creates logins with a password by hand today.
 
 ## Suggested next steps for a new team
 

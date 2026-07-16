@@ -264,6 +264,14 @@ documents are kept indefinitely until then. By design; call it out to new owners
 <code>$queryRaw</code>, so any raw query touching tenant tables must filter <code>property_id</code>
 itself (e.g. <a href="../src/lib/availability.ts"><code>freeRooms</code></a>) — a miss leaks across one
 owner&#39;s properties (never across clients). The recurring rule for multi-property work.</li>
+<li><strong>Authorization hardening (unbuilt — from a retired design doc).</strong> Three items
+from an earlier &quot;Org layer / RBAC v2&quot; design that multi-property shipped <em>without</em>
+(no Organization grouping was needed); these specific gaps remain worth doing:
+(a) <strong>field-level money masking</strong> — RBAC is page/route-level, so a staff-visible
+API response can still carry <code>grossAmount</code>; mask money fields server-side per role;
+(b) <strong>Postgres RLS</strong> — isolation is app-layer only (the tenant extension); DB-level
+row security would be defence in depth; (c) <strong>user invites + password reset</strong> — the
+owner creates logins with a password by hand today.</li>
 </ul>
 <h2>Suggested next steps for a new team</h2>
 <ol>

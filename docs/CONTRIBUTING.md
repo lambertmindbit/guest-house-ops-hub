@@ -133,9 +133,9 @@ build → test**. Green CI is required before merging. See [DEPLOYMENT.md](DEPLO
 
 The `.html` docs are **generated** — `npm run docs:html` renders them from the
 Markdown, which is the source of truth. Never hand-edit a generated `.html`; your
-change is overwritten on the next run. (`USER-GUIDE.html`, `WORKFLOW.html` and
-`CHANNEL-SYNC.html` are the exceptions: hand-authored visual docs with CSS
-diagrams and screenshots, with no Markdown source. Edit those directly.)
+change is overwritten on the next run. Every doc, including the end-user
+[USER-GUIDE.md](USER-GUIDE.md), now lives in this pipeline — there are no
+hand-authored HTML exceptions left.
 
 CI enforces two things, both of which broke in the past:
 
