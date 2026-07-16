@@ -41,6 +41,11 @@ scam/bad-guest blacklist span properties); bookings, pricing, and finance stay
 per-property. Inert on single-property clients. Different **clients** get fully
 separate deployments/databases/agents — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#deployment-isolation--one-client-one-everything).
 
+**Commercial go-live features** (the "take money / talk to guests" half):
+- **Travel agents** — verified B2B agents with a commission rate; bookings attributed to an agent, commission owed per agent derived in Settings.
+- **Cancellation refund ladder** — tiered days-before → refund %, with the refund computed on the reservation.
+- **UPI payment request** — a tap-to-pay link + scannable QR per booking (no gateway/account). Razorpay auto-capture + room-hold await merchant keys.
+
 **Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
 - **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).
 - **ROOT agent seam** — `/api/agent/*` gated by `AGENT_TOKEN` (fails closed); see [docs/INTEGRATION.md](docs/INTEGRATION.md). The agents are separate services that connect to it.

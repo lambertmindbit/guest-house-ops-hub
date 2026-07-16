@@ -152,6 +152,23 @@ single-property clients that exist today — the feature only appears once there
   shared between clients. See
   [ARCHITECTURE.md → Deployment isolation](ARCHITECTURE.md#deployment-isolation--one-client-one-everything).
 
+## Delivered — commercial go-live features
+
+Built against the Pine Air discovery + go-live plan — the "take money / talk to
+guests" half the operations core didn't yet cover. All live on `main`.
+
+- **Travel agents (B2B).** A first-class `Agent` (verified phone, commission rate)
+  distinct from Channel (*where* a booking came from) and referrals (outbound
+  overflow). A booking is attributed via `Reservation.agentId`; Settings → **Travel
+  agents** shows each agent and the commission owed this month (derived from their
+  bookings, never stored). See [ARCHITECTURE.md](ARCHITECTURE.md).
+- **Cancellation refund ladder.** The policy is an ordered tier list (days-before →
+  refund %), replacing the old binary free-window; the reservation detail shows the
+  computed refund. Advisory — the owner can still approve a different amount.
+- **UPI payment request.** Each unpaid booking has a tap-to-pay UPI link **and a
+  scannable QR** (self-contained SVG, no gateway, no account) for the outstanding
+  balance — the no-fee half of online payment.
+
 ## Deferred — by design
 
 These were intentionally left out (see [CLAUDE.md](../CLAUDE.md) "do NOT" rules and
@@ -161,6 +178,7 @@ phase scoping). They are **not** bugs:
 |----------|--------------------------|--------|
 | **OTA email ingestion** | Parse the owner's confirmation emails into bookings. | 🟡 **Groundwork built** — parser, staging model, **Inbox** paste/review/create flow, and a token-gated webhook seam (`POST /api/ingest/email`) all exist. Usable today via paste. Two **ready-to-deploy forwarders** now ship in [`integrations/`](../integrations/) (Gmail Apps Script — no domain; Cloudflare Worker — optional, for a branded domain instead of a personal Gmail); only setting the token + tuning the parser against real OTA emails remains. |
 | **Messaging automation** | WhatsApp/email/SMS templates + triggers. Needs a provider account. | 🟡 **Transport scaffold built** — the LogAdapter outbox (`src/lib/messaging.ts`), `/messages` review screen, and agent `POST /api/agent/messages` seam log every message; a **WhatsApp Cloud API adapter** (`src/lib/whatsapp.ts`, OFF unless `WHATSAPP_ENABLED=true` + credentials) now flips outbox `status` to sent/failed when switched on. **Remaining:** Meta-approved templates + carrying template params through the seam — proactive sends need a pre-approved template, not free text (24h-window only). |
+| **Online payment capture (gateway)** | Automatic capture so payments post themselves, + a hold-a-room-while-paying flow. | 🟡 **UPI half built** — tap-to-pay link + scannable QR per booking (no account needed). The **Razorpay gateway + idempotent webhook + hold-as-`confirmed`-with-deadline** await the owner's merchant keys. The hold reuses the exclusion constraint (no new status, constraint untouched). |
 | **Dynamic pricing → OTAs** | Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal. | ○ Won't do (external limit) |
 | **Multi-role auth** | Accounts, roles, lockout. | ✅ **Done** (gap Phase 2) — `User` table, scrypt, owner/reception/housekeeping RBAC, login rate-limiting (`src/lib/rate-limit.ts`) |
 | **Guest ID document/photo upload** | Needs object storage. | 🟡 **Groundwork built** — Supabase Storage adapter, upload/view/delete endpoints, and guest-profile UI. Activate by creating a private bucket + setting the storage env vars (see [SETUP.md](SETUP.md#optional-integrations-leave-unset-to-keep-them-off)). |

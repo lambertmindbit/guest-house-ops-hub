@@ -105,6 +105,12 @@ property-aware AI agent. Guests are <strong>shared</strong> owner-wide (repeat-g
 scam/bad-guest blacklist span properties); bookings, pricing, and finance stay
 per-property. Inert on single-property clients. Different <strong>clients</strong> get fully
 separate deployments/databases/agents — see <a href="docs/ARCHITECTURE.html#deployment-isolation--one-client-one-everything">docs/ARCHITECTURE.md</a>.</p>
+<p><strong>Commercial go-live features</strong> (the &quot;take money / talk to guests&quot; half):</p>
+<ul>
+<li><strong>Travel agents</strong> — verified B2B agents with a commission rate; bookings attributed to an agent, commission owed per agent derived in Settings.</li>
+<li><strong>Cancellation refund ladder</strong> — tiered days-before → refund %, with the refund computed on the reservation.</li>
+<li><strong>UPI payment request</strong> — a tap-to-pay link + scannable QR per booking (no gateway/account). Razorpay auto-capture + room-hold await merchant keys.</li>
+</ul>
 <p><strong>Keep-ready groundwork</strong> (built behind clean seams, off by default — activate via env):</p>
 <ul>
 <li><strong>OTA email ingestion</strong> — paste a confirmation email into the <strong>Inbox</strong> screen → review → create; a token-gated webhook seam (<code>/api/ingest/email</code>) plus <strong>two ready-to-deploy forwarders</strong> for full automation in <a href="integrations/"><code>integrations/</code></a> (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).</li>
