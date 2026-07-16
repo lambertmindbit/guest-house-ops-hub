@@ -192,8 +192,8 @@ phase scoping). They are <strong>not</strong> bugs:</p>
 </tr>
 <tr>
 <td><strong>Messaging automation</strong></td>
-<td>WhatsApp/email/SMS templates + triggers. Needs a messaging provider.</td>
-<td>🟡 <strong>Groundwork built</strong> — a LogAdapter outbox (<code>src/lib/messaging.ts</code>), <code>/messages</code> review screen, and the agent <code>POST /api/agent/messages</code> seam all exist and log every message. Wiring a provider (and flipping <code>status</code> to sent/failed) is all that remains; callers don&#39;t change.</td>
+<td>WhatsApp/email/SMS templates + triggers. Needs a provider account.</td>
+<td>🟡 <strong>Transport scaffold built</strong> — the LogAdapter outbox (<code>src/lib/messaging.ts</code>), <code>/messages</code> review screen, and agent <code>POST /api/agent/messages</code> seam log every message; a <strong>WhatsApp Cloud API adapter</strong> (<code>src/lib/whatsapp.ts</code>, OFF unless <code>WHATSAPP_ENABLED=true</code> + credentials) now flips outbox <code>status</code> to sent/failed when switched on. <strong>Remaining:</strong> Meta-approved templates + carrying template params through the seam — proactive sends need a pre-approved template, not free text (24h-window only).</td>
 </tr>
 <tr>
 <td><strong>Dynamic pricing → OTAs</strong></td>

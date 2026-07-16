@@ -109,7 +109,7 @@ separate deployments/databases/agents — see <a href="docs/ARCHITECTURE.html#de
 <ul>
 <li><strong>OTA email ingestion</strong> — paste a confirmation email into the <strong>Inbox</strong> screen → review → create; a token-gated webhook seam (<code>/api/ingest/email</code>) plus <strong>two ready-to-deploy forwarders</strong> for full automation in <a href="integrations/"><code>integrations/</code></a> (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).</li>
 <li><strong>ROOT agent seam</strong> — <code>/api/agent/*</code> gated by <code>AGENT_TOKEN</code> (fails closed); see <a href="docs/INTEGRATION.md">docs/INTEGRATION.md</a>. The agents are separate services that connect to it.</li>
-<li><strong>Messaging outbox</strong> — a LogAdapter logs every outbound message (<code>/messages</code>); wire a WhatsApp/SMS/email provider to start sending without changing callers.</li>
+<li><strong>Messaging outbox</strong> — a LogAdapter logs every outbound message (<code>/messages</code>). A <strong>WhatsApp Cloud API adapter</strong> (<code>src/lib/whatsapp.ts</code>) ships behind <code>WHATSAPP_ENABLED</code> (+ credentials), off by default; switching it on flips outbox status to sent/failed with no caller changes. Proactive sends still await Meta-approved templates.</li>
 <li><strong>Login rate-limiting</strong> — active (10 attempts / IP / 5 min).</li>
 <li><strong>Guest ID document upload</strong> — Supabase Storage adapter + UI; activate by setting the storage env vars.</li>
 </ul>
