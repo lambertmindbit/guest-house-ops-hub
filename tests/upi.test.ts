@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isValidVpa, buildUpiLink } from "@/lib/upi";
+import { isValidVpa, buildUpiLink, upiQrSvg } from "@/lib/upi";
 
 describe("isValidVpa", () => {
   it("accepts handle@bank forms", () => {
@@ -28,5 +28,22 @@ describe("buildUpiLink", () => {
   it("omits the amount when zero/undefined so the guest can enter it", () => {
     expect(buildUpiLink({ vpa: "a@b", payeeName: "X", amount: 0 })).not.toContain("am=");
     expect(buildUpiLink({ vpa: "a@b", payeeName: "X" })).not.toContain("am=");
+  });
+});
+
+describe("upiQrSvg", () => {
+  it("renders a self-contained SVG (no external references, so it's offline/CSP-safe)", () => {
+    const svg = upiQrSvg({ vpa: "lawei@okhdfcbank", payeeName: "Lawei Homestay", amount: 2000, note: "Booking payment" });
+    expect(svg.startsWith("<svg")).toBe(true);
+    expect(svg).toContain("</svg>");
+    // Nothing is fetched from a host (the xmlns namespace URI doesn't count).
+    expect(svg).not.toContain("<image");
+    expect(svg).not.toContain("xlink:href");
+    expect(svg.length).toBeGreaterThan(200); // actually encoded, not an empty tag
+  });
+  it("encodes different amounts into different QR matrices", () => {
+    const a = upiQrSvg({ vpa: "a@b", payeeName: "X", amount: 1000 });
+    const b = upiQrSvg({ vpa: "a@b", payeeName: "X", amount: 2000 });
+    expect(a).not.toBe(b);
   });
 });
