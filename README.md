@@ -44,7 +44,7 @@ separate deployments/databases/agents — see [docs/ARCHITECTURE.md](docs/ARCHIT
 **Keep-ready groundwork** (built behind clean seams, off by default — activate via env):
 - **OTA email ingestion** — paste a confirmation email into the **Inbox** screen → review → create; a token-gated webhook seam (`/api/ingest/email`) plus **two ready-to-deploy forwarders** for full automation in [`integrations/`](integrations/) (Gmail Apps Script — no domain; Cloudflare Email Worker — optional, for a branded domain instead of a personal Gmail).
 - **ROOT agent seam** — `/api/agent/*` gated by `AGENT_TOKEN` (fails closed); see [docs/INTEGRATION.md](docs/INTEGRATION.md). The agents are separate services that connect to it.
-- **Messaging outbox** — a LogAdapter logs every outbound message (`/messages`); wire a WhatsApp/SMS/email provider to start sending without changing callers.
+- **Messaging outbox** — a LogAdapter logs every outbound message (`/messages`). A **WhatsApp Cloud API adapter** (`src/lib/whatsapp.ts`) ships behind `WHATSAPP_ENABLED` (+ credentials), off by default; switching it on flips outbox status to sent/failed with no caller changes. Proactive sends still await Meta-approved templates.
 - **Login rate-limiting** — active (10 attempts / IP / 5 min).
 - **Guest ID document upload** — Supabase Storage adapter + UI; activate by setting the storage env vars.
 

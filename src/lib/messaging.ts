@@ -7,6 +7,7 @@ import {
 import { displayDate, displayINR } from "@/lib/format";
 import { todayDateOnly, parseDateOnly, addDays } from "@/lib/dates";
 import { isUniqueViolation } from "@/lib/db-errors";
+import { adapterFromEnv } from "@/lib/whatsapp";
 
 export type LogMessageOpts = {
   source: MessageSource;
@@ -34,7 +35,11 @@ export const LogAdapter: MessageAdapter = {
   },
 };
 
-let activeAdapter: MessageAdapter = LogAdapter;
+// Default to the WhatsApp Cloud adapter when it's fully configured in env,
+// otherwise the LogAdapter. With no WhatsApp env set (every deployment today, and
+// all tests) this is exactly the LogAdapter — no behaviour change until an owner
+// switches WhatsApp on.
+let activeAdapter: MessageAdapter = adapterFromEnv() ?? LogAdapter;
 export function setMessageAdapter(adapter: MessageAdapter) {
   activeAdapter = adapter;
 }
