@@ -9,7 +9,7 @@ export default async function Page() {
   return (
     <main className="app-main" style={{ maxWidth: 760 }}>
       <div className="entrance">
-        <SubHeader title="Cancellation & refunds" sub="Free-cancellation windows (normal vs peak)" />
+        <SubHeader title="Cancellation & refunds" sub="Refund ladder — how much a guest gets back, by how far ahead they cancel" />
         <CancellationSection initial={policy} />
       </div>
     </main>

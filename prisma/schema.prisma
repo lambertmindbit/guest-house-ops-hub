@@ -1422,13 +1422,17 @@ enum RefundStatus {
 // cancellation windows are in days before check-in; a shorter window applies on
 // peak dates — a check-in that falls inside a Season with a positive adjustment.
 model CancellationPolicy {
-  id                    String   @id @default(cuid())
-  enabled               Boolean  @default(true)
-  freeCancelDaysDefault Int      @default(4) @map("free_cancel_days_default")
-  freeCancelDaysPeak    Int      @default(2) @map("free_cancel_days_peak")
-  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  enabled   Boolean  @default(true)
+  // Ordered refund ladder, e.g. [{minDaysBefore:30,refundPct:100},…,{0,0}]. The
+  // refund for a cancellation is the refundPct of the tier with the highest
+  // minDaysBefore threshold that is still ≤ days-until-check-in. Stored as JSON:
+  // it's one small config edited and saved as a whole (not rows to query), so a
+  // table-per-tier would be overkill. Shape is validated by Zod on every write.
+  tiers     Json     @default("[]")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
   // Forward-compatible tenancy (single-property today; unused).
-  propertyId            String?  @map("property_id")
+  propertyId String? @map("property_id")
 
   @@map("cancellation_policy")
 }

@@ -25,15 +25,15 @@ export function RefundPanel({
   reservationId,
   collected,
   suggestedRefund,
-  freeWindowDays,
-  withinFreeWindow,
+  refundPct,
+  daysUntilCheckIn,
   refunds,
 }: {
   reservationId: string;
   collected: number;
   suggestedRefund: number;
-  freeWindowDays: number;
-  withinFreeWindow: boolean;
+  refundPct: number;
+  daysUntilCheckIn: number;
   refunds: RefundRow[];
 }) {
   const router = useRouter();
@@ -80,13 +80,13 @@ export function RefundPanel({
     <div className="card card--pad" style={{ marginTop: 16 }}>
       <div className="spread" style={{ marginBottom: 6 }}>
         <span className="h3">Cancellation &amp; refund</span>
-        <span className={`badge ${withinFreeWindow ? "badge--good" : "badge--warn"}`}>
-          {withinFreeWindow ? "Within free window" : "Past free window"}
+        <span className={`badge ${refundPct >= 100 ? "badge--good" : refundPct > 0 ? "badge--warn" : "badge--neutral"}`}>
+          {refundPct}% refund per policy
         </span>
       </div>
       <p className="help-a" style={{ marginTop: 0 }}>
-        Policy: free cancellation up to <b>{freeWindowDays}</b> day{freeWindowDays === 1 ? "" : "s"} before check-in.
-        Collected <b className="num">{displayINR(collected)}</b> · suggested refund{" "}
+        Cancelled <b>{daysUntilCheckIn >= 0 ? `${daysUntilCheckIn} day${daysUntilCheckIn === 1 ? "" : "s"} before check-in` : "after check-in"}</b>{" "}
+        → policy allows <b>{refundPct}%</b>. Collected <b className="num">{displayINR(collected)}</b> · suggested refund{" "}
         <b className="num">{displayINR(suggestedRefund)}</b>.
       </p>
 

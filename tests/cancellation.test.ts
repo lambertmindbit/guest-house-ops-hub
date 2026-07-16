@@ -1,28 +1,21 @@
 import { describe, it, expect } from "vitest";
 import {
-  isPeakDate,
   daysUntil,
+  refundPctForDays,
   assessRefund,
+  parseTiers,
   DEFAULT_CANCELLATION_POLICY,
-  type SeasonWindow,
+  type CancellationTier,
 } from "@/lib/cancellation";
 
-const seasons: SeasonWindow[] = [
-  { startDate: "2026-10-01", endDate: "2026-12-31", adjustPct: 20 }, // peak
-  { startDate: "2026-01-01", endDate: "2026-04-30", adjustPct: -15 }, // lean (discount)
+// Aiban's ladder (confirmed): 100% at 30+, 75% at 20–29, 50% at 7–19, 0% inside a
+// week (2–6 and the last 48h both nothing).
+const ladder: CancellationTier[] = [
+  { minDaysBefore: 30, refundPct: 100 },
+  { minDaysBefore: 20, refundPct: 75 },
+  { minDaysBefore: 7, refundPct: 50 },
+  { minDaysBefore: 0, refundPct: 0 },
 ];
-
-describe("isPeakDate", () => {
-  it("is true inside a positively-adjusted season, inclusive of endpoints", () => {
-    expect(isPeakDate(seasons, "2026-10-01")).toBe(true);
-    expect(isPeakDate(seasons, "2026-11-15")).toBe(true);
-    expect(isPeakDate(seasons, "2026-12-31")).toBe(true);
-  });
-  it("is false for discount seasons and outside any season", () => {
-    expect(isPeakDate(seasons, "2026-02-10")).toBe(false); // lean/discount
-    expect(isPeakDate(seasons, "2026-07-15")).toBe(false); // no season
-  });
-});
 
 describe("daysUntil", () => {
   it("counts whole days and goes negative once past", () => {
@@ -32,30 +25,61 @@ describe("daysUntil", () => {
   });
 });
 
+describe("refundPctForDays", () => {
+  it("picks the highest band still at or below the days remaining", () => {
+    expect(refundPctForDays(ladder, 35)).toBe(100); // 30+
+    expect(refundPctForDays(ladder, 30)).toBe(100); // exactly the threshold
+    expect(refundPctForDays(ladder, 25)).toBe(75); // 20–29
+    expect(refundPctForDays(ladder, 12)).toBe(50); // 7–19
+    expect(refundPctForDays(ladder, 3)).toBe(0); // inside a week
+  });
+  it("is 0 on the last two days and after check-in (Aiban's rule)", () => {
+    expect(refundPctForDays(ladder, 1)).toBe(0);
+    expect(refundPctForDays(ladder, 0)).toBe(0);
+    expect(refundPctForDays(ladder, -2)).toBe(0);
+  });
+  it("order of the tiers doesn't matter", () => {
+    const shuffled = [ladder[2], ladder[0], ladder[3], ladder[1]];
+    expect(refundPctForDays(shuffled, 25)).toBe(75);
+  });
+});
+
 describe("assessRefund", () => {
-  const policy = DEFAULT_CANCELLATION_POLICY; // 4 default / 2 peak
+  const policy = { enabled: true, tiers: ladder };
 
-  it("refunds fully inside the default free window", () => {
-    const a = assessRefund({ policy, isPeak: false, daysUntilCheckIn: 4, collected: 2000 });
-    expect(a.withinFreeWindow).toBe(true);
-    expect(a.suggestedRefund).toBe(2000);
+  it("refunds the ladder's share of what was collected, whole rupees", () => {
+    expect(assessRefund({ policy, daysUntilCheckIn: 25, collected: 4000 }).suggestedRefund).toBe(3000); // 75%
+    expect(assessRefund({ policy, daysUntilCheckIn: 12, collected: 3333 }).suggestedRefund).toBe(1667); // 50% → round(1666.5)
+    expect(assessRefund({ policy, daysUntilCheckIn: 3, collected: 4000 }).suggestedRefund).toBe(0); // inside a week
   });
-
-  it("suggests no refund past the default window", () => {
-    const a = assessRefund({ policy, isPeak: false, daysUntilCheckIn: 3, collected: 2000 });
-    expect(a.withinFreeWindow).toBe(false);
-    expect(a.suggestedRefund).toBe(0);
+  it("reports the applied percentage", () => {
+    expect(assessRefund({ policy, daysUntilCheckIn: 25, collected: 4000 }).refundPct).toBe(75);
   });
-
-  it("uses the shorter peak window", () => {
-    const a = assessRefund({ policy, isPeak: true, daysUntilCheckIn: 2, collected: 5000 });
-    expect(a.freeWindowDays).toBe(2);
-    expect(a.withinFreeWindow).toBe(true);
-    expect(a.suggestedRefund).toBe(5000);
+  it("a disabled policy refunds everything collected (owner isn't enforcing tiers)", () => {
+    expect(assessRefund({ policy: { ...policy, enabled: false }, daysUntilCheckIn: 0, collected: 1200 }).suggestedRefund).toBe(1200);
   });
+  it("never refunds more than was collected", () => {
+    expect(assessRefund({ policy, daysUntilCheckIn: 40, collected: 0 }).suggestedRefund).toBe(0);
+  });
+});
 
-  it("refunds the collected amount when the policy is disabled", () => {
-    const a = assessRefund({ policy: { ...policy, enabled: false }, isPeak: false, daysUntilCheckIn: 0, collected: 1200 });
-    expect(a.suggestedRefund).toBe(1200);
+describe("parseTiers", () => {
+  it("normalises and sorts a JSON ladder highest-threshold first", () => {
+    const out = parseTiers([{ minDaysBefore: 7, refundPct: 50 }, { minDaysBefore: 30, refundPct: 100 }]);
+    expect(out.map((t) => t.minDaysBefore)).toEqual([30, 7]);
+  });
+  it("drops malformed rungs and clamps out-of-range values", () => {
+    const out = parseTiers([{ minDaysBefore: 10, refundPct: 150 }, { foo: 1 }, "nope", { minDaysBefore: -5, refundPct: 40 }]);
+    expect(out).toEqual([
+      { minDaysBefore: 10, refundPct: 100 }, // 150 clamped to 100
+      { minDaysBefore: 0, refundPct: 40 }, // -5 clamped to 0
+    ]);
+  });
+  it("returns an empty ladder for non-array input", () => {
+    expect(parseTiers(null)).toEqual([]);
+    expect(parseTiers("[]")).toEqual([]);
+  });
+  it("the default ladder round-trips through parse unchanged", () => {
+    expect(parseTiers(DEFAULT_CANCELLATION_POLICY.tiers)).toEqual(DEFAULT_CANCELLATION_POLICY.tiers);
   });
 });
