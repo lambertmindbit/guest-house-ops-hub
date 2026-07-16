@@ -9,7 +9,7 @@ import { RefundPanel } from "@/components/RefundPanel";
 import { displayDate, displayMoney } from "@/lib/format";
 import { formatDateOnly, todayDateOnly } from "@/lib/dates";
 import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
-import { getCancellationPolicy, isPeakDate, daysUntil, assessRefund, type SeasonWindow } from "@/lib/cancellation";
+import { getCancellationPolicy, daysUntil, assessRefund } from "@/lib/cancellation";
 import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
@@ -65,23 +65,14 @@ export default async function ReservationDetailPage({
   let refundView: {
     collected: number;
     suggestedRefund: number;
-    freeWindowDays: number;
-    withinFreeWindow: boolean;
+    refundPct: number;
+    daysUntilCheckIn: number;
   } | null = null;
   if (r.status === "cancelled") {
-    const [policy, seasons] = await Promise.all([
-      getCancellationPolicy(),
-      prisma.season.findMany(),
-    ]);
-    const seasonWindows: SeasonWindow[] = seasons.map((s) => ({
-      startDate: formatDateOnly(s.startDate),
-      endDate: formatDateOnly(s.endDate),
-      adjustPct: Number(s.adjustPct),
-    }));
+    const policy = await getCancellationPolicy();
     const collected = r.payments.reduce((sum, p) => sum + Number(p.amount), 0);
     const assessment = assessRefund({
       policy,
-      isPeak: isPeakDate(seasonWindows, formatDateOnly(r.checkIn)),
       daysUntilCheckIn: daysUntil(todayDateOnly(), formatDateOnly(r.checkIn)),
       collected,
     });
@@ -208,8 +199,8 @@ export default async function ReservationDetailPage({
             reservationId={r.id}
             collected={refundView.collected}
             suggestedRefund={refundView.suggestedRefund}
-            freeWindowDays={refundView.freeWindowDays}
-            withinFreeWindow={refundView.withinFreeWindow}
+            refundPct={refundView.refundPct}
+            daysUntilCheckIn={refundView.daysUntilCheckIn}
             refunds={r.refunds.map((rf) => ({
               id: rf.id,
               amount: Number(rf.amount),

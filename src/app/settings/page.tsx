@@ -35,7 +35,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
     ],
   },
   { group: "Pricing", items: [{ key: "pricing", title: "Pricing rules", sub: "Weekend, season, lead-time, occupancy", icon: "tag" }] },
-  { group: "Bookings", items: [{ key: "cancellation", title: "Cancellation & refunds", sub: "Free-cancellation windows (normal / peak)", icon: "receipt" }] },
+  { group: "Bookings", items: [{ key: "cancellation", title: "Cancellation & refunds", sub: "Refund ladder — how much a guest gets back by how far ahead they cancel", icon: "receipt" }] },
   { group: "Maintenance", items: [{ key: "blocks", title: "Blocked dates", sub: "Hold rooms out of service", icon: "alert" }] },
   {
     group: "Safety",
