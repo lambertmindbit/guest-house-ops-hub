@@ -174,6 +174,22 @@ the room, so a booking never lands in the wrong calendar.</li>
 shared between clients. See
 <a href="ARCHITECTURE.html#deployment-isolation--one-client-one-everything">ARCHITECTURE.md → Deployment isolation</a>.</li>
 </ul>
+<h2>Delivered — commercial go-live features</h2>
+<p>Built against the Pine Air discovery + go-live plan — the &quot;take money / talk to
+guests&quot; half the operations core didn&#39;t yet cover. All live on <code>main</code>.</p>
+<ul>
+<li><strong>Travel agents (B2B).</strong> A first-class <code>Agent</code> (verified phone, commission rate)
+distinct from Channel (<em>where</em> a booking came from) and referrals (outbound
+overflow). A booking is attributed via <code>Reservation.agentId</code>; Settings → <strong>Travel
+agents</strong> shows each agent and the commission owed this month (derived from their
+bookings, never stored). See <a href="ARCHITECTURE.html">ARCHITECTURE.md</a>.</li>
+<li><strong>Cancellation refund ladder.</strong> The policy is an ordered tier list (days-before →
+refund %), replacing the old binary free-window; the reservation detail shows the
+computed refund. Advisory — the owner can still approve a different amount.</li>
+<li><strong>UPI payment request.</strong> Each unpaid booking has a tap-to-pay UPI link <strong>and a
+scannable QR</strong> (self-contained SVG, no gateway, no account) for the outstanding
+balance — the no-fee half of online payment.</li>
+</ul>
 <h2>Deferred — by design</h2>
 <p>These were intentionally left out (see <a href="../CLAUDE.html">CLAUDE.md</a> &quot;do NOT&quot; rules and
 phase scoping). They are <strong>not</strong> bugs:</p>
@@ -194,6 +210,11 @@ phase scoping). They are <strong>not</strong> bugs:</p>
 <td><strong>Messaging automation</strong></td>
 <td>WhatsApp/email/SMS templates + triggers. Needs a provider account.</td>
 <td>🟡 <strong>Transport scaffold built</strong> — the LogAdapter outbox (<code>src/lib/messaging.ts</code>), <code>/messages</code> review screen, and agent <code>POST /api/agent/messages</code> seam log every message; a <strong>WhatsApp Cloud API adapter</strong> (<code>src/lib/whatsapp.ts</code>, OFF unless <code>WHATSAPP_ENABLED=true</code> + credentials) now flips outbox <code>status</code> to sent/failed when switched on. <strong>Remaining:</strong> Meta-approved templates + carrying template params through the seam — proactive sends need a pre-approved template, not free text (24h-window only).</td>
+</tr>
+<tr>
+<td><strong>Online payment capture (gateway)</strong></td>
+<td>Automatic capture so payments post themselves, + a hold-a-room-while-paying flow.</td>
+<td>🟡 <strong>UPI half built</strong> — tap-to-pay link + scannable QR per booking (no account needed). The <strong>Razorpay gateway + idempotent webhook + hold-as-<code>confirmed</code>-with-deadline</strong> await the owner&#39;s merchant keys. The hold reuses the exclusion constraint (no new status, constraint untouched).</td>
 </tr>
 <tr>
 <td><strong>Dynamic pricing → OTAs</strong></td>
