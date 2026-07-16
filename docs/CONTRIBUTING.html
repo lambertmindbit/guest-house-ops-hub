@@ -150,9 +150,9 @@ build → test</strong>. Green CI is required before merging. See <a href="DEPLO
 <h2>Docs</h2>
 <p>The <code>.html</code> docs are <strong>generated</strong> — <code>npm run docs:html</code> renders them from the
 Markdown, which is the source of truth. Never hand-edit a generated <code>.html</code>; your
-change is overwritten on the next run. (<code>USER-GUIDE.html</code>, <code>WORKFLOW.html</code> and
-<code>CHANNEL-SYNC.html</code> are the exceptions: hand-authored visual docs with CSS
-diagrams and screenshots, with no Markdown source. Edit those directly.)</p>
+change is overwritten on the next run. Every doc, including the end-user
+<a href="USER-GUIDE.html">USER-GUIDE.md</a>, now lives in this pipeline — there are no
+hand-authored HTML exceptions left.</p>
 <p>CI enforces two things, both of which broke in the past:</p>
 <ul>
 <li><strong>No broken links.</strong> <code>npm run docs:check</code> walks every relative link in every
