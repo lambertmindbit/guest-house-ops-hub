@@ -1,3 +1,5 @@
+import qrcode from "qrcode-generator";
+
 // Pure UPI helpers — build a standard `upi://pay` deep link the guest can tap to
 // pay the property directly. No SDK, no account: this is just the NPCI UPI URL
 // scheme, so any UPI app (GPay/PhonePe/Paytm/…) handles it. A hosted checkout
@@ -24,4 +26,15 @@ export function buildUpiLink({ vpa, payeeName, amount, note }: UpiLinkOpts): str
   parts.push("cu=INR");
   if (note && note.trim()) parts.push(`tn=${encodeURIComponent(note.trim())}`);
   return `upi://pay?${parts.join("&")}`;
+}
+
+// Render the UPI pay link as a self-contained SVG QR the guest scans with any UPI
+// app — the automation of the owner's current "show a QR by hand" workflow. Pure
+// and offline: an inline SVG string, no image host, no network, CSP-safe. Error
+// correction "M" balances density against a phone-camera scan.
+export function upiQrSvg(opts: UpiLinkOpts): string {
+  const qr = qrcode(0, "M");
+  qr.addData(buildUpiLink(opts));
+  qr.make();
+  return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
 }

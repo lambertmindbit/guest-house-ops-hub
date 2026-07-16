@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { displayINR, PAYMENT_MODE_LABELS } from "@/lib/format";
 import { Icon } from "@/components/ui";
-import { buildUpiLink } from "@/lib/upi";
+import { buildUpiLink, upiQrSvg } from "@/lib/upi";
 
 export type PaymentRow = {
   id: string;
@@ -47,6 +47,7 @@ export function PaymentsPanel({
   const [checklist, setChecklist] = useState<boolean[]>(VERIFY_ITEMS.map(() => false));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showQr, setShowQr] = useState(false);
 
   const needsVerify = mode === "upi" || mode === "bank";
   const allChecked = checklist.every(Boolean);
@@ -65,6 +66,12 @@ export function PaymentsPanel({
   const advancePaid = payments.filter((p) => p.isAdvance).reduce((s, p) => s + p.amount, 0);
   const balance = gross - collected;
   const pct = gross > 0 ? Math.min(100, (collected / gross) * 100) : 0;
+  // Self-contained SVG QR of the UPI link for the outstanding balance. Memoised so
+  // typing in the amount field doesn't re-encode it on every keystroke.
+  const qrSvg = useMemo(
+    () => (upi && balance > 0 ? upiQrSvg({ vpa: upi.vpa, payeeName: upi.payeeName, amount: balance, note: "Booking payment" }) : ""),
+    [upi, balance],
+  );
   const advanceOk = advanceRequired > 0 && advancePaid >= advanceRequired;
   const advancePending = advanceRequired > 0 && !advanceOk;
 
@@ -145,15 +152,35 @@ export function PaymentsPanel({
           <div className={`progress__fill${balance > 0 ? " progress__fill--warn" : ""}`} style={{ width: `${pct}%` }} />
         </div>
 
-        {/* Tap-to-pay UPI link for the outstanding balance (no SDK — standard UPI URL). */}
+        {/* UPI request for the outstanding balance (no SDK — standard UPI URL).
+            The link is a tap-to-pay deep link (for the guest's own phone / a
+            WhatsApp send); the QR is for showing a guest in person or screenshotting. */}
         {upi && balance > 0 && (
-          <a
-            className="btn btn--ghost btn--block"
-            style={{ marginBottom: 12 }}
-            href={buildUpiLink({ vpa: upi.vpa, payeeName: upi.payeeName, amount: balance, note: "Booking payment" })}
-          >
-            <Icon name="wallet" size={16} /> Request {displayINR(balance)} via UPI
-          </a>
+          <div style={{ marginBottom: 12 }}>
+            <div className="row" style={{ gap: 8 }}>
+              <a
+                className="btn btn--ghost"
+                style={{ flex: 1 }}
+                href={buildUpiLink({ vpa: upi.vpa, payeeName: upi.payeeName, amount: balance, note: "Booking payment" })}
+              >
+                <Icon name="wallet" size={16} /> Request {displayINR(balance)} via UPI
+              </a>
+              <button type="button" className="btn btn--ghost" style={{ flex: "none" }} onClick={() => setShowQr((v) => !v)} aria-expanded={showQr}>
+                {showQr ? "Hide QR" : "Show QR"}
+              </button>
+            </div>
+            {showQr && (
+              <div style={{ marginTop: 12, textAlign: "center" }}>
+                <div
+                  style={{ width: 200, maxWidth: "60%", margin: "0 auto", background: "#fff", padding: 12, borderRadius: 10, border: "1px solid var(--border-subtle)" }}
+                  dangerouslySetInnerHTML={{ __html: qrSvg }}
+                />
+                <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 6 }}>
+                  Scan with any UPI app to pay {displayINR(balance)} to {upi.vpa}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {payments.map((p, i) => (
