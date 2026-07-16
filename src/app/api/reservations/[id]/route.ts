@@ -24,6 +24,8 @@ const updateSchema = z
   .object({
     roomId: z.string().min(1).optional(),
     channelId: z.string().min(1).optional(),
+    // Attribute (or clear, via null) the inbound travel agent for this booking.
+    agentId: z.string().min(1).nullable().optional(),
     checkIn: dateOnly.optional(),
     checkOut: dateOnly.optional(),
     status: z.enum(["confirmed", "cancelled", "no_show"]).optional(),
@@ -64,6 +66,7 @@ async function handlePATCH(
     await updateReservation(id, {
       roomId: input.roomId,
       channelId: input.channelId,
+      agentId: input.agentId,
       checkIn: input.checkIn ? nextCheckIn : undefined,
       checkOut: input.checkOut ? nextCheckOut : undefined,
       status: input.status,

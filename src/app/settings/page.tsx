@@ -30,6 +30,7 @@ const GROUPS: { group: string; items: SetItem[] }[] = [
     group: "Channels & sync",
     items: [
       { key: "channels", title: "Channels", sub: "Booking sources & commission", icon: "link" },
+      { key: "agents", title: "Travel agents", sub: "Verified B2B agents, commission & what you owe", icon: "guests" },
       { key: "feeds", title: "iCal feeds", sub: "Sync availability with OTAs", icon: "link" },
     ],
   },

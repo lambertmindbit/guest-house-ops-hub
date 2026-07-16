@@ -14,10 +14,11 @@ export default async function EditReservationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [reservation, rooms, channels] = await Promise.all([
+  const [reservation, rooms, channels, agents] = await Promise.all([
     prisma.reservation.findUnique({ where: { id }, include: { guest: true } }),
     prisma.room.findMany({ include: { roomType: true }, orderBy: { label: "asc" } }),
     prisma.channel.findMany({ orderBy: { name: "asc" } }),
+    prisma.agent.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
   if (!reservation) notFound();
 
@@ -26,6 +27,7 @@ export default async function EditReservationPage({
     version: reservation.version,
     roomId: reservation.roomId,
     channelId: reservation.channelId,
+    agentId: reservation.agentId ?? "",
     checkIn: formatDateOnly(reservation.checkIn),
     checkOut: formatDateOnly(reservation.checkOut),
     arrivalTime: reservation.arrivalTime ?? "",

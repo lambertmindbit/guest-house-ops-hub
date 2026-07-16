@@ -659,6 +659,37 @@ model Channel {
   @@map("channels")
 }
 
+// A travel agent who brings bookings on a B2B arrangement — you owe them
+// `commissionPct` of the room rate (Aiban's "10% commission"). Deliberately
+// distinct from two things it's easy to confuse it with:
+//   • Channel says WHERE a booking came from (Direct / Phone / Travel agent…).
+//     An agent says WHICH agent — a booking can be `Travel agent` channel + a
+//     specific Agent, and Finance's per-channel profit keeps working untouched.
+//   • Partner/referrals are OUTBOUND — overflow you send AWAY, tracked as a
+//     credit you're owed. An agent is INBOUND and a cost of sale — the opposite
+//     direction of money. Merging them would credit you for business you paid a
+//     commission on.
+// Commission owed is always DERIVED (a booking's grossAmount × commissionPct),
+// never stored — same discipline as availability.
+model Agent {
+  id            String        @id @default(cuid())
+  name          String
+  phone         String?
+  commissionPct Decimal       @default(10) @map("commission_pct") @db.Decimal(5, 2)
+  // A "verified" agent (his word): set once you've confirmed who they are.
+  verifiedAt    DateTime?     @map("verified_at")
+  active        Boolean       @default(true)
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  reservations  Reservation[]
+
+  // Tenant (multi-property). Single-property today; scoped by the Prisma tenant
+  // extension. See src/lib/tenant.ts.
+  propertyId String? @map("property_id")
+
+  @@map("agents")
+}
+
 model Guest {
   id                      String            @id @default(cuid())
   name                    String
@@ -728,6 +759,9 @@ model Reservation {
   roomId          String                    @map("room_id")
   guestId         String                    @map("guest_id")
   channelId       String                    @map("channel_id")
+  // Optional inbound travel agent who brought this booking (B2B commission).
+  // Nullable — most bookings have none. Commission owed is derived, not stored.
+  agentId         String?                   @map("agent_id")
   otaRef          String?                   @map("ota_ref")
   checkIn         DateTime                  @map("check_in") @db.Date
   checkOut        DateTime                  @map("check_out") @db.Date
@@ -763,6 +797,7 @@ model Reservation {
   room             Room              @relation(fields: [roomId], references: [id])
   guest            Guest             @relation(fields: [guestId], references: [id])
   channel          Channel           @relation(fields: [channelId], references: [id])
+  agent            Agent?            @relation(fields: [agentId], references: [id])
   payments         Payment[]
   outboundMessages OutboundMessage[]
   refunds          Refund[]
@@ -774,6 +809,7 @@ model Reservation {
 
   @@index([roomId])
   @@index([guestId])
+  @@index([agentId])
   @@index([groupId])
   @@map("reservations")
 }

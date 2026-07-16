@@ -23,6 +23,7 @@ export type Room = {
   photos: string[]; facing: string | null; view: string | null;
 };
 export type Channel = { id: string; name: string; commissionPct: number; collectsPayment: boolean; resCount: number };
+export type Agent = { id: string; name: string; phone: string | null; commissionPct: number; verified: boolean; active: boolean; notes: string | null; resCount: number; commissionThisMonth: number };
 export type Block = { id: string; roomId: string; roomLabel: string; startDate: string; endDate: string; reason: string | null };
 export type Settings = {
   name: string;
