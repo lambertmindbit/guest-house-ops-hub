@@ -201,6 +201,16 @@ phone, room or channel) and stay-state filtering client-side.</p>
 <td>Edit / delete (409 if it has bookings)</td>
 </tr>
 <tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/agents</code></td>
+<td>List / create travel agents (name, phone, <code>commissionPct</code>) — inbound B2B agents you owe commission</td>
+</tr>
+<tr>
+<td><code>PATCH</code> / <code>DELETE</code></td>
+<td><code>/api/agents/[id]</code></td>
+<td>Edit / verify (<code>{ verified }</code>) / deactivate (<code>{ active }</code>) / delete (409 if it has bookings — deactivate instead)</td>
+</tr>
+<tr>
 <td><code>GET</code> / <code>PATCH</code></td>
 <td><code>/api/settings</code></td>
 <td>Property profile (single row, get-or-create)</td>

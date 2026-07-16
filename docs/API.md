@@ -68,6 +68,8 @@ phone, room or channel) and stay-state filtering client-side.
 | `PATCH` / `DELETE` | `/api/room-types/[id]` | Edit / delete (409 if it still has rooms) |
 | `GET` / `POST` | `/api/channels` | List / create channels |
 | `PATCH` / `DELETE` | `/api/channels/[id]` | Edit / delete (409 if it has bookings) |
+| `GET` / `POST` | `/api/agents` | List / create travel agents (name, phone, `commissionPct`) — inbound B2B agents you owe commission |
+| `PATCH` / `DELETE` | `/api/agents/[id]` | Edit / verify (`{ verified }`) / deactivate (`{ active }`) / delete (409 if it has bookings — deactivate instead) |
 | `GET` / `PATCH` | `/api/settings` | Property profile (single row, get-or-create) |
 
 ## Properties, access & session (multi-property)

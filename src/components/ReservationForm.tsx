@@ -8,12 +8,14 @@ type Quote = { total: number; nights: { date: string; rate: number; applied: str
 
 export type RoomOption = { id: string; label: string; roomTypeName: string };
 export type ChannelOption = { id: string; name: string };
+export type AgentOption = { id: string; name: string; commissionPct: number };
 
 export type ReservationFormValues = {
   id?: string;
   version?: number;
   roomId: string;
   channelId: string;
+  agentId: string;
   checkIn: string;
   checkOut: string;
   arrivalTime: string;
@@ -28,6 +30,7 @@ type Props = {
   mode: "create" | "edit";
   rooms: RoomOption[];
   channels: ChannelOption[];
+  agents?: AgentOption[];
   initial: ReservationFormValues;
   idPolicy?: "off" | "warn" | "block";
   idRequiredAtBooking?: boolean;
@@ -47,7 +50,7 @@ function nightsBetween(checkIn: string, checkOut: string): number {
   return Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / 86_400_000);
 }
 
-export function ReservationForm({ mode, rooms, channels, initial, idPolicy = "block", idRequiredAtBooking = false }: Props) {
+export function ReservationForm({ mode, rooms, channels, agents = [], initial, idPolicy = "block", idRequiredAtBooking = false }: Props) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -195,12 +198,13 @@ export function ReservationForm({ mode, rooms, channels, initial, idPolicy = "bl
           ? await fetch("/api/reservations", {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ ...common, guest: { name: values.guestName, phone: values.guestPhone, idNumber: idNumber.trim() || undefined }, idAck }),
+              body: JSON.stringify({ ...common, agentId: values.agentId || undefined, guest: { name: values.guestName, phone: values.guestPhone, idNumber: idNumber.trim() || undefined }, idAck }),
             })
           : await fetch(`/api/reservations/${values.id}`, {
               method: "PATCH",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ ...common, expectedVersion: values.version }),
+              // null (not undefined) so clearing the agent on an edit persists.
+              body: JSON.stringify({ ...common, agentId: values.agentId || null, expectedVersion: values.version }),
             });
 
       const json = await res.json();
@@ -352,6 +356,24 @@ export function ReservationForm({ mode, rooms, channels, initial, idPolicy = "bl
           );
         })}
       </div>
+
+      {/* ---------- Travel agent (optional) — only if any agents exist ---------- */}
+      {agents.length > 0 && (
+        <>
+          <div className="eyebrow eyebrow--accent" style={{ marginBottom: 8 }}>Travel agent <span className="muted" style={{ textTransform: "none", letterSpacing: 0 }}>· optional</span></div>
+          <div className="chips" style={{ marginBottom: 18 }}>
+            {agents.map((a) => {
+              const on = values.agentId === a.id;
+              // Click the active agent to clear it (a booking need not have one).
+              return (
+                <button type="button" key={a.id} className={`chip${on ? " on" : ""}`} onClick={() => set("agentId", on ? "" : a.id)}>
+                  {a.name} · {a.commissionPct}%
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* ---------- Details ---------- */}
       <div className="eyebrow eyebrow--accent" style={{ marginBottom: 8 }}>Details</div>

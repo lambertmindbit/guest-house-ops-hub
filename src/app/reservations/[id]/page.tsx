@@ -48,6 +48,7 @@ export default async function ReservationDetailPage({
       include: {
         guest: true,
         channel: true,
+        agent: true,
         room: { include: { roomType: true } },
         payments: { orderBy: { paidAt: "asc" } },
         refunds: { orderBy: { createdAt: "desc" } },
@@ -103,6 +104,9 @@ export default async function ReservationDetailPage({
             <div className="row" style={{ gap: 8, marginTop: 4, flexWrap: "wrap" }}>
               <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>{r.guest.phone}</span>
               <ChannelBadge name={r.channel.name} />
+              {r.agent && (
+                <span className="badge" style={{ fontSize: "var(--fs-meta)" }}>Agent: {r.agent.name} · {Number(r.agent.commissionPct)}%</span>
+              )}
             </div>
           </div>
         </div>

@@ -14,6 +14,8 @@ const createSchema = z
   .object({
     roomId: z.string().min(1),
     channelId: z.string().min(1),
+    // Optional inbound travel agent who brought this booking (B2B commission).
+    agentId: z.string().min(1).optional(),
     checkIn: dateOnly,
     checkOut: dateOnly,
     // Either reference an existing guest or supply enough to upsert one by phone.
@@ -85,6 +87,7 @@ async function handlePOST(request: Request) {
           roomId: input.roomId,
           guestId,
           channelId: input.channelId,
+          agentId: input.agentId,
           checkIn: parseDateOnly(input.checkIn),
           checkOut: parseDateOnly(input.checkOut),
           otaRef: input.otaRef,
