@@ -51,6 +51,11 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # Raw SQL bypasses the Prisma tenant extension, so an unscoped $queryRaw over
+      # a tenant table leaks across one owner's properties (the freeRooms bug class).
+      - name: Tenant SQL scope guard
+        run: node scripts/check-tenant-sql.mjs
+
       # Docs rot silently. Deleting a doc leaves every reference to it dangling,
       # and the .html set is GENERATED — edit a .md, forget `npm run docs:html`,
       # and the published HTML quietly says something the Markdown no longer does.
