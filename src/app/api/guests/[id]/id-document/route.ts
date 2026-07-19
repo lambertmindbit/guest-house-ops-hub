@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ok, fail, withRoute } from "@/lib/api";
 import { isStorageConfigured, uploadObject, signedUrl, deleteObject } from "@/lib/storage";
+import { recordAudit } from "@/lib/audit";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
@@ -59,7 +60,10 @@ async function handleGET(_request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const guest = await prisma.guest.findUnique({ where: { id } });
   if (!guest?.idDocumentPath) return fail("no document on file", 404);
-  return ok({ url: await signedUrl(guest.idDocumentPath) });
+  const url = await signedUrl(guest.idDocumentPath);
+  // DPDP accountability (US-604 / GAP-15): every view/download of an ID scan is logged.
+  await recordAudit("id.document.view", "guest", id, `Viewed ID document for ${guest.name}`).catch(() => {});
+  return ok({ url });
 }
 
 async function handleDELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {

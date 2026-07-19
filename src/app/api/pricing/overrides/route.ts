@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
+import { recordAudit } from "@/lib/audit";
 
 // Pin or clear a manual nightly rate for a room type on one date (rate calendar).
 const upsertSchema = z.object({
@@ -21,6 +22,7 @@ async function handlePOST(request: Request) {
     create: { roomTypeId, date: parseDateOnly(date), rate },
     update: { rate },
   });
+  await recordAudit("pricing.override.set", "rate_override", override.id, `Pinned ₹${Math.round(rate).toLocaleString("en-IN")} on ${date}`).catch(() => {});
   return ok(override, 201);
 }
 
@@ -33,6 +35,7 @@ async function handleDELETE(request: Request) {
   const { roomTypeId, date } = parsed.data;
 
   await prisma.rateOverride.deleteMany({ where: { roomTypeId, date: parseDateOnly(date) } });
+  await recordAudit("pricing.override.clear", "rate_override", null, `Cleared the pinned rate on ${date}`).catch(() => {});
   return ok({ deleted: true });
 }
 

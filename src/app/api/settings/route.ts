@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma, unscopedPrisma } from "@/lib/prisma";
 import { ok, zodFail, withRoute } from "@/lib/api";
 import { currentPropertySettings } from "@/lib/property-settings";
+import { recordAudit } from "@/lib/audit";
 
 // Settings for the ACTING property. Resolve it properly rather than findFirst() —
 // with two properties, findFirst() would let the owner edit whichever comes first,
@@ -45,6 +46,7 @@ async function handlePATCH(request: Request) {
     where: { id: current.id },
     data: parsed.data,
   });
+  await recordAudit("settings.update", "property_settings", settings.id, `Updated property settings (${Object.keys(parsed.data).join(", ")})`).catch(() => {});
   return ok(settings);
 }
 
