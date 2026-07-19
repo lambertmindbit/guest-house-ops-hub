@@ -3,11 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { send, ErrorLine, type Settings } from "./shared";
+import { DEFAULT_GST_SLABS } from "@/lib/gst";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 export function PropertySection({ settings }: { settings: Settings }) {
   const router = useRouter();
+  // GST slab table, editable because tax rates change (the 12% band became 5% in
+  // Sep 2025) — a rate change must never need a code deploy. Thresholds shown in
+  // rupees; blank upper bound = "and above".
+  const [slabs, setSlabs] = useState(
+    (settings?.gstSlabs ?? DEFAULT_GST_SLABS).map((s) => ({
+      upto: s.uptoPaise === null ? "" : String(paiseToRupees(s.uptoPaise)),
+      rate: String(s.ratePct),
+    })),
+  );
   const [f, setF] = useState({
     name: settings?.name ?? "My Guest House",
+    invoicePrefix: settings?.invoicePrefix ?? "",
     address: settings?.address ?? "",
     gstNumber: settings?.gstNumber ?? "",
     upiVpa: settings?.upiVpa ?? "",
@@ -29,7 +41,21 @@ export function PropertySection({ settings }: { settings: Settings }) {
     setBusy(true);
     setError(null);
     setSaved(false);
-    const r = await send("PATCH", "/api/settings", { ...f, address: f.address || null, gstNumber: f.gstNumber || null, upiVpa: f.upiVpa || null, idRetentionDays: f.idRetentionDays ? Number(f.idRetentionDays) : null, idPolicy: f.idPolicy, idRequiredAtBooking: f.idRequiredAtBooking });
+    const r = await send("PATCH", "/api/settings", {
+      ...f,
+      address: f.address || null,
+      gstNumber: f.gstNumber || null,
+      upiVpa: f.upiVpa || null,
+      idRetentionDays: f.idRetentionDays ? Number(f.idRetentionDays) : null,
+      idPolicy: f.idPolicy,
+      idRequiredAtBooking: f.idRequiredAtBooking,
+      invoicePrefix: f.invoicePrefix || null,
+      // Thresholds are entered in rupees; stored as paise (GAP-9).
+      gstSlabs: slabs.map((s) => ({
+        uptoPaise: s.upto.trim() === "" ? null : rupeesToPaise(Number(s.upto)),
+        ratePct: Number(s.rate),
+      })),
+    });
     setBusy(false);
     if (!r.ok) return setError(r.error!);
     setSaved(true);
@@ -63,7 +89,47 @@ export function PropertySection({ settings }: { settings: Settings }) {
         <div>
           <label className="field-label">GST number</label>
           <input className="input" value={f.gstNumber} onChange={(e) => setF({ ...f, gstNumber: e.target.value })} placeholder="Optional" />
+          <div className="field-hint">Leave blank if you aren’t GST-registered — invoices then carry no tax lines.</div>
         </div>
+        <div>
+          <label className="field-label">Invoice number prefix</label>
+          <input className="input" value={f.invoicePrefix} onChange={(e) => setF({ ...f, invoicePrefix: e.target.value })} placeholder="e.g. GH" maxLength={8} />
+          <div className="field-hint">Numbers run as PREFIX/2026-27/0001, restarting each financial year.</div>
+        </div>
+
+        {f.gstNumber.trim() !== "" && (
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="field-label">GST rate slabs</label>
+            <div className="field-hint" style={{ marginBottom: 8 }}>
+              Applied to the room tariff <b>per night</b>. Defaults follow the current hotel
+              slabs (up to ₹1,000 nil · ₹1,001–₹7,500 at 5% · above ₹7,500 at 18%).
+              <b> Confirm these with your accountant</b> — rates change, and the invoice records whichever rate applied.
+            </div>
+            <div className="col" style={{ gap: 8 }}>
+              {slabs.map((s, i) => (
+                <div className="row" key={i} style={{ gap: 8, alignItems: "center" }}>
+                  <span className="muted" style={{ fontSize: "var(--fs-meta)", width: 62 }}>Up to ₹</span>
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    style={{ flex: 1 }}
+                    placeholder="and above"
+                    value={s.upto}
+                    onChange={(e) => setSlabs(slabs.map((x, xi) => (xi === i ? { ...x, upto: e.target.value } : x)))}
+                  />
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    style={{ width: 80 }}
+                    value={s.rate}
+                    onChange={(e) => setSlabs(slabs.map((x, xi) => (xi === i ? { ...x, rate: e.target.value } : x)))}
+                  />
+                  <span className="muted" style={{ fontSize: "var(--fs-meta)" }}>%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ gridColumn: "1 / -1" }}>
           <label className="field-label">UPI ID (VPA)</label>
           <input className="input" value={f.upiVpa} onChange={(e) => setF({ ...f, upiVpa: e.target.value })} placeholder="e.g. lawei@okhdfcbank" />

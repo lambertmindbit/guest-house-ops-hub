@@ -38,6 +38,8 @@ export type Settings = {
   idPolicy: string;
   idRequiredAtBooking: boolean;
   inspectionRequired: boolean;
+  invoicePrefix: string | null;
+  gstSlabs: { uptoPaise: number | null; ratePct: number }[] | null;
 } | null;
 export type Policy = {
   enabled: boolean;

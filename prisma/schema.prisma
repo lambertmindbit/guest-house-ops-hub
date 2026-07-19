@@ -842,6 +842,7 @@ model Reservation {
   payments         Payment[]
   outboundMessages OutboundMessage[]
   refunds          Refund[]
+  invoices         Invoice[]
   complaints       Complaint[]
   group            BookingGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
   // Tenant (multi-property). Single-property today; backfilled + scoped by the
@@ -1098,6 +1099,14 @@ model PropertySettings {
   // product rather than a blank app. See src/lib/modules.ts; CORE modules are
   // refused even if listed here.
   disabledModules String[] @default([]) @map("disabled_modules")
+  // Statutory invoicing (GAP-11). Series prefix for invoice numbers
+  // ("GH" → GH/2026-27/0001). GST tax lines appear only when gstNumber is set, so
+  // a non-registered property invoices without tax — no code branch per pilot.
+  invoicePrefix   String?  @map("invoice_prefix")
+  // Per-property GST slab table [{ uptoPaise, ratePct }, …]. NULL = the current
+  // statutory defaults (see src/lib/gst.ts). Editable so a rate change is a
+  // Settings edit, never a migration.
+  gstSlabs        Json?    @map("gst_slabs")
 
   @@map("property_settings")
 }
@@ -1585,4 +1594,72 @@ model Complaint {
 
   @@index([status, priority, createdAt])
   @@map("complaints")
+}
+
+/// A statutory tax invoice (GAP-11/US-205). IMMUTABLE: every figure is snapshotted
+/// at issue time, so a reprint years later is byte-identical even if the booking,
+/// the room rate, or the GST slabs have since changed. Nothing here is recomputed.
+///
+/// Numbering is a consecutive series per property per financial year (Apr–Mar),
+/// enforced by the DB via @@unique([propertyId, financialYear, seq]) — two
+/// simultaneous issues can never take the same number.
+///
+/// A booking that changes after invoicing does NOT mutate its invoice: the invoice
+/// is cancelled (cancelledAt) and a new one issued, so the series stays gapless.
+model Invoice {
+  id            String      @id @default(cuid())
+  reservationId String      @map("reservation_id")
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  number        String
+  financialYear String      @map("financial_year")
+  seq           Int
+  issuedAt      DateTime    @default(now()) @map("issued_at")
+  cancelledAt   DateTime?   @map("cancelled_at")
+
+  // ── Snapshot: supplier (the property) ──
+  propertyName    String  @map("property_name")
+  propertyAddress String? @map("property_address")
+  propertyGstin   String? @map("property_gstin")
+
+  // ── Snapshot: recipient (the guest) ──
+  guestName  String  @map("guest_name")
+  guestPhone String? @map("guest_phone")
+
+  // ── Snapshot: money, all integer paise (GAP-9) ──
+  nights        Int
+  /// 0 when the property is not GST-registered (no tax lines on the invoice).
+  taxRatePct    Decimal @default(0) @map("tax_rate_pct") @db.Decimal(5, 2)
+  taxablePaise  BigInt  @map("taxable_paise")
+  cgstPaise     BigInt  @default(0) @map("cgst_paise")
+  sgstPaise     BigInt  @default(0) @map("sgst_paise")
+  /// Whole-rupee rounding difference so taxable + tax + roundOff == total exactly.
+  roundOffPaise BigInt  @default(0) @map("round_off_paise")
+  totalPaise    BigInt  @map("total_paise")
+  /// Payments recorded against the booking at the moment of issue.
+  paidPaise     BigInt  @default(0) @map("paid_paise")
+
+  lines      InvoiceLine[]
+  propertyId String?       @map("property_id")
+
+  @@unique([propertyId, financialYear, seq])
+  @@unique([propertyId, number])
+  @@index([reservationId])
+  @@map("invoices")
+}
+
+/// One line of a snapshotted invoice (room nights today; extras later).
+model InvoiceLine {
+  id          String  @id @default(cuid())
+  invoiceId   String  @map("invoice_id")
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  qty         Int     @default(1)
+  /// Per-unit tariff in paise, GST-inclusive (the guest-facing price).
+  unitPaise   BigInt  @map("unit_paise")
+  amountPaise BigInt  @map("amount_paise")
+  sortOrder   Int     @default(0) @map("sort_order")
+  propertyId  String? @map("property_id")
+
+  @@index([invoiceId])
+  @@map("invoice_lines")
 }

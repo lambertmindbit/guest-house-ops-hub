@@ -52,6 +52,22 @@ export function pctOfMoneyWholeRupee(paise: number, pct: number): Money {
   return rupeesToPaise(Math.round((paiseToRupees(paise) * pct) / 100));
 }
 
+// Paise-precise percentage, rounded half-up to the paise — for statutory GST tax
+// lines (GAP-11), where rounding to the rupee per line would stop taxable + tax
+// reconciling with the invoice total. Distinct from the whole-rupee convention
+// above, which governs commission and the refund ladder.
+export function pctOfPaise(paise: number, pct: number): Money {
+  return Math.round((paise * pct) / 100) as Money;
+}
+
+// Round a paise amount to the nearest whole rupee, returning the rounded value and
+// the signed difference — the "Round off" line Indian invoices carry so that
+// taxable + tax + round-off equals the grand total exactly.
+export function roundToRupee(paise: number): { rounded: Money; roundOff: Money } {
+  const rounded = (Math.round(paise / PAISE_PER_RUPEE) * PAISE_PER_RUPEE) as Money;
+  return { rounded, roundOff: (rounded - paise) as Money };
+}
+
 export function sumPaise(values: number[]): Money {
   return values.reduce((a, b) => a + b, 0) as Money;
 }
