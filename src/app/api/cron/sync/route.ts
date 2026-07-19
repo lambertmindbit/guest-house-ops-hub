@@ -10,7 +10,7 @@ async function handleGET(request: Request) {
   if (!secret || auth !== `Bearer ${secret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
-  const results = await syncAllFeeds();
+  const results = await syncAllFeeds({ respectFrequency: true });
   return Response.json({ data: { results, syncedAt: new Date().toISOString() } });
 }
 

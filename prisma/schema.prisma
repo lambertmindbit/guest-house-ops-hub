@@ -988,6 +988,10 @@ model PropertySettings {
   checkOutTime        String   @default("11:00") @map("check_out_time")
   currency            String   @default("INR")
   timezone            String   @default("Asia/Kolkata")
+  // How often the cron re-fetches iCal feeds (hours; 1 = hourly minimum, 24 = the
+  // existing daily default). GAP-6. Actual cadence is still bounded by how often
+  // the host runs the sync cron; this only lets a feed be considered "due" sooner.
+  icalSyncHours       Int      @default(24) @map("ical_sync_hours")
   address             String?
   gstNumber           String?  @map("gst_number")
   // UPI VPA (e.g. name@bank) used to build a pay-to-me UPI link/QR for guests.

@@ -16,7 +16,14 @@ export type FeedRow = {
   lastError: string | null;
 };
 
-export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: FeedRow[] }) {
+const SYNC_OPTIONS = [
+  { hours: 24, label: "Daily (default)" },
+  { hours: 12, label: "Every 12 hours" },
+  { hours: 6, label: "Every 6 hours" },
+  { hours: 1, label: "Hourly" },
+];
+
+export function ImportFeeds({ rooms, feeds, syncHours = 24 }: { rooms: RoomOption[]; feeds: FeedRow[]; syncHours?: number }) {
   const router = useRouter();
   const { confirm } = useConfirm();
   const [roomId, setRoomId] = useState("");
@@ -25,6 +32,11 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  async function changeFrequency(hours: number) {
+    await fetch("/api/settings", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ icalSyncHours: hours }) });
+    router.refresh();
+  }
 
   async function addFeed(e: React.FormEvent) {
     e.preventDefault();
@@ -83,6 +95,14 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
       <p style={{ fontSize: "var(--fs-body)", color: "var(--text-subtle)", marginBottom: 14, lineHeight: 1.5 }}>
         Paste the iCal link each OTA gives you for a room. Imported dates show as blocks on the calendar so they can&apos;t be double-booked.
       </p>
+
+      <div className="row" style={{ gap: 8, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
+        <label className="field-label" style={{ margin: 0 }}>Auto-sync frequency</label>
+        <select className="select" value={syncHours} onChange={(e) => changeFrequency(Number(e.target.value))} style={{ width: "auto" }}>
+          {SYNC_OPTIONS.map((o) => <option key={o.hours} value={o.hours}>{o.label}</option>)}
+        </select>
+        <span style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)" }}>How often the scheduled sync re-fetches feeds. “Sync now” always runs immediately.</span>
+      </div>
 
       {syncMsg && (
         <div className="banner banner--good" style={{ cursor: "default", marginBottom: 12 }}>

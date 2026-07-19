@@ -1,6 +1,6 @@
 import * as nodeIcal from "node-ical";
 import type { IcalFeed } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma, unscopedPrisma } from "@/lib/prisma";
 import { parseDateOnly } from "@/lib/dates";
 import { assertPublicHttpUrl } from "@/lib/url-guard";
 
@@ -64,9 +64,36 @@ export async function syncFeed(feed: IcalFeed): Promise<SyncResult> {
   }
 }
 
-export async function syncAllFeeds(): Promise<SyncResult[]> {
+// Pure (testable): is a feed due for a re-fetch? Never-synced feeds are always
+// due; otherwise the last sync must be at least `syncHours` old. GAP-6.
+export function feedIsDue(lastSyncedAt: Date | null, syncHours: number, now: Date): boolean {
+  if (!lastSyncedAt) return true;
+  const ageHours = (now.getTime() - lastSyncedAt.getTime()) / 3_600_000;
+  return ageHours >= syncHours;
+}
+
+// Sync active feeds. The manual "Sync now" button forces every feed
+// (respectFrequency = false, unchanged). The daily cron passes respectFrequency so
+// a feed is only re-fetched once its property's icalSyncHours has elapsed — which
+// only matters on a host that runs the cron more often than daily.
+export async function syncAllFeeds({ respectFrequency = false }: { respectFrequency?: boolean } = {}): Promise<SyncResult[]> {
   const feeds = await prisma.icalFeed.findMany({ where: { active: true } });
+
+  let hoursFor: (propertyId: string | null) => number = () => 24;
+  if (respectFrequency) {
+    const settings = await unscopedPrisma.propertySettings.findMany({ select: { id: true, icalSyncHours: true } });
+    const byId = new Map(settings.map((s) => [s.id, s.icalSyncHours]));
+    // Single-property feeds carry a null property_id; fall back to the sole
+    // property's setting when there's exactly one, else the daily default.
+    const soleHours = settings.length === 1 ? settings[0].icalSyncHours : 24;
+    hoursFor = (propertyId) => (propertyId ? byId.get(propertyId) ?? soleHours : soleHours);
+  }
+
+  const now = new Date();
   const results: SyncResult[] = [];
-  for (const feed of feeds) results.push(await syncFeed(feed));
+  for (const feed of feeds) {
+    if (respectFrequency && !feedIsDue(feed.lastSyncedAt, hoursFor(feed.propertyId), now)) continue;
+    results.push(await syncFeed(feed));
+  }
   return results;
 }
