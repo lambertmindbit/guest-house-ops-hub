@@ -189,6 +189,14 @@ async function main() {
   }
 
   log(`  ✓ Created ${made} bookings with guests and payments.`);
+
+  // A realistic housekeeping mix so the Cleaning screen isn't all-clean or
+  // all-dirty: the first couple of rooms need cleaning, the rest are freshly done.
+  for (const [i, room] of rooms.entries()) {
+    const dirty = i < 2;
+    await prisma.room.update({ where: { id: room.id }, data: { needsCleaningFlag: dirty, lastCleanedAt: dirty ? null : new Date() } });
+  }
+  log(`  ✓ Housekeeping: ${Math.min(2, rooms.length)} room(s) to clean, the rest ready.`);
   log("    Remove them again with:  node scripts/demo-data.mjs --wipe");
 }
 
@@ -211,6 +219,8 @@ async function wipe(propertyId) {
   await prisma.payment.deleteMany({ where: { reservationId: { in: res.map((r) => r.id) } } });
   await prisma.reservation.deleteMany({ where: { id: { in: res.map((r) => r.id) } } });
   await prisma.guest.deleteMany({ where: { id: { in: ids } } });
+  // Reset the housekeeping states the demo set.
+  await prisma.room.updateMany({ where: { propertyId }, data: { needsCleaningFlag: false, lastCleanedAt: null } });
   log(`  ✓ Wiped ${res.length} bookings and ${ids.length} demo guests.`);
 }
 
