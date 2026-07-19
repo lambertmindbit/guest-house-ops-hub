@@ -11,6 +11,8 @@ import { formatDateOnly, todayDateOnly } from "@/lib/dates";
 import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
 import { getCancellationPolicy, daysUntil, assessRefund } from "@/lib/cancellation";
 import { currentPropertySettings } from "@/lib/property-settings";
+import { currentRole } from "@/lib/session";
+import { canSeeMoney } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +60,8 @@ export default async function ReservationDetailPage({
   ]);
   if (!r) notFound();
 
+  // Non-owner roles never see money (GAP-12): hide the amount, payments and refund.
+  const showMoney = canSeeMoney(await currentRole());
   const status = STATUS[r.status] ?? STATUS.confirmed;
   const nights = nightsBetween(r.checkIn, r.checkOut);
 
@@ -109,15 +113,17 @@ export default async function ReservationDetailPage({
               <div className="eyebrow">Room</div>
               <div className="h3" style={{ marginTop: 3 }}>{r.room.label} · {r.room.roomType.name}</div>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div className="eyebrow">Amount</div>
-              <div className="h3 money" style={{ marginTop: 3, fontSize: "var(--fs-h2)" }}>{displayMoney(r.grossAmount)}</div>
-              {r.advanceRequired && (
-                <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>
-                  Advance: {displayMoney(r.advanceRequired)}
-                </div>
-              )}
-            </div>
+            {showMoney && (
+              <div style={{ textAlign: "right" }}>
+                <div className="eyebrow">Amount</div>
+                <div className="h3 money" style={{ marginTop: 3, fontSize: "var(--fs-h2)" }}>{displayMoney(r.grossAmount)}</div>
+                {r.advanceRequired && (
+                  <div className="muted" style={{ fontSize: "var(--fs-meta)", marginTop: 2 }}>
+                    Advance: {displayMoney(r.advanceRequired)}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <hr className="hairline" style={{ margin: "12px 0" }} />
           <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
@@ -178,23 +184,25 @@ export default async function ReservationDetailPage({
           <Icon name="phone" size={16} /> Message guest on WhatsApp
         </a>
 
-        <PaymentsPanel
-          reservationId={r.id}
-          gross={r.grossAmount ? Number(r.grossAmount) : 0}
-          advanceRequired={r.advanceRequired ? Number(r.advanceRequired) : 0}
-          upi={property?.upiVpa ? { vpa: property.upiVpa, payeeName: property.name } : undefined}
-          payments={r.payments.map((p) => ({
-            id: p.id,
-            amount: Number(p.amount),
-            mode: p.mode,
-            isAdvance: p.isAdvance,
-            paidAt: p.paidAt.toISOString(),
-            note: p.note,
-          }))}
-        />
+        {showMoney && (
+          <PaymentsPanel
+            reservationId={r.id}
+            gross={r.grossAmount ? Number(r.grossAmount) : 0}
+            advanceRequired={r.advanceRequired ? Number(r.advanceRequired) : 0}
+            upi={property?.upiVpa ? { vpa: property.upiVpa, payeeName: property.name } : undefined}
+            payments={r.payments.map((p) => ({
+              id: p.id,
+              amount: Number(p.amount),
+              mode: p.mode,
+              isAdvance: p.isAdvance,
+              paidAt: p.paidAt.toISOString(),
+              note: p.note,
+            }))}
+          />
+        )}
 
-        {/* Cancellation & refund — appears once the booking is cancelled. */}
-        {refundView && (
+        {/* Cancellation & refund — appears once the booking is cancelled (owner only). */}
+        {showMoney && refundView && (
           <RefundPanel
             reservationId={r.id}
             collected={refundView.collected}
