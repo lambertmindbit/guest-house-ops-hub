@@ -208,7 +208,7 @@ export function NavShell({
       </header>
 
       {/* ---------- mobile: bottom tab bar ---------- */}
-      <nav className="tabbar rd-m">
+      <nav className="tabbar rd-m" aria-label="Primary">
         {PRIMARY.map((id) => (
           <Link key={id} href={META[id].href} className={`tab${active === id ? " on" : ""}`}>
             <Icon name={META[id].icon} size={22} />
@@ -290,7 +290,7 @@ export function NavShell({
               {properties.length > 1 && (
                 <>
                   <div className="prefs__group">Property</div>
-                  <select className="select" style={{ width: "100%" }} value={currentPropertyId ?? ""} onChange={(e) => switchProperty(e.target.value)}>
+                  <select className="select" aria-label="Switch property" style={{ width: "100%" }} value={currentPropertyId ?? ""} onChange={(e) => switchProperty(e.target.value)}>
                     {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </>
