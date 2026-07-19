@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { prisma, unscopedPrisma } from "@/lib/prisma";
 import type { ScamReportStatus } from "@prisma/client";
 
@@ -13,10 +13,34 @@ const DEFAULT_RETENTION_DAYS = 180;
 
 // ─── Pure helpers ───────────────────────────────────────────────────────────
 
-// Normalize to digits, then SHA-256. Matching by hash means the raw number is
-// never shared across properties (data minimisation).
+// A per-network pepper (US-605). Set → keyed HMAC; unset → legacy SHA-256 (v1),
+// so existing deployments are non-breaking until the owner sets it.
+function pepper(): string | undefined {
+  return process.env.COMMUNITY_HASH_PEPPER?.trim() || undefined;
+}
+
+// The CURRENT hash for NEW rows. With a pepper it's a keyed HMAC — an attacker
+// who exfiltrates the hashes still can't precompute the 10-digit phone space
+// without the pepper. Without one it's the legacy unsalted SHA-256.
 export function hashPhone(phone: string): string {
-  return createHash("sha256").update(normalizePhone(phone)).digest("hex");
+  const n = normalizePhone(phone);
+  const p = pepper();
+  return p ? createHmac("sha256", p).update(n).digest("hex") : createHash("sha256").update(n).digest("hex");
+}
+
+// Scheme new rows are written with: 2 = keyed HMAC, 1 = legacy SHA-256.
+export function currentHashVersion(): number {
+  return pepper() ? 2 : 1;
+}
+
+// All candidate hashes to MATCH a phone against: the current scheme PLUS the legacy
+// SHA-256, so existing v1 rows still match after the pepper is introduced — they
+// can't be re-hashed (the raw number was never stored). US-605 "migration".
+export function hashPhoneCandidates(phone: string): string[] {
+  const n = normalizePhone(phone);
+  const sha = createHash("sha256").update(n).digest("hex");
+  const p = pepper();
+  return p ? [createHmac("sha256", p).update(n).digest("hex"), sha] : [sha];
 }
 // Digits only, then the last 10 (drops a +91 / leading-0 country prefix) so the
 // same Indian mobile matches regardless of how it was typed.
@@ -69,6 +93,7 @@ export async function reportScam(
     data: {
       reporterPropertyId,
       phoneHash: hashPhone(input.phone),
+      hashVersion: currentHashVersion(),
       phoneLast4: phoneLast4(input.phone),
       reason: input.reason.trim(),
       evidenceNote: input.evidenceNote?.trim() || null,
@@ -163,11 +188,10 @@ export async function sharedScamListFor(viewerPropertyId: string): Promise<ScamR
 
 // Look a number up across my own verified reports + peers sharing with me.
 export async function lookupScam(viewerPropertyId: string, phone: string): Promise<ScamReportView[]> {
-  const hash = hashPhone(phone);
   const sharerIds = await scamSharersFor(viewerPropertyId);
   const rows = await unscopedPrisma.sharedScamReport.findMany({
     where: {
-      phoneHash: hash,
+      phoneHash: { in: hashPhoneCandidates(phone) },
       status: "verified",
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       reporterPropertyId: { in: [viewerPropertyId, ...sharerIds] },

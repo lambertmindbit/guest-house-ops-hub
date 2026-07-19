@@ -1,5 +1,5 @@
 import { prisma, unscopedPrisma } from "@/lib/prisma";
-import { hashPhone, phoneLast4, normalizePhone } from "@/lib/community/scam";
+import { hashPhone, hashPhoneCandidates, currentHashVersion, phoneLast4, normalizePhone } from "@/lib/community/scam";
 import type { GuestAlertStatus, GuestAlertCategory } from "@prisma/client";
 
 // Community bad-guest alerts (Phase 3, slice f). The evidence-backed sibling of
@@ -55,6 +55,7 @@ export async function reportGuestAlert(
     data: {
       reporterPropertyId,
       guestPhoneHash: hashPhone(input.phone),
+      hashVersion: currentHashVersion(),
       guestPhoneLast4: phoneLast4(input.phone),
       guestNameMasked: input.guestName ? maskName(input.guestName) : null,
       category: input.category,
@@ -144,11 +145,10 @@ export async function sharedGuestAlertsFor(viewerPropertyId: string): Promise<Gu
 }
 
 export async function lookupGuestAlert(viewerPropertyId: string, phone: string): Promise<GuestAlertView[]> {
-  const hash = hashPhone(phone);
   const sharerIds = await alertSharersFor(viewerPropertyId);
   const rows = await unscopedPrisma.sharedGuestAlert.findMany({
     where: {
-      guestPhoneHash: hash,
+      guestPhoneHash: { in: hashPhoneCandidates(phone) },
       status: "verified",
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       reporterPropertyId: { in: [viewerPropertyId, ...sharerIds] },

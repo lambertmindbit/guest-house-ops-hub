@@ -1195,6 +1195,7 @@ model SharedScamReport {
   id                 String           @id @default(cuid())
   reporterPropertyId String           @map("reporter_property_id")
   phoneHash          String           @map("phone_hash")
+  hashVersion        Int              @default(1) @map("hash_version")
   phoneLast4         String?          @map("phone_last4")
   reason             String
   evidenceNote       String?          @map("evidence_note")
@@ -1234,6 +1235,7 @@ model SharedGuestAlert {
   id                 String             @id @default(cuid())
   reporterPropertyId String             @map("reporter_property_id")
   guestPhoneHash     String             @map("guest_phone_hash")
+  hashVersion        Int                @default(1) @map("hash_version")
   guestPhoneLast4    String?            @map("guest_phone_last4")
   guestNameMasked    String?            @map("guest_name_masked")
   category           GuestAlertCategory @default(other)
