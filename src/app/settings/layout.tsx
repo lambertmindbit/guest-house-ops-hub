@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui";
 // phone the list is hidden (rd-d) and the sub-page is the full-screen drill-in
 // with its own back-chevron (SubHeader).
 const RAIL: { group: string; items: [string, string, string][] }[] = [
-  { group: "Property", items: [["/settings/properties", "Properties", "layers"], ["/settings/property", "Property details", "settings"], ["/settings/faq", "Guest FAQ", "help"], ["/settings/assistant-rules", "Assistant rules", "inbox"]] },
+  { group: "Property", items: [["/settings/properties", "Properties", "layers"], ["/settings/property", "Property details", "settings"], ["/settings/faq", "Guest FAQ", "help"], ["/settings/assistant-rules", "Assistant rules", "inbox"], ["/settings/notifications", "Notifications", "alert"]] },
   { group: "Inventory", items: [["/settings/room-types", "Room types", "bed"], ["/settings/rooms", "Rooms", "door"], ["/settings/amenities", "Amenities", "box"]] },
   { group: "Channels & sync", items: [["/settings/channels", "Channels", "link"], ["/settings/agents", "Travel agents", "guests"], ["/settings/feeds", "iCal feeds", "link"]] },
   { group: "Pricing", items: [["/settings/pricing", "Pricing rules", "tag"]] },

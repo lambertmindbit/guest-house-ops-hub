@@ -1,5 +1,7 @@
 import { withRoute } from "@/lib/api";
 import { syncAllFeeds } from "@/lib/ical-import";
+import { countConflicts } from "@/lib/conflicts";
+import { notifyAfterSync } from "@/lib/notify";
 
 // Daily Vercel Cron target. This route is NOT behind the owner cookie (cron has
 // no session), so it is gated by CRON_SECRET instead: Vercel sends
@@ -10,7 +12,11 @@ async function handleGET(request: Request) {
   if (!secret || auth !== `Bearer ${secret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
+  // Push the owner if this background run introduces new conflicts or a feed fails
+  // (GAP-14) — they aren't watching the sync happen. Best-effort.
+  const conflictsBefore = await countConflicts().catch(() => 0);
   const results = await syncAllFeeds({ respectFrequency: true });
+  await notifyAfterSync(conflictsBefore, results);
   return Response.json({ data: { results, syncedAt: new Date().toISOString() } });
 }
 

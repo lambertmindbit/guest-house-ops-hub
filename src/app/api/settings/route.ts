@@ -33,6 +33,10 @@ const updateSchema = z
     idRequiredAtBooking: z.boolean().optional(),
     // iCal sync frequency in hours (GAP-6): 1 = hourly minimum, 24 = daily default.
     icalSyncHours: z.number().int().min(1).max(24).optional(),
+    // Owner web-push toggles per event (GAP-14).
+    pushEscalations: z.boolean().optional(),
+    pushConflicts: z.boolean().optional(),
+    pushStaleSync: z.boolean().optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "no fields to update",
