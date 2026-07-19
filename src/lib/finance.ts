@@ -6,6 +6,13 @@ function num(value: { toString(): string } | null): number {
   return value === null ? 0 : Number(value);
 }
 
+// Commission on a gross amount at a channel's percentage (Q-FIN-01: all % on
+// gross). Single definition so the "net to you" in the channel table and the
+// "owed by the OTA" in payout reconciliation can never diverge.
+export function commissionOn(gross: number, commissionPct: number): number {
+  return Math.round((gross * commissionPct) / 100);
+}
+
 export type ChannelTotals = {
   channel: string;
   bookings: number;
@@ -87,7 +94,7 @@ export async function getFinanceSummary(from: string, to: string): Promise<Finan
 
   for (const r of reservations) {
     const gross = num(r.grossAmount);
-    const commission = Math.round((gross * num(r.channel.commissionPct)) / 100);
+    const commission = commissionOn(gross, num(r.channel.commissionPct));
     const net = gross - commission;
     const collected = r.payments.reduce((s, p) => s + num(p.amount), 0);
     const balance = gross - collected;
@@ -168,6 +175,86 @@ export function sumOutstanding(
     }
   }
   return { total, count };
+}
+
+// ── OTA payout reconciliation (GAP-13/US-405) ───────────────────────────────
+// For channels the OTA collects payment on, the OTA owes the property gross −
+// commission per confirmed booking. Recording the settlements it actually sends
+// lets the owner see, per OTA, whether they've been paid in full.
+
+export type PayoutRow = { id: string; amount: number; paidAt: string; reference: string | null; note: string | null };
+
+export type ChannelRecon = {
+  channelId: string;
+  channel: string;
+  bookings: number; // confirmed OTA-collect bookings (all-time)
+  owed: number; // Σ net (gross − commission) the OTA owes
+  received: number; // Σ recorded payouts
+  variance: number; // owed − received; > 0 = still owed to you, < 0 = overpaid/mismatch
+  payouts: PayoutRow[];
+};
+
+// Pure aggregation so the arithmetic is unit-testable without a DB. Cumulative /
+// all-time and per OTA-collect channel — this answers "has the OTA paid what it
+// owes", so it deliberately ignores any date range (owed accrues by booking, cash
+// arrives later; a period-scoped variance would be dominated by that timing).
+export function reconcilePayouts(
+  channels: { id: string; name: string }[],
+  bookings: { channelId: string; owed: number }[],
+  payouts: (PayoutRow & { channelId: string })[],
+): ChannelRecon[] {
+  const rows = new Map<string, ChannelRecon>();
+  for (const c of channels) {
+    rows.set(c.id, { channelId: c.id, channel: c.name, bookings: 0, owed: 0, received: 0, variance: 0, payouts: [] });
+  }
+  for (const b of bookings) {
+    const row = rows.get(b.channelId);
+    if (!row) continue; // booking on a non-collect channel — not reconciled here
+    row.bookings += 1;
+    row.owed += b.owed;
+  }
+  for (const p of payouts) {
+    const row = rows.get(p.channelId);
+    if (!row) continue;
+    row.received += p.amount;
+    row.payouts.push({ id: p.id, amount: p.amount, paidAt: p.paidAt, reference: p.reference, note: p.note });
+  }
+  const out: ChannelRecon[] = [];
+  for (const row of rows.values()) {
+    if (row.bookings === 0 && row.payouts.length === 0) continue; // configured-but-unused OTA
+    row.variance = row.owed - row.received;
+    out.push(row);
+  }
+  return out.sort((a, b) => b.owed - a.owed);
+}
+
+export async function getPayoutReconciliation(): Promise<ChannelRecon[]> {
+  const [channels, reservations, payouts] = await Promise.all([
+    prisma.channel.findMany({ where: { collectsPayment: true }, select: { id: true, name: true } }),
+    prisma.reservation.findMany({
+      where: { status: "confirmed", channel: { collectsPayment: true } },
+      select: { channelId: true, grossAmount: true, channel: { select: { commissionPct: true } } },
+    }),
+    prisma.payout.findMany({
+      orderBy: { paidAt: "desc" },
+      select: { id: true, channelId: true, amount: true, paidAt: true, reference: true, note: true },
+    }),
+  ]);
+
+  const bookings = reservations.map((r) => {
+    const gross = num(r.grossAmount);
+    return { channelId: r.channelId, owed: gross - commissionOn(gross, num(r.channel.commissionPct)) };
+  });
+  const payoutRows = payouts.map((p) => ({
+    id: p.id,
+    channelId: p.channelId,
+    amount: num(p.amount),
+    paidAt: p.paidAt.toISOString().slice(0, 10),
+    reference: p.reference,
+    note: p.note,
+  }));
+
+  return reconcilePayouts(channels, bookings, payoutRows);
 }
 
 export async function getPendingPayments(): Promise<PendingPayments> {

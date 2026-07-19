@@ -684,6 +684,7 @@ model Channel {
   commissionPct   Decimal       @map("commission_pct") @db.Decimal(5, 2)
   collectsPayment Boolean       @map("collects_payment")
   reservations    Reservation[]
+  payouts         Payout[]
 
   // Tenant (multi-property). Single-property today; backfilled + scoped by the
   // Prisma tenant extension. See src/lib/tenant.ts.
@@ -953,6 +954,27 @@ model Expense {
 
   @@index([date])
   @@map("expenses")
+}
+
+/// A settlement actually received from an OTA-collect channel (Booking.com, Agoda,
+/// MMT collect the guest's money, then remit gross − commission to the property).
+/// Recording payouts lets Finance derive owed-vs-received per OTA (GAP-13/US-405).
+/// The variance is always DERIVED (Σ net owed − Σ payouts), never stored.
+model Payout {
+  id         String   @id @default(cuid())
+  channelId  String   @map("channel_id")
+  channel    Channel  @relation(fields: [channelId], references: [id])
+  amount     Decimal  @db.Decimal(10, 2)
+  paidAt     DateTime @db.Date @map("paid_at")
+  reference  String?
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  // Tenant (multi-property). Single-property today; backfilled + scoped by the
+  // Prisma tenant extension. See src/lib/tenant.ts.
+  propertyId String?  @map("property_id")
+
+  @@index([channelId])
+  @@map("payouts")
 }
 
 // Single configurable pricing policy (one row). The pricing engine starts from a

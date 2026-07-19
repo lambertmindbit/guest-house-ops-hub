@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { getFinanceSummary, currentMonthRange } from "@/lib/finance";
+import { getFinanceSummary, getPayoutReconciliation, currentMonthRange } from "@/lib/finance";
+import { prisma } from "@/lib/prisma";
 import { displayINR } from "@/lib/format";
 import { PageHead, SectionLabel, RangeForm, ChannelBadge, Icon } from "@/components/ui";
 import { ExpensesPanel } from "@/components/ExpensesPanel";
+import { PayoutsPanel } from "@/components/PayoutsPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,11 @@ export default async function FinancePage({
   const month = currentMonthRange();
   const from = isDate(params.from) ? params.from : month.from;
   const to = isDate(params.to) ? params.to : month.to;
-  const summary = await getFinanceSummary(from, to);
+  const [summary, recon, otaChannels] = await Promise.all([
+    getFinanceSummary(from, to),
+    getPayoutReconciliation(),
+    prisma.channel.findMany({ where: { collectsPayment: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  ]);
   const t = summary.totals;
 
   return (
@@ -90,6 +96,8 @@ export default async function FinancePage({
         </div>
 
         <ExpensesPanel expenses={summary.expenses} total={summary.expensesTotal} />
+
+        <PayoutsPanel recon={recon} channels={otaChannels} />
 
         {summary.outstanding.length > 0 && (
           <>

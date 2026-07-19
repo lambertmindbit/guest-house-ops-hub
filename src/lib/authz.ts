@@ -13,7 +13,7 @@ const OWNER_ONLY_PREFIXES = [
   "/admin",
   "/api/admin",
   "/finance", "/analytics", "/pricing", "/settings", "/users",
-  "/api/pricing", "/api/settings", "/api/seasons", "/api/expenses",
+  "/api/pricing", "/api/settings", "/api/seasons", "/api/expenses", "/api/payouts",
   "/api/flagged-numbers", "/api/users", "/api/import", "/api/id-documents",
   // Money data endpoints — same "money only for owners" rule as the pages above.
   // Easy to miss: the page path (/analytics, /finance) differs from the API path,
