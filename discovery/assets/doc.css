@@ -1,0 +1,81 @@
+/* ============================================================
+   GUEST HOUSE OPS HUB — DISCOVERY DOCUMENT DESIGN SYSTEM
+   Matches the IDM document family; branded navy/teal for ROOT.
+   ============================================================ */
+:root{
+  --navy:#12303f; --navy-2:#1c4356; --teal:#0fa68e; --teal-dk:#0b7d6b;
+  --teal-bg:#e7f5f1; --mint:#d9efe7; --ink:#1c2421; --sub:#5b6b64;
+  --line:#e3e8e5; --paper:#fff; --bg:#f4f7f6; --amber-bg:#fdf3e3; --amber:#a8690a;
+  --red:#b3362b; --red-bg:#fbeae8; --chip-ink:#254b41;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.65 "Plus Jakarta Sans","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.page{max-width:960px;margin:26px auto;background:var(--paper);
+  border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  box-shadow:0 2px 14px rgba(18,48,63,.06)}
+
+/* Banner */
+.banner{background:linear-gradient(120deg,var(--navy) 0%,var(--navy-2) 62%,var(--teal-dk) 130%);
+  color:#eef7f4;padding:30px 40px 26px}
+.banner .kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#9fd6c9;font-weight:700;margin:0 0 8px}
+.banner h1{margin:0 0 6px;font-size:27px;letter-spacing:-.02em;font-weight:800;color:#fff}
+.banner .sub{margin:0;color:#cfe5de;font-size:14.5px;max-width:760px}
+.banner .chips{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-block;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.25);
+  color:#eaf6f2;border-radius:999px;padding:3px 12px;font-size:12px;font-weight:600}
+.confbar{background:#0d2430;color:#8fb6ab;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;padding:7px 40px;display:flex;justify-content:space-between}
+
+/* Body */
+.content{padding:30px 40px 40px}
+h1,h2,h3,h4{letter-spacing:-.01em;color:var(--navy)}
+.content>h1{font-size:22px;border-bottom:2px solid var(--navy);padding-bottom:8px}
+h2{font-size:19px;margin:1.9em 0 .55em;border-bottom:1px solid var(--line);padding-bottom:6px}
+h2::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;
+  background:var(--teal);margin-right:9px;transform:translateY(-1px)}
+h3{font-size:16px;margin:1.4em 0 .4em;color:var(--navy-2)}
+p{margin:.6em 0}
+a{color:var(--teal-dk);text-decoration:none;border-bottom:1px dotted #9fd6c9}
+a:hover{color:var(--teal)}
+ul,ol{padding-left:24px} li{margin:.3em 0}
+strong{color:var(--navy)}
+code{background:#eef2f0;color:#20443a;padding:1.5px 6px;border-radius:5px;
+  font:12.8px ui-monospace,"JetBrains Mono",SFMono-Regular,Menlo,monospace}
+pre{background:#0f1f1a;color:#d9efe7;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);
+  background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+hr{border:0;border-top:1px solid var(--line);margin:28px 0}
+
+/* Tables — IDM style: dark header band */
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.2px;display:block;overflow-x:auto}
+th{background:var(--navy);color:#eef7f4;font-weight:700;text-align:left;
+  padding:8px 11px;border:1px solid #24506a;font-size:12.3px;letter-spacing:.02em;white-space:nowrap}
+td{border:1px solid var(--line);padding:7px 11px;vertical-align:top}
+tbody tr:nth-child(even){background:#f7faf9}
+td:first-child{font-weight:600;color:var(--navy-2);white-space:nowrap}
+
+/* Status / tag colouring via plain text hooks */
+.tag{display:inline-block;border-radius:999px;padding:1px 10px;font-size:11.5px;font-weight:700}
+.tag.fact{background:var(--teal-bg);color:var(--teal-dk)}
+.tag.inferred{background:var(--amber-bg);color:var(--amber)}
+.tag.rec{background:#e8eef8;color:#2a4d8f}
+.tag.openq{background:var(--red-bg);color:var(--red)}
+
+/* Mermaid frames */
+.mermaid{background:#fbfdfc;border:1px solid var(--line);border-radius:12px;
+  padding:18px;margin:16px 0;text-align:center;overflow-x:auto}
+
+/* Footer */
+.docfooter{border-top:1px solid var(--line);padding:14px 40px;display:flex;
+  justify-content:space-between;color:var(--sub);font-size:12px;background:#fbfdfc}
+
+@media print{
+  body{background:#fff} .page{margin:0;border:0;border-radius:0;box-shadow:none}
+  .banner{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  a{border-bottom:none;color:inherit}
+}
+@media (max-width:640px){.content,.banner{padding-left:18px;padding-right:18px}.confbar{padding:7px 18px}}

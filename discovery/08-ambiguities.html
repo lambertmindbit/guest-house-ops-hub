@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Requirement Ambiguities · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 08</p>
+  <h1>Requirement Ambiguities</h1>
+  <p class="sub">22 ambiguities — why each matters, interpretations, recommendation, decision required</p>
+  <div class="chips"><span class="chip">Cross-referenced to Question Log</span></div>
+</div>
+<div class="content">
+<h1 id="requirement-ambiguities">Requirement Ambiguities</h1>
+<h2 id="discovery-doc-08--v10--2026-07-16">Discovery doc 08 · v1.0 · 2026-07-16</h2>
+<p>Each ambiguity: why it matters, plausible interpretations, recommendation, and the decision required (cross-ref doc 09 question IDs).</p>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Ambiguity</th>
+<th>Why it matters</th>
+<th>Interpretations</th>
+<th>Recommendation <code>[R]</code></th>
+<th>Decision (Q ref)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>AMB-01</td>
+<td><strong>"Self-hosted"</strong> while reference stack is Vercel+Supabase+Cloud Run</td>
+<td>Grant claims "data locally owned"; sales positioning; DPDP cross-border</td>
+<td>(a) self-hosted = "owner-controlled, isolated deployment" regardless of cloud; (b) literal on-prem/in-country hosting</td>
+<td>Adopt (a) formally but publish residency statement; productise DO/in-country as paid option</td>
+<td>Q-INF-01</td>
+</tr>
+<tr class="even">
+<td>AMB-02</td>
+<td><strong>Offline support depth</strong> ("changes offline are saved and sync")</td>
+<td>Field reality in Meghalaya; silent data loss if PWA cache is mistaken for a write queue</td>
+<td>(a) full write-queue + conflict UX; (b) read cache + limited writes; (c) marketing gloss</td>
+<td>Audit code (iteration 2); then spec explicitly which writes queue</td>
+<td>Q-TEC-04</td>
+</tr>
+<tr class="odd">
+<td>AMB-03</td>
+<td><strong>Room fixed at booking</strong> (no type-level booking)</td>
+<td>Peak selling flexibility, OTA norms (book type, assign room later)</td>
+<td>(a) deliberate simplicity, keep; (b) add type-level with assignment at check-in (big change touching the constraint)</td>
+<td>Keep (a) for MVP; revisit with &gt;10-room pilots</td>
+<td>Q-OPS-05</td>
+</tr>
+<tr class="even">
+<td>AMB-04</td>
+<td><strong>Reception vs money</strong>: "money only for owners" yet reception records payments</td>
+<td>RBAC boundary + field masking design</td>
+<td>(a) reception records but never sees aggregates; (b) payments owner-only</td>
+<td>(a), with field-level masking (GAP-12)</td>
+<td>Q-FIN-05</td>
+</tr>
+<tr class="odd">
+<td>AMB-05</td>
+<td><strong>Commission arithmetic</strong>: basis (gross vs net-of-GST), MMT net-rate model, channel+agent stacking</td>
+<td>"Net to you" accuracy = BO-05</td>
+<td>(a) all % on gross, additive; (b) per-channel model config</td>
+<td>Start (a) documented, add per-channel model when GST work lands</td>
+<td>Q-FIN-01</td>
+</tr>
+<tr class="even">
+<td>AMB-06</td>
+<td><strong>Refund ladder base</strong>: % of gross vs % of paid; interplay with advance</td>
+<td>Determinism of refunds; guest disputes</td>
+<td>(a) % of gross capped at paid; (b) % of paid</td>
+<td>(a)</td>
+<td>Q-FIN-07</td>
+</tr>
+<tr class="odd">
+<td>AMB-07</td>
+<td><strong>Finance/analytics date semantics</strong>: stay date vs booking date vs payment date</td>
+<td>Period reports can silently mislead</td>
+<td>any consistent choice, documented</td>
+<td>Revenue by stay-night (accrual), cash by payment date; label views</td>
+<td>Q-FIN-09</td>
+</tr>
+<tr class="even">
+<td>AMB-08</td>
+<td><strong>No-show policy</strong>: when marked, by whom, charge, refund, reliability-score effect</td>
+<td>Guest fairness + shared reliability signals</td>
+<td>manual mark only vs auto at N am</td>
+<td>Manual mark with prompt next morning; ladder-defined charge</td>
+<td>Q-OPS-04</td>
+</tr>
+<tr class="odd">
+<td>AMB-09</td>
+<td><strong>Check-out with balance due</strong></td>
+<td>Revenue leakage vs front-desk reality</td>
+<td>block / warn / allow</td>
+<td>Warn + require owner override; log</td>
+<td>Q-OPS-03</td>
+</tr>
+<tr class="even">
+<td>AMB-10</td>
+<td><strong>Foreign-guest detection</strong> for C-Form gate</td>
+<td>Legal miss if mis-filed</td>
+<td>nationality field drives it vs manual toggle</td>
+<td>Nationality-driven with explicit "Indian national?" prompt at check-in</td>
+<td>Q-OPS-10</td>
+</tr>
+<tr class="odd">
+<td>AMB-11</td>
+<td><strong>Currency setting exists</strong> but money is INR-centric (UPI, GST, ₹)</td>
+<td>Multi-currency illusion; display vs accounting</td>
+<td>(a) display-only label; (b) true multi-currency</td>
+<td>Declare INR-only; currency = display label</td>
+<td>Q-FIN-08</td>
+</tr>
+<tr class="even">
+<td>AMB-12</td>
+<td><strong>Community topology</strong>: where shared registries/referrals physically live across isolated client deployments</td>
+<td>Legal controllership, SPOF, trust</td>
+<td>central MindBit service vs federated peer-to-peer</td>
+<td>Document current design (likely central <code>[I]</code>); ADR + DPA</td>
+<td>Q-LEG-03</td>
+</tr>
+<tr class="odd">
+<td>AMB-13</td>
+<td><strong>Referral guest PII</strong> vs "guest details never shared"</td>
+<td>Contradiction in User Guide promises</td>
+<td>consent-at-referral vs minimal handoff (name+phone only)</td>
+<td>Consent capture at referral moment; minimal fields</td>
+<td>Q-LEG-05</td>
+</tr>
+<tr class="even">
+<td>AMB-14</td>
+<td><strong>"Verified" scam reports</strong> — verified by whom?</td>
+<td>Governance/defamation</td>
+<td>reporter evidence auto-check vs MindBit moderation vs peer quorum</td>
+<td>Written moderation policy; MindBit adjudicates appeals initially</td>
+<td>Q-LEG-03</td>
+</tr>
+<tr class="odd">
+<td>AMB-15</td>
+<td><strong>Two-way guest messaging ownership</strong> (hub outbox vs assistant threads)</td>
+<td>Duplicate builds / split context</td>
+<td>hub grows inbound vs assistant owns conversations, hub logs</td>
+<td>Assistant owns conversation; hub shows unified log</td>
+<td>Q-AI-04</td>
+</tr>
+<tr class="even">
+<td>AMB-16</td>
+<td><strong>Agent booking guardrails</strong>: scam/blacklist checks at seam parity</td>
+<td>AI could book a flagged guest silently</td>
+<td>warn-only parity vs hard-block for AI</td>
+<td>Parity + escalate-on-flag for AI path</td>
+<td>Q-AI-03</td>
+</tr>
+<tr class="odd">
+<td>AMB-17</td>
+<td><strong>iCal removed events</strong> → do blocks release?</td>
+<td>Phantom busy = lost revenue</td>
+<td>full re-sync replace vs append-only</td>
+<td>Replace-per-feed on each sync (idempotent)</td>
+<td>Q-TEC-06</td>
+</tr>
+<tr class="even">
+<td>AMB-18</td>
+<td><strong>Pricing rule compounding order</strong></td>
+<td>Owner trust in suggestions</td>
+<td>multiplicative in fixed order vs sequence-sensitive</td>
+<td>Document formula in Help; property-visible trace ("why this price")</td>
+<td>Q-OPS-08</td>
+</tr>
+<tr class="odd">
+<td>AMB-19</td>
+<td><strong>Group folio billing depth</strong>: one invoice? split payments across rooms?</td>
+<td>Group/corporate use cases</td>
+<td>view-only aggregation vs true folio accounting</td>
+<td>View + combined invoice v1; true folio later</td>
+<td>Q-OPS-06</td>
+</tr>
+<tr class="even">
+<td>AMB-20</td>
+<td><strong>PropertySettings vs Property</strong>: schema has <code>PropertySettings</code> (+<code>UserProperty</code>) but no <code>Property</code> model visible in grep</td>
+<td>Data-model clarity for new team</td>
+<td>PropertySettings <em>is</em> the property root vs separate table missed</td>
+<td>Verify in iteration 2; document canonical tenancy root</td>
+<td>Q-TEC-09</td>
+</tr>
+<tr class="odd">
+<td>AMB-21</td>
+<td><strong>"About a month" session length</strong> + revocation on role change</td>
+<td>Security posture</td>
+<td>fixed 30d vs sliding; revoke semantics</td>
+<td>Sliding 30d; revoke on disable/role change</td>
+<td>Q-SEC-03</td>
+</tr>
+<tr class="even">
+<td>AMB-22</td>
+<td><strong>Monetisation model</strong> (Q3 milestone): subscription? per-booking? tiered?</td>
+<td>Everything commercial downstream</td>
+<td>flat monthly vs %-of-bookings vs freemium</td>
+<td>Flat monthly per property, pilot-discounted</td>
+<td>Q-BUS-03</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>08-ambiguities.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gap Analysis Report · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 06</p>
+  <h1>Gap Analysis Report</h1>
+  <p class="sub">Prototype vs enterprise-quality: 30 prioritized gaps with recommendations</p>
+  <div class="chips"><span class="chip">S1–S4 severity</span><span class="chip">MoSCoW rated</span></div>
+</div>
+<div class="content">
+<h1 id="gap-analysis-report">Gap Analysis Report</h1>
+<h2 id="discovery-doc-06--v10--2026-07-16">Discovery doc 06 · v1.0 · 2026-07-16</h2>
+<p>Gaps between the prototype (as documented in README/ROADMAP/User Guide) and an enterprise-quality, deployable-at-scale product. Severity: <strong>S1</strong> blocks safe production / legal exposure · <strong>S2</strong> blocks scale to 25+ clients or a core business objective · <strong>S3</strong> material quality/UX gap · <strong>S4</strong> enhancement. "Repo-ack" = the repo's own docs already acknowledge it (credibility point — these are honest docs).</p>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Gap</th>
+<th>Area</th>
+<th>Severity</th>
+<th>Repo-ack</th>
+<th>Impact / rationale</th>
+<th>Recommendation</th>
+<th>MoSCoW</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>GAP-1</td>
+<td>No documented, tested backup &amp; restore (RPO/RTO undefined; restore never drilled)</td>
+<td>Ops</td>
+<td><strong>S1</strong></td>
+<td>✖</td>
+<td>A pilot losing its bookings DB is a region-wide trust kill (RSK-B7)</td>
+<td>Nightly automated backups + offsite copy + quarterly restore drill + runbook</td>
+<td>Must</td>
+</tr>
+<tr class="even">
+<td>GAP-2</td>
+<td>OTA modification/cancellation emails have no linked-update path</td>
+<td>Ingestion</td>
+<td><strong>S1</strong></td>
+<td>partial</td>
+<td>Unapplied changes ⇒ ghost availability or oversell — defeats BO-02</td>
+<td>Parse mod/cancel types; match by ota_ref; guided update flow</td>
+<td>Must</td>
+</tr>
+<tr class="odd">
+<td>GAP-3</td>
+<td>WhatsApp templates (multi-language) + param plumbing missing — delivery can't turn on</td>
+<td>Messaging</td>
+<td>S2</td>
+<td>✅</td>
+<td>Messaging value prop (confirmations, reminders) inert; Meta approval lead time</td>
+<td>Template catalogue (En/Kha/Hi), submit early, params through seam</td>
+<td>Must</td>
+</tr>
+<tr class="even">
+<td>GAP-4</td>
+<td>No two-way message thread visible to operator (outbox only)</td>
+<td>Messaging</td>
+<td>S3</td>
+<td>partial</td>
+<td>Guest replies invisible in hub; context split with assistant</td>
+<td>Decide owner (hub vs assistant UI) then build inbound log</td>
+<td>Should</td>
+</tr>
+<tr class="odd">
+<td>GAP-5</td>
+<td>Silent failure of crons/forwarders/iCal fetches (no alerts, no last-success surfacing)</td>
+<td>Ops/Sync</td>
+<td><strong>S1</strong></td>
+<td>✖</td>
+<td>Staleness is invisible precisely when it causes double-books</td>
+<td>Health timestamps per feed/cron + owner-visible warning + fleet alert</td>
+<td>Must</td>
+</tr>
+<tr class="even">
+<td>GAP-6</td>
+<td>iCal sync only daily; lag window larger than necessary</td>
+<td>Sync</td>
+<td>S3</td>
+<td>✖</td>
+<td>Bigger oversell window than the free method requires</td>
+<td>Configurable frequency (e.g. hourly) within OTA politeness</td>
+<td>Should</td>
+</tr>
+<tr class="odd">
+<td>GAP-7</td>
+<td>Form C: fields captured but no artefact/reminder/submission support</td>
+<td>Compliance</td>
+<td><strong>S1</strong></td>
+<td>✖</td>
+<td>Legal duty within 24h of foreign arrival; capture without output ≈ non-compliance</td>
+<td>Printable pre-filled Form C + 24h reminder + submitted flag (Q-LEG-02)</td>
+<td>Must</td>
+</tr>
+<tr class="even">
+<td>GAP-8</td>
+<td>DPDP data-principal rights absent (export/erase guest data); breach procedure absent; retention default = indefinite</td>
+<td>Compliance</td>
+<td><strong>S1</strong></td>
+<td>partial (purge inert noted)</td>
+<td>DPDP 2023 exposure across every client MindBit deploys</td>
+<td>Guest data export+delete; sane retention default; breach runbook; notice text</td>
+<td>Must</td>
+</tr>
+<tr class="odd">
+<td>GAP-9</td>
+<td>Money = whole-rupee float <code>number</code></td>
+<td>Finance</td>
+<td>S2</td>
+<td>✅</td>
+<td>Rounding/precision errors as finance features grow; GST math needs paise</td>
+<td>Migrate to integer paise (or Decimal) with typed money util</td>
+<td>Must (before gateway/GST)</td>
+</tr>
+<tr class="even">
+<td>GAP-10</td>
+<td>No password reset / user invites; owner hand-sets passwords</td>
+<td>Auth</td>
+<td>S2</td>
+<td>✅</td>
+<td>Unworkable + insecure at 25 clients × staff churn</td>
+<td>Email invite + reset flow; force-change on first login</td>
+<td>Must</td>
+</tr>
+<tr class="odd">
+<td>GAP-11</td>
+<td>Invoices not statutory-grade: no stored invoice entity, no sequential numbering, no GST tax lines, browser-print only</td>
+<td>Finance</td>
+<td>S2</td>
+<td>partial (PDF deferred)</td>
+<td>GST-registered properties can't legally invoice from the product</td>
+<td><code>Invoice</code> entity (immutable snapshot, per-FY series) + GST lines + server PDF</td>
+<td>Must (for GST clients)</td>
+</tr>
+<tr class="even">
+<td>GAP-12</td>
+<td>Authorization depth: no field-level money masking; no Postgres RLS; raw-SQL scoping by convention only</td>
+<td>Security</td>
+<td>S2</td>
+<td>✅</td>
+<td>Staff API responses leak money; single missed scope leaks across owner's properties</td>
+<td>Serializer-level masking; RLS defence-in-depth; CI raw-SQL guard</td>
+<td>Must</td>
+</tr>
+<tr class="odd">
+<td>GAP-13</td>
+<td>No OTA payout reconciliation (OTA-collect bookings: owed vs received untracked)</td>
+<td>Finance</td>
+<td>S3</td>
+<td>✖</td>
+<td>Owner can't see if Booking.com actually paid</td>
+<td>Payout record + match to bookings</td>
+<td>Should</td>
+</tr>
+<tr class="even">
+<td>GAP-14</td>
+<td>No push/WhatsApp notification for escalations &amp; conflicts (badge only)</td>
+<td>AI/Notify</td>
+<td>S2</td>
+<td>✖</td>
+<td>Defeats "owner needn't be available 24/7" (BO-06); PushSubscription model exists unused?</td>
+<td>Wire web-push (+optional WhatsApp-to-owner) for high-severity events</td>
+<td>Must</td>
+</tr>
+<tr class="odd">
+<td>GAP-15</td>
+<td>Audit log covers only a narrow action set; no tamper-evidence; ID-document access not logged</td>
+<td>Security</td>
+<td>S3</td>
+<td>✖</td>
+<td>Investigations &amp; DPDP accountability need breadth</td>
+<td>Extend coverage (payments edits, settings, shares, ID views); append-only</td>
+<td>Should</td>
+</tr>
+<tr class="even">
+<td>GAP-16</td>
+<td>Operator console is English-only — Khasi/Hindi UI absent</td>
+<td>Localization</td>
+<td>S2</td>
+<td>✖ (inferred)</td>
+<td>Pitch's inclusion promise applies only to guest AI; staff literacy varies</td>
+<td>i18n framework now (strings extraction), Khasi pack with pilot feedback</td>
+<td>Should→Must for grant optics</td>
+</tr>
+<tr class="odd">
+<td>GAP-17</td>
+<td>No observability: error tracking, structured logs, uptime monitoring per deployment</td>
+<td>Ops</td>
+<td><strong>S1</strong></td>
+<td>✖</td>
+<td>Fleet of isolated deployments with no telemetry = support blindness</td>
+<td>Sentry (or similar) + uptime checks + log drain, per client</td>
+<td>Must</td>
+</tr>
+<tr class="even">
+<td>GAP-18</td>
+<td>No fleet tooling: onboarding automation, version/health dashboard, coordinated upgrades across N deployments</td>
+<td>Ops</td>
+<td>S2</td>
+<td>✖</td>
+<td>One-deployment-per-client × 25 clients × 3 founders = milestone risk (RSK-B1/B2)</td>
+<td>Onboarding wizard + IaC template + fleet dashboard + scripted upgrades</td>
+<td>Must (Q3–Q4)</td>
+</tr>
+<tr class="odd">
+<td>GAP-19</td>
+<td>No guest merge / duplicate resolution</td>
+<td>CRM</td>
+<td>S3</td>
+<td>✖</td>
+<td>Phone changes fracture history, LTV, reliability</td>
+<td>Merge tool with audit</td>
+<td>Should</td>
+</tr>
+<tr class="even">
+<td>GAP-20</td>
+<td>Housekeeping lacks inspected state, deep-clean cadence, dirty-room booking guard</td>
+<td>Housekeeping</td>
+<td>S4</td>
+<td>✖</td>
+<td>Quality ceiling for larger pilots</td>
+<td>Optional inspection step + recurring tasks</td>
+<td>Could</td>
+</tr>
+<tr class="odd">
+<td>GAP-21</td>
+<td>Accessibility unassessed (WCAG 2.1 AA)</td>
+<td>UX</td>
+<td>S3</td>
+<td>✖</td>
+<td>Public-facing artefacts + staff diversity; grant optics</td>
+<td>Audit core flows; fix contrast/targets/labels</td>
+<td>Should</td>
+</tr>
+<tr class="even">
+<td>GAP-22</td>
+<td>No per-night rate breakdown on a booking (single amount)</td>
+<td>Booking/Finance</td>
+<td>S3</td>
+<td>✖</td>
+<td>Limits invoice lines, season analytics, partial-stay refund math</td>
+<td>Store nightly rate snapshot at creation</td>
+<td>Should</td>
+</tr>
+<tr class="odd">
+<td>GAP-23</td>
+<td>No client data-export / offboarding path (data ownership promise)</td>
+<td>Ops/Trust</td>
+<td>S2</td>
+<td>✖</td>
+<td>"Locally owned data" must include leaving with it</td>
+<td>Full-export (DB dump + docs) runbook/feature</td>
+<td>Should</td>
+</tr>
+<tr class="even">
+<td>GAP-24</td>
+<td>No oversell safety-buffer feature (guide advises it manually)</td>
+<td>Sync</td>
+<td>S3</td>
+<td>✖</td>
+<td>The one automatable mitigation for the iCal lag window</td>
+<td>Per-type "hold back N units from shared/agent availability"</td>
+<td>Should</td>
+</tr>
+<tr class="odd">
+<td>GAP-25</td>
+<td>Offline claims unverified: queue depth, conflict UX, which writes are safe offline</td>
+<td>PWA</td>
+<td>S2</td>
+<td>✖</td>
+<td>Patchy-signal Meghalaya is the stated context; silent data loss risk if claims overstate</td>
+<td>Iteration-2 code audit → explicit offline spec (doc 03 B15)</td>
+<td>Must (verify)</td>
+</tr>
+<tr class="even">
+<td>GAP-26</td>
+<td>Community network cross-deployment topology undocumented (where do shared registries live?)</td>
+<td>Architecture</td>
+<td>S2</td>
+<td>✖</td>
+<td>Legal controller-ship, availability, and trust model all hinge on it</td>
+<td>Architecture decision record + doc (Q-LEG-03)</td>
+<td>Must (document)</td>
+</tr>
+<tr class="odd">
+<td>GAP-27</td>
+<td>No MindBit-side billing/subscription tooling (monetisation is a Q3 grant milestone)</td>
+<td>Business</td>
+<td>S2</td>
+<td>✖</td>
+<td>Can't invoice clients ⇒ milestone slip</td>
+<td>Even manual process + pricing sheet by Q3; product later</td>
+<td>Must (business)</td>
+</tr>
+<tr class="even">
+<td>GAP-28</td>
+<td>Positioning contradiction: "self-hosted / locally-owned" vs Vercel+Supabase+Cloud Run reference stack</td>
+<td>Positioning</td>
+<td>S2</td>
+<td>✖</td>
+<td>Grant reviewers &amp; data-residency claims; DO branch exists but not primary</td>
+<td>Publish honest data-residency statement; offer in-country/DO option</td>
+<td>Must (document)</td>
+</tr>
+<tr class="odd">
+<td>GAP-29</td>
+<td>Room-type-level booking absent (room fixed at creation) — deliberate; unratified trade-off</td>
+<td>Product</td>
+<td>S3</td>
+<td>by design</td>
+<td>Peak-season selling flexibility vs simplicity</td>
+<td>Stakeholder decision Q-OPS-05</td>
+<td>Decision</td>
+</tr>
+<tr class="even">
+<td>GAP-30</td>
+<td>No staging/UAT environment or seeded demo tenant mentioned for client trials</td>
+<td>Delivery</td>
+<td>S3</td>
+<td>✖</td>
+<td>Pilots will demo on production or nothing</td>
+<td>Demo-tenant seed + staging per release</td>
+<td>Should</td>
+</tr>
+</tbody>
+</table>
+<h2 id="priority-clusters">Priority clusters</h2>
+<ul>
+<li><strong>Production-safety cluster (do first):</strong> GAP-1, 5, 17 (operability) + GAP-7, 8 (legal) + GAP-2 (correctness of the core promise).</li>
+<li><strong>Scale cluster (before client #10):</strong> GAP-10, 18, 27, 28, 12.</li>
+<li><strong>Money cluster (before gateway/GST go-live):</strong> GAP-9, 11, 13.</li>
+<li><strong>Experience cluster:</strong> GAP-3, 14, 16, 4, 24.</li>
+</ul>
+<h2 id="what-is-not-a-gap-explicitly">What is <em>not</em> a gap (explicitly)</h2>
+<p>Rates-push to OTAs (impossible for single properties — permanent constraint, correctly refused); live cab dispatch (owned by ROOT sidecar); channel-manager replacement claims (product is honest about the residual window). The prototype's honesty about its own limits is a strength to preserve.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>06-gap-analysis.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

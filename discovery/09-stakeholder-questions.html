@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stakeholder Question Log · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 09</p>
+  <h1>Stakeholder Question Log</h1>
+  <p class="sub">~70 grouped questions, each with its rationale; ★ marks design blockers</p>
+  <div class="chips"><span class="chip">Workshop-ready</span><span class="chip">17 groups</span></div>
+</div>
+<div class="content">
+<h1 id="stakeholder-question-log">Stakeholder Question Log</h1>
+<h2 id="discovery-doc-09--v10--2026-07-16">Discovery doc 09 · v1.0 · 2026-07-16</h2>
+<p>Grouped questionnaire; every question states <em>why it is asked</em>. Priority ★ = blocks design decisions now. Answer column left blank for workshop use.</p>
+<h2 id="business">Business</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why it matters</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-BUS-01</td>
+<td>Who is the design-target client: 3–8-room guest house, 10–20-room hotel, homestay cluster?</td>
+<td>Sets scale envelope (NFR-PRF-04), UI density, feature priorities</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-BUS-02</td>
+<td>Is the Ops Hub sold standalone, or only bundled with the ROOT assistant?</td>
+<td>Packaging, onboarding scope, pricing</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-BUS-03</td>
+<td>What is the monetisation model and price point (Q3 grant milestone)?</td>
+<td>GAP-27; billing tooling; unit economics per deployment</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-BUS-04</td>
+<td>What does "scale-readiness" (Q4 milestone) mean measurably to the grant committee?</td>
+<td>Converts milestone into acceptance criteria</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-BUS-05</td>
+<td>Which 3–5 pilot properties are committed for Q1, and what are their room counts/OTA mix?</td>
+<td>Real parser fixtures, iCal availability check, UAT plan</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-BUS-06</td>
+<td>Referral credits: is settlement ever monetary, or reciprocity-only? Dispute handling? Peer disconnect?</td>
+<td>BR-COM-06; community economics</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-BUS-07</td>
+<td>Is there competitive pressure (e.g. eZee, Djubo, local channel managers) at pilot properties today?</td>
+<td>Positioning + must-match features</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="operations--reception">Operations / Reception</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-OPS-01</td>
+<td>Max advance-booking horizon and max stay length to accept?</td>
+<td>Validation bounds (BR-BOOK-10)</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OPS-02</td>
+<td>Can a room with future bookings be archived? What should happen?</td>
+<td>BR-BOOK-11</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-OPS-03</td>
+<td>May a guest check out with a balance due (block/warn/allow)?</td>
+<td>AMB-09; revenue leakage</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OPS-04</td>
+<td>No-show policy: when marked, charge, refund, effect on reliability score?</td>
+<td>AMB-08; shared alerts fairness</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-OPS-05</td>
+<td>Is fixed-room-at-booking acceptable at peak, or is type-level booking with assignment at check-in needed?</td>
+<td>AMB-03 — deepest structural question in the booking core</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OPS-06</td>
+<td>Groups: is one combined invoice enough, or split billing/deposits per room needed?</td>
+<td>AMB-19</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-OPS-07</td>
+<td>Is mid-stay room change (split stay) needed?</td>
+<td>Calendar/constraint design</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OPS-08</td>
+<td>Should the app show <em>why</em> a price was suggested (rule trace)? Confirm compounding order expectations</td>
+<td>AMB-18; owner trust</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-OPS-09</td>
+<td>Should attendance link to payroll (salary calc), or is register-keeping enough?</td>
+<td>Staff scope boundary</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OPS-10</td>
+<td>How should the app decide a guest is a foreign national (C-Form gate)?</td>
+<td>AMB-10; legal miss risk</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-OPS-11</td>
+<td>Early check-in / late check-out: charged? how much?</td>
+<td>Fee constructs on booking</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OPS-12</td>
+<td>Any midnight/rollover expectations (late-night check-ins count as which day)?</td>
+<td>Today board semantics</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-OPS-13</td>
+<td>CSV import: expected source formats (old registers? Excel?) and volume?</td>
+<td>Import robustness</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="housekeeping">Housekeeping</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-HK-01</td>
+<td>Is a supervisor "inspected" step wanted before a room returns to Ready?</td>
+<td>GAP-20</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-HK-02</td>
+<td>Are recurring deep-clean/linen-change schedules needed?</td>
+<td>GAP-20</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-HK-03</td>
+<td>Should a dirty room be bookable for same-day arrival (warn) or blocked?</td>
+<td>Guard rules</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="finance">Finance</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-FIN-01</td>
+<td>Commission basis per channel (gross vs net-of-GST)? Does MMT operate net-rate for pilots? Channel+agent stacking arithmetic?</td>
+<td>AMB-05; BO-05 accuracy</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-FIN-02</td>
+<td>Are pilot properties GST-registered? Required invoice format/series/tax lines?</td>
+<td>GAP-11 scope trigger</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-FIN-03</td>
+<td>Do owners need OTA payout reconciliation (owed vs received per OTA)?</td>
+<td>GAP-13</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-FIN-04</td>
+<td>Payment corrections: edit-in-place acceptable, or void+reversal with audit?</td>
+<td>BR-PAY-05</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-FIN-05</td>
+<td>Confirm reception-vs-owner money boundary (record vs view aggregates)</td>
+<td>AMB-04; masking design</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-FIN-06</td>
+<td>Overpayment: hold as credit, auto-refund, or reject?</td>
+<td>BR-PAY-06</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-FIN-07</td>
+<td>Refund base (gross vs paid)? OTA-collect refund recording?</td>
+<td>AMB-06</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-FIN-08</td>
+<td>Confirm INR-only; what is the currency setting meant to do?</td>
+<td>AMB-11</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-FIN-09</td>
+<td>Finance period semantics: accrual by stay-night vs cash by payment date — which do owners expect?</td>
+<td>AMB-07</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-FIN-10</td>
+<td>Expense categories needed? Should maintenance costs auto-post to expenses?</td>
+<td>Finance coherence</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-FIN-11</td>
+<td>Agent commission settlement: record payments to agents (owed→paid)?</td>
+<td>Module B9</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="management--reporting">Management / Reporting</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-MGT-01</td>
+<td>Which reports do owners actually ask their accountant for today?</td>
+<td>CSV/report roadmap</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-MGT-02</td>
+<td>Wanted alerts digest (daily WhatsApp summary of arrivals/outstanding)?</td>
+<td>Notification design</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-MGT-03</td>
+<td>Multi-property owners: consolidated cross-property dashboard needed, or per-property enough?</td>
+<td>Current design is per-property views</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="technology--infrastructure">Technology / Infrastructure</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-INF-01</td>
+<td>Ratify hosting stance: managed cloud (Vercel/Supabase) as default with residency statement, vs DO/in-country option — which is offered to whom?</td>
+<td>AMB-01; GAP-28; cost per client</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-TEC-04</td>
+<td>What exactly works offline today (write queue? which screens?)?</td>
+<td>AMB-02; GAP-25 — field safety</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-TEC-05</td>
+<td>Confirm property timezone = IST fixed; server TZ pinning</td>
+<td>Date arithmetic</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-TEC-06</td>
+<td>iCal re-sync semantics: are removed events released? Partial-feed failure handling?</td>
+<td>AMB-17</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-TEC-07</td>
+<td>Community seam: central registry service or peer-to-peer between deployments?</td>
+<td>AMB-12; GAP-26</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-TEC-08</td>
+<td>Is the <code>PushSubscription</code> model wired to anything?</td>
+<td>GAP-14 shortcut if yes</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-TEC-09</td>
+<td>Is <code>PropertySettings</code> the canonical property root (no separate <code>Property</code> model)?</td>
+<td>AMB-20; ERD accuracy</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-TEC-10</td>
+<td>Per-client cost envelope target (hosting+AI) at pilot pricing?</td>
+<td>Unit economics; RSK-28</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="security">Security</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-SEC-01</td>
+<td>Required password policy / lockout beyond rate-limit?</td>
+<td>Auth hardening</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-SEC-02</td>
+<td>Is owner 2FA wanted (SMS impractical? TOTP?)</td>
+<td>FR-AUTH-7</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-SEC-03</td>
+<td>Session length + revocation on role change/disable — confirm expectations</td>
+<td>AMB-21</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-SEC-04</td>
+<td>Who may view/download stored ID documents; is each access logged?</td>
+<td>NFR-SEC-08; GAP-15</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-SEC-05</td>
+<td>Accept keyed-hash redesign for shared phone matching (enumeration resistance)?</td>
+<td>NFR-SEC-09</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="ai">AI</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-AI-01</td>
+<td>Which guest intents may the assistant complete end-to-end vs always escalate (canonical list)?</td>
+<td>Policy baseline; BO-06</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-AI-02</td>
+<td>Quote→book flow: how does the agent choose a room among free units? Race/409 UX for the guest?</td>
+<td>Seam behaviour</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-AI-03</td>
+<td>Should agent bookings hard-block on scam/blacklist hits (vs human warn-only parity)?</td>
+<td>AMB-16</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-AI-04</td>
+<td>Who owns two-way guest threads — assistant UI or hub?</td>
+<td>AMB-15; GAP-4</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-AI-05</td>
+<td>Has the security prompt been red-teamed (injection suite)? Results?</td>
+<td>RSK-23</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-AI-06</td>
+<td>Review responses: AI-drafted? posted where/how?</td>
+<td>Module B8</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-AI-07</td>
+<td>Khasi voice quality: which STT/TTS path, and what's the fallback when it fails?</td>
+<td>Pitch promise vs reality</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="localization">Localization</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-L10N-01</td>
+<td>Staff console languages needed at pilots (English enough? Khasi wanted?)</td>
+<td>GAP-16 priority</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-L10N-02</td>
+<td>Guest artefact languages (invoice, messages) per guest?</td>
+<td>Template variants (GAP-3)</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-L10N-03</td>
+<td>Who validates Khasi translations (terminology consistency)?</td>
+<td>Quality of localization</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="otas">OTAs</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-OTA-01</td>
+<td>Which OTAs at which pilots, and do their listing types offer iCal?</td>
+<td>Sync viability per pilot</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OTA-02</td>
+<td>Can we collect a corpus of real confirmation/modification/cancellation emails per OTA?</td>
+<td>Parser tuning (FR-ING-4) + GAP-2</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-OTA-03</td>
+<td>Booking.com virtual-card payouts in use? (PCI: never store card data from emails)</td>
+<td>Ingestion redaction rules</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-OTA-04</td>
+<td>Appetite to pair one budget channel manager later; which brands are trusted locally?</td>
+<td>Future-scope planning</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="legal--compliance">Legal / Compliance</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-LEG-01</td>
+<td>Between MindBit and client: who is DPDP data fiduciary vs processor? Is there a DPA template?</td>
+<td>Contract + breach duties</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-LEG-02</td>
+<td>Exact Form C practice at pilots (portal? paper? police station?) — what artefact satisfies it?</td>
+<td>GAP-7 design target</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-LEG-03</td>
+<td>Community governance: who moderates/verifies/adjudicates shared reports? Where is the registry hosted, under whose name?</td>
+<td>RSK-04; AMB-12/14</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-LEG-04</td>
+<td>Guest-registry requirements (all guests' IDs vs lead guest) in Meghalaya?</td>
+<td>Check-in capture scope</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-LEG-05</td>
+<td>Referral PII: consent script when passing guest name/phone to a peer?</td>
+<td>AMB-13</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-LEG-06</td>
+<td>Any state tourism registration/licence data the app should hold per property?</td>
+<td>Settings completeness</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="migration--deployment--support--training">Migration / Deployment / Support / Training</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Question</th>
+<th>Why</th>
+<th>★</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Q-MIG-01</td>
+<td>What records do pilots keep today (paper registers, Excel), and how much history to import?</td>
+<td>CSV import realism</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-DEP-01</td>
+<td>Onboarding time budget per property (target hours) and who performs it?</td>
+<td>GAP-18 tooling scope</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-SUP-01</td>
+<td>Support channel/hours/SLA commitment to pilots; who staffs it?</td>
+<td>RSK-29</td>
+<td>★</td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-TRN-01</td>
+<td>Training format: in-person, video (Khasi?), printed quick cards?</td>
+<td>Adoption plan</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
+<td>Q-ANL-01</td>
+<td>Do owners want anonymised benchmarks vs peers (occupancy vs region)? Privacy stance?</td>
+<td>Future analytics; community value</td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Q-INT-01</td>
+<td>Accounting handoff: is CSV enough, or is Tally export wanted soon?</td>
+<td>Integration roadmap</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Workshop plan <code>[R]</code>:</strong> one 3-hour session with owner+reception covers OPS/FIN/HK; one 2-hour session with MindBit founders covers BUS/INF/LEG/AI; counsel review async for LEG. Answers feed directly into Backlog priorities (doc 14) and re-baselined Roadmap (doc 17).</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>09-stakeholder-questions.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

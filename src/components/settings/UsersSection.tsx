@@ -34,6 +34,29 @@ export function UsersSection({
   const [role, setRole] = useState<Role>("reception");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+
+  // Invite by email: no password set here — the invitee sets their own via the
+  // link. In log-only mode (no SMTP) the returned link is shown to copy/send.
+  async function invite() {
+    setBusy(true);
+    setError(null);
+    setInviteLink(null);
+    const res = await fetch("/api/users/invite", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, role }),
+    });
+    setBusy(false);
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(j.error ?? "Could not send the invite.");
+      return;
+    }
+    setEmail("");
+    setInviteLink(j.data?.link ?? null);
+    router.refresh();
+  }
 
   async function add() {
     setBusy(true);
@@ -111,9 +134,22 @@ export function UsersSection({
           </div>
         </div>
         {error && <p style={{ color: "var(--red-text)", fontSize: "var(--fs-small)", marginTop: 8 }}>{error}</p>}
-        <button className="btn btn--primary btn--sm" style={{ marginTop: 12 }} onClick={add} disabled={busy || !email || password.length < 8}>
-          {busy ? "Adding…" : "Add user"}
-        </button>
+        <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+          <button className="btn btn--primary btn--sm" onClick={add} disabled={busy || !email || password.length < 8}>
+            {busy ? "Adding…" : "Add with password"}
+          </button>
+          <button className="btn btn--ghost btn--sm" onClick={invite} disabled={busy || !email} title="Email the person a link to set their own password">
+            {busy ? "…" : "Send invite instead"}
+          </button>
+        </div>
+        {inviteLink && (
+          <div className="banner banner--good" style={{ cursor: "default", marginTop: 12, alignItems: "flex-start" }}>
+            <span style={{ flex: 1, minWidth: 0, wordBreak: "break-all" }}>
+              Invite created. If email isn&apos;t configured, send this link yourself:<br />
+              <code style={{ fontSize: "var(--fs-meta)" }}>{inviteLink}</code>
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="col" style={{ gap: 8 }}>

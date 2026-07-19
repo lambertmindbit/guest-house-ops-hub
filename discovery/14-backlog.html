@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Backlog · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 14</p>
+  <h1>Product Backlog</h1>
+  <p class="sub">9 epics · 45+ stories with Given/When/Then, points, DoR/DoD</p>
+  <div class="chips"><span class="chip">P0 ≈ 67 pts</span><span class="chip">Jira/ADO-ready</span></div>
+</div>
+<div class="content">
+<h1 id="product-backlog">Product Backlog</h1>
+<h2 id="discovery-doc-14--v10--2026-07-16">Discovery doc 14 · v1.0 · 2026-07-16</h2>
+<p>Scope note: the delivered feature set (README/ROADMAP) is treated as the baseline; this backlog covers the <strong>delta to enterprise quality</strong> — hardening, activation, compliance, scale — plus verification stories for claims that need code-audit proof. Table columns are Jira/ADO-import-ready.</p>
+<p><strong>Definition of Ready (all stories):</strong> open questions referenced are answered; acceptance criteria agreed; test data identified; touches to the constraint/migration machinery flagged for senior review. <strong>Definition of Done (all stories):</strong> code + tests (unit; route-level where API changes) green in CI; migration via <code>db:migrate:new</code> only; docs updated (USER-GUIDE/ARCHITECTURE as relevant); audit/RBAC respected; deployed to a pilot-mirror environment; demoed.</p>
+<p>Priority P0 (production-safety) &gt; P1 (scale/commercial) &gt; P2 (quality) &gt; P3 (enhancement). Points: Fibonacci.</p>
+<h2 id="epic-e1--production-safety--operability-gap-1-5-17">Epic E1 — Production Safety &amp; Operability (GAP-1, 5, 17)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria (Given/When/Then)</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-101</td>
+<td>As MindBit ops, I need automated daily backups with an offsite copy per client DB, so a client can survive data loss.</td>
+<td>G a client deployment; W the nightly job runs; T a restorable snapshot exists offsite, retention 30d, and failure alerts ops.</td>
+<td>GAP-1, RSK-08</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-102</td>
+<td>As MindBit ops, I need a documented, drilled restore runbook.</td>
+<td>G a snapshot; W the runbook is executed on a scratch instance quarterly; T RTO ≤ 4h verified and logged.</td>
+<td>GAP-1</td>
+<td>P0</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-103</td>
+<td>As MindBit ops, I need error tracking + uptime checks on every deployment.</td>
+<td>G an unhandled error or downtime; W it occurs; T it appears in the monitoring tool within 5 min tagged by client, and UI shows an incident ID.</td>
+<td>GAP-17</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-104</td>
+<td>As an owner, I can see sync health (last success per iCal feed, forwarder heartbeat, cron status) and get warned when stale.</td>
+<td>G a feed that hasn't synced &gt; 12h; W I open Feeds/Today; T a visible warning shows age; and a push/alert fires (with E5).</td>
+<td>GAP-5, BR-AVL-05</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td>US-105</td>
+<td>As MindBit ops, I need a fleet dashboard (version, health, cron, backup status across clients).</td>
+<td>G ≥ 2 deployments; W I open the dashboard; T each shows version+health+last backup+last sync, red on breach.</td>
+<td>GAP-18</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e2--compliance-dpdp-form-c-gst-gap-7-8-11">Epic E2 — Compliance: DPDP, Form C, GST (GAP-7, 8, 11)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-201</td>
+<td>As an owner, I can produce a pre-filled Form C artefact for a foreign guest and track submission.</td>
+<td>G a checked-in foreign guest; W I tap "Form C"; T a print-ready artefact with the 13 fields renders; a due-in-24h reminder exists until "submitted" is ticked (audited).</td>
+<td>GAP-7, Q-LEG-02</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-202</td>
+<td>As an owner, I can export all data held about a guest, and erase it (where no statutory hold).</td>
+<td>G a guest requests erasure; W I trigger it; T PII is removed/anonymised, bookings retain non-identifying financial integrity, action audited.</td>
+<td>GAP-8</td>
+<td>P0</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td>US-203</td>
+<td>As MindBit, ID-scan retention has a sane default and the purge provably runs.</td>
+<td>G a new property; W created; T <code>idRetentionDays</code> defaults (e.g. 180); purge logs deletions; owner notified of policy.</td>
+<td>BR-GST-05</td>
+<td>P0</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td>US-204</td>
+<td>As MindBit, we have a breach-notification runbook and guest-facing privacy notice (incl. AI/US-cloud processing).</td>
+<td>Docs approved by counsel; notice linked in app.</td>
+<td>NFR-PRV-01/04</td>
+<td>P0</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-205</td>
+<td>As an owner (GST-registered), invoices carry sequential per-FY numbers, GST lines, and are stored immutably.</td>
+<td>G GSTIN configured; W invoice issued; T <code>Invoice</code> record with number series, tax lines per rate, snapshot; reprint = identical.</td>
+<td>GAP-11, Q-FIN-02</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td>US-206</td>
+<td>As a guest-facing doc, invoices render as server-side PDFs.</td>
+<td>Pixel-stable PDF, phone-downloadable.</td>
+<td>GAP-11</td>
+<td>P2</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e3--ota-ingestion-completeness-gap-2-6-24-rsk-13">Epic E3 — OTA Ingestion completeness (GAP-2, 6, 24; RSK-13)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-301</td>
+<td>As reception, modification/cancellation OTA emails match the existing booking and guide me through applying the change.</td>
+<td>G a booking with otaRef X; W a modification email for X is ingested; T the pending item links to the booking, shows a diff, "Apply" updates via the normal conflict-checked path.</td>
+<td>GAP-2</td>
+<td>P0</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td>US-302</td>
+<td>As MindBit, a fixture corpus of real OTA emails (per OTA, per type) gates parser changes in CI.</td>
+<td>G corpus collected (Q-OTA-02); W parser changes; T CI runs fixtures, extraction accuracy reported.</td>
+<td>RSK-13</td>
+<td>P1</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td>US-303</td>
+<td>As an owner, I can set iCal sync frequency (up to hourly).</td>
+<td>Configurable; respects OTA politeness; health surfaced (US-104).</td>
+<td>GAP-6</td>
+<td>P2</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td>US-304</td>
+<td>As an owner, I can hold back a last-room buffer per room type from agent/shared availability.</td>
+<td>G buffer=1 on Deluxe(3); W 2 booked; T agent/community availability reports 0; direct booking still possible with warning.</td>
+<td>GAP-24</td>
+<td>P2</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td>US-305</td>
+<td>As reception, duplicate OTA confirmations never create two bookings.</td>
+<td>G booking with otaRef X exists; W same-ref email ingested; T flagged duplicate, no new pending create.</td>
+<td>BR-OTA-03</td>
+<td>P1</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td>US-306</td>
+<td>As MindBit, ingested emails have card data redacted before storage.</td>
+<td>Fixture with virtual card; stored record contains none of it.</td>
+<td>ASM-18, Q-OTA-03</td>
+<td>P1</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e4--money-correctness-gap-9-12-13-q-fin-">Epic E4 — Money correctness (GAP-9, 12, 13; Q-FIN-*)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-401</td>
+<td>As engineering, money is integer paise end-to-end with a typed money util.</td>
+<td>All money fields migrated; property tests on arithmetic; CSVs/invoices unchanged to the rupee.</td>
+<td>GAP-9</td>
+<td>P0</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td>US-402</td>
+<td>As an owner, staff API responses never contain money fields.</td>
+<td>G reception session; W any endpoint returns a reservation; T <code>grossAmount</code> etc. absent; contract tests per role.</td>
+<td>GAP-12</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="odd">
+<td>US-403</td>
+<td>As engineering, Postgres RLS enforces property scoping as defence-in-depth.</td>
+<td>RLS policies on tenant tables keyed to session property; raw-SQL leak test proves containment.</td>
+<td>GAP-12, RSK-17</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td>US-404</td>
+<td>As an owner, payment corrections are void+reversal with audit (no silent edits).</td>
+<td>Edit disabled; void creates reversing entry; both audited.</td>
+<td>BR-PAY-05, Q-FIN-04</td>
+<td>P1</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-405</td>
+<td>As an owner, I can record OTA payouts and see owed-vs-received per OTA.</td>
+<td>Payout entity matched to bookings; Finance shows variance.</td>
+<td>GAP-13</td>
+<td>P2</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-406</td>
+<td>As an owner, refund rules are deterministic (base, caps) per ratified answers.</td>
+<td>Ladder base per Q-FIN-07; refund ≤ paid enforced; OTA-collect path documented.</td>
+<td>BR-CANC-03/04/05</td>
+<td>P1</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-407</td>
+<td>As an owner, Razorpay capture + room-hold works when keys are provided.</td>
+<td>Idempotent webhook (replay-safe test); hold expires → release; constraint untouched.</td>
+<td>FR-PAY-5</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e5--notifications--messaging-activation-gap-3-4-14">Epic E5 — Notifications &amp; Messaging activation (GAP-3, 4, 14)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-501</td>
+<td>As an owner, I receive a push notification for high-severity escalations and new conflicts.</td>
+<td>G subscribed device; W event fires; T push within 1 min; deep-links to item; per-event toggles in Settings.</td>
+<td>GAP-14, BR-AI-05</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-502</td>
+<td>As MindBit, WhatsApp templates (En/Kha/Hi) for confirmation, pre-arrival, payment reminder are approved and parameterised.</td>
+<td>Templates submitted+approved; outbox sends real messages with params; language chosen per guest.</td>
+<td>GAP-3</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td>US-503</td>
+<td>As an owner, guest replies are visible in a unified message log.</td>
+<td>Inbound webhook stores replies; thread view per guest; ownership per Q-AI-04 decision.</td>
+<td>GAP-4</td>
+<td>P2</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-504</td>
+<td>As a guest, I can opt out of messages; sends respect quiet hours.</td>
+<td>STOP handling; no sends 22:00–07:00 except OTP-class.</td>
+<td>RSK-15</td>
+<td>P1</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e6--auth--access-hardening-gap-10-q-sec-">Epic E6 — Auth &amp; access hardening (GAP-10; Q-SEC-*)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-601</td>
+<td>As a staff member, I join via an email invite and set my own password.</td>
+<td>Invite → expiring link → set password → role/property pre-assigned.</td>
+<td>GAP-10</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-602</td>
+<td>As any user, I can reset a forgotten password.</td>
+<td>Reset link, single-use, rate-limited.</td>
+<td>GAP-10</td>
+<td>P0</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-603</td>
+<td>As an owner, disabling a user or changing role revokes their sessions.</td>
+<td>Per Q-SEC-03 ratified semantics; test proves stale session rejected.</td>
+<td>AMB-21</td>
+<td>P1</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td>US-604</td>
+<td>As an owner, ID-document access is logged.</td>
+<td>Every view/download → audit entry; owner-visible.</td>
+<td>Q-SEC-04, GAP-15</td>
+<td>P1</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>US-605</td>
+<td>As engineering, shared-list phone hashing uses a keyed hash.</td>
+<td>Pepper per network; enumeration test infeasible; migration for existing hashes.</td>
+<td>NFR-SEC-09</td>
+<td>P1</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td>US-606</td>
+<td>As engineering, CI guards raw SQL for tenant scoping.</td>
+<td>Lint rule / grep-gate fails PRs with unscoped tenant-table raw SQL.</td>
+<td>NFR-SEC-06</td>
+<td>P1</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e7--fleet--onboarding-gap-18-23-27-30">Epic E7 — Fleet &amp; onboarding (GAP-18, 23, 27, 30)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-701</td>
+<td>As MindBit ops, I can provision a new client (deploy+DB+seed+env) with one scripted command.</td>
+<td>New deployment live &lt; 2h hands-on; checklist auto-verified.</td>
+<td>GAP-18, Q-DEP-01</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td>US-702</td>
+<td>As a new owner, a setup wizard walks me through property, rooms, channels, policies, staff.</td>
+<td>First-run wizard completes to a bookable state without support.</td>
+<td>GAP-18</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td>US-703</td>
+<td>As MindBit ops, upgrades roll out across the fleet staged (canary → all) with pre-migration backup gates.</td>
+<td>Scripted; halt-on-failure; version visible in fleet dashboard.</td>
+<td>RSK-09</td>
+<td>P1</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-704</td>
+<td>As a client, I can receive a complete export of my data on request (offboarding).</td>
+<td>DB export + documents + CSVs delivered; runbook.</td>
+<td>GAP-23</td>
+<td>P2</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-705</td>
+<td>As MindBit, pilot billing operates (even manually) with a rate card.</td>
+<td>Pricing sheet ratified (Q-BUS-03); invoices issued; revenue tracked vs grant milestone.</td>
+<td>GAP-27</td>
+<td>P1</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td>US-706</td>
+<td>As sales, a seeded demo tenant showcases the product safely.</td>
+<td>Demo data realistic; reset script.</td>
+<td>GAP-30</td>
+<td>P2</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e8--localization--accessibility-gap-16-21">Epic E8 — Localization &amp; accessibility (GAP-16, 21)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-801</td>
+<td>As engineering, all UI strings are externalized (i18n framework).</td>
+<td>No hardcoded user-facing strings; language switch scaffolding.</td>
+<td>GAP-16</td>
+<td>P1</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td>US-802</td>
+<td>As a Khasi-speaking operator, core flows are available in Khasi.</td>
+<td>Today/Calendar/Booking/Payments/Housekeeping translated; reviewed per Q-L10N-03.</td>
+<td>GAP-16</td>
+<td>P2</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td>US-803</td>
+<td>As any user, core flows meet WCAG 2.1 AA basics.</td>
+<td>Contrast, touch targets ≥ 44px, labels; audit checklist passes.</td>
+<td>GAP-21</td>
+<td>P2</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="epic-e9--verification--spec-truth-gap-25-26-29-iteration-2-inputs">Epic E9 — Verification &amp; spec-truth (GAP-25, 26, 29; iteration-2 inputs)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Story</th>
+<th>Acceptance criteria</th>
+<th>Refs</th>
+<th>Pri</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>US-901</td>
+<td>As the team, offline behaviour is audited and specified honestly.</td>
+<td>Doc: which reads cached, which writes queue, conflict UX; User Guide corrected if overstated; 2G field test.</td>
+<td>GAP-25, Q-TEC-04</td>
+<td>P0</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td>US-902</td>
+<td>As the team, community topology is documented as an ADR.</td>
+<td>Where registries live, who controls, failure modes; counsel-reviewed.</td>
+<td>GAP-26, Q-LEG-03</td>
+<td>P0</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-903</td>
+<td>As engineering, route-level test: booking create overlap → 409 (repo's own top test gap).</td>
+<td>Vitest route test green; guards db-errors sniffing.</td>
+<td>NFR-MNT-02</td>
+<td>P0</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td>US-904</td>
+<td>As engineering, housekeeping derivation has a test.</td>
+<td>Checkout ⇒ task appears; mark-clean ⇒ ready.</td>
+<td>NFR-MNT-02</td>
+<td>P1</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>US-905</td>
+<td>As the team, the room-assignment product stance (fixed room vs type-level) is ratified and recorded.</td>
+<td>Decision workshop output; if type-level chosen, spike estimates constraint redesign.</td>
+<td>GAP-29, Q-OPS-05</td>
+<td>P1</td>
+<td>2</td>
+</tr>
+<tr class="even">
+<td>US-906</td>
+<td>As engineering, per-feed iCal tokens replace the single token.</td>
+<td>Rotation per feed; old URLs invalidated gracefully.</td>
+<td>ROADMAP suggestion</td>
+<td>P2</td>
+<td>3</td>
+</tr>
+<tr class="odd">
+<td>US-907</td>
+<td>As engineering, guest merge tool resolves duplicates with audit.</td>
+<td>Merge preserves stays/LTV; irreversible warning; audited.</td>
+<td>GAP-19</td>
+<td>P2</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="backlog-summary">Backlog summary</h2>
+<p>P0: 15 stories ≈ 67 pts · P1: 19 ≈ 85 pts · P2: 11 ≈ 46 pts. At a sustained 20–25 pts/sprint (small team), P0 ≈ 3 sprints — aligning with the "before wider pilot rollout" window in doc 17.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>14-backlog.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dependencies Register · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 11</p>
+  <h1>Dependencies Register</h1>
+  <p class="sub">Internal, external, OTA, government, messaging, browser and infrastructure dependencies</p>
+  <div class="chips"></div>
+</div>
+<div class="content">
+<h1 id="dependencies-register">Dependencies Register</h1>
+<h2 id="discovery-doc-11--v10--2026-07-16">Discovery doc 11 · v1.0 · 2026-07-16</h2>
+<h2 id="internal-within-rootmindbit">Internal (within ROOT/MindBit)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Dependency</th>
+<th>Consumer</th>
+<th>Nature</th>
+<th>Risk note</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DEP-I1</td>
+<td>Assistant sidecar (Python ADK+Gemini, Cloud Run)</td>
+<td>Escalations, guest chat, messages</td>
+<td>Service via <code>AGENT_TOKEN</code> seam</td>
+<td>Contract versioning needed</td>
+</tr>
+<tr class="even">
+<td>DEP-I2</td>
+<td>ROOT cab-dispatch module</td>
+<td>Transport records context</td>
+<td>Out-of-hub service</td>
+<td>Records-only boundary must hold</td>
+</tr>
+<tr class="odd">
+<td>DEP-I3</td>
+<td>Community registry seam (topology TBD)</td>
+<td>All community features</td>
+<td>Cross-deployment</td>
+<td>GAP-26</td>
+</tr>
+<tr class="even">
+<td>DEP-I4</td>
+<td>Email forwarders (<code>integrations/</code>: Gmail Apps Script, CF Email Worker)</td>
+<td>Ingestion automation</td>
+<td>Deployed per client</td>
+<td>Silent-failure monitoring (GAP-5)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="external-services--third-parties">External services / third parties</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Dependency</th>
+<th>Used for</th>
+<th>Failure/exposure</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DEP-E1</td>
+<td>Supabase (Postgres, storage, backups)</td>
+<td>Primary DB; ID-document bucket</td>
+<td>Pricing/limits ×25 clients; residency (AMB-01)</td>
+</tr>
+<tr class="even">
+<td>DEP-E2</td>
+<td>Vercel (+Cron)</td>
+<td>Hosting, scheduled jobs</td>
+<td>Cron reliability; serverless rate-limit weakness</td>
+</tr>
+<tr class="odd">
+<td>DEP-E3</td>
+<td>Google Gemini / Cloud Run</td>
+<td>AI assistant</td>
+<td>Cost, ToS, PII transfer (RSK-25); fallback model exists</td>
+</tr>
+<tr class="even">
+<td>DEP-E4</td>
+<td>Meta WhatsApp Cloud API</td>
+<td>Guest messaging</td>
+<td>Template approval, number bans (RSK-15)</td>
+</tr>
+<tr class="odd">
+<td>DEP-E5</td>
+<td>Razorpay</td>
+<td>Gateway capture + holds</td>
+<td>Merchant KYC lead time; webhook idempotency</td>
+</tr>
+<tr class="even">
+<td>DEP-E6</td>
+<td>UPI rails (NPCI deep links/QR)</td>
+<td>No-gateway payments</td>
+<td>Format changes rare; verification stays manual</td>
+</tr>
+<tr class="odd">
+<td>DEP-E7</td>
+<td>GitHub Actions</td>
+<td>CI</td>
+<td>Low risk</td>
+</tr>
+<tr class="even">
+<td>DEP-E8</td>
+<td>Sentry/monitoring vendor (proposed)</td>
+<td>GAP-17</td>
+<td>To select</td>
+</tr>
+<tr class="odd">
+<td>DEP-E9</td>
+<td>Upstash/Redis (proposed)</td>
+<td>Shared rate-limit store</td>
+<td>Only when PUBLIC_CHAT on</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ota-dependencies">OTA dependencies</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Dependency</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DEP-O1</td>
+<td>Booking.com / Agoda / MMT confirmation-email formats</td>
+<td>No contract; drift monitored via fixtures (RSK-13)</td>
+</tr>
+<tr class="even">
+<td>DEP-O2</td>
+<td>OTA iCal endpoints (availability varies by listing type)</td>
+<td>May be absent or withdrawn (RSK-14)</td>
+</tr>
+<tr class="odd">
+<td>DEP-O3</td>
+<td>OTA extranets (manual updates by owner)</td>
+<td>Human dependency; never automated (hard rule)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="government--regulatory">Government / regulatory</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Dependency</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DEP-G1</td>
+<td>FRRO / Form C process (local practice at pilots)</td>
+<td>Q-LEG-02 defines integration artefact</td>
+</tr>
+<tr class="even">
+<td>DEP-G2</td>
+<td>GST regime (rates, invoice rules)</td>
+<td>GAP-11; accountant validation</td>
+</tr>
+<tr class="odd">
+<td>DEP-G3</td>
+<td>DPDP Act 2023 rules &amp; timelines</td>
+<td>GAP-8 programme</td>
+</tr>
+<tr class="even">
+<td>DEP-G4</td>
+<td>Meghalaya tourism registration (if any)</td>
+<td>Q-LEG-06</td>
+</tr>
+</tbody>
+</table>
+<h2 id="messaging--email-providers">Messaging / email providers</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Dependency</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DEP-M1</td>
+<td>Owner's Gmail (ingestion source)</td>
+<td>Apps Script quotas; or CF Worker w/ branded domain</td>
+</tr>
+<tr class="even">
+<td>DEP-M2</td>
+<td>Transactional email provider (proposed — invites/reset, GAP-10)</td>
+<td>To select</td>
+</tr>
+</tbody>
+</table>
+<h2 id="browser--device">Browser / device</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Dependency</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DEP-B1</td>
+<td>PWA capabilities on Android Chrome + iOS Safari</td>
+<td>iOS push/install quirks affect GAP-14 design</td>
+</tr>
+<tr class="even">
+<td>DEP-B2</td>
+<td>Browser print engine</td>
+<td>Invoice PDF quality until server-side PDFs</td>
+</tr>
+</tbody>
+</table>
+<h2 id="infrastructure--tooling">Infrastructure / tooling</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Dependency</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>DEP-N1</td>
+<td>Prisma + safe-migration helper (<code>db:migrate:new</code>)</td>
+<td>Load-bearing; never bypass (RSK-09)</td>
+</tr>
+<tr class="even">
+<td>DEP-N2</td>
+<td>Postgres <code>btree_gist</code> + DATERANGE</td>
+<td>Core constraint substrate</td>
+</tr>
+<tr class="odd">
+<td>DEP-N3</td>
+<td>DigitalOcean branch (<code>deploy/digitalocean</code>)</td>
+<td>Residency hedge (AMB-01)</td>
+</tr>
+<tr class="even">
+<td>DEP-N4</td>
+<td>Node 22 / Next.js 15 lifecycle</td>
+<td>Upgrade cadence for fleet</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>11-dependencies-register.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

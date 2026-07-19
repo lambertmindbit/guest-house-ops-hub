@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Requirement Traceability Matrix · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 15</p>
+  <h1>Requirement Traceability Matrix</h1>
+  <p class="sub">BO → FR/NFR → BR → GAP → US → TS, fully linked</p>
+  <div class="chips"></div>
+</div>
+<div class="content">
+<h1 id="requirement-traceability-matrix-rtm">Requirement Traceability Matrix (RTM)</h1>
+<h2 id="discovery-doc-15--v10--2026-07-16">Discovery doc 15 · v1.0 · 2026-07-16</h2>
+<p>Chain: <strong>Business Objective (BO, doc 01) → Requirement (FR/NFR, doc 02) → Business Rules (BR, doc 05) → Gap (doc 06) → Story (US, doc 14) → Test scenario (TS, doc 16)</strong>. Baseline-✅ requirements trace to regression scenarios; delta items trace to stories. Import-ready single table.</p>
+<table>
+<thead>
+<tr class="header">
+<th>BO</th>
+<th>Requirement</th>
+<th>Rules</th>
+<th>Gap</th>
+<th>Story</th>
+<th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BO-01</td>
+<td>FR-BOOK-1..5</td>
+<td>BR-BOOK-01..08</td>
+<td>—</td>
+<td>baseline (+US-903)</td>
+<td>TS-BK-01..07</td>
+</tr>
+<tr class="even">
+<td>BO-01</td>
+<td>FR-ING-1..3</td>
+<td>BR-OTA-01/02</td>
+<td>—</td>
+<td>baseline</td>
+<td>TS-IN-01..03</td>
+</tr>
+<tr class="odd">
+<td>BO-01</td>
+<td>FR-ING-5 (mods/cancels)</td>
+<td>BR-OTA-04</td>
+<td>GAP-2</td>
+<td>US-301</td>
+<td>TS-IN-04..06</td>
+</tr>
+<tr class="even">
+<td>BO-01</td>
+<td>FR-ING-6 (dedupe)</td>
+<td>BR-OTA-03</td>
+<td>—</td>
+<td>US-305</td>
+<td>TS-IN-07</td>
+</tr>
+<tr class="odd">
+<td>BO-02</td>
+<td>FR-AVAIL-1..4</td>
+<td>BR-BOOK-01/03, BR-AVL-02</td>
+<td>—</td>
+<td>baseline (+US-903/904)</td>
+<td>TS-AV-01..05</td>
+</tr>
+<tr class="even">
+<td>BO-02</td>
+<td>FR-ICAL-1..2</td>
+<td>BR-AVL-01/03</td>
+<td>—</td>
+<td>baseline</td>
+<td>TS-IC-01..02</td>
+</tr>
+<tr class="odd">
+<td>BO-02</td>
+<td>FR-ICAL-3/6 (health, freq)</td>
+<td>BR-AVL-05</td>
+<td>GAP-5/6</td>
+<td>US-104, US-303</td>
+<td>TS-IC-03..04</td>
+</tr>
+<tr class="even">
+<td>BO-02</td>
+<td>FR-AVAIL-5 (buffer)</td>
+<td>BR-AVL-06</td>
+<td>GAP-24</td>
+<td>US-304</td>
+<td>TS-IC-05</td>
+</tr>
+<tr class="odd">
+<td>BO-02</td>
+<td>FR-ICAL-4 (release)</td>
+<td>—</td>
+<td>AMB-17</td>
+<td>(Q-TEC-06→story)</td>
+<td>TS-IC-06</td>
+</tr>
+<tr class="even">
+<td>BO-03/06</td>
+<td>FR-AGT-1..4/6</td>
+<td>BR-AI-01..04</td>
+<td>—</td>
+<td>baseline</td>
+<td>TS-AG-01..05</td>
+</tr>
+<tr class="odd">
+<td>BO-06</td>
+<td>FR-AGT-5 (notify)</td>
+<td>BR-AI-05</td>
+<td>GAP-14</td>
+<td>US-501</td>
+<td>TS-NT-01..02</td>
+</tr>
+<tr class="even">
+<td>BO-03</td>
+<td>FR-MSG-1..3</td>
+<td>—</td>
+<td>GAP-3</td>
+<td>US-502, US-504</td>
+<td>TS-MS-01..04</td>
+</tr>
+<tr class="odd">
+<td>BO-03</td>
+<td>FR-MSG-5</td>
+<td>—</td>
+<td>GAP-4</td>
+<td>US-503</td>
+<td>TS-MS-05</td>
+</tr>
+<tr class="even">
+<td>BO-05</td>
+<td>FR-PAY-1..4/6</td>
+<td>BR-PAY-01..04, BR-CANC-01/02</td>
+<td>—</td>
+<td>baseline</td>
+<td>TS-PY-01..06</td>
+</tr>
+<tr class="odd">
+<td>BO-05</td>
+<td>FR-PAY-7/8</td>
+<td>BR-PAY-05/07</td>
+<td>GAP-9</td>
+<td>US-401, US-404</td>
+<td>TS-PY-07..09</td>
+</tr>
+<tr class="even">
+<td>BO-05</td>
+<td>FR-PAY-5 (gateway)</td>
+<td>BR-PAY-08</td>
+<td>—</td>
+<td>US-407</td>
+<td>TS-PY-10..11</td>
+</tr>
+<tr class="odd">
+<td>BO-05</td>
+<td>FIN commission truth</td>
+<td>BR-FIN-01..03/05</td>
+<td>AMB-05/07</td>
+<td>US-406 (+answers)</td>
+<td>TS-FN-01..04</td>
+</tr>
+<tr class="even">
+<td>BO-05</td>
+<td>Invoice compliance</td>
+<td>BR-FIN-06</td>
+<td>GAP-11</td>
+<td>US-205/206</td>
+<td>TS-FN-05..06</td>
+</tr>
+<tr class="odd">
+<td>BO-05</td>
+<td>OTA payout recon</td>
+<td>—</td>
+<td>GAP-13</td>
+<td>US-405</td>
+<td>TS-FN-07</td>
+</tr>
+<tr class="even">
+<td>BO-05</td>
+<td>Money masking</td>
+<td>BR-FIN-04</td>
+<td>GAP-12</td>
+<td>US-402/403</td>
+<td>TS-SC-04..05</td>
+</tr>
+<tr class="odd">
+<td>BO-07</td>
+<td>NFR-PRV-01 (DPDP)</td>
+<td>BR-GST-04/05</td>
+<td>GAP-8</td>
+<td>US-202/203/204</td>
+<td>TS-PR-01..04</td>
+</tr>
+<tr class="even">
+<td>BO-07</td>
+<td>NFR-PRV-02 (Form C)</td>
+<td>BR-CHK-02/04</td>
+<td>GAP-7</td>
+<td>US-201</td>
+<td>TS-CI-04..05</td>
+</tr>
+<tr class="odd">
+<td>BO-07</td>
+<td>GAP-23 export</td>
+<td>—</td>
+<td>GAP-23</td>
+<td>US-704</td>
+<td>TS-OP-05</td>
+</tr>
+<tr class="even">
+<td>BO-07</td>
+<td>AMB-01 residency</td>
+<td>—</td>
+<td>GAP-28</td>
+<td>US-902-adjacent (statement)</td>
+<td>—</td>
+</tr>
+<tr class="odd">
+<td>BO-08</td>
+<td>FR-COM (community)</td>
+<td>BR-COM-01..05</td>
+<td>—</td>
+<td>baseline</td>
+<td>TS-CM-01..05</td>
+</tr>
+<tr class="even">
+<td>BO-08</td>
+<td>Governance/topology</td>
+<td>BR-COM-06</td>
+<td>GAP-26</td>
+<td>US-902</td>
+<td>TS-CM-06</td>
+</tr>
+<tr class="odd">
+<td>BO-08</td>
+<td>Hash strength</td>
+<td>BR-COM-04</td>
+<td>—</td>
+<td>US-605</td>
+<td>TS-SC-06</td>
+</tr>
+<tr class="even">
+<td>BO-09</td>
+<td>Fleet ops</td>
+<td>—</td>
+<td>GAP-18/30</td>
+<td>US-105/701/702/703/706</td>
+<td>TS-OP-01..04</td>
+</tr>
+<tr class="odd">
+<td>BO-09</td>
+<td>Backup/restore</td>
+<td>—</td>
+<td>GAP-1</td>
+<td>US-101/102</td>
+<td>TS-OP-06..07</td>
+</tr>
+<tr class="even">
+<td>BO-09</td>
+<td>Observability</td>
+<td>—</td>
+<td>GAP-17</td>
+<td>US-103</td>
+<td>TS-OP-08</td>
+</tr>
+<tr class="odd">
+<td>BO-09</td>
+<td>Onboarding auth</td>
+<td>—</td>
+<td>GAP-10</td>
+<td>US-601/602/603</td>
+<td>TS-AU-01..05</td>
+</tr>
+<tr class="even">
+<td>BO-10</td>
+<td>Billing</td>
+<td>—</td>
+<td>GAP-27</td>
+<td>US-705</td>
+<td>— (process)</td>
+</tr>
+<tr class="odd">
+<td>BO-06/inclusion</td>
+<td>FR-L10N-1/2</td>
+<td>—</td>
+<td>GAP-16</td>
+<td>US-801/802</td>
+<td>TS-LN-01..02</td>
+</tr>
+<tr class="even">
+<td>Quality</td>
+<td>NFR-UX-03</td>
+<td>—</td>
+<td>GAP-21</td>
+<td>US-803</td>
+<td>TS-AC-01..03</td>
+</tr>
+<tr class="odd">
+<td>Field reality</td>
+<td>Offline (B15)</td>
+<td>—</td>
+<td>GAP-25</td>
+<td>US-901</td>
+<td>TS-OF-01..04</td>
+</tr>
+<tr class="even">
+<td>CRM integrity</td>
+<td>FR-GST-1 (merge)</td>
+<td>—</td>
+<td>GAP-19</td>
+<td>US-907</td>
+<td>TS-GD-05</td>
+</tr>
+<tr class="odd">
+<td>Check-in legal</td>
+<td>FR/BR-CHK-01..03</td>
+<td>—</td>
+<td>—</td>
+<td>baseline</td>
+<td>TS-CI-01..03</td>
+</tr>
+<tr class="even">
+<td>Housekeeping</td>
+<td>BR-HK-01..04</td>
+<td>—</td>
+<td>GAP-20</td>
+<td>US-904 (+Q-HK)</td>
+<td>TS-HK-01..03</td>
+</tr>
+<tr class="odd">
+<td>Pricing</td>
+<td>BR-PRC-01..05</td>
+<td>—</td>
+<td>AMB-18</td>
+<td>(doc answer)</td>
+<td>TS-PR-R01..03</td>
+</tr>
+<tr class="even">
+<td>Security misc</td>
+<td>NFR-SEC-05/06</td>
+<td>—</td>
+<td>—</td>
+<td>US-606 (+Upstash cond.)</td>
+<td>TS-SC-01..03</td>
+</tr>
+<tr class="odd">
+<td>ID docs</td>
+<td>NFR-SEC-08</td>
+<td>—</td>
+<td>GAP-15</td>
+<td>US-604</td>
+<td>TS-SC-07</td>
+</tr>
+<tr class="even">
+<td>iCal tokens</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>US-906</td>
+<td>TS-IC-07</td>
+</tr>
+<tr class="odd">
+<td>Product stance</td>
+<td>BR-BOOK-09</td>
+<td>—</td>
+<td>GAP-29</td>
+<td>US-905</td>
+<td>— (decision)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Coverage check:</strong> every GAP-1…GAP-30 traces to ≥1 story or an explicit decision/answer path (GAP-22 → doc 17 Phase 3 scope; GAP-28 → residency statement action in doc 17). Every P0 story traces back to a BO. Orphan check re-run after stakeholder answers.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>15-rtm.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

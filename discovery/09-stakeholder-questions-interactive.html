@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stakeholder Question Log · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+<style>
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px;align-items:center}
+.toolbar .fbtn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 14px;
+  font:600 12.5px "Plus Jakarta Sans",sans-serif;color:var(--navy-2);cursor:pointer}
+.toolbar .fbtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.toolbar .fbtn.star.active{background:var(--red);border-color:var(--red)}
+.count{margin-left:auto;font-size:12.5px;color:var(--sub)}
+.grouphead{margin:26px 0 10px;display:flex;align-items:baseline;gap:10px}
+.grouphead h2{margin:0;border:0;padding:0}
+.grouphead .gcount{font-size:12px;color:var(--sub)}
+.qcard{border:1px solid var(--line);border-radius:12px;margin:10px 0;background:#fff;overflow:hidden}
+.qcard.star{border-left:4px solid var(--red)}
+.qtop{display:flex;gap:10px;padding:12px 16px 4px;align-items:baseline}
+.qid{font:700 11.5px ui-monospace,Menlo,monospace;color:var(--teal-dk);background:var(--teal-bg);
+  border-radius:6px;padding:2px 8px;white-space:nowrap}
+.qstar{color:var(--red);font-size:13px;font-weight:800;white-space:nowrap}
+.qtext{font-weight:700;color:var(--navy);font-size:14.5px}
+.qwhy{padding:0 16px 10px;color:var(--sub);font-size:13px}
+.qwhy b{color:var(--chip-ink)}
+.qans{border-top:1px dashed var(--line);background:#fbfdfc;padding:8px 16px 12px}
+.qans .lbl{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--sub);font-weight:700}
+.qans .box{min-height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;
+  margin-top:5px;padding:7px 10px;font-size:13.5px;outline:none}
+.qans .box:focus{border-color:var(--teal)}
+.qans .box:empty::before{content:"Type the workshop answer here… (saved in this browser)";color:#a8b6b0}
+@media print{.toolbar{display:none}.qans .box{min-height:50px}.qcard{break-inside:avoid}}
+</style></head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — workshop instrument</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 09</p>
+  <h1>Stakeholder Question Log</h1>
+  <p class="sub">Every question that must be answered before build decisions freeze. ★ marks design blockers. Each card explains <em>why</em> it is asked. Answers typed here persist in this browser and print cleanly; transcribe them into 09-stakeholder-questions.md as the record.</p>
+  <div class="chips"><span class="chip" id="chipTotal"></span><span class="chip" id="chipStar"></span><span class="chip">17 groups · 2 workshops + counsel review</span></div>
+</div>
+<div class="content">
+<div class="toolbar" id="groupBar"></div>
+<div class="toolbar"><button class="fbtn star" id="starBtn">★ blockers only</button>
+<button class="fbtn" id="unansBtn">Unanswered only</button><span class="count" id="count"></span></div>
+<div id="list"></div>
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>Source of record: 09-stakeholder-questions.md</span></div>
+</div>
+<script>
+const Q = [
+["Business","Q-BUS-01","Who is the design-target client: 3–8-room guest house, 10–20-room hotel, homestay cluster?","Sets the scale envelope (NFR-PRF-04), UI density and feature priorities.",1],
+["Business","Q-BUS-02","Is the Ops Hub sold standalone, or only bundled with the ROOT assistant?","Packaging, onboarding scope and pricing follow from this.",1],
+["Business","Q-BUS-03","What is the monetisation model and price point (Q3 grant milestone)?","GAP-27: billing tooling and unit economics per deployment depend on it.",1],
+["Business","Q-BUS-04","What does “scale-readiness” (Q4 milestone) mean measurably to the grant committee?","Converts the milestone into acceptance criteria the roadmap can target.",1],
+["Business","Q-BUS-05","Which 3–5 pilot properties are committed for Q1, and what are their room counts / OTA mix?","Provides real parser fixtures, iCal availability checks and the UAT plan.",1],
+["Business","Q-BUS-06","Referral credits: is settlement ever monetary, or reciprocity-only? Dispute handling? Peer disconnect?","BR-COM-06 — the community economics are undefined without it.",0],
+["Business","Q-BUS-07","Is there competitive pressure (eZee, Djubo, local channel managers) at pilot properties today?","Positioning and must-match features.",0],
+["Operations","Q-OPS-01","Max advance-booking horizon and max stay length to accept?","Validation bounds for the booking form (BR-BOOK-10).",0],
+["Operations","Q-OPS-02","Can a room with future bookings be archived? What should happen?","BR-BOOK-11 — currently undefined.",0],
+["Operations","Q-OPS-03","May a guest check out with a balance due (block / warn / allow)?","AMB-09 — revenue leakage vs front-desk reality.",1],
+["Operations","Q-OPS-04","No-show policy: when marked, charge, refund, effect on reliability score?","AMB-08 — shared alerts fairness depends on a consistent definition.",1],
+["Operations","Q-OPS-05","Is fixed-room-at-booking acceptable at peak, or is type-level booking with assignment at check-in needed?","AMB-03 — the deepest structural question in the booking core; changing it touches the DB constraint.",1],
+["Operations","Q-OPS-06","Groups: is one combined invoice enough, or split billing/deposits per room needed?","AMB-19 — group folio depth.",0],
+["Operations","Q-OPS-07","Is mid-stay room change (split stay) needed?","Calendar and constraint design implications.",0],
+["Operations","Q-OPS-08","Should the app show why a price was suggested (rule trace)? Confirm compounding-order expectations.","AMB-18 — owner trust in the pricing engine.",0],
+["Operations","Q-OPS-09","Should attendance link to payroll (salary calc), or is register-keeping enough?","Bounds the staff module scope.",0],
+["Operations","Q-OPS-10","How should the app decide a guest is a foreign national (C-Form gate)?","AMB-10 — a mis-filed foreigner silently skips a legal duty.",1],
+["Operations","Q-OPS-11","Early check-in / late check-out: charged? how much?","No fee construct exists on bookings today.",0],
+["Operations","Q-OPS-12","Any midnight/rollover expectations (late-night check-ins count as which day)?","Today-board semantics.",0],
+["Operations","Q-OPS-13","CSV import: expected source formats (old registers? Excel?) and volume?","Import robustness and templates.",0],
+["Housekeeping","Q-HK-01","Is a supervisor “inspected” step wanted before a room returns to Ready?","GAP-20 — quality ceiling for larger pilots.",0],
+["Housekeeping","Q-HK-02","Are recurring deep-clean / linen-change schedules needed?","GAP-20.",0],
+["Housekeeping","Q-HK-03","Should a dirty room be bookable for same-day arrival (warn) or blocked?","Guard-rule definition.",0],
+["Finance","Q-FIN-01","Commission basis per channel (gross vs net-of-GST)? Does MMT operate net-rate for pilots? Channel + agent stacking arithmetic?","AMB-05 — the accuracy of “Net to you” (BO-05) hangs on this.",1],
+["Finance","Q-FIN-02","Are pilot properties GST-registered? Required invoice format / series / tax lines?","Triggers the GAP-11 statutory-invoice scope.",1],
+["Finance","Q-FIN-03","Do owners need OTA payout reconciliation (owed vs received per OTA)?","GAP-13.",0],
+["Finance","Q-FIN-04","Payment corrections: edit-in-place acceptable, or void + reversal with audit?","BR-PAY-05 — audit integrity of the money trail.",1],
+["Finance","Q-FIN-05","Confirm the reception-vs-owner money boundary (record vs view aggregates).","AMB-04 — decides the field-masking design (GAP-12).",1],
+["Finance","Q-FIN-06","Overpayment: hold as credit, auto-refund, or reject?","BR-PAY-06 — undefined behaviour.",0],
+["Finance","Q-FIN-07","Refund base (gross vs paid)? OTA-collect refund recording?","AMB-06 — deterministic refunds and no double-counting.",1],
+["Finance","Q-FIN-08","Confirm INR-only; what is the currency setting meant to do?","AMB-11 — multi-currency illusion.",0],
+["Finance","Q-FIN-09","Finance period semantics: accrual by stay-night vs cash by payment date — which do owners expect?","AMB-07 — period reports can silently mislead.",1],
+["Finance","Q-FIN-10","Expense categories needed? Should maintenance costs auto-post to expenses?","Finance coherence across modules.",0],
+["Finance","Q-FIN-11","Agent commission settlement: record payments to agents (owed → paid)?","Module B9 — owed is shown, settlement untracked.",0],
+["Management","Q-MGT-01","Which reports do owners actually ask their accountant for today?","Prioritises the CSV/report roadmap.",0],
+["Management","Q-MGT-02","Wanted alerts digest (daily WhatsApp summary of arrivals / outstanding)?","Notification design.",0],
+["Management","Q-MGT-03","Multi-property owners: consolidated cross-property dashboard needed, or per-property enough?","Current design is per-property views.",0],
+["Technology","Q-INF-01","Ratify the hosting stance: managed cloud (Vercel/Supabase) with a residency statement, vs DigitalOcean / in-country option — offered to whom?","AMB-01 / GAP-28 — the “self-hosted, locally-owned” positioning must match reality.",1],
+["Technology","Q-TEC-04","What exactly works offline today (write queue? which screens?)","AMB-02 / GAP-25 — field safety in patchy-signal Meghalaya.",1],
+["Technology","Q-TEC-05","Confirm property timezone = IST fixed; server TZ pinning.","Date arithmetic correctness.",0],
+["Technology","Q-TEC-06","iCal re-sync semantics: are removed events released? Partial-feed failure handling?","AMB-17 — stale blocks are silent lost revenue.",1],
+["Technology","Q-TEC-07","Community seam: central registry service or peer-to-peer between deployments?","AMB-12 / GAP-26 — legal controllership and failure modes follow.",1],
+["Technology","Q-TEC-08","Is the PushSubscription model wired to anything?","Shortcut for GAP-14 if yes.",0],
+["Technology","Q-TEC-09","Is PropertySettings the canonical property root (no separate Property model)?","AMB-20 — ERD accuracy.",0],
+["Technology","Q-TEC-10","Per-client cost envelope target (hosting + AI) at pilot pricing?","Unit economics; RSK-28.",0],
+["Security","Q-SEC-01","Required password policy / lockout beyond the rate-limit?","Auth hardening baseline.",0],
+["Security","Q-SEC-02","Is owner 2FA wanted (TOTP)?","FR-AUTH-7.",0],
+["Security","Q-SEC-03","Session length + revocation on role change / disable — confirm expectations.","AMB-21.",0],
+["Security","Q-SEC-04","Who may view/download stored ID documents; is each access logged?","NFR-SEC-08 / GAP-15 — sensitive-PII accountability.",1],
+["Security","Q-SEC-05","Accept the keyed-hash redesign for shared phone matching (enumeration resistance)?","NFR-SEC-09 — 10-digit phone space is trivially enumerable with plain hashing.",0],
+["AI","Q-AI-01","Which guest intents may the assistant complete end-to-end vs always escalate (canonical list)?","Policy baseline for BO-06 (owner needn't be available 24/7).",1],
+["AI","Q-AI-02","Quote→book: how does the agent choose a room among free units? Race/409 UX for the guest?","Seam behaviour under contention.",0],
+["AI","Q-AI-03","Should agent bookings hard-block on scam/blacklist hits (vs human warn-only parity)?","AMB-16 — the AI can't exercise human judgement on a warning.",1],
+["AI","Q-AI-04","Who owns two-way guest threads — assistant UI or hub?","AMB-15 / GAP-4 — avoids building the same thing twice.",1],
+["AI","Q-AI-05","Has the security prompt been red-teamed (injection suite)? Results?","RSK-23.",0],
+["AI","Q-AI-06","Review responses: AI-drafted? posted where/how?","Module B8 behaviour.",0],
+["AI","Q-AI-07","Khasi voice quality: which STT/TTS path, and the fallback when it fails?","The pitch's multilingual promise vs technical reality.",0],
+["Localization","Q-L10N-01","Staff console languages needed at pilots (is English enough? Khasi wanted?)","Sets GAP-16 priority.",1],
+["Localization","Q-L10N-02","Guest artefact languages (invoice, messages) per guest?","Template variants (GAP-3).",0],
+["Localization","Q-L10N-03","Who validates Khasi translations (terminology consistency)?","Localization quality.",0],
+["OTAs","Q-OTA-01","Which OTAs at which pilots, and do their listing types offer iCal?","Sync viability per pilot; ASM-04.",1],
+["OTAs","Q-OTA-02","Can we collect a corpus of real confirmation / modification / cancellation emails per OTA?","Parser tuning (FR-ING-4) and GAP-2.",1],
+["OTAs","Q-OTA-03","Booking.com virtual-card payouts in use? (PCI: never store card data from emails)","Ingestion redaction rules; ASM-18.",0],
+["OTAs","Q-OTA-04","Appetite to pair one budget channel manager later; which brands are trusted locally?","Future-scope planning.",0],
+["Legal","Q-LEG-01","Between MindBit and client: who is DPDP data fiduciary vs processor? Is there a DPA template?","Contractual duties and breach responsibilities.",1],
+["Legal","Q-LEG-02","Exact Form C practice at pilots (portal? paper? police station?) — what artefact satisfies it?","GAP-7 design target.",1],
+["Legal","Q-LEG-03","Community governance: who moderates / verifies / adjudicates shared reports? Where is the registry hosted, under whose name?","RSK-04 — the package's highest legal exposure.",1],
+["Legal","Q-LEG-04","Guest-registry requirements (all guests' IDs vs lead guest) in Meghalaya?","Check-in capture scope.",0],
+["Legal","Q-LEG-05","Referral PII: consent script when passing guest name/phone to a peer?","AMB-13 — reconciles with the “never shared” promise.",0],
+["Legal","Q-LEG-06","Any state tourism registration / licence data the app should hold per property?","Settings completeness.",0],
+["Deployment & Support","Q-MIG-01","What records do pilots keep today (paper registers, Excel), and how much history to import?","CSV import realism.",0],
+["Deployment & Support","Q-DEP-01","Onboarding time budget per property (target hours) and who performs it?","GAP-18 tooling scope; grant milestones.",1],
+["Deployment & Support","Q-SUP-01","Support channel / hours / SLA commitment to pilots; who staffs it?","RSK-29 — churn prevention.",1],
+["Deployment & Support","Q-TRN-01","Training format: in-person, video (Khasi?), printed quick cards?","Adoption plan.",0],
+["Deployment & Support","Q-ANL-01","Do owners want anonymised benchmarks vs peers (occupancy vs region)? Privacy stance?","Future analytics and community value.",0],
+["Deployment & Support","Q-INT-01","Accounting handoff: is CSV enough, or is Tally export wanted soon?","Integration roadmap.",0],
+];
+const groups = [...new Set(Q.map(q=>q[0]))];
+let activeGroup = null, starOnly = false, unansOnly = false;
+const bar = document.getElementById("groupBar");
+const allBtn = document.createElement("button");
+allBtn.className = "fbtn active"; allBtn.textContent = "All";
+allBtn.onclick = () => { activeGroup = null; render(); };
+bar.appendChild(allBtn);
+groups.forEach(g => { const b = document.createElement("button");
+  b.className = "fbtn"; b.textContent = g; b.onclick = () => { activeGroup = g; render(); }; bar.appendChild(b); });
+document.getElementById("starBtn").onclick = () => { starOnly = !starOnly; render(); };
+document.getElementById("unansBtn").onclick = () => { unansOnly = !unansOnly; render(); };
+document.getElementById("chipTotal").textContent = Q.length + " questions";
+document.getElementById("chipStar").textContent = Q.filter(q=>q[4]).length + " ★ design blockers";
+const store = k => "ghq_" + k;
+function render(){
+  [...bar.children].forEach(b => b.classList.toggle("active", (b===allBtn && !activeGroup) || b.textContent===activeGroup));
+  document.getElementById("starBtn").classList.toggle("active", starOnly);
+  document.getElementById("unansBtn").classList.toggle("active", unansOnly);
+  const list = document.getElementById("list"); list.innerHTML = "";
+  let shown = 0, curGroup = null;
+  Q.forEach(([g,id,text,why,star]) => {
+    if (activeGroup && g!==activeGroup) return;
+    if (starOnly && !star) return;
+    const saved = localStorage.getItem(store(id)) || "";
+    if (unansOnly && saved.trim()) return;
+    if (g!==curGroup){ curGroup=g;
+      const gh=document.createElement("div"); gh.className="grouphead";
+      gh.innerHTML=`<h2>${g}</h2><span class="gcount">${Q.filter(q=>q[0]===g).length} questions</span>`;
+      list.appendChild(gh); }
+    const card=document.createElement("div"); card.className="qcard"+(star?" star":"");
+    card.innerHTML=`<div class="qtop"><span class="qid">${id}</span>${star?'<span class="qstar">★ blocker</span>':''}<span class="qtext">${text}</span></div>
+    <div class="qwhy"><b>Why it's asked:</b> ${why}</div>
+    <div class="qans"><span class="lbl">Answer / decision</span><div class="box" contenteditable="true" data-id="${id}">${saved}</div></div>`;
+    list.appendChild(card); shown++;
+  });
+  document.getElementById("count").textContent = shown + " shown";
+  list.querySelectorAll(".box").forEach(b => b.addEventListener("input",
+    () => localStorage.setItem(store(b.dataset.id), b.innerText)));
+}
+render();
+</script>
+</body></html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Model &amp; ERD · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 12</p>
+  <h1>Data Model &amp; ERD</h1>
+  <p class="sub">55-model entity catalogue, relationships, constraints, retention rules</p>
+  <div class="chips"><span class="chip">Schema-extracted</span><span class="chip">GiST correctness core</span></div>
+</div>
+<div class="content">
+<h1 id="data-model--erd">Data Model &amp; ERD</h1>
+<h2 id="discovery-doc-12--v10--2026-07-16">Discovery doc 12 · v1.0 · 2026-07-16</h2>
+<p><strong>Source of truth:</strong> <code>prisma/schema.prisma</code> (1,507 lines). The <strong>entity names and enums below are extracted verbatim from the schema</strong> <code><span class="tag fact">FACT</span></code>; attributes/relationships shown are those evidenced in ROADMAP/User Guide plus inference — full attribute-level verification is the first job of iteration 2 (Q-TEC-09).</p>
+<h2 id="1-entity-catalogue-grouped-55-models-27-enums-fact--grep">1. Entity catalogue (grouped; 55 models, 27 enums <code><span class="tag fact">FACT</span></code>)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Domain</th>
+<th>Models</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Identity &amp; tenancy</strong></td>
+<td><code>User</code>, <code>UserProperty</code>, <code>PropertySettings</code></td>
+<td><code>UserProperty</code> = per-property access grants. <strong>No <code>Property</code> model found</strong> — <code>PropertySettings</code> appears to be the property root (AMB-20/Q-TEC-09). Roles via <code>UserRole</code> enum</td>
+</tr>
+<tr class="even">
+<td><strong>Inventory of sellable space</strong></td>
+<td><code>RoomType</code>, <code>Room</code>, <code>Amenity</code>, <code>RoomTypeAmenity</code></td>
+<td>Type carries base rate, occupancy, floor/ceiling; room archivable</td>
+</tr>
+<tr class="odd">
+<td><strong>Booking core</strong></td>
+<td><code>Reservation</code>, <code>Block</code>, <code>Channel</code>, <code>Agent</code>, <code>Guest</code>, <code>BookingGroup</code>, <code>InboundBooking</code></td>
+<td><code>Reservation.stay</code> DATERANGE + GiST exclusion (<code>WHERE status='confirmed'</code>); <code>Block.period</code> DATERANGE; <code>InboundBooking</code> = staged OTA email; <code>BookingGroup</code> = folio</td>
+</tr>
+<tr class="even">
+<td><strong>Money</strong></td>
+<td><code>Payment</code>, <code>Refund</code>, <code>CancellationPolicy</code>, <code>Expense</code></td>
+<td><code>PaymentMode</code> enum (cash/UPI/card/bank/OTA-collect); <code>RefundStatus</code>; advance derived from <code>Payment.isAdvance</code> + <code>Reservation.advanceRequired</code></td>
+</tr>
+<tr class="odd">
+<td><strong>Pricing</strong></td>
+<td><code>PricingPolicy</code>, <code>Season</code>, <code>RateOverride</code></td>
+<td>Advisory engine config</td>
+</tr>
+<tr class="even">
+<td><strong>Ops</strong></td>
+<td><code>HousekeepingTask</code>, <code>MaintenanceRequest</code>, <code>Asset</code>, <code>InventoryItem</code>, <code>StockMovement</code>, <code>Vendor</code>, <code>PurchaseOrder</code>, <code>VendorPayment</code></td>
+<td>Status enums per module</td>
+</tr>
+<tr class="odd">
+<td><strong>People ops</strong></td>
+<td><code>Staff</code>, <code>Shift</code>, <code>Attendance</code></td>
+<td>AttendanceStatus enum</td>
+</tr>
+<tr class="even">
+<td><strong>Guest experience</strong></td>
+<td><code>Complaint</code>, <code>ReviewRequest</code>, <code>Tour</code>, <code>TourPartner</code>, <code>TourBooking</code>, <code>Driver</code>, <code>Trip</code></td>
+<td>Trip records only (dispatch external)</td>
+</tr>
+<tr class="odd">
+<td><strong>Sync &amp; ingestion</strong></td>
+<td><code>IcalFeed</code></td>
+<td>Import/export config per room; <code>InboundStatus</code> enum for staged emails</td>
+</tr>
+<tr class="even">
+<td><strong>AI &amp; comms</strong></td>
+<td><code>Escalation</code>, <code>OutboundMessage</code>, <code>ConversationTurn</code>, <code>FaqEntry</code>, <code>AssistantPolicy</code>, <code>PushSubscription</code></td>
+<td>Escalation source/category/severity/status enums; <code>PushSubscription</code> present but wiring unverified (Q-TEC-08)</td>
+</tr>
+<tr class="odd">
+<td><strong>Trust &amp; safety (local)</strong></td>
+<td><code>FlaggedNumber</code>, <code>AuditEvent</code></td>
+<td>Local scam list; audit log</td>
+</tr>
+<tr class="even">
+<td><strong>Community network</strong></td>
+<td><code>NetworkConnection</code>, <code>SharingGrant</code>, <code>Partner</code>, <code>OutboundReferral</code>, <code>Referral</code>, <code>ReferralCreditEntry</code>, <code>SharedScamReport</code>, <code>SharedGuestAlert</code></td>
+<td>ShareType/ConnectionStatus/ReferralStatus/ScamReportStatus/GuestAlertStatus+Category enums; hashed matching</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Multi-tenancy:</strong> 55 occurrences of <code>propertyId</code> across the schema <code><span class="tag fact">FACT</span></code>; auto-scoping Prisma extension; guests shared owner-wide (an explicit exception to per-property scoping) <code><span class="tag fact">FACT</span></code>.</p>
+<h2 id="2-core-erd-booking-correctness-core--money">2. Core ERD (booking correctness core + money)</h2>
+<pre class="mermaid">erDiagram
+    PropertySettings ||--o{ Room : has
+    PropertySettings ||--o{ RoomType : has
+    PropertySettings ||--o{ Channel : has
+    PropertySettings ||--o{ UserProperty : grants
+    User ||--o{ UserProperty : &quot;accesses via&quot;
+    RoomType ||--o{ Room : classifies
+    RoomType ||--o{ RateOverride : &quot;pins rate&quot;
+    RoomType ||--o{ RoomTypeAmenity : offers
+    Amenity ||--o{ RoomTypeAmenity : &quot;&quot;
+    Room ||--o{ Reservation : &quot;hosts (GiST: no overlapping confirmed stays)&quot;
+    Room ||--o{ Block : &quot;held out by&quot;
+    Room ||--o{ IcalFeed : &quot;syncs via&quot;
+    Guest ||--o{ Reservation : books
+    Channel ||--o{ Reservation : sourced
+    Agent ||--o{ Reservation : &quot;attributed (optional)&quot;
+    BookingGroup ||--o{ Reservation : &quot;folios (optional)&quot;
+    Reservation ||--o{ Payment : receives
+    Reservation ||--o{ Refund : &quot;may refund&quot;
+    CancellationPolicy ||--o{ Refund : &quot;suggests via ladder&quot;
+    InboundBooking }o--|| Channel : &quot;parsed from OTA email&quot;
+    InboundBooking ||--o| Reservation : &quot;creates on review&quot;
+
+    Reservation {
+        daterange stay &quot;half-open [in,out)&quot;
+        enum status &quot;confirmed|cancelled|no_show&quot;
+        datetime checkedInAt
+        datetime checkedOutAt
+        string otaRef
+        boolean advanceRequired
+        int grossAmount &quot;whole-rupee today - GAP-9&quot;
+    }
+    Payment {
+        enum mode &quot;cash|upi|card|bank|ota_collect&quot;
+        boolean isAdvance
+        string utrReference
+    }
+    Block {
+        daterange period
+        enum source &quot;manual|ical&quot;
+        string reason
+    }
+    Guest {
+        string phone &quot;unique, dedupe key - owner-wide&quot;
+        boolean blacklisted
+        string cformFields &quot;13 nullable foreign-national fields&quot;
+        boolean consentRecorded
+    }
+</pre>
+<h2 id="3-community-network-erd">3. Community-network ERD</h2>
+<pre class="mermaid">erDiagram
+    PropertySettings ||--o{ NetworkConnection : &quot;connects (code)&quot;
+    NetworkConnection ||--o{ SharingGrant : &quot;per-peer switches&quot;
+    PropertySettings ||--o{ Referral : &quot;sends/receives&quot;
+    Referral ||--o{ ReferralCreditEntry : &quot;derives credit&quot;
+    PropertySettings ||--o{ SharedScamReport : &quot;reports (evidence, expiry)&quot;
+    PropertySettings ||--o{ SharedGuestAlert : &quot;reports (category, appeal)&quot;
+    Partner ||--o{ OutboundReferral : &quot;&quot;
+    SharingGrant {
+        enum shareType &quot;rooms|referrals|scam|badguest|vendors|drivers&quot;
+    }
+    SharedScamReport {
+        string hashedPhone &quot;keyed hash - NFR-SEC-09&quot;
+        enum status &quot;pending|verified|disputed|expired&quot;
+    }
+</pre>
+<h2 id="4-ops--ai-satellite-domains-compact">4. Ops &amp; AI satellite domains (compact)</h2>
+<pre class="mermaid">erDiagram
+    Staff ||--o{ Shift : rostered
+    Staff ||--o{ Attendance : marked
+    Staff ||--o{ HousekeepingTask : assigned
+    Room ||--o{ HousekeepingTask : &quot;to clean&quot;
+    Asset ||--o{ MaintenanceRequest : &quot;may relate&quot;
+    Vendor ||--o{ PurchaseOrder : supplies
+    PurchaseOrder ||--o{ VendorPayment : paid
+    InventoryItem ||--o{ StockMovement : &quot;in/out&quot;
+    TourPartner ||--o{ Tour : offers
+    Tour ||--o{ TourBooking : booked
+    Guest ||--o{ TourBooking : takes
+    Driver ||--o{ Trip : drives
+    Guest ||--o{ Complaint : raises
+    Reservation ||--o{ ReviewRequest : prompts
+    Escalation }o--o| Reservation : &quot;may link&quot;
+    OutboundMessage }o--o| Reservation : &quot;confirmation/reminder&quot;
+    Guest ||--o{ ConversationTurn : &quot;chats (assistant)&quot;
+</pre>
+<h2 id="5-keys-constraints-integrity-rules">5. Keys, constraints, integrity rules</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Concern</th>
+<th>Position</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Primary keys</td>
+<td>Surrogate ids throughout (Prisma convention) <code>[I]</code></td>
+</tr>
+<tr class="even">
+<td>The one constraint that matters</td>
+<td><code>no_overlapping_confirmed_stays</code> — GiST <code>EXCLUDE (room_id WITH =, stay WITH &amp;&amp;) WHERE status='confirmed'</code>; created via raw SQL migration; <strong>never weaken</strong> (C-04) <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="odd">
+<td>Guest uniqueness</td>
+<td><code>phone</code> unique owner-wide <code><span class="tag fact">FACT</span></code>; normalization rule to define (E.164) <code>[R]</code></td>
+</tr>
+<tr class="even">
+<td>Derived-only values</td>
+<td>availability, balance due, advance status, agent commission owed, referral credit — <strong>never stored</strong> <code><span class="tag fact">FACT</span></code> — keep this doctrine for anything new <code>[R]</code></td>
+</tr>
+<tr class="odd">
+<td>Tenancy</td>
+<td><code>propertyId</code> on all tenant tables; Prisma extension auto-scopes; raw SQL hand-scoped (RSK-17); guests intentionally exempt (owner-wide) <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="even">
+<td>Money types</td>
+<td>int whole-rupee today → integer paise migration (GAP-9) <code>[R]</code></td>
+</tr>
+<tr class="odd">
+<td>OTA ref</td>
+<td><code>otaRef</code> on Reservation — enforce uniqueness per channel for dedupe (BR-OTA-03) <code>[R — verify]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-normalization--denormalization">6. Normalization &amp; denormalization</h2>
+<p>Schema is well-normalized with derived values computed at read time <code><span class="tag fact">FACT</span></code> — correct for this scale (NFR-PRF-04). <strong>Deliberate denormalizations to consider later <code>[R]</code>:</strong> (a) nightly-rate snapshot per reservation (GAP-22 — actually <em>adds</em> information, not denormalizes); (b) immutable <code>Invoice</code> snapshot entity (GAP-11 — required for statutory integrity, not performance); (c) materialized occupancy aggregates only if analytics slow beyond the envelope — not now.</p>
+<h2 id="7-retention--archival">7. Retention &amp; archival</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Data</th>
+<th>Rule today</th>
+<th>Target <code>[R]</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ID documents</td>
+<td>Purge cron exists; <strong>inert until <code>idRetentionDays</code> set</strong> (indefinite default)</td>
+<td>Sane default (e.g. 180d) + owner notice</td>
+</tr>
+<tr class="even">
+<td>Guest PII</td>
+<td>Indefinite</td>
+<td>DPDP: erase-on-request (GAP-8) + inactivity review</td>
+</tr>
+<tr class="odd">
+<td>Shared community reports</td>
+<td>Auto-expire <code><span class="tag fact">FACT</span></code></td>
+<td>Keep; document period</td>
+</tr>
+<tr class="even">
+<td>Audit events</td>
+<td>Undefined</td>
+<td>≥ 2y, append-only</td>
+</tr>
+<tr class="odd">
+<td>Reservations/finance</td>
+<td>Indefinite (books of account)</td>
+<td>8y per Indian accounting norms <code>[R — confirm with accountant]</code></td>
+</tr>
+<tr class="even">
+<td>Messages/conversations</td>
+<td>Undefined</td>
+<td>1y default, configurable</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>12-data-model.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

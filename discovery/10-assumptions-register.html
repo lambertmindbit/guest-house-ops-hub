@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assumptions Register · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 10</p>
+  <h1>Assumptions Register</h1>
+  <p class="sub">18 assumptions with impact, validation path and risk if incorrect</p>
+  <div class="chips"></div>
+</div>
+<div class="content">
+<h1 id="assumptions-register">Assumptions Register</h1>
+<h2 id="discovery-doc-10--v10--2026-07-16">Discovery doc 10 · v1.0 · 2026-07-16</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Assumption</th>
+<th>Impact if held</th>
+<th>Validation required</th>
+<th>Risk if incorrect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ASM-01</td>
+<td>Property operates in a single timezone (IST); dates are property-local</td>
+<td>All date arithmetic simple</td>
+<td>Confirm server/client TZ pinning in code</td>
+<td>Off-by-one stays around midnight; wrong Today board</td>
+</tr>
+<tr class="even">
+<td>ASM-02</td>
+<td>INR is the only real currency; "currency" setting is display-only</td>
+<td>UPI/GST/₹ features safe</td>
+<td>Q-FIN-08</td>
+<td>Multi-currency illusion misleads a client</td>
+</tr>
+<tr class="odd">
+<td>ASM-03</td>
+<td>Phone number is a reliable unique guest key</td>
+<td>Dedupe, scam-matching, community hashing all work</td>
+<td>Field data on shared/changed phones</td>
+<td>Fractured guest history; false scam matches</td>
+</tr>
+<tr class="even">
+<td>ASM-04</td>
+<td>Each physical room maps 1:1 to one OTA listing unit for iCal</td>
+<td>iCal protects against oversell</td>
+<td>Per-pilot listing audit (Q-OTA-01)</td>
+<td>Residual oversell despite sync</td>
+</tr>
+<tr class="odd">
+<td>ASM-05</td>
+<td>Owners can operate an English console until localization lands</td>
+<td>GAP-16 can be Should not Must</td>
+<td>Pilot observation (Q-L10N-01)</td>
+<td>Adoption failure at less-English-literate pilots</td>
+</tr>
+<tr class="even">
+<td>ASM-06</td>
+<td>Staff smartphones: mid/low-end Android, intermittent 4G</td>
+<td>Perf/offline targets</td>
+<td>Device survey at pilots</td>
+<td>UX unusable in field</td>
+</tr>
+<tr class="odd">
+<td>ASM-07</td>
+<td>README/ROADMAP accurately describe what's built</td>
+<td>This package's ✅ statuses valid</td>
+<td>Iteration-2 code audit</td>
+<td>Statuses wrong → plan wrong</td>
+</tr>
+<tr class="even">
+<td>ASM-08</td>
+<td>Supabase platform backups exist and are restorable</td>
+<td>GAP-1 is procedure, not capability</td>
+<td>Restore drill</td>
+<td>Data-loss exposure worse than assessed</td>
+</tr>
+<tr class="odd">
+<td>ASM-09</td>
+<td>Meta will approve transactional WhatsApp templates (confirmation/reminder) incl. Khasi text</td>
+<td>Messaging plan viable</td>
+<td>Early template submission</td>
+<td>Messaging value prop delayed</td>
+</tr>
+<tr class="even">
+<td>ASM-10</td>
+<td>OTA confirmation emails reach the owner's own inbox for all pilot OTA listings</td>
+<td>Ingestion viable</td>
+<td>Q-BUS-05 pilot check</td>
+<td>Inbox flow useless for some pilots</td>
+</tr>
+<tr class="odd">
+<td>ASM-11</td>
+<td>Gemini/Cloud Run terms permit guest PII processing with notice; costs stay within unit economics</td>
+<td>AI stack stable</td>
+<td>ToS/cost review (Q-TEC-10)</td>
+<td>Re-platform assistant</td>
+</tr>
+<tr class="even">
+<td>ASM-12</td>
+<td>Guests consent to ID storage at check-in when asked</td>
+<td>ID gate workable</td>
+<td>Consent script + pilot feedback</td>
+<td>Check-in friction; legal exposure</td>
+</tr>
+<tr class="odd">
+<td>ASM-13</td>
+<td>One-deployment-per-client remains the isolation model (no shared multi-client SaaS)</td>
+<td>Fleet tooling is the scaling answer</td>
+<td>Founders ratify</td>
+<td>Different architecture path entirely</td>
+</tr>
+<tr class="even">
+<td>ASM-14</td>
+<td>Community features run on a MindBit-operated shared registry <code>[I — topology unconfirmed]</code></td>
+<td>Governance/legal design target</td>
+<td>Q-TEC-07</td>
+<td>Governance design invalid</td>
+</tr>
+<tr class="odd">
+<td>ASM-15</td>
+<td>Pilot properties are ≤ ~20 rooms, ≤ ~5 properties/owner</td>
+<td>Perf envelope (NFR-PRF-04)</td>
+<td>Q-BUS-01</td>
+<td>Perf/N+1 issues surface</td>
+</tr>
+<tr class="even">
+<td>ASM-16</td>
+<td>The grant's Q3 "monetisation" milestone can be satisfied with manual billing + pricing sheet</td>
+<td>GAP-27 scope small in-year</td>
+<td>Grant committee expectations (Q-BUS-04)</td>
+<td>Product billing needed sooner</td>
+</tr>
+<tr class="odd">
+<td>ASM-17</td>
+<td>Form C obligations at pilots are satisfiable with a printed/pre-filled artefact + manual portal entry</td>
+<td>GAP-7 scope bounded</td>
+<td>Q-LEG-02</td>
+<td>Deeper e-filing integration needed</td>
+</tr>
+<tr class="even">
+<td>ASM-18</td>
+<td>No PCI-scope data is stored (card entries are mode-labels only; OTA virtual cards never persisted)</td>
+<td>Avoids PCI burden</td>
+<td>Code + ingestion redaction check (Q-OTA-03)</td>
+<td>PCI scope accidentally acquired</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>10-assumptions-register.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

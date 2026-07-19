@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Requirements Document · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 01</p>
+  <h1>Business Requirements Document</h1>
+  <p class="sub">Business context, objectives, stakeholders, current &amp; future state, scope, risks, success metrics</p>
+  <div class="chips"><span class="chip">BRD-GHOH-001</span><span class="chip">v1.0</span><span class="chip">10 objectives</span></div>
+</div>
+<div class="content">
+<h1 id="business-requirements-document-brd">Business Requirements Document (BRD)</h1>
+<h2 id="guest-house-operations-hub--root-platform-pms-layer">Guest House Operations Hub — ROOT Platform PMS Layer</h2>
+<table>
+<tbody>
+<tr class="odd">
+<td><strong>Document</strong></td>
+<td>BRD-GHOH-001</td>
+</tr>
+<tr class="even">
+<td><strong>Version</strong></td>
+<td>1.0 (Discovery Pass 1 — pre-codebase-audit)</td>
+</tr>
+<tr class="odd">
+<td><strong>Date</strong></td>
+<td>2026-07-16</td>
+</tr>
+<tr class="even">
+<td><strong>Author</strong></td>
+<td>Discovery analysis (Claude, acting Sr. PM / BA / Solution Architect)</td>
+</tr>
+<tr class="odd">
+<td><strong>Sources</strong></td>
+<td>MindBit Solutions Pitch Deck (PRIME Meghalaya Innoventure Grant 2025–26); USER-GUIDE (v. current); repo README.md; docs/ROADMAP.md</td>
+</tr>
+<tr class="even">
+<td><strong>Status</strong></td>
+<td>DRAFT — pending stakeholder review of Open Questions (doc 09)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Evidence tagging convention (used across the whole discovery package):</strong> <code><span class="tag fact">FACT</span></code> — stated in an authoritative source · <code><span class="tag inferred">INFERRED</span></code> — reasonable deduction, needs confirmation · <code><span class="tag rec">REC</span></code> — analyst recommendation · <code><span class="tag openq">OPEN-Q</span></code> — must be answered by stakeholders (cross-referenced to doc 09).</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<p>MindBit Solutions LLP (Shillong, Meghalaya) is building <strong>ROOT — Regional Orchestration Of Tasks</strong> — a localized, multilingual AI infrastructure for Meghalaya's tourism and transport operators <code><span class="tag fact">FACT</span></code>. The <strong>Guest House Operations Hub</strong> is the property-management layer of ROOT: a mobile-first web application giving a small guest-house owner a single source of truth for bookings, calendar, guests, housekeeping, pricing, payments, finance, staff, facilities, and a regional community network, across direct, WhatsApp, and OTA (Booking.com / Agoda / MakeMyTrip) channels <code><span class="tag fact">FACT</span></code>.</p>
+<p>The product is deliberately <strong>not a channel manager</strong>: real-time OTA connectivity APIs are gated to certified channel-manager partners and are unavailable to a single small property <code><span class="tag fact">FACT</span></code>. Instead the hub ingests OTA bookings through the owner's own confirmation emails and iCal feeds, exports availability via free iCal links, and owns everything the OTAs do not — the unified calendar, guest CRM, operational workflows, pricing decisions, and finances <code><span class="tag fact">FACT</span></code>.</p>
+<p>A substantial prototype already exists (55+ Prisma models; six product milestones plus three gap-analysis phases, multi-property tenancy, RBAC, an AI-agent seam, and a community network, all reported "in production on main") <code><span class="tag fact">FACT</span></code>. This BRD treats that prototype as a <strong>starting point, not a finished product</strong>: the purpose of this discovery package is to identify what exists, what is missing, what is ambiguous, and what must be confirmed before the product is deployed at the scale the grant plan commits to (25+ businesses in 12 months) <code><span class="tag fact">FACT</span></code>.</p>
+<p><strong>Headline findings</strong> (detailed in the Gap Analysis, doc 06):</p>
+<ol>
+<li>The <strong>operational core is unusually strong</strong> for a prototype — DB-enforced double-booking prevention, derived availability, and a human-in-the-loop AI seam are correct-by-design decisions that most commercial PMS products get wrong. <code><span class="tag fact">FACT</span></code></li>
+<li>The largest risks are <strong>not features but operations</strong>: fleet management of one-deployment-per-client, backup/DR, monitoring, support model, and MindBit's own billing/monetisation tooling are undefined. <code><span class="tag inferred">INFERRED</span></code></li>
+<li>There is a <strong>positioning contradiction</strong> — the product is described as "self-hosted / locally owned data" while the reference deployment is Vercel + Supabase + Google Cloud Run (US/global cloud). <code><span class="tag fact">FACT</span></code></li>
+<li><strong>Compliance is under-specified</strong>: India's DPDP Act 2023 obligations for guest PII and ID scans, GST invoicing rules, and the Form C (FRRO) submission workflow are partially represented in the product but have no documented compliance position. <code><span class="tag inferred">INFERRED</span></code></li>
+<li>The <strong>community network (shared scam / bad-guest lists)</strong> is innovative but carries the package's highest legal exposure and needs a governance policy before scale. <code><span class="tag rec">REC</span></code></li>
+<li>The <strong>multilingual (Khasi/Hindi/English) promise applies to the AI guest layer but not to the operator console UI</strong>, which is English-only per the User Guide — a localization gap against the pitch's inclusion claims. <code><span class="tag inferred">INFERRED</span></code></li>
+</ol>
+<h2 id="2-business-context">2. Business Context</h2>
+<h3 id="21-the-problem-fact--pitch-deck">2.1 The problem <code><span class="tag fact">FACT</span></code></h3>
+<p>Small operators in Meghalaya run on manual coordination: bookings arrive by phone call or WhatsApp (often after hours and missed), the operator reads/interprets/decides manually, drivers are assigned by phone with no shared status, Khasi↔︎English translation happens by hand, and records live in hand-kept spreadsheets — no history, no analytics, no source of truth. Operators lose business to this fragility.</p>
+<h3 id="22-the-solution-thesis-fact--pitch-deck">2.2 The solution thesis <code><span class="tag fact">FACT</span></code></h3>
+<p>An always-on, multilingual AI layer (Khasi · Hindi · English, voice and text) that sits between the customer and the operator: multilingual chat, booking &amp; OTP automation, driver dispatch &amp; fallback, and a plain-language admin console. ROOT is explicitly <em>not</em> an aggregator (not OYO/MMT/Uber/Ola); it is the operational layer small operators use to run their own work. The stated moat: no national aggregator is built to serve the Khasi/regional operational level.</p>
+<h3 id="23-where-the-ops-hub-fits-fact--readmeuser-guide">2.3 Where the Ops Hub fits <code><span class="tag fact">FACT</span></code></h3>
+<p>The Ops Hub is the deterministic system-of-record the AI agents connect to through a token-gated seam. Agents can query availability, quote, book (through the same DB-guarded transaction as a human), queue messages, and file escalations — but never touch money or the calendar directly; sensitive actions always route to a human queue.</p>
+<h3 id="24-funding--delivery-context-fact--pitch-deck">2.4 Funding &amp; delivery context <code><span class="tag fact">FACT</span></code></h3>
+<p>PRIME Meghalaya Innoventure Grant ask: ₹15,00,000; founder co-financing ₹4,46,722; total ₹19,46,722. 12-month milestone plan: Q1 foundation + 3–5 pilots → Q2 cab module + 10 pilots → Q3 console &amp; monetisation + 15–20 → Q4 scale-readiness, 25+ businesses. Milestones support tranche-based fund release. Impact commitments: 4–6 local jobs, 25+ businesses in year one, Khasi/multilingual inclusion, locally-owned data and customer relationships.</p>
+<p><strong>Business implication <code><span class="tag rec">REC</span></code>:</strong> the grant milestones convert product gaps into <em>deadline-bound</em> obligations. Anything that blocks onboarding a new property in hours rather than days (setup wizard, fleet deploy tooling, training material) is on the critical path for Q3–Q4 milestones even though it is invisible in the feature list.</p>
+<h2 id="3-business-objectives">3. Business Objectives</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Objective</th>
+<th>Source</th>
+<th>Measure</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BO-01</td>
+<td>Give each property a single source of truth for all bookings across channels</td>
+<td>Pitch, README</td>
+<td>100% of the property's bookings (direct + OTA) recorded in the hub</td>
+</tr>
+<tr class="even">
+<td>BO-02</td>
+<td>Make internal double-bookings impossible and cross-channel double-bookings rare</td>
+<td>README, User Guide</td>
+<td>0 internal double-bookings (DB-enforced); cross-channel oversell incidents/quarter</td>
+</tr>
+<tr class="odd">
+<td>BO-03</td>
+<td>Capture bookings that today are lost after-hours or in translation</td>
+<td>Pitch</td>
+<td>After-hours booking conversion rate via AI assistant</td>
+</tr>
+<tr class="even">
+<td>BO-04</td>
+<td>Replace the expensive parts of a commercial channel manager</td>
+<td>README</td>
+<td>Monthly software cost to owner vs. channel-manager benchmark</td>
+</tr>
+<tr class="odd">
+<td>BO-05</td>
+<td>Show true profitability per channel (net of commission and expenses)</td>
+<td>User Guide</td>
+<td>Owner can state net-by-channel for any period</td>
+</tr>
+<tr class="even">
+<td>BO-06</td>
+<td>Reduce the owner's need to be available 24/7</td>
+<td>Pitch</td>
+<td>% guest interactions resolved by AI without escalation</td>
+</tr>
+<tr class="odd">
+<td>BO-07</td>
+<td>Keep data and customer relationships locally owned</td>
+<td>Pitch</td>
+<td>Data residency / ownership position documented and true</td>
+</tr>
+<tr class="even">
+<td>BO-08</td>
+<td>Build a regional trust network (referrals, scam/bad-guest alerts, shared vendors)</td>
+<td>User Guide</td>
+<td>Connected peers per property; referral volume; fraud losses avoided</td>
+</tr>
+<tr class="odd">
+<td>BO-09</td>
+<td>Deploy to 25+ Meghalaya businesses in 12 months on grant milestones</td>
+<td>Pitch</td>
+<td>Businesses live per quarter vs. milestone plan</td>
+</tr>
+<tr class="even">
+<td>BO-10</td>
+<td>Sustain MindBit through monetisation (Q3 milestone)</td>
+<td>Pitch</td>
+<td>Paying clients; revenue vs. plan <code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-stakeholders">4. Stakeholders</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Stakeholder</th>
+<th>Role / interest</th>
+<th>Responsibilities in this project</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Property owner</strong></td>
+<td>Primary customer &amp; primary user; controls money, settings, community participation</td>
+<td>Validates workflows, pricing, cancellation policy, ID rules; signs off pilot</td>
+</tr>
+<tr class="even">
+<td><strong>Reception staff</strong></td>
+<td>Daily bookings, check-in/out, payments, guest handling</td>
+<td>UAT of front-desk flows; feedback on speed on low-end phones</td>
+</tr>
+<tr class="odd">
+<td><strong>Housekeeping staff</strong></td>
+<td>Cleaning queue, room readiness</td>
+<td>UAT of housekeeping; validates checklist realism</td>
+</tr>
+<tr class="even">
+<td><strong>Guests (domestic / foreign)</strong></td>
+<td>Indirect users via AI chat, UPI links, invoices, messages</td>
+<td>N/A (represented via owner + research)</td>
+</tr>
+<tr class="odd">
+<td><strong>MindBit Solutions LLP</strong></td>
+<td>Product owner, deployer, support organisation</td>
+<td>Roadmap, fleet operations, compliance position, monetisation</td>
+</tr>
+<tr class="even">
+<td><strong>PRIME Meghalaya / grant committee</strong></td>
+<td>Funder; milestone verification</td>
+<td>Tranche release against milestones</td>
+</tr>
+<tr class="odd">
+<td><strong>OTA platforms</strong> (Booking.com, Agoda, MMT)</td>
+<td>Constraint-setters (ToS, iCal availability, email formats)</td>
+<td>None (external dependency; formats change without notice)</td>
+</tr>
+<tr class="even">
+<td><strong>Peer properties (community network)</strong></td>
+<td>Counterparties for referrals &amp; shared lists</td>
+<td>Opt-in participation; evidence standards for reports</td>
+</tr>
+<tr class="odd">
+<td><strong>Travel agents (B2B)</strong></td>
+<td>Bring bookings for commission</td>
+<td>Confirm commission terms &amp; settlement expectations</td>
+</tr>
+<tr class="even">
+<td><strong>Government (FRRO/police, GST)</strong></td>
+<td>Form C for foreign guests; tax compliance</td>
+<td>External requirements the product must serve</td>
+</tr>
+<tr class="odd">
+<td><strong>Meta (WhatsApp), Google (Gemini), Supabase, Vercel, Razorpay</strong></td>
+<td>Platform dependencies</td>
+<td>ToS, template approvals, pricing, availability</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-current-state-as-is">5. Current State (As-Is)</h2>
+<h3 id="51-without-the-product-fact--pitch-deck">5.1 Without the product <code><span class="tag fact">FACT</span></code></h3>
+<p>Manual phone/WhatsApp intake, hand translation, paper/spreadsheet records, no shared driver status, no analytics, missed after-hours bookings.</p>
+<h3 id="52-the-prototype-today-fact--readmeroadmap-verify-in-iteration-2">5.2 The prototype today <code><span class="tag fact">FACT</span></code></h3>
+<p>Delivered and reported in production: operations core (bookings, calendar, Today board, guests, housekeeping, admin); advisory pricing engine + rate calendar; check-in/out; guest CRM (history, LTV, blacklist, ID flags, C-Form fields); finance (per-channel net, expenses); analytics (occupancy/ADR/RevPAR/mix + CSV); invoices (browser print); bookings list; multi-property with shared-guest CRM; RBAC (owner/reception/housekeeping) + login rate limiting; staff/shift/attendance; maintenance + assets; inventory; vendors + procurement; transport records; tours; groups/folios; complaints; reviews tracker; audit log; travel agents; cancellation refund ladder; UPI pay-link + QR; payment verification checklist; scam numbers; community network (connections, grants, directory, referrals + credit ledger, verified scam/bad-guest sharing with hashed numbers, evidence, appeal, expiry); iCal import/export with daily sync; OTA email paste-parse Inbox + webhook seam + two ready forwarders; AI agent seam (availability/quote/book/escalate/message) with HITL escalations; assistant sidecar (Python, Google ADK + Gemini, Cloud Run) with personas, fallback, runtime policies, diagnostics, tests.</p>
+<p>Groundwork built but <strong>off by default</strong>: automatic email ingestion (token + forwarder), WhatsApp Cloud API adapter (needs credentials + Meta-approved templates), Razorpay gateway + hold (needs merchant keys), guest-ID document storage (needs bucket + env).</p>
+<p>Deferred / known debt (the repo's own canonical list): message <em>delivery</em> default-off; server-side PDFs; rates-to-OTA push (impossible by rule); whole-rupee <code>number</code> money math; per-instance rate limiter; route-handler test gaps; field-level money masking absent; no Postgres RLS; no user invites / password reset; ID-retention purge inert until configured; raw-SQL tenant-scoping discipline required.</p>
+<h3 id="53-as-is-assessment-rec">5.3 As-is assessment <code><span class="tag rec">REC</span></code></h3>
+<p>The prototype is a <strong>late-stage MVP with production-hardening gaps</strong>, not an early prototype. The correctness core (exclusion constraint, derived availability, HITL AI) is enterprise-grade in design. The unfinished layer is everything <em>around</em> the software: compliance posture, operations at fleet scale, resilience, observability, and the commercial machinery.</p>
+<h2 id="6-future-state-to-be">6. Future State (To-Be)</h2>
+<p>A property owner in Meghalaya runs the entire guest house from a phone <code><span class="tag fact">FACT</span></code>:</p>
+<ul>
+<li>Every booking — walk-in, WhatsApp, website, or OTA email — lands in one calendar within minutes, automatically parsed and human-confirmed; internal double-booking is impossible and the cross-channel window is minimised by automated iCal sync plus (optionally) one paired channel manager.</li>
+<li>The AI assistant answers guests in Khasi, Hindi, or English around the clock; anything sensitive lands in the owner's escalation queue with a summary and one-tap actions.</li>
+<li>Money is collected via UPI QR/link or gateway, verified against fake-payment scams, reconciled per channel net of commission, and exported for the accountant; invoices are GST-correct.</li>
+<li>Foreign-guest Form C data is captured at check-in and produces the artefact the local FRRO process requires <code><span class="tag openq">OPEN-Q</span></code>.</li>
+<li>Housekeeping, maintenance, inventory, staff attendance and vendor spend run as lightweight queues with accountability.</li>
+<li>The property participates, opt-in, in a regional trust network: overflow referrals with reciprocal credit, verified scam/bad-guest alerts, shared vendor/driver lists.</li>
+<li>MindBit operates a fleet of isolated per-client deployments with monitored health, tested backups, one-command onboarding, in-Khasi training material, and a subscription billing relationship.</li>
+</ul>
+<h2 id="7-key-business-processes-summary--full-detail-in-doc-04-workflows">7. Key Business Processes (summary — full detail in doc 04 Workflows)</h2>
+<ol>
+<li>Direct/WhatsApp/walk-in booking capture → conflict-checked confirmation → automated guest messaging.</li>
+<li>OTA booking ingestion (email parse → review → create) and iCal import (busy blocks).</li>
+<li>Availability push-out (iCal export; manual extranet updates; optional channel manager).</li>
+<li>Arrival: ID verification (+C-Form for foreigners) → check-in → in-house services.</li>
+<li>Departure: balance settlement → invoice → check-out → housekeeping task.</li>
+<li>Payments: deposit/advance → verification checklist (UPI/bank) → balance → refund ladder on cancellation.</li>
+<li>Pricing: rules produce advisory nightly rates → owner pins overrides → suggested price pre-fills bookings.</li>
+<li>Finance close: expenses, per-channel commission, net profit, CSV export.</li>
+<li>Facilities loops: maintenance requests, asset service schedules, inventory in/out, procurement.</li>
+<li>Team: roster, attendance, housekeeping assignment.</li>
+<li>Community: connect → grant shares → refer overflow → credit ledger → verified alert sharing.</li>
+<li>AI: guest conversation → tool calls through the seam → escalation → human action.</li>
+</ol>
+<h2 id="8-scope">8. Scope</h2>
+<h3 id="81-in-scope-this-product">8.1 In scope (this product)</h3>
+<p>Everything in §5.2 plus the hardening/completion workstreams defined in the Gap Analysis (doc 06) and phased in the Roadmap (doc 17): activation of email ingestion, WhatsApp delivery, gateway payments, ID storage; compliance workstream (DPDP, GST invoice fields, Form C artefact); operations workstream (backup/DR, monitoring, fleet onboarding); localization of the operator UI; MindBit-side billing.</p>
+<h3 id="82-out-of-scope-permanently-by-rule-fact--hard-rules">8.2 Out of scope (permanently, by rule) <code><span class="tag fact">FACT</span></code></h3>
+<ul>
+<li>Scraping / browser automation against OTA extranets.</li>
+<li>Direct Booking.com / Agoda / MakeMyTrip connectivity API integration.</li>
+<li>Storing availability as a mutable counter.</li>
+<li>Weakening the DB double-booking constraint.</li>
+<li>Acting as an OTA/aggregator (ROOT is an operational layer, not a marketplace).</li>
+</ul>
+<h3 id="83-out-of-scope-this-product-handled-elsewhere-in-root">8.3 Out of scope (this product, handled elsewhere in ROOT)</h3>
+<ul>
+<li>Live cab dispatch (separate ROOT module; hub keeps transport <em>records</em> only) <code><span class="tag fact">FACT</span></code>.</li>
+<li>The AI assistant's own runtime (separate Python sidecar service) <code><span class="tag fact">FACT</span></code>.</li>
+</ul>
+<h3 id="84-future-scope--stretch-doc-17-has-the-full-phased-plan">8.4 Future scope / stretch (doc 17 has the full phased plan)</h3>
+<p>Channel-manager pairing; owner mobile push notifications; guest self-service portal; payment gateway alternatives; accounting-software export (Tally); occupancy-tax/GST filings support; Khasi operator UI; offline-first hardening; community-network expansion beyond guest houses (homestays, cabs, tours).</p>
+<h2 id="9-business-risks-top-line--full-register-in-doc-07">9. Business Risks (top-line — full register in doc 07)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Risk</th>
+<th>Prob.</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RSK-B1</td>
+<td>Fleet operations (one deployment per client) don't scale to 25+ clients with a 3-founder team</td>
+<td>High</td>
+<td>High</td>
+</tr>
+<tr class="even">
+<td>RSK-B2</td>
+<td>Grant milestones slip because onboarding/monetisation tooling was never scoped</td>
+<td>Med</td>
+<td>High</td>
+</tr>
+<tr class="odd">
+<td>RSK-B3</td>
+<td>"Self-hosted / locally-owned data" positioning contradicted by US-cloud reference stack</td>
+<td>Med</td>
+<td>Med–High (grant/reputation)</td>
+</tr>
+<tr class="even">
+<td>RSK-B4</td>
+<td>Shared bad-guest/scam lists create defamation or DPDP liability</td>
+<td>Med</td>
+<td>High</td>
+</tr>
+<tr class="odd">
+<td>RSK-B5</td>
+<td>WhatsApp/Meta template rejection blocks the messaging value proposition</td>
+<td>Med</td>
+<td>Med</td>
+</tr>
+<tr class="even">
+<td>RSK-B6</td>
+<td>OTA changes (email format, iCal removal) silently break ingestion</td>
+<td>High</td>
+<td>Med</td>
+</tr>
+<tr class="odd">
+<td>RSK-B7</td>
+<td>Data loss at a pilot property (no documented backup/restore) destroys trust regionally</td>
+<td>Low–Med</td>
+<td>Very High</td>
+</tr>
+</tbody>
+</table>
+<h2 id="10-assumptions-top-line--full-register-in-doc-10">10. Assumptions (top-line — full register in doc 10)</h2>
+<p>Single-timezone (IST) operation; INR-only money; smartphone + intermittent connectivity as baseline; owner literate in English for the console (until localized); OTA iCal availability varies by listing type; guest consent obtainable at check-in; Meta/Google/Supabase terms remain compatible.</p>
+<h2 id="11-success-metrics">11. Success Metrics</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Metric</th>
+<th>Target (proposed <code><span class="tag rec">REC</span></code> — confirm with stakeholders)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Internal double-bookings</td>
+<td>0 (hard invariant)</td>
+</tr>
+<tr class="even">
+<td>Cross-channel oversell incidents</td>
+<td>&lt; 1 / property / quarter with iCal sync active</td>
+</tr>
+<tr class="odd">
+<td>Time to onboard a new property</td>
+<td>&lt; 1 day by Q4 of grant plan</td>
+</tr>
+<tr class="even">
+<td>OTA email → booking created</td>
+<td>&lt; 10 min with forwarder active; 100% human-reviewed</td>
+</tr>
+<tr class="odd">
+<td>% guest messages handled by AI without escalation</td>
+<td>&gt; 60% by Q4</td>
+</tr>
+<tr class="even">
+<td>Owner weekly time on admin</td>
+<td>−50% vs. baseline interview</td>
+</tr>
+<tr class="odd">
+<td>Monthly cost to owner vs. channel manager</td>
+<td>≤ 50%</td>
+</tr>
+<tr class="even">
+<td>Properties live</td>
+<td>3–5 (Q1) → 10 (Q2) → 15–20 (Q3) → 25+ (Q4) <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="odd">
+<td>Restore-from-backup drill</td>
+<td>Quarterly, &lt; 4h RTO <code><span class="tag rec">REC</span></code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-approval--next-steps">12. Approval &amp; next steps</h2>
+<ol>
+<li>Stakeholders answer the Question Log (doc 09) — the ambiguities in doc 08 block design decisions.</li>
+<li>Iteration 2: codebase/architecture audit to convert <code><span class="tag inferred">INFERRED</span></code> items to <code><span class="tag fact">FACT</span></code>.</li>
+<li>Backlog (doc 14) groomed against the answers; roadmap (doc 17) re-baselined to grant quarters.</li>
+</ol>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>01-BRD.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

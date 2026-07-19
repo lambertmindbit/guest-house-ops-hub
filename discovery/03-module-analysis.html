@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module-by-Module Analysis · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 03</p>
+  <h1>Module-by-Module Analysis</h1>
+  <p class="sub">Every module dissected — inputs, outputs, validations, business rules, edge cases, risks</p>
+  <div class="chips"><span class="chip">12 Tier-A deep dives</span><span class="chip">16 Tier-B modules</span></div>
+</div>
+<div class="content">
+<h1 id="module-by-module-analysis">Module-by-Module Analysis</h1>
+<h2 id="guest-house-operations-hub--discovery-doc-03--v10--2026-07-16">Guest House Operations Hub — Discovery doc 03 · v1.0 · 2026-07-16</h2>
+<p>Depth is calibrated: <strong>Tier A</strong> (correctness-/money-/legal-critical) modules get the full template (purpose, actors, journey, requirements, rules, validations, edge cases, risks, dependencies, APIs, DB, permissions). <strong>Tier B</strong> modules get a compact template. FR/BR/GAP/Q IDs cross-reference docs 02/05/06/09.</p>
+<p>Legend: <code>[F]</code> fact from sources · <code>[I]</code> inferred · <code>[R]</code> recommendation · <code>[Q]</code> open question.</p>
+<hr />
+<h1 id="tier-a-modules">TIER A MODULES</h1>
+<h2 id="a1-booking-engine">A1. Booking Engine</h2>
+<p><strong>Purpose.</strong> Create and manage reservations — the system's central transaction — with double-booking impossible at the database level. <strong>Actors.</strong> Reception, Owner, AI agent (via seam), Inbox review flow, CSV import. <strong>Permissions.</strong> Owner + Reception create/edit/cancel; Housekeeping none; Agent creates only via token seam.</p>
+<p><strong>User journey (happy path).</strong> New → guest name+phone (existing guest auto-matched by phone) → channel → optional travel agent → room → dates (+arrival time) → amount (pricing suggestion pre-fills; "Use" or type) → special requests → ID-confirmation tick → Save → confirmed; confirmation message auto-drafted to outbox.</p>
+<p><strong>Inputs.</strong> guestName, phone, email?, channelId, agentId?, roomId, checkIn, checkOut, arrivalTime?, grossAmount, specialRequests?, idConfirmed, advanceRequired? <strong>Outputs.</strong> Reservation(confirmed), Guest (created or reused), OutboundMessage(draft confirmation), calendar/Today updates. <strong>Preconditions.</strong> Authenticated non-housekeeping user in acting property; room active (not archived). <strong>Postconditions.</strong> <code>stay = [checkIn, checkOut)</code> DATERANGE persisted; no overlapping confirmed stay exists for the room (DB-guaranteed); availability derivations updated implicitly.</p>
+<p><strong>Validations.</strong></p>
+<ul>
+<li>checkOut &gt; checkIn (half-open; 1-night minimum). <code>[Q]</code> max stay length? past-dated bookings allowed (for import/records)? — Q-OPS-01.</li>
+<li>Phone format normalization (critical: dedupe + scam-list + community hashing all key on phone <code>[R]</code> — E.164 canonicalization required; unverified <code>[I]</code>).</li>
+<li>Amount ≥ 0; within sanity bounds <code>[R]</code>; whole-rupee today (GAP-9).</li>
+<li>If property setting "ID number required to book" — enforce <code>[F]</code>.</li>
+<li>Warnings (non-blocking): blacklist hit, scam-number hit <code>[F]</code>.</li>
+</ul>
+<p><strong>Business rules.</strong> BR-BOOK-01…09 (doc 05). Key: overlap→friendly 409; cancelled/no_show stays don't block dates; blacklist warns-not-blocks; agent commission attribution at booking time.</p>
+<p><strong>Exceptions / error conditions.</strong></p>
+<ul>
+<li>GiST violation → "those dates are no longer available for this room" (23P01 sniffed in <code>db-errors.ts</code> — fragile string-matching, keep tests green <code>[F]</code>).</li>
+<li>Race: two receptionists booking the same room simultaneously → one wins, one gets 409 — correct by design <code>[F]</code>.</li>
+<li>Guest phone matches two properties' history: guests are owner-wide, fine <code>[F]</code>; matches <em>another client</em>: invisible (separate DBs) <code>[F]</code>.</li>
+</ul>
+<p><strong>Alternate flows.</strong> Edit (dates changed → same constraint path); cancel (→ Cancellation module); agent-seam create (same transaction, 409 on overlap <code>[F]</code>); CSV import row (same checks <code>[F]</code>); group booking (each room normal, then attached to folio <code>[F]</code>).</p>
+<p><strong>Edge cases requiring decisions.</strong></p>
+<ol>
+<li>Same-day checkout+checkin turnover on one room — half-open ranges make this legal <code>[F]</code>; housekeeping "clean first" flag covers ops <code>[F]</code>.</li>
+<li>Booking spanning a rate-season boundary: amount is a single figure; no per-night rate breakdown stored — limits invoice detail &amp; analytics precision <code>[R]</code> GAP-22.</li>
+<li>Room archived while holding future bookings — allowed? <code>[Q]</code> Q-OPS-02.</li>
+<li>Guest books 2 rooms same dates (family) — two reservations + optional group folio <code>[F]</code>; UX cost of re-entering guest <code>[I]</code>.</li>
+<li>Overbooking <em>by room type</em> intentionally (sell N+1 expecting cancellation) — impossible by design (room-level assignment at creation). This is a <strong>deliberate product stance</strong>: no unassigned/room-type-level bookings. Confirm the stance is acceptable for peak season <code>[Q]</code> Q-OPS-05 — many small hotels want type-level booking with room assignment at check-in. <strong>High-impact design question.</strong></li>
+<li>Modification arriving from OTA (date change) — no linked-update path (GAP-2).</li>
+</ol>
+<p><strong>Risks.</strong> Money math (GAP-9); error-string sniffing breaks on Postgres/Prisma upgrade; no route-level 409 test (repo-acknowledged). <strong>Dependencies.</strong> Availability engine, Pricing suggestion, Guest dedupe, Channels, Agents, Messaging outbox, audit log. <strong>APIs.</strong> CRUD reservation routes; <code>POST /api/agent/reservations</code>; availability query. (Exact route audit — iteration 2.) <strong>DB.</strong> <code>Reservation</code> (stay DATERANGE, status enum, checkedInAt/OutAt, otaRef, agentId, advanceRequired, groupId…), GiST exclusion <code>WHERE status='confirmed'</code>.</p>
+<hr />
+<h2 id="a2-availability-engine">A2. Availability Engine</h2>
+<p><strong>Purpose.</strong> Derive free units per room type/date from reservations + blocks; the correctness core. <strong>Rules.</strong> available(type, date) = units(type) − confirmed reservations overlapping date − blocks overlapping date <code>[F]</code>. Never stored <code>[F]</code> (C-03). <strong>Actors.</strong> Every booking surface; agent seam (<code>GET /api/agent/availability</code>); community shared-availability (derived) <code>[F]</code>. <strong>Edge cases.</strong> Archived rooms excluded from units but history retained <code>[F]</code>; blocks from iCal import count as busy <code>[F]</code>; cancelled frees instantly <code>[F]</code> — but <strong>iCal export consumers see it only on their next pull</strong> → transient phantom-busy on OTAs <code>[I]</code>; DST-free zone (IST) simplifies dates, but server TZ vs property TZ must be pinned <code>[Q]</code> Q-TEC-05. <strong>Risks.</strong> Raw SQL in <code>freeRooms</code> must hand-scope <code>property_id</code> <code>[F — repo-acknowledged]</code>; any new raw query is a cross-property leak risk (within one owner). <code>[R]</code> CI grep-guard. <strong>Missing.</strong> Oversell buffer feature (FR-AVAIL-5, GAP-24); availability by <em>type</em> for agents when multiple units (agent quoting picks a room how? <code>[Q]</code> Q-AI-02).</p>
+<hr />
+<h2 id="a3-calendar--conflicts">A3. Calendar &amp; Conflicts</h2>
+<p><strong>Purpose.</strong> Visual command centre (rooms × dates); surface conflicts needing human decision. <strong>Journey.</strong> Swipe/page dates; tap stay → detail; tap empty night → prefilled new booking; views Day/Week/2-Week/Month <code>[F]</code>. <strong>Conflict semantics.</strong> Two confirmed bookings can never overlap (prevented) <code>[F]</code>; conflicts = booking × block overlaps (e.g. iCal block lands on an existing stay, or manual block over a stay) → red + Conflicts screen; resolve by editing either side <code>[F]</code>. <strong>Edge cases.</strong> iCal import creating a block over an existing direct booking is the <em>expected</em> cross-channel double-book detection path <code>[I]</code> — make this explicit in ops training <code>[R]</code>. Offline-created booking that clashed syncs → "the app tells you" <code>[F]</code> — surface &amp; flow unverified <code>[Q]</code> Q-TEC-04. <strong>Missing.</strong> Drag-to-move/resize stays <code>[R nice-to-have]</code>; room-change mid-stay (split stay) — no evidence of support <code>[Q]</code> Q-OPS-07 — common hotel need.</p>
+<hr />
+<h2 id="a4-payments-refunds-deposits-money-core">A4. Payments, Refunds, Deposits (money core)</h2>
+<p><strong>Purpose.</strong> Record and verify money in; compute refunds on cancellation; keep balance truthful. <strong>Actors.</strong> Owner, Reception (record <code>[F — "record payments" is day-to-day]</code>; visibility of totals for reception <code>[Q]</code> — money is owner-only per RBAC, yet reception records payments: exact boundary needs definition — Q-FIN-05 <strong>[contradiction candidate]</strong>).</p>
+<p><strong>Journey (collect).</strong> Booking → payments panel (collected, balance due) → Add payment (amount, mode) → if UPI/bank: verification checklist (sender name, funds landed, UTR) must all be ticked before save <code>[F]</code> → advance flag if applicable → balance recomputes. <strong>Journey (refund).</strong> Cancel booking → ladder computes suggested refund → owner approves same or different amount → Refund recorded (status) → payout executed outside the system <code>[I]</code>.</p>
+<p><strong>Validations.</strong> amount &gt; 0; amount ≤ outstanding? <code>[Q]</code> — overpayment/credit handling undefined Q-FIN-06; UTR format check <code>[R]</code>; mode ∈ {cash, UPI, card, bank, OTA-collect}. <strong>Business rules.</strong> BR-PAY-01…08 (doc 05): advance status derived never stored <code>[F]</code>; OTA-collect implies money arrives via OTA payout not guest <code>[I]</code> — reconciliation gap GAP-13. <strong>Exceptions.</strong> Fake-payment scam attempt → checklist blocks <code>[F]</code>; gateway webhook replay → idempotency (planned Razorpay) <code>[F]</code>. <strong>Edge cases.</strong> Partial refund after partial payment (refund &gt; paid?); refund of OTA-collect booking (OTA refunds guest; hub must not double-count) <code>[Q]</code> Q-FIN-07; currency setting ≠ INR with UPI links <code>[I contradiction]</code> Q-FIN-08; payment recorded on cancelled booking. <strong>Risks.</strong> Whole-rupee float math (GAP-9 — Must-fix before accounting claims); no payment immutability/void-with-audit (Q-FIN-04); reception/owner money boundary (above). <strong>DB.</strong> <code>Payment</code> (mode enum, isAdvance), <code>Refund</code> (status enum), <code>CancellationPolicy</code> tiers.</p>
+<hr />
+<h2 id="a5-invoicing--finance">A5. Invoicing &amp; Finance</h2>
+<p><strong>Purpose.</strong> Give the guest a bill; give the owner truth (net = gross − commission − expenses) and accountant-ready exports. <strong>Delivered.</strong> Invoice (browser print) with property identity + GST number; finance tiles, by-channel, expenses, balances due, CSVs <code>[F]</code>. <strong>Hidden complexity <code>[R]</code>.</strong></p>
+<ul>
+<li><em>GST correctness</em>: hotel tariffs attract slab-dependent GST; invoice today shows a GST <em>number</em> but no evidence of tax lines/rates. If any pilot is GST-registered this is a legal must (GAP-11, Q-FIN-02).</li>
+<li><em>Invoice numbering</em>: sequential, gap-free series per financial year is a statutory expectation; browser-print with no stored invoice record breaks this <code>[I]</code> — recommend an <code>Invoice</code> entity with immutable number/snapshot <code>[R]</code>.</li>
+<li><em>Commission basis</em>: Booking.com commission-on-gross vs MMT net-rate models differ; single <code>commission_pct</code> per channel may misstate net (Q-FIN-01).</li>
+<li><em>Agent + channel commission stacking</em> on one booking — both can apply <code>[I]</code>; confirm intended arithmetic (Q-FIN-01).</li>
+<li><em>Accrual vs cash</em>: tiles mix confirmed revenue and received payments; date-range semantics (by stay date? booking date? payment date?) undefined <code>[Q]</code> Q-FIN-09 — analytics can silently mislead. <strong>Missing.</strong> OTA payout reconciliation (GAP-13); Tally/accounting export (future); expense categories/receipts <code>[Q]</code> Q-FIN-10.</li>
+</ul>
+<hr />
+<h2 id="a6-ota-email-ingestion-inbox">A6. OTA Email Ingestion (Inbox)</h2>
+<p><strong>Purpose.</strong> Get OTA bookings into the calendar without APIs, with a human always confirming. <strong>Journey.</strong> Confirmation email arrives → (manual paste <strong>or</strong> forwarder → webhook) → parser stages <code>InboundBooking</code> (pending review) with guest/dates/amount best-effort → operator corrects, picks room → Create (conflict-checked) or Dismiss; original viewable <code>[F]</code>. <strong>Validations.</strong> Parsed dates sane; amount numeric; duplicate <code>ota_ref</code> suppression <code>[I — verify]</code>; token check on webhook. <strong>Failure paths.</strong> Unparseable → staged raw with reason (FR-ING-4) <code>[R — confirm behaviour]</code>; forwarder down → emails simply don't arrive (silent!) <code>[R]</code> add heartbeat GAP-5; OTA format change → parse quality degrades silently <code>[R]</code> add parse-confidence metric. <strong>Edge cases / missing.</strong> Modification &amp; cancellation emails (GAP-2 — today they'd stage as a <em>new</em> pending item at best, or parse wrongly; a modification not applied = ghost availability or oversell); multi-room OTA bookings in one email; virtual-card payment details in Booking.com emails (PCI-sensitive — do not store <code>[R]</code>); non-English emails. <strong>Risks.</strong> RSK-B6 (format drift); Gmail Apps Script quotas <code>[I]</code>. <strong>Dependencies.</strong> Booking engine, forwarders (<code>integrations/</code>), token config.</p>
+<hr />
+<h2 id="a7-ical-import--export--cross-channel-sync">A7. iCal Import / Export &amp; Cross-Channel Sync</h2>
+<p><strong>Purpose.</strong> Minimise (not eliminate) the cross-channel double-booking window using free feeds. <strong>Semantics <code>[F]</code>.</strong> Import: OTA busy dates → blocks per room; daily auto + manual Sync now. Export: private per-room <code>.ics</code> of busy dates. iCal is not real-time (hours lag), binary busy/free per single unit, availability-only (no rates/guests), and not offered for all listing types. <strong>Edge cases.</strong></p>
+<ul>
+<li>Multi-unit room types: an OTA listing "3 Deluxe" cannot be expressed — iCal is per <em>room</em>; mapping OTA listing↔︎hub room must be 1:1 or oversell risk persists <code>[F/I]</code> — onboarding rule <code>[R]</code>.</li>
+<li>Event removed at OTA (their cancellation) → must release block (Q-TEC-06); stale blocks = lost revenue.</li>
+<li>Import overlapping an existing confirmed stay → conflict flag (by design) — who wins, and what does the owner <em>do</em>? Needs playbook <code>[R]</code>.</li>
+<li>Export URL leak = availability disclosure; single shared token (repo suggests per-feed rotation) <code>[F]</code>.</li>
+<li>Feed URL rot / OTA disables iCal → silent staleness (GAP-5: last-success timestamp + alert <code>[R]</code>). <strong>Risks.</strong> Residual oversell window is <em>honest and documented</em> <code>[F]</code> — mitigation ladder: buffer feature (GAP-24) → more frequent sync (GAP-6) → paired channel manager (future scope).</li>
+</ul>
+<hr />
+<h2 id="a8-check-in--check-out-id-verification-form-c">A8. Check-in / Check-out, ID Verification, Form C</h2>
+<p><strong>Purpose.</strong> Legal-grade arrival processing; housekeeping trigger on departure. <strong>Journey.</strong> Arrival → booking → gate: ID recorded (number, scan, or verified tick; C-Form fields for foreign guests) per property strictness block/warn/off → Check in (timestamp) → … → Check out → room joins To-clean <code>[F]</code>. Undo steps back one stage <code>[F]</code>. <strong>Validations.</strong> Gate logic per settings <code>[F]</code>; foreign guest detection — how? nationality field? <code>[Q]</code> Q-OPS-10 (a foreigner mis-filed as domestic silently skips C-Form — validation needed <code>[R]</code>). <strong>Form C reality check <code>[R]</code>.</strong> Indian rules require reporting foreign guests (Form C via FRRO portal) typically within 24h of arrival. The hub captures the 13 fields but produces <strong>no artefact and no submission support</strong> (GAP-7). Minimum viable: printable/exportable pre-filled Form C + a "submitted" checkbox + due-within-24h reminder. Actual FRRO e-submission is out of scope (no public API <code>[I]</code>), Q-LEG-02. <strong>Edge cases.</strong> Early check-in/late check-out fees — no fee construct <code>[Q]</code> Q-OPS-11; check-out with balance due allowed? (Q-OPS-03); group check-in (one ID per guest or per booking? registry expectations <code>[Q]</code> Q-LEG-04); walk-in with no booking — must create booking first <code>[F implied]</code>. <strong>Data protection.</strong> ID scans = sensitive PII: retention default indefinite until configured (repo-acknowledged — change default <code>[R]</code>); access logging on views/downloads ✖ (GAP-15).</p>
+<hr />
+<h2 id="a9-pricing-engine-advisory">A9. Pricing Engine (advisory)</h2>
+<p><strong>Delivered <code>[F]</code>.</strong> Rules: weekend (days+uplift), seasons/holidays date-ranges with adjustment, early-bird/last-minute by lead time, busy-period/occupancy; compounded, clamped to floor/ceiling; rate calendar; pinned overrides; pre-fill on booking; never external, never rewrites bookings. <strong>Dissection.</strong></p>
+<ul>
+<li>Compounding order &amp; interaction (e.g. weekend × season × last-minute stacking to ceiling constantly?) undocumented — Q-OPS-08; publish the formula in Help <code>[R]</code>.</li>
+<li>Override scope = room type × date <code>[F]</code>; per-<em>room</em> premium (view/balcony) impossible — acceptable? <code>[Q]</code>.</li>
+<li>Occupancy input to busy-pricing: which occupancy (that date's forecast)? <code>[I]</code> verify.</li>
+<li>No competitor/OTA-parity awareness — advisory-only is honest, but suggestion drift vs OTA published rates confuses guests quoting both <code>[R]</code> note in training. <strong>Risks.</strong> Low — advisory design contains blast radius <code>[R — good design]</code>.</li>
+</ul>
+<hr />
+<h2 id="a10-ai-agent-seam--escalations-hitl">A10. AI Agent Seam &amp; Escalations (HITL)</h2>
+<p><strong>Delivered <code>[F]</code>.</strong> Token-gated fail-closed seam: availability / quote / create-reservation (same GiST transaction) / queue-message / file-escalation; escalation queue with source/category/severity, guest message + summary, open→in-progress→resolved; owner-editable runtime policies (~1 min apply); sidecar: persona isolation (guest vs owner, startup assertion), canonical security block outranking owner policies, model fallback chain, per-turn diagnostics, FAQ media, pytest+CI. <strong>Dissection.</strong></p>
+<ul>
+<li><strong>Escalation latency</strong>: queue+badge only; an owner asleep = guest waiting hours. Push/WhatsApp notify on high-severity ✖ (GAP-14, Must for BO-06).</li>
+<li>Agent-created bookings: which guest identity checks apply (scam list? blacklist?) at seam level <code>[Q]</code> Q-AI-03; amount = quote from pricing engine <code>[I]</code>.</li>
+<li>Quote→book race: no hold; guest confirms, room gone → 409 → agent must handle gracefully (verify UX <code>[Q]</code> Q-AI-02).</li>
+<li>Prompt-injection: canonical security block exists <code>[F]</code>; red-team evidence <code>[Q]</code> Q-AI-05.</li>
+<li>Guest PII → Gemini (US processing): consent/notice ✖ (NFR-PRV-04).</li>
+<li>Seam versioning/contract tests between hub and sidecar <code>[R]</code>. <strong>Permissions.</strong> Escalation resolution: owner+reception <code>[I]</code>; linked sensitive action (cancel/refund) through normal RBAC-guarded screens <code>[F — good]</code>.</li>
+</ul>
+<hr />
+<h2 id="a11-community-network-referrals-shared-lists">A11. Community Network (referrals, shared lists)</h2>
+<p><strong>Delivered <code>[F]</code>.</strong> Connect codes; per-peer grants (rooms/referrals/scam/bad-guest/vendors/drivers); directory by amenities; referrals: full property refers guest → peer accepts → books via normal conflict-checked path → revenue attributed → derived reciprocal-credit ledger; verified scam/bad-guest sharing: evidence required, dispute/appeal, auto-expiry, hashed phone matching, opt-in, no PII/occupancy/finance ever; single audited grant-gated seam. <strong>Dissection — the package's most legally exposed module <code>[R]</code>.</strong></p>
+<ol>
+<li><strong>Topology</strong>: clients are fully isolated deployments — where do shared reports and referrals physically live? A MindBit-operated registry service? Peer-to-peer? Undefined in available docs — Q-LEG-03/Q-TEC-07. This decides data-controller responsibilities.</li>
+<li><strong>Defamation/DPDP</strong>: a "bad guest" alert is an adverse profile of an identifiable person. Evidence+appeal+expiry are the right primitives <code>[R — good]</code>, but need: written moderation policy, who adjudicates disputes across independent owners, notice to the flagged person? (likely impractical — legal review required), and hashing that resists enumeration (phones are 10-digit; salt/pepper per-network <code>[R]</code>, NFR-SEC-09).</li>
+<li><strong>Referral credit ledger</strong>: derived, never stored <code>[F — good]</code>; but settlement (cash? reciprocity only?), dispute, and what happens on peer disconnect — undefined (Q-BUS-06).</li>
+<li><strong>Referred-guest PII</strong>: sending a guest to a peer inherently shares name+phone — reconcile with "guests' private details are never shared" (consent at referral moment <code>[R]</code>) — Q-LEG-05. <strong>Risks.</strong> RSK-B4 (top legal risk); trust erosion if one bad actor games alerts (rate-limit reports, reputation-weight <code>[R]</code>).</li>
+</ol>
+<hr />
+<h2 id="a12-auth-rbac--multi-tenancy">A12. Auth, RBAC &amp; Multi-tenancy</h2>
+<p><strong>Delivered <code>[F]</code>.</strong> User table, scrypt, roles owner/reception/housekeeping ("money only for owners"), login rate-limit, per-property access grants, auto-scoping tenant extension, audit of user changes; separate clients = separate everything. <strong>Gaps (repo-acknowledged + analysis).</strong> Password reset &amp; invites ✖ (GAP-10 — owner hand-sets passwords: unworkable at 25 clients); field-level money masking ✖; RLS ✖; session revocation semantics <code>[Q]</code> Q-SEC-03; role list fixed — no custom roles (fine for MVP <code>[R]</code>); housekeeping login sees guest names? (privacy-minimal view <code>[R]</code>).</p>
+<hr />
+<h1 id="tier-b-modules-compact">TIER B MODULES (compact)</h1>
+<h2 id="b1-today-dashboard">B1. Today Dashboard</h2>
+<p>Tiles (occupancy, in-house, check-ins/outs), arrival/departure lists with status ticks, 7-day arrivals, attention banners (cleaning, conflicts), owner-only pending-payments card <code>[F]</code>. Edge: date rollover at midnight vs late checkouts <code>[Q]</code> Q-OPS-12 (no night-audit concept — acceptable for segment <code>[R]</code>, document behaviour). Risks: low. Deps: everything.</p>
+<h2 id="b2-guests-list--profile">B2. Guests list &amp; profile</h2>
+<p>Covered under A8/CRM aspects; additional: search by name/phone <code>[F]</code>; merge duplicates ✖ (GAP-19); export-my-data ✖ (GAP-8); notes are free-text PII — retention policy applies <code>[R]</code>.</p>
+<h2 id="b3-housekeeping">B3. Housekeeping</h2>
+<p>Derived to-clean + manual flag + assignment + checklist <code>[F]</code>. Missing: inspected state, deep-clean cadence, dirty-room booking guard (GAP-20). Permissions: housekeeping role sees only this + Today <code>[F]</code>.</p>
+<h2 id="b4-staff-shifts-attendance">B4. Staff, Shifts, Attendance</h2>
+<p>Directory/roster/attendance <code>[F]</code>. Edge: attendance vs shift mismatch un-flagged <code>[I]</code>; no overtime/payroll (Q-OPS-09). Low risk.</p>
+<h2 id="b5-maintenance--assets">B5. Maintenance &amp; Assets</h2>
+<p>Requests (priority/assignee/cost/status), assets with service-every-N-days + due flag <code>[F]</code>. Edge: request→auto room block linkage ✖ <code>[R nice]</code>; cost feeds expenses? <code>[Q]</code> Q-FIN-10.</p>
+<h2 id="b6-inventory--procurement">B6. Inventory &amp; Procurement</h2>
+<p>Items (unit, low level), in/out movements, low banners; vendors+rating; PO draft→ordered→received; vendor payments + summary <code>[F]</code>. Edge: PO received → stock-in automation ✖ <code>[I]</code>; no valuation/costing (fine <code>[R]</code>).</p>
+<h2 id="b7-transport--tours">B7. Transport &amp; Tours</h2>
+<p>Drivers, trips (records; dispatch in ROOT) <code>[F]</code>; tour partners (commission), tours, tour bookings + summaries <code>[F]</code>. Edge: tour commission owed vs paid tracking parity with agents <code>[I]</code>.</p>
+<h2 id="b8-complaints--reviews">B8. Complaints &amp; Reviews</h2>
+<p>Complaints: category/priority/assignee/status/follow-up <code>[F]</code>. Reviews: request tracking + drafted responses <code>[F]</code> — drafted by AI? send path? <code>[Q]</code> Q-AI-06. Edge: complaint→escalation cross-link <code>[R]</code>.</p>
+<h2 id="b9-travel-agents">B9. Travel Agents</h2>
+<p>Directory (name/phone/commission %, verified, deactivate); per-agent bookings + commission owed this month (derived) <code>[F]</code>. Edge: commission payment recording ✖ (owed shown, settlement untracked <code>[I]</code>) — Q-FIN-11; rate changes affect past bookings? (snapshot rate at booking <code>[R]</code>).</p>
+<h2 id="b10-messaging-outbox">B10. Messaging Outbox</h2>
+<p>LogAdapter, <code>/messages</code>, auto-drafts (confirmation, pre-arrival, payment reminder), WhatsApp adapter off-by-default, agent queue endpoint <code>[F]</code>. Gaps: templates+params+language (GAP-3), two-way inbound (GAP-4), quiet hours/opt-out <code>[R]</code> (spam + WhatsApp policy).</p>
+<h2 id="b11-settings--system-administration">B11. Settings &amp; System Administration</h2>
+<p>Full table per User Guide <code>[F]</code>. Missing admin: backup/restore visibility, health page, data export (client offboarding) — GAP-1/17/23.</p>
+<h2 id="b12-csv-import">B12. CSV Import</h2>
+<p>Historical guests+bookings, row-wise conflict-checked <code>[F]</code>. Edge: partial-failure reporting, idempotent re-run, template docs <code>[Q]</code> Q-OPS-13.</p>
+<h2 id="b13-audit-log">B13. Audit Log</h2>
+<p>Sensitive actions: cancellations, refunds, blacklisting, user &amp; consent changes <code>[F]</code>. Extend coverage (GAP-15); tamper-evidence (append-only) <code>[R]</code>; retention <code>[Q]</code>.</p>
+<h2 id="b14-notifications-cross-cutting">B14. Notifications (cross-cutting)</h2>
+<p>In-app banners/badges only <code>[I]</code>. Missing: push (PWA <code>PushSubscription</code> model exists in schema <code>[F]</code> — wired? <code>[Q]</code> Q-TEC-08), escalation alerts (GAP-14), cron-failure alerts (GAP-5).</p>
+<h2 id="b15-offline--sync">B15. Offline &amp; Sync</h2>
+<p>Claimed queue-and-sync with clash surfacing <code>[F — User Guide]</code>; implementation depth unknown — the single largest fact-gap for iteration 2 (Q-TEC-04). Spec target <code>[R]</code>: read cache for Today/Calendar/Guests; write queue for check-in/out, payments (dangerous offline — consider excluding), housekeeping marks; explicit conflict UX.</p>
+<h2 id="b16-pwa--mobile">B16. PWA / Mobile</h2>
+<p>Installable, bottom tab bar + FAB, dark/light, accent, density <code>[F]</code>. Verify: iOS Safari quirks, low-end Android perf budget (NFR-PRF-01), 2G fallback <code>[R]</code>.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>03-module-analysis.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>
