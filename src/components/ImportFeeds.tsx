@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
+import { describeSyncAge, isFeedStale } from "@/lib/feed-health";
 
 export type RoomOption = { id: string; label: string; roomTypeName: string };
 export type FeedRow = {
@@ -126,9 +127,12 @@ export function ImportFeeds({ rooms, feeds }: { rooms: RoomOption[]; feeds: Feed
                   <div style={{ fontSize: "var(--fs-meta)", color: "var(--text-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.url}</div>
                   <div style={{ marginTop: 4, fontSize: "var(--fs-meta)" }}>
                     {f.lastError ? (
-                      <span style={{ color: "var(--red-text)" }}>Error: {f.lastError}</span>
+                      <span style={{ color: "var(--red-text)" }}>Sync failed ({describeSyncAge(f.lastSyncedAt, new Date())}): {f.lastError}</span>
                     ) : f.lastSyncedAt ? (
-                      <span style={{ color: "var(--text-subtle)" }}>Last synced {new Date(f.lastSyncedAt).toLocaleString()}</span>
+                      <span style={{ color: isFeedStale({ active: true, lastSyncedAt: f.lastSyncedAt, lastError: null }, new Date()) ? "var(--amber-text, #b45309)" : "var(--text-subtle)" }}>
+                        Synced {describeSyncAge(f.lastSyncedAt, new Date())}
+                        {isFeedStale({ active: true, lastSyncedAt: f.lastSyncedAt, lastError: null }, new Date()) ? " · stale" : ""}
+                      </span>
                     ) : (
                       <span style={{ color: "var(--text-subtle)" }}>Not synced yet</span>
                     )}
