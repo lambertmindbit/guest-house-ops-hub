@@ -1,0 +1,6 @@
+MakeMyTrip — your booking was modified
+Itinerary number: NH7009823451
+Guest name: Rahul Verma
+Check-in: 2026-09-05
+Check-out: 2026-09-08
+Total: ₹ 12,000

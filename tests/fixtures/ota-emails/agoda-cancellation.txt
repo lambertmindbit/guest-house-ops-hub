@@ -1,0 +1,5 @@
+Agoda: your reservation has been cancelled
+Booking ID: AGD778899
+Guest: Meera Iyer
+Check-in: 20 Aug 2026
+Check-out: 22 Aug 2026

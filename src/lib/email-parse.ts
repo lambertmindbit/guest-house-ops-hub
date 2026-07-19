@@ -7,8 +7,11 @@
 // on automated import — paste a few real samples and adjust. The review step
 // makes mis-parses safe in the meantime.
 
+export type BookingEmailKind = "new" | "modification" | "cancellation";
+
 export type ParsedBooking = {
   source: string; // "Booking.com" | "Agoda" | "MakeMyTrip" | "Unknown"
+  kind: BookingEmailKind; // new confirmation vs a change/cancel of an existing one (GAP-2)
   otaRef: string | null;
   guestName: string | null;
   guestPhone: string | null;
@@ -17,6 +20,16 @@ export type ParsedBooking = {
   roomTypeHint: string | null;
   amount: number | null;
 };
+
+// Classify the email so a change to an existing booking isn't mistaken for a new
+// one (which would ghost availability or oversell — GAP-2). Cancellation wins over
+// modification when both words appear ("your modified booking is cancelled").
+export function detectKind(raw: string): BookingEmailKind {
+  const s = raw.toLowerCase();
+  if (/\bcancel(?:led|ed|lation)?\b|has been cancelled|booking cancelled/.test(s)) return "cancellation";
+  if (/\bmodif(?:ied|ication)\b|\bamend(?:ed|ment)\b|\bchang(?:ed|e to)\b|date change|updated (?:booking|reservation)|(?:booking|reservation) (?:has been )?(?:updated|changed)/.test(s)) return "modification";
+  return "new";
+}
 
 const MONTHS: Record<string, number> = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
@@ -91,6 +104,7 @@ export function parseBookingEmail(raw: string): ParsedBooking {
 
   return {
     source,
+    kind: detectKind(raw),
     otaRef,
     guestName,
     guestPhone,

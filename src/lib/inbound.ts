@@ -25,6 +25,18 @@ export async function ingestEmail(raw: string) {
     amount: p.amount ?? undefined,
   };
 
+  // GAP-2: a modification/cancellation for an EXISTING booking is not a duplicate.
+  // Match it to the reservation and stage it (linked) for the operator to review a
+  // field-level diff and Apply through the normal conflict-checked path. A new
+  // confirmation falls through to the dedup + staging below.
+  if (p.otaRef && p.kind !== "new") {
+    const reservation = await prisma.reservation.findFirst({ where: { otaRef: p.otaRef }, select: { id: true } });
+    if (reservation) {
+      const existing = await prisma.inboundBooking.findFirst({ where: { otaRef: p.otaRef, emailKind: p.kind, status: "pending" } });
+      return existing ?? prisma.inboundBooking.create({ data: { ...commonData, emailKind: p.kind, reservationId: reservation.id } });
+    }
+  }
+
   if (p.otaRef) {
     const [reservation, staged] = await Promise.all([
       prisma.reservation.findFirst({ where: { otaRef: p.otaRef }, select: { id: true } }),
