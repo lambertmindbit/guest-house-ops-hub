@@ -5,6 +5,8 @@ import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { isOverlapError } from "@/lib/db-errors";
 import { notifyBookingConfirmation } from "@/lib/messaging";
 import { currentPropertySettings } from "@/lib/property-settings";
+import { currentRole } from "@/lib/session";
+import { maskReservationsMoney } from "@/lib/money-mask";
 
 // Thrown inside the create transaction when neither a guestId nor guest details
 // resolved to a guest — surfaced as a 422.
@@ -150,7 +152,8 @@ async function handleGET(request: Request) {
     orderBy: { checkIn: from && to ? "asc" : "desc" },
     ...(from && to ? {} : { take: 1000 }),
   });
-  return ok(reservations);
+  // Strip money for non-owner roles (GAP-12).
+  return ok(maskReservationsMoney(await currentRole(), reservations));
 }
 
 export const POST = withRoute(handlePOST);

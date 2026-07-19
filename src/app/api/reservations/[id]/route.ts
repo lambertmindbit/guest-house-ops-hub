@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { updateReservation, OverlapError, StaleWriteError } from "@/lib/reservations";
+import { currentRole } from "@/lib/session";
+import { maskReservationMoney } from "@/lib/money-mask";
 
 const include = {
   guest: true,
@@ -17,7 +19,7 @@ async function handleGET(
   const { id } = await params;
   const reservation = await prisma.reservation.findUnique({ where: { id }, include });
   if (!reservation) return fail("reservation not found", 404);
-  return ok(reservation);
+  return ok(maskReservationMoney(await currentRole(), reservation));
 }
 
 const updateSchema = z
