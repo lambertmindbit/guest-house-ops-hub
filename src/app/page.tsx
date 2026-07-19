@@ -4,6 +4,7 @@ import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
 import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
 import { getPendingPayments } from "@/lib/finance";
+import { staleFeedCount } from "@/lib/feed-health";
 import { currentRole } from "@/lib/session";
 import { canSeeMoney } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -27,13 +28,17 @@ function PayBadge({ r }: { r: SummaryReservation }) {
 }
 
 export default async function DashboardPage() {
-  const [s, conflicts, housekeeping, openEscalations, pending] = await Promise.all([
+  const [s, conflicts, housekeeping, openEscalations, pending, activeFeeds] = await Promise.all([
     getTodaySummary(),
     getConflicts(),
     getHousekeeping(),
     prisma.escalation.count({ where: { status: "open" } }),
     getPendingPayments(),
+    prisma.icalFeed.findMany({ where: { active: true }, select: { active: true, lastSyncedAt: true, lastError: true } }),
   ]);
+  // Stale/failed iCal feeds mean imported OTA busy-dates are silently out of date
+  // (GAP-5) — the exact moment a double-book slips in. Surface it, don't hide it.
+  const staleFeeds = staleFeedCount(activeFeeds, new Date());
   const showMoney = canSeeMoney(await currentRole());
   const heading = displayDate(parseDateOnly(s.date));
   const conflictN = conflicts.length;
@@ -127,6 +132,17 @@ export default async function DashboardPage() {
 
           {/* THE RAIL — things you check, not things you do. */}
           <aside className="dash__rail">
+            {staleFeeds > 0 && (
+              <Link href="/settings/feeds" className="railcard" style={{ borderColor: "var(--amber-line, #ecd6b3)", background: "var(--amber-fill, #fffbeb)" }}>
+                <span className="railcard__ic" style={{ color: "var(--amber-text, #b45309)" }}><Icon name="alert" size={18} /></span>
+                <span className="railcard__m">
+                  <span className="railcard__k">Sync may be stale</span>
+                  <span className="railcard__v">{staleFeeds} feed{staleFeeds === 1 ? "" : "s"}</span>
+                  <span className="railcard__s">Not synced in over 12h — OTA dates could be out of date</span>
+                </span>
+                <span className="railcard__go"><Icon name="arrowR" size={17} /></span>
+              </Link>
+            )}
             {showMoney && (
               <Link href="/finance" className="railcard railcard--money">
                 <span className="railcard__ic"><Icon name="wallet" size={18} /></span>
