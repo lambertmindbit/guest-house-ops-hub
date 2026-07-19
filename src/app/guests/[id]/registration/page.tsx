@@ -27,6 +27,13 @@ export default async function RegistrationCardPage({ params }: { params: Promise
   ]);
   if (!guest) notFound();
 
+  // Audit the Form C artefact generation for a foreign guest (GAP-7 / accountability).
+  const { isForeignGuest } = await import("@/lib/form-c");
+  if (isForeignGuest(guest.nationality)) {
+    const { recordAudit } = await import("@/lib/audit");
+    await recordAudit("form-c.generate", "guest", id, `Generated Form C for ${guest.name}`).catch(() => {});
+  }
+
   const g: RegistrationGuest = {
     name: guest.name,
     phone: guest.phone,

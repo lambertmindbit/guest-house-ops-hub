@@ -13,6 +13,8 @@ import { getCancellationPolicy, daysUntil, assessRefund } from "@/lib/cancellati
 import { currentPropertySettings } from "@/lib/property-settings";
 import { currentRole } from "@/lib/session";
 import { canSeeMoney } from "@/lib/authz";
+import { formCStatus } from "@/lib/form-c";
+import { FormCReminder } from "@/components/FormCReminder";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +64,8 @@ export default async function ReservationDetailPage({
 
   // Non-owner roles never see money (GAP-12): hide the amount, payments and refund.
   const showMoney = canSeeMoney(await currentRole());
+  // Form C (foreign-guest FRRO filing) reminder state for this arrival (GAP-7).
+  const formC = formCStatus({ nationality: r.guest.nationality, checkedInAt: r.checkedInAt, formCSubmittedAt: r.formCSubmittedAt }, new Date());
   const status = STATUS[r.status] ?? STATUS.confirmed;
   const nights = nightsBetween(r.checkIn, r.checkOut);
 
@@ -105,6 +109,10 @@ export default async function ReservationDetailPage({
             </div>
           </div>
         </div>
+
+        {formC.applies && (r.checkedInAt || formC.submitted) && (
+          <FormCReminder reservationId={r.id} guestId={r.guestId} hoursSinceCheckIn={formC.hoursSinceCheckIn} overdue={formC.overdue} submitted={formC.submitted} />
+        )}
 
         {/* info card */}
         <div className="card card--pad">

@@ -816,6 +816,9 @@ model Reservation {
   // When the booker confirmed the guest accepts that a valid ID is collected at
   // check-in (booking-time acknowledgement). Null for non-manual paths.
   idAckAt         DateTime?                 @map("id_ack_at")
+  // When the foreign-guest Form C was filed with the FRRO for this arrival (GAP-7).
+  // Null while the 24h filing duty is outstanding; set once the owner ticks it.
+  formCSubmittedAt DateTime?                @map("form_c_submitted_at")
   grossAmount     Decimal?                  @map("gross_amount") @db.Decimal(10, 2)
   // Amount expected upfront to hold the room. Separate from grossAmount so the
   // owner can track whether the deposit has arrived before check-in.
