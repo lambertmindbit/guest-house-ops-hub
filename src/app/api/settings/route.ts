@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { prisma, unscopedPrisma } from "@/lib/prisma";
 import { ok, zodFail, withRoute } from "@/lib/api";
 import { currentPropertySettings } from "@/lib/property-settings";
@@ -31,6 +32,12 @@ const updateSchema = z
     idRetentionDays: z.number().int().min(0).max(3650).nullable().optional(),
     idPolicy: z.enum(["off", "warn", "block"]).optional(),
     idRequiredAtBooking: z.boolean().optional(),
+    // Statutory invoicing (GAP-11): series prefix + editable GST slab table.
+    invoicePrefix: z.string().trim().max(8).nullable().optional(),
+    gstSlabs: z
+      .array(z.object({ uptoPaise: z.number().int().positive().nullable(), ratePct: z.number().min(0).max(100) }))
+      .nullable()
+      .optional(),
     // Optional housekeeping inspection step (GAP-20).
     inspectionRequired: z.boolean().optional(),
     // iCal sync frequency in hours (GAP-6): 1 = hourly minimum, 24 = daily default.
@@ -50,9 +57,15 @@ async function handlePATCH(request: Request) {
   if (!parsed.success) return zodFail(parsed.error);
 
   const current = await getOrCreate();
+  // A nullable Json column clears with Prisma.DbNull, not a bare null — clearing
+  // gstSlabs falls the property back to the statutory defaults in src/lib/gst.ts.
+  const { gstSlabs, ...rest } = parsed.data;
   const settings = await prisma.propertySettings.update({
     where: { id: current.id },
-    data: parsed.data,
+    data: {
+      ...rest,
+      ...(gstSlabs === undefined ? {} : { gstSlabs: gstSlabs === null ? Prisma.DbNull : gstSlabs }),
+    },
   });
   await recordAudit("settings.update", "property_settings", settings.id, `Updated property settings (${Object.keys(parsed.data).join(", ")})`).catch(() => {});
   return ok(settings);

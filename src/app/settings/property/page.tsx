@@ -19,6 +19,8 @@ export default async function Page() {
     idPolicy: s.idPolicy,
     idRequiredAtBooking: s.idRequiredAtBooking,
     inspectionRequired: s.inspectionRequired,
+    invoicePrefix: s.invoicePrefix,
+    gstSlabs: (s.gstSlabs as { uptoPaise: number | null; ratePct: number }[] | null) ?? null,
   };
 
   return (

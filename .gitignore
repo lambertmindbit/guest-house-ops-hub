@@ -44,3 +44,8 @@ ROOT_Lawei_Gap_Analysis*
 
 # Reference agent-system drop for study (separate project; node_modules + .env inside)
 /Archive/
+
+# Database dumps. A prod backup contains every guest's PII and must never be
+# committed — keep them outside the repo (e.g. ~/ota-backups/).
+*.dump
+*.sql.gz
