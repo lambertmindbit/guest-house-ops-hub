@@ -2,6 +2,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
+import { recordAudit } from "@/lib/audit";
 
 const schema = z.object({
   amount: z.number().positive(),
@@ -53,6 +54,7 @@ async function handlePOST(
       ...(parsed.data.paidAt ? { paidAt: parseDateOnly(parsed.data.paidAt) } : {}),
     },
   });
+  await recordAudit("payment.create", "payment", payment.id, `Recorded ₹${Math.round(Number(payment.amount)).toLocaleString("en-IN")} (${payment.mode})`).catch(() => {});
   return ok(payment, 201);
 }
 
