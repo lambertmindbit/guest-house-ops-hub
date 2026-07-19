@@ -71,7 +71,7 @@ export function PropertySection({ settings }: { settings: Settings }) {
         <div>
           <label className="field-label">ID document retention (days)</label>
           <input className="input" inputMode="numeric" value={f.idRetentionDays} onChange={(e) => setF({ ...f, idRetentionDays: e.target.value.replace(/\D/g, "") })} placeholder="Blank = keep forever" />
-          <div className="field-hint">Scanned guest IDs older than this are auto-deleted (privacy). Blank keeps them indefinitely.</div>
+          <div className="field-hint">Scanned guest IDs older than this are auto-deleted each night (privacy). New properties default to 180 days; blank keeps them indefinitely.</div>
         </div>
         <div>
           <label className="field-label">ID at check-in</label>
