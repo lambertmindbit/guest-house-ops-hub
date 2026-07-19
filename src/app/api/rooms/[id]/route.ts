@@ -12,6 +12,8 @@ import { roomPhotosSchema, roomFacingSchema, roomViewSchema } from "@/lib/rooms"
 const schema = z
   .object({
     markCleaned: z.boolean().optional(),
+    // Housekeeping inspection step (GAP-20): stamps last_inspected_at = now.
+    markInspected: z.boolean().optional(),
     label: z.string().trim().min(1).optional(),
     roomTypeId: z.string().min(1).optional(),
     archived: z.boolean().optional(),
@@ -45,6 +47,7 @@ async function handlePATCH(
       data.needsCleaningFlag = true;
     }
   }
+  if (input.markInspected) data.lastInspectedAt = new Date();
   if (input.label !== undefined) data.label = input.label;
   if (input.roomTypeId !== undefined) data.roomTypeId = input.roomTypeId;
   if (input.archived !== undefined) data.archivedAt = input.archived ? new Date() : null;

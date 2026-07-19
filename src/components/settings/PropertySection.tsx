@@ -14,6 +14,7 @@ export function PropertySection({ settings }: { settings: Settings }) {
     idRetentionDays: settings?.idRetentionDays != null ? String(settings.idRetentionDays) : "",
     idPolicy: settings?.idPolicy ?? "block",
     idRequiredAtBooking: settings?.idRequiredAtBooking ?? false,
+    inspectionRequired: settings?.inspectionRequired ?? false,
     checkInTime: settings?.checkInTime ?? "14:00",
     checkOutTime: settings?.checkOutTime ?? "11:00",
     currency: settings?.currency ?? "INR",
@@ -86,6 +87,12 @@ export function PropertySection({ settings }: { settings: Settings }) {
           <label className="row" style={{ gap: 8, cursor: "pointer", fontSize: "var(--fs-small)" }}>
             <input type="checkbox" checked={f.idRequiredAtBooking} onChange={(e) => setF({ ...f, idRequiredAtBooking: e.target.checked })} />
             <span>Require an ID number to <b>take a booking</b> (for walk-in-only properties)</span>
+          </label>
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label className="row" style={{ gap: 8, cursor: "pointer", fontSize: "var(--fs-small)" }}>
+            <input type="checkbox" checked={f.inspectionRequired} onChange={(e) => setF({ ...f, inspectionRequired: e.target.checked })} />
+            <span>Add a housekeeping <b>inspection step</b> — a cleaned room waits for “mark inspected” before it counts as ready</span>
           </label>
         </div>
       </div>

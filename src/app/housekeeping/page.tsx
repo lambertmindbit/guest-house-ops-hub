@@ -1,6 +1,7 @@
 import { getHousekeeping, getTodayTasks, DEFAULT_CHECKLIST, type HousekeepingRoom } from "@/lib/housekeeping";
 import { listStaff } from "@/lib/staff";
 import { CleaningButton } from "@/components/CleaningButton";
+import { InspectButton } from "@/components/InspectButton";
 import { HousekeepingTaskCard } from "@/components/HousekeepingTaskCard";
 import { PageHead, SectionLabel, EmptyState } from "@/components/ui";
 import { displayShortDate } from "@/lib/format";
@@ -20,7 +21,9 @@ export default async function HousekeepingPage() {
   const toClean = rooms
     .filter((r) => r.needsCleaning)
     .sort((a, b) => Number(b.highPriority) - Number(a.highPriority));
-  const ready = rooms.filter((r) => !r.needsCleaning);
+  // With the optional inspection step on, a cleaned room waits here before ready.
+  const awaiting = rooms.filter((r) => r.awaitingInspection);
+  const ready = rooms.filter((r) => !r.needsCleaning && !r.awaitingInspection);
 
   return (
     <main className="app-main">
@@ -61,6 +64,27 @@ export default async function HousekeepingPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {awaiting.length > 0 && (
+          <>
+            <SectionLabel count={awaiting.length}>Awaiting inspection</SectionLabel>
+            <div className="col" style={{ gap: 10 }}>
+              {awaiting.map((room) => (
+                <div key={room.id} className="card card--pad">
+                  <div className="spread" style={{ alignItems: "flex-start" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <RoomTitle room={room} />
+                      <div style={{ marginTop: 8 }}>
+                        <span className="badge badge--warn">Cleaned · needs inspection</span>
+                      </div>
+                    </div>
+                    <InspectButton roomId={room.id} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         <SectionLabel count={ready.length}>Ready</SectionLabel>

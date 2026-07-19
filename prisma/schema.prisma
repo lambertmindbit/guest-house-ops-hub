@@ -652,6 +652,10 @@ model Room {
   // Housekeeping: a room "needs cleaning" when a guest has checked out since
   // this timestamp. Marking a room clean sets it to now.
   lastCleanedAt     DateTime?          @map("last_cleaned_at")
+  // When the room was last inspected after cleaning (GAP-20). Only meaningful when
+  // the property turns inspectionRequired on: a cleaned room isn't "ready" until
+  // lastInspectedAt >= lastCleanedAt. Off by default → cleaning alone = ready.
+  lastInspectedAt   DateTime?          @map("last_inspected_at")
   // Manual override: lets the owner flag a room dirty when there's no checkout
   // to derive from (dust, maintenance, own use). Cleared on "mark clean".
   needsCleaningFlag Boolean            @default(false) @map("needs_cleaning_flag")
@@ -1071,6 +1075,9 @@ model PropertySettings {
   // an ID is also required to SAVE a booking (walk-in-only properties).
   idPolicy            String   @default("block") @map("id_policy")
   idRequiredAtBooking Boolean  @default(false) @map("id_required_at_booking")
+  // Optional housekeeping inspection step (GAP-20). Off by default: a cleaned room
+  // is immediately "ready". On: a cleaned room waits for "mark inspected" first.
+  inspectionRequired  Boolean  @default(false) @map("inspection_required")
   updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Community directory profile (Phase 3). Opt-in; blank/false until the owner

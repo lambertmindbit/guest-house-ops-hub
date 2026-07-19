@@ -37,6 +37,7 @@ export type Settings = {
   idRetentionDays: number | null;
   idPolicy: string;
   idRequiredAtBooking: boolean;
+  inspectionRequired: boolean;
 } | null;
 export type Policy = {
   enabled: boolean;

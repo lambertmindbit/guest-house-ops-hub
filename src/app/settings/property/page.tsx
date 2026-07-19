@@ -18,6 +18,7 @@ export default async function Page() {
     idRetentionDays: s.idRetentionDays,
     idPolicy: s.idPolicy,
     idRequiredAtBooking: s.idRequiredAtBooking,
+    inspectionRequired: s.inspectionRequired,
   };
 
   return (
