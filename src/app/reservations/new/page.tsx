@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { ReservationForm, type ReservationFormValues } from "@/components/ReservationForm";
 import { PageHead, Icon } from "@/components/ui";
 import { currentPropertySettings } from "@/lib/property-settings";
+import { getHousekeeping } from "@/lib/housekeeping";
+import { todayDateOnly } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +14,14 @@ export default async function NewReservationPage({
   searchParams: Promise<{ roomId?: string; date?: string }>;
 }) {
   const { roomId, date } = await searchParams;
-  const [rooms, channels, agents, property] = await Promise.all([
+  const [rooms, channels, agents, property, housekeeping] = await Promise.all([
     prisma.room.findMany({ where: { archivedAt: null }, include: { roomType: true }, orderBy: { label: "asc" } }),
     prisma.channel.findMany({ orderBy: { name: "asc" } }),
     prisma.agent.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     currentPropertySettings(),
+    getHousekeeping(),
   ]);
+  const dirtyRoomIds = housekeeping.rooms.filter((r) => r.needsCleaning).map((r) => r.id);
 
   const initial: ReservationFormValues = {
     roomId: roomId ?? "",
@@ -48,6 +52,8 @@ export default async function NewReservationPage({
           agents={agents.map((a) => ({ id: a.id, name: a.name, commissionPct: Number(a.commissionPct) }))}
           idPolicy={(property?.idPolicy as "off" | "warn" | "block") ?? "block"}
           idRequiredAtBooking={property?.idRequiredAtBooking ?? false}
+          dirtyRoomIds={dirtyRoomIds}
+          today={todayDateOnly()}
         />
       </div>
     </main>

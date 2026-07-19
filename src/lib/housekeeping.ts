@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { currentPropertySettings } from "@/lib/property-settings";
 import { todayDateOnly, parseDateOnly, formatDateOnly } from "@/lib/dates";
 
 export type HousekeepingRoom = {
@@ -6,11 +7,33 @@ export type HousekeepingRoom = {
   label: string;
   roomTypeName: string;
   needsCleaning: boolean;
+  awaitingInspection: boolean;
   lastDeparture: string | null;
   arrivalToday: boolean;
   occupiedTonight: boolean;
   highPriority: boolean;
 };
+
+// Pure derivation of a room's cleaning state (GAP-20), so availability-style
+// correctness lives in one testable place. A room needs cleaning when a guest
+// departed since it was last cleaned, or it's manually flagged. When the property
+// requires inspection, a cleaned-but-not-yet-inspected room is "awaiting
+// inspection" — not yet ready. Inspection off (default) → awaiting is never true.
+export function cleaningState(
+  room: { needsCleaningFlag: boolean; lastCleanedAt: Date | null; lastInspectedAt: Date | null },
+  lastDeparture: Date | null,
+  inspectionRequired: boolean,
+): { needsCleaning: boolean; awaitingInspection: boolean } {
+  const needsCleaning =
+    room.needsCleaningFlag ||
+    (lastDeparture !== null && (room.lastCleanedAt === null || room.lastCleanedAt < lastDeparture));
+  const awaitingInspection =
+    inspectionRequired &&
+    !needsCleaning &&
+    room.lastCleanedAt !== null &&
+    (room.lastInspectedAt === null || room.lastInspectedAt < room.lastCleanedAt);
+  return { needsCleaning, awaitingInspection };
+}
 
 export type Housekeeping = {
   rooms: HousekeepingRoom[];
@@ -24,7 +47,7 @@ export async function getHousekeeping(): Promise<Housekeeping> {
   const today = todayDateOnly();
   const todayDate = parseDateOnly(today);
 
-  const [rooms, departures, arrivalsToday, occupiedTonight] = await Promise.all([
+  const [rooms, departures, arrivalsToday, occupiedTonight, property] = await Promise.all([
     prisma.room.findMany({
       where: { archivedAt: null },
       include: { roomType: true },
@@ -44,18 +67,17 @@ export async function getHousekeeping(): Promise<Housekeeping> {
       where: { status: "confirmed", checkIn: { lte: todayDate }, checkOut: { gt: todayDate } },
       select: { roomId: true },
     }),
+    currentPropertySettings(),
   ]);
 
+  const inspectionRequired = property?.inspectionRequired ?? false;
   const lastDepartureByRoom = new Map(departures.map((d) => [d.roomId, d._max.checkOut]));
   const arrivingTodayRooms = new Set(arrivalsToday.map((r) => r.roomId));
   const occupiedRooms = new Set(occupiedTonight.map((r) => r.roomId));
 
   const result: HousekeepingRoom[] = rooms.map((room) => {
     const lastDeparture = lastDepartureByRoom.get(room.id) ?? null;
-    const needsCleaning =
-      room.needsCleaningFlag ||
-      (lastDeparture !== null &&
-        (room.lastCleanedAt === null || room.lastCleanedAt < lastDeparture));
+    const { needsCleaning, awaitingInspection } = cleaningState(room, lastDeparture, inspectionRequired);
     const arrivalToday = arrivingTodayRooms.has(room.id);
 
     return {
@@ -63,6 +85,7 @@ export async function getHousekeeping(): Promise<Housekeeping> {
       label: room.label,
       roomTypeName: room.roomType.name,
       needsCleaning,
+      awaitingInspection,
       lastDeparture: lastDeparture ? formatDateOnly(lastDeparture) : null,
       arrivalToday,
       occupiedTonight: occupiedRooms.has(room.id),

@@ -34,6 +34,9 @@ type Props = {
   initial: ReservationFormValues;
   idPolicy?: "off" | "warn" | "block";
   idRequiredAtBooking?: boolean;
+  // Rooms currently needing cleaning + the property's "today" (GAP-20 warn-on-book).
+  dirtyRoomIds?: string[];
+  today?: string;
 };
 
 // Solid channel dots (match the calendar grid palette).
@@ -50,7 +53,7 @@ function nightsBetween(checkIn: string, checkOut: string): number {
   return Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / 86_400_000);
 }
 
-export function ReservationForm({ mode, rooms, channels, agents = [], initial, idPolicy = "block", idRequiredAtBooking = false }: Props) {
+export function ReservationForm({ mode, rooms, channels, agents = [], initial, idPolicy = "block", idRequiredAtBooking = false, dirtyRoomIds = [], today = "" }: Props) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +173,10 @@ export function ReservationForm({ mode, rooms, channels, agents = [], initial, i
     ? [...new Set(quote.nights.flatMap((n) => n.applied))].filter((a) => a !== "Clamped to floor/ceiling")
     : [];
 
+  // Advisory only (GAP-20): booking a room that still needs cleaning for a guest
+  // arriving today. Never blocks — it's a nudge to get the room ready in time.
+  const dirtyArrivalWarn = mode === "create" && !!roomId && checkIn === today && dirtyRoomIds.includes(roomId);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -252,6 +259,12 @@ export function ReservationForm({ mode, rooms, channels, agents = [], initial, i
         <div className="banner banner--danger" style={{ marginBottom: 14 }}>
           <span className="banner__icon"><Icon name="alert" size={18} /></span>
           <span className="banner__txt"><b>Scam list:</b> {scamWarn} — saving is blocked until you resolve this.</span>
+        </div>
+      )}
+      {dirtyArrivalWarn && (
+        <div className="banner banner--warn" style={{ marginBottom: 14 }}>
+          <span className="banner__icon"><Icon name="alert" size={18} /></span>
+          <span className="banner__txt"><b>Room needs cleaning</b> — this guest is arriving today. You can still book; just make sure it&apos;s ready in time.</span>
         </div>
       )}
 
