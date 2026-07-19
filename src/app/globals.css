@@ -414,6 +414,7 @@ a.banner:hover { box-shadow: var(--shadow-sm); }
   -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%);
   border-top: 1px solid var(--border-subtle); }
 .tab { border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-height: 44px; /* a11y: comfortable tap target (GAP-21) — extends hit area downward, content stays top-aligned */
   font-size: 10px; font-weight: 600; color: var(--text-subtle); text-decoration: none; padding-top: 2px; transition: color var(--fast); }
 .tab.on { color: var(--accent); }
 .tab__slot { display: flex; justify-content: center; }

@@ -262,12 +262,12 @@ export function ReservationForm({ mode, rooms, channels, agents = [], initial, i
           <>
             <div className="field">
               <label className="field-label">Phone <span className="req">*</span></label>
-              <input className="input" required value={values.guestPhone} onChange={(e) => set("guestPhone", e.target.value)} placeholder="98xxxxxxxx" inputMode="tel" />
+              <input className="input" required value={values.guestPhone} onChange={(e) => set("guestPhone", e.target.value)} placeholder="98xxxxxxxx" inputMode="tel" aria-label="Guest phone" />
               <div className="field-hint">We’ll match an existing guest as you type.</div>
             </div>
             <div className="field">
               <label className="field-label">Full name <span className="req">*</span></label>
-              <input className="input" required value={values.guestName} onChange={(e) => set("guestName", e.target.value)} placeholder="e.g. Priya Nair" />
+              <input className="input" required value={values.guestName} onChange={(e) => set("guestName", e.target.value)} placeholder="e.g. Priya Nair" aria-label="Guest full name" />
             </div>
 
             {/* C-Form: collect foreign-national registration at booking time. */}

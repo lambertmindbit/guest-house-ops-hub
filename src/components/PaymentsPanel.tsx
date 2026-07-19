@@ -203,8 +203,8 @@ export function PaymentsPanel({
 
         <form onSubmit={add} style={{ marginTop: 14 }}>
           <div className="row" style={{ gap: 8, alignItems: "stretch" }}>
-            <input className="input" inputMode="numeric" min="1" required placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ flex: 1 }} />
-            <select className="select" value={mode} onChange={(e) => changeMode(e.target.value)} style={{ width: 140, flex: "none" }}>
+            <input className="input" inputMode="numeric" min="1" required placeholder="Amount" aria-label="Payment amount" value={amount} onChange={(e) => setAmount(e.target.value)} style={{ flex: 1 }} />
+            <select className="select" value={mode} onChange={(e) => changeMode(e.target.value)} aria-label="Payment method" style={{ width: 140, flex: "none" }}>
               {MODES.map((m) => (
                 <option key={m} value={m}>{PAYMENT_MODE_LABELS[m]}</option>
               ))}
@@ -226,6 +226,7 @@ export function PaymentsPanel({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="UTR / transaction reference (e.g. 408912345678)"
+              aria-label="UTR / transaction reference"
               style={{ marginTop: 8 }}
             />
           )}
