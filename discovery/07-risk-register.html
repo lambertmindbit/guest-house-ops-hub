@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Risk Register · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 07</p>
+  <h1>Risk Register</h1>
+  <p class="sub">32 risks with probability, impact, mitigation and owner</p>
+  <div class="chips"><span class="chip">Top-5 board summary</span></div>
+</div>
+<div class="content">
+<h1 id="risk-register">Risk Register</h1>
+<h2 id="discovery-doc-07--v10--2026-07-16">Discovery doc 07 · v1.0 · 2026-07-16</h2>
+<p>Scale: Probability/Impact Low·Med·High. Owner = accountable role (MB = MindBit; Eng = engineering; PO = product owner; Own = property owner). Exposure = P×I qualitative.</p>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Category</th>
+<th>Risk</th>
+<th>P</th>
+<th>I</th>
+<th>Exposure</th>
+<th>Mitigation</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>RSK-01</td>
+<td>Business</td>
+<td>Fleet ops (1 deployment/client) exceed 3-founder capacity at 25 clients; support drowns delivery</td>
+<td>H</td>
+<td>H</td>
+<td><strong>Critical</strong></td>
+<td>Fleet tooling (GAP-18), onboarding wizard, support tiers, hire per grant jobs plan</td>
+<td>MB</td>
+</tr>
+<tr class="even">
+<td>RSK-02</td>
+<td>Business</td>
+<td>Grant milestones slip (monetisation Q3, 25 clients Q4) because ops/billing tooling unscoped</td>
+<td>M</td>
+<td>H</td>
+<td>High</td>
+<td>Re-baseline roadmap (doc 17) against quarters; treat GAP-18/27 as milestone work</td>
+<td>MB/PO</td>
+</tr>
+<tr class="odd">
+<td>RSK-03</td>
+<td>Business</td>
+<td>Positioning contradiction ("locally owned" vs US cloud) surfaces in grant due-diligence</td>
+<td>M</td>
+<td>M–H</td>
+<td>High</td>
+<td>Honest data-residency statement; DigitalOcean/in-country option productised (GAP-28)</td>
+<td>MB</td>
+</tr>
+<tr class="even">
+<td>RSK-04</td>
+<td>Legal</td>
+<td>Shared bad-guest/scam network triggers defamation or DPDP complaint</td>
+<td>M</td>
+<td>H</td>
+<td><strong>High</strong></td>
+<td>Governance policy, evidence+appeal (exists), keyed hashing, legal review before scale (GAP-26, Q-LEG-03)</td>
+<td>MB+counsel</td>
+</tr>
+<tr class="odd">
+<td>RSK-05</td>
+<td>Legal</td>
+<td>DPDP non-compliance: ID scans indefinite by default, no erasure/export, no breach procedure</td>
+<td>M</td>
+<td>H</td>
+<td><strong>High</strong></td>
+<td>GAP-8 workstream; retention default; DPIA-style review</td>
+<td>MB+counsel</td>
+</tr>
+<tr class="even">
+<td>RSK-06</td>
+<td>Legal</td>
+<td>Form C non-compliance at pilot properties harms owners (fines/police friction)</td>
+<td>M</td>
+<td>M–H</td>
+<td>High</td>
+<td>GAP-7 artefact + reminder; owner training</td>
+<td>PO</td>
+</tr>
+<tr class="odd">
+<td>RSK-07</td>
+<td>Legal/Fin</td>
+<td>Non-compliant GST invoices issued by registered properties</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>GAP-11 before invoicing push; accountant review</td>
+<td>PO</td>
+</tr>
+<tr class="even">
+<td>RSK-08</td>
+<td>Technical</td>
+<td>Data loss: no tested restore (backup assumed = platform default)</td>
+<td>L–M</td>
+<td><strong>VH</strong></td>
+<td><strong>Critical</strong></td>
+<td>GAP-1: backups + quarterly drills + runbook</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-09</td>
+<td>Technical</td>
+<td>Migration fragility (DATERANGE+GiST vs Prisma diff) corrupts a client DB during fleet upgrade</td>
+<td>M</td>
+<td>H</td>
+<td>High</td>
+<td>Helper-only migrations (exists), CI guard, staged rollout, pre-migration backup gate</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-10</td>
+<td>Technical</td>
+<td>Overlap-detection error-string sniffing breaks on Postgres/Prisma upgrade → raw 500s on the core path</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>Keep conflict tests green (exists); add route-level test (repo-ack)</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-11</td>
+<td>Technical</td>
+<td>Money float math produces accounting discrepancies as finance scope grows</td>
+<td>M</td>
+<td>M–H</td>
+<td>High</td>
+<td>GAP-9 conversion before gateway/GST</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-12</td>
+<td>Technical</td>
+<td>Offline claims overstate reality → silent lost writes in the field</td>
+<td>M</td>
+<td>H</td>
+<td>High</td>
+<td>GAP-25 verification; explicit offline spec; field test on 2G</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-13</td>
+<td>Integration</td>
+<td>OTA email format changes silently degrade parsing</td>
+<td>H</td>
+<td>M</td>
+<td>High</td>
+<td>Parse-confidence metric, staged-raw fallback (exists), fixture corpus per OTA, alerting (GAP-5)</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-14</td>
+<td>Integration</td>
+<td>OTA removes/limits iCal for a listing type → sync gone for that property</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>Onboarding checks; manual-extranet playbook; channel-manager pairing option</td>
+<td>PO</td>
+</tr>
+<tr class="odd">
+<td>RSK-15</td>
+<td>Integration</td>
+<td>Meta rejects WhatsApp templates or bans number (policy violations, spam reports)</td>
+<td>M</td>
+<td>M–H</td>
+<td>High</td>
+<td>Template review vs policy, opt-out handling, early submission (GAP-3)</td>
+<td>Eng/PO</td>
+</tr>
+<tr class="even">
+<td>RSK-16</td>
+<td>Integration</td>
+<td>Gmail Apps Script quotas/fragility break forwarding silently</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>Heartbeat (GAP-5); prefer CF Worker for scale</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-17</td>
+<td>Security</td>
+<td>Cross-property leak via un-scoped raw SQL (within one owner)</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>CI grep-guard; RLS defence-in-depth (GAP-12)</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-18</td>
+<td>Security</td>
+<td>Money fields leak to staff via API responses</td>
+<td>H (exists)</td>
+<td>L–M</td>
+<td>Med</td>
+<td>Field-level masking (GAP-12)</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-19</td>
+<td>Security</td>
+<td>ID-document bucket misconfiguration exposes PII</td>
+<td>L–M</td>
+<td>VH</td>
+<td>High</td>
+<td>Private bucket + signed URLs + access logging + config checklist (NFR-SEC-08)</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-20</td>
+<td>Security</td>
+<td>Hashed phone lists reversible by enumeration (10-digit space)</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>Keyed/peppered hash per network (NFR-SEC-09)</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-21</td>
+<td>Security</td>
+<td>Seam token leakage (AGENT_TOKEN static, long-lived)</td>
+<td>L–M</td>
+<td>M</td>
+<td>Med</td>
+<td>Rotation procedure, per-service tokens, IP allowlist where possible</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-22</td>
+<td>AI</td>
+<td>Assistant hallucinates commitments (price/promise) to guests in Khasi where owner can't easily audit</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>HITL for sensitive (exists), policy guardrails (exists), transcript review UI, canned-answer bias</td>
+<td>Eng/PO</td>
+</tr>
+<tr class="odd">
+<td>RSK-23</td>
+<td>AI</td>
+<td>Prompt injection via guest messages escalates privileges</td>
+<td>L–M</td>
+<td>M</td>
+<td>Med</td>
+<td>Canonical security block (exists) + red-team suite (Q-AI-05)</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-24</td>
+<td>AI</td>
+<td>Gemini/Cloud Run outage or pricing change breaks assistant economics</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>Model fallback (exists), cost monitoring, provider abstraction</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-25</td>
+<td>Privacy</td>
+<td>Guest PII flows to Gemini (US) without adequate notice/consent</td>
+<td>M</td>
+<td>M–H</td>
+<td>High</td>
+<td>NFR-PRV-04 notice; evaluate regional endpoints; DPA with Google terms review</td>
+<td>MB+counsel</td>
+</tr>
+<tr class="even">
+<td>RSK-26</td>
+<td>Operational</td>
+<td>Owner mis-training: conflicts/escalations ignored (badge-blindness)</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>GAP-14 notifications; Khasi training materials; WF-12 playbook</td>
+<td>PO</td>
+</tr>
+<tr class="odd">
+<td>RSK-27</td>
+<td>Operational</td>
+<td>Key-person risk: one dev understands the migration/tenancy machinery</td>
+<td>H</td>
+<td>H</td>
+<td><strong>Critical</strong></td>
+<td>This discovery package + ARCHITECTURE docs (exist); pairing; hiring plan</td>
+<td>MB</td>
+</tr>
+<tr class="even">
+<td>RSK-28</td>
+<td>Deployment</td>
+<td>Vercel/Supabase free-tier limits or pricing shifts across 25 deployments</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>Cost model per client; DO branch as hedge; usage monitoring</td>
+<td>MB</td>
+</tr>
+<tr class="odd">
+<td>RSK-29</td>
+<td>Support</td>
+<td>No defined support SLA/channel → pilot churn</td>
+<td>M</td>
+<td>M</td>
+<td>Med</td>
+<td>Q-SUP-01; in-app help (exists) + WhatsApp support line + triage rota</td>
+<td>MB</td>
+</tr>
+<tr class="even">
+<td>RSK-30</td>
+<td>Data</td>
+<td>Community registry (wherever it lives) becomes single point of failure / breach across clients</td>
+<td>M</td>
+<td>H</td>
+<td>High</td>
+<td>GAP-26 architecture decision; minimal data, expiry (exists), isolation review</td>
+<td>Eng</td>
+</tr>
+<tr class="odd">
+<td>RSK-31</td>
+<td>Scalability</td>
+<td>Serverless per-instance rate limiting ineffective under real abuse (public chat)</td>
+<td>M</td>
+<td>L–M</td>
+<td>Low–Med</td>
+<td>Shared store when PUBLIC_CHAT on (repo-ack)</td>
+<td>Eng</td>
+</tr>
+<tr class="even">
+<td>RSK-32</td>
+<td>Business</td>
+<td>Referral credit imbalances sour peer relationships (no settlement rules)</td>
+<td>M</td>
+<td>L–M</td>
+<td>Med</td>
+<td>Q-BUS-06 policy; visibility of balances (exists)</td>
+<td>PO</td>
+</tr>
+</tbody>
+</table>
+<h2 id="top-5-board-level-summary">Top-5 board-level summary</h2>
+<ol>
+<li><strong>RSK-08 data loss</strong> — cheap to fix, catastrophic if not.</li>
+<li><strong>RSK-01/27 fleet &amp; key-person capacity</strong> — the real constraint on the grant plan.</li>
+<li><strong>RSK-04/05 community + DPDP legal exposure</strong> — needs counsel before scale, not after.</li>
+<li><strong>RSK-02 milestone slip</strong> — ops/billing tooling must enter the roadmap now.</li>
+<li><strong>RSK-13 + GAP-2 OTA ingestion drift</strong> — the quiet killer of the core "single source of truth" promise.</li>
+</ol>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>07-risk-register.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roadmap &amp; Delivery Plan · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 17</p>
+  <h1>Roadmap &amp; Delivery Plan</h1>
+  <p class="sub">Phase 0–3 aligned to grant quarters, future scope, delivery governance</p>
+  <div class="chips"><span class="chip">Grant-quarter aligned</span></div>
+</div>
+<div class="content">
+<h1 id="prioritized-roadmap--phase-wise-delivery-plan">Prioritized Roadmap &amp; Phase-wise Delivery Plan</h1>
+<h2 id="discovery-doc-17--v10--2026-07-16">Discovery doc 17 · v1.0 · 2026-07-16</h2>
+<p>Anchored to the grant quarters (Q1 already largely satisfied by the delivered baseline). Phases assume the small-team velocity noted in doc 14. Scope reasoning inline; MoSCoW per item.</p>
+<h2 id="phase-0--decisions--verification-2-weeks-parallel">Phase 0 — Decisions &amp; verification (2 weeks, parallel)</h2>
+<p>Stakeholder workshops answer doc 09 ★ questions; iteration-2 codebase audit converts <code><span class="tag inferred">INFERRED</span></code> to <code><span class="tag fact">FACT</span></code> (offline truth US-901, community topology US-902, PropertySettings root, PushSubscription wiring). Output: re-baselined backlog. <strong>Everything below assumes this happened.</strong></p>
+<h2 id="phase-1--production-safety-hardening--3-sprints--gate-for-scaling-past-first-pilots">Phase 1 — Production-safety hardening (≈ 3 sprints) → <em>gate for scaling past first pilots</em></h2>
+<p><strong>Theme: never lose data, never miss a legal duty, never fail silently.</strong></p>
+<ul>
+<li>Backup/restore + drills (US-101/102) — Must</li>
+<li>Observability per deployment (US-103) + sync/cron health &amp; warnings (US-104) — Must</li>
+<li>Form C artefact + reminder (US-201); DPDP export/erase, retention default, breach runbook, privacy notice (US-202/203/204) — Must</li>
+<li>OTA modification/cancellation linked updates (US-301); dup suppression (US-305); card-data redaction (US-306) — Must</li>
+<li>Escalation/conflict push notifications (US-501) — Must</li>
+<li>Password reset + invites (US-601/602) — Must</li>
+<li>Money → paise (US-401); staff money masking (US-402) — Must</li>
+<li>Route-level 409 test + housekeeping test (US-903/904) — Must</li>
+<li>Offline audit &amp; honest spec (US-901); community ADR (US-902) — Must <strong>Exit criteria:</strong> restore drill passed; a simulated Form C, erasure request, and OTA modification each handled end-to-end; push received on phone; zero silent-failure paths in sync.</li>
+</ul>
+<h2 id="phase-2--commercial-activation--3-sprints--aligns-with-grant-q2q3-1020-pilots--monetisation">Phase 2 — Commercial activation (≈ 3 sprints) → <em>aligns with grant Q2/Q3: 10–20 pilots + monetisation</em></h2>
+<ul>
+<li>WhatsApp templates (En/Kha/Hi) live + opt-out/quiet hours (US-502/504) — Must</li>
+<li>Razorpay capture + hold (US-407) — Should (keys dependent)</li>
+<li>GST invoice entity + numbering + tax lines (US-205), server PDF (US-206) — Must for GST clients</li>
+<li>Refund determinism + void/reversal (US-406/404) — Must</li>
+<li>Fleet: scripted provisioning (US-701), onboarding wizard (US-702), staged upgrades (US-703), fleet dashboard (US-105) — Must (this IS the Q3–Q4 milestone machinery)</li>
+<li>Pilot billing process + rate card (US-705) — Must (grant monetisation milestone)</li>
+<li>Session revocation, ID-access logging, keyed hashing, CI raw-SQL guard (US-603/604/605/606) — Should</li>
+<li>i18n string externalization (US-801) — Should (do while UI churn is low) <strong>Exit criteria:</strong> a new property onboarded &lt; 1 day hands-on; first paid invoices issued; guests receive real WhatsApp confirmations.</li>
+</ul>
+<h2 id="phase-3--scale--experience--34-sprints--grant-q4-25-scale-readiness">Phase 3 — Scale &amp; experience (≈ 3–4 sprints) → <em>grant Q4: 25+, scale-readiness</em></h2>
+<ul>
+<li>Khasi console for core flows (US-802) — Should→Must for inclusion narrative</li>
+<li>Two-way message log (US-503) — Should</li>
+<li>iCal frequency config (US-303), oversell buffer (US-304), per-feed tokens (US-906), removed-event release (per Q-TEC-06) — Should</li>
+<li>OTA payout reconciliation (US-405) — Should</li>
+<li>RLS defence-in-depth (US-403) — Should</li>
+<li>Guest merge (US-907), accessibility pass (US-803), demo tenant (US-706), offboarding export (US-704) — Should/Could</li>
+<li>Nightly-rate snapshot (GAP-22) — Could (enables richer invoices/analytics)</li>
+<li>Room-assignment stance ratified (US-905); if type-level booking chosen → dedicated design spike (constraint redesign — treat as its own Phase-4 epic) — Decision <strong>Exit criteria:</strong> fleet dashboard green across 25 deployments; support rota + SLA live; Khasi UI in pilot use.</li>
+</ul>
+<h2 id="future-scope--stretch-post-grant-year">Future scope / stretch (post-grant-year)</h2>
+<p>Channel-manager pairing integration (close the oversell window fully); consolidated multi-property owner dashboard; Tally/accounting export; anonymised regional benchmarks (Q-ANL-01); guest self-service portal (view booking, pay, request); housekeeping inspection &amp; deep-clean cadence (GAP-20); payroll linkage; community expansion to cabs/tours operators; regional in-country hosting productised (AMB-01); public booking widget for owner websites.</p>
+<h2 id="nice-to-have-backlog-unscheduled">Nice-to-have backlog (unscheduled)</h2>
+<p>Calendar drag-to-move; split-stay support; "why this price" trace; complaint↔︎escalation cross-link; maintenance→auto-block; PO→stock-in automation; review-response send integration.</p>
+<h2 id="delivery-governance-rec">Delivery governance <code><span class="tag rec">REC</span></code></h2>
+<ul>
+<li>Keep the repo's discipline: plan-first, one PR per slice, CI-gated, migrations only via helper.</li>
+<li>Add: canary client for every release; pre-migration backup gate; fixture-corpus CI for the email parser; quarterly restore + security drills.</li>
+<li>Traceability: stories carry FR/GAP IDs (doc 14 already does); RTM (doc 15) re-validated at each phase gate.</li>
+</ul>
+<h2 id="wireframe-recommendations-limited--ui-already-shipped">Wireframe recommendations (limited — UI already shipped)</h2>
+<p>New surfaces needing design: onboarding wizard (US-702), Form C artefact &amp; reminder placement (US-201), sync-health strip on Feeds/Today (US-104), notification settings (US-501), message thread view (US-503), fleet dashboard (internal, US-105). Recommend reusing the existing navy/teal design system and mobile bottom-tab patterns documented in ARCHITECTURE → UI.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>17-roadmap.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

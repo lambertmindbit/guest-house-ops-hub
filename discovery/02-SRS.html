@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Software Requirements Specification · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 02</p>
+  <h1>Software Requirements Specification</h1>
+  <p class="sub">Functional &amp; non-functional requirements with build status, constraints, external interfaces</p>
+  <div class="chips"><span class="chip">SRS-GHOH-001</span><span class="chip">IEEE 29148-aligned</span><span class="chip">25 FR groups · 30+ NFRs</span></div>
+</div>
+<div class="content">
+<h1 id="software-requirements-specification-srs">Software Requirements Specification (SRS)</h1>
+<h2 id="guest-house-operations-hub--root-platform-pms-layer">Guest House Operations Hub — ROOT Platform PMS Layer</h2>
+<table>
+<tbody>
+<tr class="odd">
+<td><strong>Document</strong></td>
+<td>SRS-GHOH-001 · v1.0 · 2026-07-16</td>
+</tr>
+<tr class="even">
+<td><strong>Standard</strong></td>
+<td>Structured per IEEE 29148/830 principles, adapted</td>
+</tr>
+<tr class="odd">
+<td><strong>Traceability</strong></td>
+<td>FR/NFR IDs here are referenced by the Backlog (doc 14), RTM (doc 15), Business Rules (doc 05) and Tests (doc 16)</td>
+</tr>
+<tr class="even">
+<td><strong>Status</strong></td>
+<td>DRAFT — items tagged <code><span class="tag openq">OPEN-Q</span></code> are blocked on the Stakeholder Question Log (doc 09)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-introduction">1. Introduction</h2>
+<h3 id="11-purpose">1.1 Purpose</h3>
+<p>Specify, to implementation-ready precision, the requirements for the Guest House Operations Hub so that a new engineering team can build, harden, and operate it without further clarification beyond the identified open questions.</p>
+<h3 id="12-scope">1.2 Scope</h3>
+<p>Covers the operator web application (PWA), its API surface, the AI-agent seam, ingestion/sync integrations (email, iCal), the community network, and the operational envelope (security, performance, backup, monitoring). Excludes the AI assistant's internal runtime (separate service) and live cab dispatch.</p>
+<h3 id="13-definitions">1.3 Definitions</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>OTA</strong></td>
+<td>Online Travel Agency (Booking.com, Agoda, MakeMyTrip)</td>
+</tr>
+<tr class="even">
+<td><strong>Channel</strong></td>
+<td>Origin of a booking (Direct, WhatsApp, Website, each OTA); carries a commission %</td>
+</tr>
+<tr class="odd">
+<td><strong>Travel agent</strong></td>
+<td>B2B person bringing bookings for commission; distinct from channel and referral</td>
+</tr>
+<tr class="even">
+<td><strong>Stay</strong></td>
+<td>Half-open date range <code>[check-in, check-out)</code> stored as Postgres <code>DATERANGE</code></td>
+</tr>
+<tr class="odd">
+<td><strong>Block</strong></td>
+<td>A room held out of service for a period (maintenance, owner use, iCal-imported busy dates)</td>
+</tr>
+<tr class="even">
+<td><strong>Derived availability</strong></td>
+<td>Free units = units − overlapping confirmed reservations − overlapping blocks; never a stored counter</td>
+</tr>
+<tr class="odd">
+<td><strong>HITL</strong></td>
+<td>Human-in-the-loop: AI files escalations; a human commits sensitive actions</td>
+</tr>
+<tr class="even">
+<td><strong>Seam</strong></td>
+<td>The token-gated API surface (<code>/api/agent/*</code>, <code>/api/ingest/*</code>) external services use</td>
+</tr>
+<tr class="odd">
+<td><strong>Client vs. property</strong></td>
+<td>A <em>client</em> (owner business) gets an isolated deployment+DB; one client may run multiple <em>properties</em> inside it</td>
+</tr>
+<tr class="even">
+<td><strong>C-Form / Form C</strong></td>
+<td>Mandatory registration of foreign guests with Indian authorities (FRRO)</td>
+</tr>
+<tr class="odd">
+<td><strong>UTR</strong></td>
+<td>Unique Transaction Reference for UPI/bank transfers</td>
+</tr>
+<tr class="even">
+<td><strong>DPDP</strong></td>
+<td>India's Digital Personal Data Protection Act, 2023</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-system-context">1.4 System context</h3>
+<pre class="mermaid">flowchart LR
+  subgraph Client_Deployment[&quot;One client = one deployment + one DB (isolated)&quot;]
+    HUB[&quot;Ops Hub&lt;br/&gt;Next.js 15 + Prisma + Postgres&quot;]
+    AGENT[&quot;Assistant sidecar&lt;br/&gt;Python · ADK + Gemini · Cloud Run&quot;]
+    AGENT -- &quot;token-gated seam&lt;br/&gt;/api/agent/*&quot; --&gt; HUB
+  end
+  OWNER[&quot;Owner / Reception / Housekeeping&lt;br/&gt;(phone PWA / desktop)&quot;] --&gt; HUB
+  GUEST[&quot;Guest&lt;br/&gt;WhatsApp / chat / voice&quot;] --&gt; AGENT
+  GMAIL[&quot;Owner&#39;s inbox&lt;br/&gt;(OTA confirmation emails)&quot;] -- &quot;forwarder →&lt;br/&gt;/api/ingest/email&quot; --&gt; HUB
+  OTA1[&quot;OTA extranets&quot;] -- &quot;iCal import (pull, daily+manual)&quot; --&gt; HUB
+  HUB -- &quot;iCal export (.ics per room)&quot; --&gt; OTA1
+  HUB -- &quot;UPI link/QR · invoices · messages&quot; --&gt; GUEST
+  PEER[&quot;Peer properties&lt;br/&gt;(community network)&quot;] -- &quot;grant-gated seam&lt;br/&gt;no PII / occupancy / finance&quot; --&gt; HUB
+  WA[&quot;WhatsApp Cloud API&quot;] -. &quot;adapter, off by default&quot; .- HUB
+  RZP[&quot;Razorpay&quot;] -. &quot;gateway, awaits keys&quot; .- HUB
+</pre>
+<h3 id="15-constraints-binding">1.5 Constraints (binding)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Constraint</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C-01</td>
+<td>No OTA extranet scraping/automation; ingest only via owner inbox + official iCal</td>
+<td>Hard rule</td>
+</tr>
+<tr class="even">
+<td>C-02</td>
+<td>No direct OTA connectivity APIs (unavailable to single properties)</td>
+<td>Hard rule</td>
+</tr>
+<tr class="odd">
+<td>C-03</td>
+<td>Availability always derived; never a mutable counter</td>
+<td>Hard rule</td>
+</tr>
+<tr class="even">
+<td>C-04</td>
+<td>DB GiST exclusion constraint <code>no_overlapping_confirmed_stays</code> must never be weakened</td>
+<td>Hard rule</td>
+</tr>
+<tr class="odd">
+<td>C-05</td>
+<td>No secrets in code; <code>.env</code> git-ignored</td>
+<td>Hard rule</td>
+</tr>
+<tr class="even">
+<td>C-06</td>
+<td>Stack: Next.js 15 App Router, TypeScript strict, Postgres (Supabase), Prisma, Tailwind v4, Zod, Vitest; migrations only via <code>db:migrate:new</code> (Prisma diff engine mangles DATERANGE/GiST)</td>
+<td>README/ROADMAP</td>
+</tr>
+<tr class="odd">
+<td>C-07</td>
+<td>One client = one deployment + one database + one agent; nothing shared across clients</td>
+<td>ROADMAP</td>
+</tr>
+<tr class="even">
+<td>C-08</td>
+<td>AI agents never write money or calendar directly; sensitive actions escalate to a human</td>
+<td>INTEGRATION design</td>
+</tr>
+<tr class="odd">
+<td>C-09</td>
+<td>Proactive WhatsApp sends require Meta-approved templates (free text only inside 24h window)</td>
+<td>Meta policy <code><span class="tag fact">FACT</span></code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-product-overview">2. Product Overview</h2>
+<h3 id="21-users-and-roles-fact">2.1 Users and roles <code><span class="tag fact">FACT</span></code></h3>
+<table>
+<thead>
+<tr class="header">
+<th>Role</th>
+<th>Access</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Owner</td>
+<td>Everything, incl. Finance, Pricing, Analytics, Settings, community, multi-property switch</td>
+</tr>
+<tr class="even">
+<td>Reception</td>
+<td>Bookings, guests, day-to-day ops; <strong>no</strong> money or setup</td>
+</tr>
+<tr class="odd">
+<td>Housekeeping</td>
+<td>Today + Cleaning only</td>
+</tr>
+</tbody>
+</table>
+<p><code>[GAP]</code> Role model is page/route-level; field-level money masking in API responses is missing (staff-visible responses can carry <code>grossAmount</code>) — see NFR-SEC-07, GAP-12.</p>
+<h3 id="22-operating-environment">2.2 Operating environment</h3>
+<p>Mobile-first PWA (~390 px baseline) installable to home screen; desktop sidebar layout; intermittent-connectivity tolerance claimed (<code><span class="tag openq">OPEN-Q</span></code> on actual offline depth); reference hosting Vercel + Supabase + GitHub Actions + Vercel Cron; DigitalOcean branch exists.</p>
+<hr />
+<h2 id="3-functional-requirements">3. Functional Requirements</h2>
+<blockquote>
+<p>Numbering: FR-<MODULE>-<n>. Priority: <strong>M</strong>ust / <strong>S</strong>hould / <strong>C</strong>ould / <strong>W</strong>on't (this release). Status: ✅ built (per README/ROADMAP, verify in code) · 🟡 groundwork/off-by-default · ✖ missing. Full behavioural detail (inputs/outputs/pre/postconditions/exceptions) is in doc 03 Module Analysis; business rules in doc 05.</p>
+</blockquote>
+<h3 id="31-authentication--user-management-auth">3.1 Authentication &amp; user management (AUTH)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-AUTH-1</td>
+<td>Email+password login with scrypt hashing; session persists ~1 month ("stay logged in")</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-AUTH-2</td>
+<td>Login rate-limiting 10 attempts/IP/5 min</td>
+<td>M</td>
+<td>✅ (per-instance store — see NFR-SEC-05)</td>
+</tr>
+<tr class="odd">
+<td>FR-AUTH-3</td>
+<td>Owner creates staff logins and assigns role + per-property access</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-AUTH-4</td>
+<td>Self-service password reset (email OTP/link)</td>
+<td>M</td>
+<td>✖ GAP-10</td>
+</tr>
+<tr class="odd">
+<td>FR-AUTH-5</td>
+<td>User invitation flow (no owner-set passwords)</td>
+<td>S</td>
+<td>✖ GAP-10</td>
+</tr>
+<tr class="even">
+<td>FR-AUTH-6</td>
+<td>Session revocation on role change/disable; audit of auth events</td>
+<td>M</td>
+<td><code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+<tr class="odd">
+<td>FR-AUTH-7</td>
+<td>Optional 2FA for owner accounts</td>
+<td>C</td>
+<td>✖</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-property--multi-property-prop">3.2 Property &amp; multi-property (PROP)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-PROP-1</td>
+<td>Property profile: name, address, GST number, check-in/out times, currency, UPI ID, ID-rule strictness (block/warn/off), ID-number-at-booking toggle, ID-scan retention days</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-PROP-2</td>
+<td>Owner adds properties; switcher appears at 2+; all screens re-scope to acting property</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-PROP-3</td>
+<td>Guests shared owner-wide; bookings/pricing/finance strictly per-property</td>
+<td>M</td>
+<td>✅ (decision 2026-07-15)</td>
+</tr>
+<tr class="even">
+<td>FR-PROP-4</td>
+<td>Staff property-access editable per user</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-PROP-5</td>
+<td>All tenant tables carry <code>propertyId</code>; auto-scoping Prisma extension; raw SQL must scope by hand</td>
+<td>M</td>
+<td>✅ (fragile — NFR-SEC-06)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-rooms--room-types-room">3.3 Rooms &amp; room types (ROOM)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-ROOM-1</td>
+<td>Room types: name, base rate, max occupancy, rate floor/ceiling</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-ROOM-2</td>
+<td>Rooms belong to a type; label; archive (retire, keep history); delete only if never booked</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-ROOM-3</td>
+<td>Amenities per room type (feeds community directory)</td>
+<td>S</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<h3 id="34-availability-engine-avail">3.4 Availability engine (AVAIL)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-AVAIL-1</td>
+<td>Availability derived: units − overlapping confirmed reservations − overlapping blocks, per room-type per date</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-AVAIL-2</td>
+<td>Two confirmed reservations for the same room can never overlap — enforced by Postgres GiST exclusion constraint, not app code</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-AVAIL-3</td>
+<td>Exclusion-constraint violations surfaced as clean 409 "dates no longer available" (never raw 500)</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-AVAIL-4</td>
+<td>Cancelled bookings free their dates immediately</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-AVAIL-5</td>
+<td>Optional oversell safety buffer per room type (don't offer last N units to OTAs/agents)</td>
+<td>S</td>
+<td>✖ GAP-24 (User Guide <em>advises</em> a manual buffer; no feature exists)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="35-booking-engine-book">3.5 Booking engine (BOOK)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-BOOK-1</td>
+<td>Create booking: guest (dedupe by phone), channel, room, dates, arrival time, amount (pre-filled by pricing suggestion), special requests, optional travel agent, ID-confirmation tick</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-BOOK-2</td>
+<td>Blacklist and scam-number warnings shown at entry; proceed allowed (warn-only)</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-BOOK-3</td>
+<td>Edit, cancel (frees dates; computes ladder refund), undo of check-in/out steps</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-BOOK-4</td>
+<td>Statuses: confirmed / cancelled / no_show; check-in/out as timestamps</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-BOOK-5</td>
+<td>All-bookings list: instant search (guest/phone/room/channel), timeline filters with counts</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-BOOK-6</td>
+<td>Group/long-stay folio linking multiple room bookings for combined view + billing</td>
+<td>S</td>
+<td>✅ (billing depth <code><span class="tag openq">OPEN-Q</span></code>)</td>
+</tr>
+<tr class="odd">
+<td>FR-BOOK-7</td>
+<td>Hold-a-room-while-paying (gateway hold with deadline, reusing the exclusion constraint)</td>
+<td>S</td>
+<td>🟡 awaits Razorpay keys</td>
+</tr>
+<tr class="even">
+<td>FR-BOOK-8</td>
+<td>Walk-in same-day booking fast path</td>
+<td>S</td>
+<td><code><span class="tag inferred">INFERRED</span></code></td>
+</tr>
+<tr class="odd">
+<td>FR-BOOK-9</td>
+<td>No-show marking rules (when, by whom, revenue/refund effect)</td>
+<td>M</td>
+<td><code><span class="tag openq">OPEN-Q</span></code> — status exists; policy undefined</td>
+</tr>
+</tbody>
+</table>
+<h3 id="36-calendar-cal">3.6 Calendar (CAL)</h3>
+<p>Rooms × dates grid; Day/Week/2-Week/Month; colour code vacant/occupied/blocked/conflict/arriving/departing; continuous stay bars with guest+channel; tap-to-book empty nights; date jump; conflict cells red. All ✅ <code><span class="tag fact">FACT</span></code>.</p>
+<h3 id="37-ota-ingestion--email-ingest">3.7 OTA ingestion — email (INGEST)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-ING-1</td>
+<td>Paste OTA confirmation email → parse guest/dates/amount → staged <code>InboundBooking</code> under Pending review</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-ING-2</td>
+<td>Review, correct, pick room, create (conflict-checked) or dismiss; original email viewable</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-ING-3</td>
+<td>Token-gated webhook <code>POST /api/ingest/email</code> + Gmail Apps Script / Cloudflare Worker forwarders for automation; review step retained</td>
+<td>M</td>
+<td>🟡 off by default</td>
+</tr>
+<tr class="even">
+<td>FR-ING-4</td>
+<td>Parser tuned per OTA format; unparseable emails staged raw with failure reason</td>
+<td>M</td>
+<td>🟡 "tuning against real OTA emails remains" <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="odd">
+<td>FR-ING-5</td>
+<td>Detect OTA <strong>modification/cancellation</strong> emails and link to the existing booking rather than staging a duplicate</td>
+<td>M</td>
+<td>✖ GAP-2 (only confirmations mentioned)</td>
+</tr>
+<tr class="even">
+<td>FR-ING-6</td>
+<td>Duplicate suppression by <code>ota_ref</code></td>
+<td>M</td>
+<td><code><span class="tag inferred">INFERRED</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="38-ical-sync-ical">3.8 iCal sync (ICAL)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-ICAL-1</td>
+<td>Import per-room OTA iCal URL; busy dates become blocks; manual Sync now + daily auto-refresh</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-ICAL-2</td>
+<td>Export per-room private <code>.ics</code> URL</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-ICAL-3</td>
+<td>Import failures (URL dead, feed malformed) alert the owner</td>
+<td>M</td>
+<td>✖ GAP-5</td>
+</tr>
+<tr class="even">
+<td>FR-ICAL-4</td>
+<td>Removed events in source feed release the corresponding blocks</td>
+<td>M</td>
+<td><code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+<tr class="odd">
+<td>FR-ICAL-5</td>
+<td>Per-feed tokens (rotate away from single iCal token)</td>
+<td>S</td>
+<td>✖ (repo's own suggestion)</td>
+</tr>
+<tr class="even">
+<td>FR-ICAL-6</td>
+<td>Sync frequency configurable / more frequent than daily (lag window = oversell risk)</td>
+<td>S</td>
+<td>✖ GAP-6</td>
+</tr>
+</tbody>
+</table>
+<h3 id="39-guests--crm-guest">3.9 Guests &amp; CRM (GUEST)</h3>
+<p>Profiles (name, phone unique, email, address, vehicle, notes, preferences/tags); stays, LTV, repeat badge; reliability score from no-shows + "repeat no-show" badge + shareable alert; ID flags (checked / photocopied / verification complete / consent) gating check-in; blacklist toggle+reason; ID document upload (🟡 storage env); C-Form section (13 nullable fields: nationality, passport, visa, port+date of entry, purpose); stay history. All ✅ except noted <code><span class="tag fact">FACT</span></code>.</p>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-GST-1</td>
+<td>Guest merge (duplicate records, changed phone)</td>
+<td>S</td>
+<td>✖ GAP-19</td>
+</tr>
+<tr class="even">
+<td>FR-GST-2</td>
+<td>DPDP data-subject operations: export &amp; delete a guest's data on request</td>
+<td>M</td>
+<td>✖ GAP-8</td>
+</tr>
+<tr class="odd">
+<td>FR-GST-3</td>
+<td>C-Form output artefact (print/PDF/CSV in the format the FRRO process accepts)</td>
+<td>M</td>
+<td>✖ GAP-7 — fields stored, no output <code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="310-check-in--check-out-check">3.10 Check-in / check-out (CHECK)</h3>
+<p>Three-stage stay card (not arrived → in-house → checked out) with undo; check-in gated on ID verification (+C-Form for foreigners) per property strictness (block/warn/off); checkout feeds housekeeping. ✅ <code><span class="tag fact">FACT</span></code>. <code><span class="tag openq">OPEN-Q</span></code>: is check-out allowed with balance due? Current behaviour unspecified.</p>
+<h3 id="311-housekeeping-hk">3.11 Housekeeping (HK)</h3>
+<p>To-clean (post-checkout, "clean first" flag when same-day arrival) and Ready lists; manual "needs cleaning"; assignment to staff with checklist. ✅. Missing <code><span class="tag rec">REC</span></code>: inspected/verified state; periodic deep-clean scheduling; block room while dirty option — GAP-20.</p>
+<h3 id="312-pricing-price">3.12 Pricing (PRICE)</h3>
+<p>Advisory rule engine — weekend, seasons/holidays list, early-bird/last-minute, occupancy/busy-period — compounded then clamped to type floor/ceiling; rate calendar with pinned overrides (dot) and rule-adjusted italics; suggestion pre-fills bookings; never pushed to OTAs; never rewrites saved bookings. ✅ <code><span class="tag fact">FACT</span></code>. Rule precedence/compounding order documentation ✖ — <code><span class="tag openq">OPEN-Q</span></code>.</p>
+<h3 id="313-payments-pay">3.13 Payments (PAY)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-PAY-1</td>
+<td>Multiple payments per booking; modes cash/UPI/card/bank/OTA-collect; balance due derived</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-PAY-2</td>
+<td>Advance tracking: <code>advanceRequired</code> + <code>isAdvance</code> payments; status derived</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-PAY-3</td>
+<td>UPI/bank verification checklist (sender name, funds landed, UTR reference) gating Add payment</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-PAY-4</td>
+<td>UPI pay link + self-contained QR for outstanding balance (no gateway)</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-PAY-5</td>
+<td>Razorpay auto-capture + idempotent webhook + room hold</td>
+<td>S</td>
+<td>🟡 awaits keys</td>
+</tr>
+<tr class="even">
+<td>FR-PAY-6</td>
+<td>Refund workflow on cancellation per ladder; owner may approve a different amount; refund recorded with status</td>
+<td>M</td>
+<td>✅ (payout execution manual <code><span class="tag inferred">INFERRED</span></code>)</td>
+</tr>
+<tr class="odd">
+<td>FR-PAY-7</td>
+<td>Payment edit/void with audit trail</td>
+<td>M</td>
+<td><code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+<tr class="even">
+<td>FR-PAY-8</td>
+<td>Money as integer paise or decimal (replace whole-rupee <code>number</code> math)</td>
+<td>M</td>
+<td>✖ GAP-9</td>
+</tr>
+</tbody>
+</table>
+<h3 id="314-invoicing-inv">3.14 Invoicing (INV)</h3>
+<p>Printable invoice (property name/address/GST no., stay, charges, payments, balance) via browser Print→PDF. ✅. Missing for GST compliance <code><span class="tag rec">REC</span></code>: sequential invoice numbering series, GST rate application per line / tariff slab, SAC code, place of supply, server-side PDF for consistency — GAP-11 <code><span class="tag openq">OPEN-Q</span></code>.</p>
+<h3 id="315-finance-fin">3.15 Finance (FIN)</h3>
+<p>Date-ranged tiles (Net to you / Gross / Commission / Outstanding); by-channel breakdown; expenses; balances due; Bookings/Payments CSV. ✅. <code><span class="tag openq">OPEN-Q</span></code>: commission basis (gross vs net-of-GST; MMT net-rate vs commission models). <code><span class="tag openq">OPEN-Q</span></code>: OTA payout reconciliation (recording when the OTA actually pays) ✖ GAP-13.</p>
+<h3 id="316-analytics-anly">3.16 Analytics (ANLY)</h3>
+<p>Occupancy, ADR, RevPAR, average stay, cancellation rate, channel mix; occupancy trend, source-mix donut, revenue-by-channel charts; full CSV export. ✅.</p>
+<h3 id="317-staff--attendance--shifts-staff">3.17 Staff / attendance / shifts (STAFF)</h3>
+<p>Directory (name/role/phone), edit/disable/delete; shift roster; daily attendance present/absent/leave; housekeeping assignment. ✅. Payroll linkage ✖ (out of scope? <code><span class="tag openq">OPEN-Q</span></code>).</p>
+<h3 id="318-facilities-fac">3.18 Facilities (FAC)</h3>
+<p>Maintenance requests (priority/assignee/cost, open→in-progress→done); asset register with service-every-N-days + due flag; inventory items (unit, low-stock level, in/out movements, low banner); vendors (+rating); purchase orders draft→ordered→received; vendor payments + summary; tour partners (commission %), tours, tour bookings + revenue/commission summary; drivers + trips (records only). All ✅.</p>
+<h3 id="319-complaints--reviews-crr">3.19 Complaints &amp; reviews (CRR)</h3>
+<p>Complaints: category, priority, assignee, status to resolved with follow-up; filters. Reviews: request tracking + response drafting. ✅.</p>
+<h3 id="320-messaging-msg">3.20 Messaging (MSG)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-MSG-1</td>
+<td>Outbox logs every outbound message (channel, recipient, text, status)</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-MSG-2</td>
+<td>Auto-drafts: booking confirmation, pre-arrival (day before), payment reminders</td>
+<td>M</td>
+<td>✅ (logged only)</td>
+</tr>
+<tr class="odd">
+<td>FR-MSG-3</td>
+<td>WhatsApp Cloud API adapter flips status to sent/failed when enabled</td>
+<td>M</td>
+<td>🟡 needs credentials + approved templates</td>
+</tr>
+<tr class="even">
+<td>FR-MSG-4</td>
+<td>Template management + params through the seam; language variants (Khasi/Hindi/English)</td>
+<td>M</td>
+<td>✖ GAP-3</td>
+</tr>
+<tr class="odd">
+<td>FR-MSG-5</td>
+<td>Inbound guest replies visible to the operator (two-way thread)</td>
+<td>S</td>
+<td>✖ GAP-4 — outbox only <code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="321-ai-agent-seam--escalations-agent">3.21 AI agent seam &amp; escalations (AGENT)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-AGT-1</td>
+<td>Token-gated (<code>AGENT_TOKEN</code>, fail-closed) endpoints: availability, quote, create reservation (same GiST transaction, 409 on overlap), queue message, file escalation</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-AGT-2</td>
+<td>Escalation queue: source/category/severity tags, guest original message + AI summary, open→in-progress→resolved; linked booking actions done via normal screens</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>FR-AGT-3</td>
+<td>Owner-editable runtime policies (Settings → Assistant rules), applied ~1 min, no redeploy</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>FR-AGT-4</td>
+<td>Guest/owner persona isolation; canonical security block outranks owner policies; model fallback chain; per-turn diagnostics</td>
+<td>M</td>
+<td>✅ (in sidecar)</td>
+</tr>
+<tr class="odd">
+<td>FR-AGT-5</td>
+<td>Escalation SLA / notification to owner's phone when an escalation arrives</td>
+<td>M</td>
+<td>✖ GAP-14 (badge only; no push)</td>
+</tr>
+<tr class="even">
+<td>FR-AGT-6</td>
+<td>Property-aware agent requests; booking derives property from room</td>
+<td>M</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<h3 id="322-community-network-comm">3.22 Community network (COMM)</h3>
+<p>Connect via code; per-peer share switches (rooms, referrals, scam numbers, bad-guest alerts, vendors, drivers); directory by amenities; overflow referrals with accept→book (conflict-checked)→attributed revenue→derived reciprocal-credit ledger; verified scam/bad-guest sharing (evidence required, dispute/appeal, auto-expiry, hashed number matching); shared vendor/driver lists; all opt-in; never shares guest PII, occupancy, or finance; single audited grant-gated seam. ✅ <code><span class="tag fact">FACT</span></code>.</p>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-COM-1</td>
+<td>Credit-ledger settlement/dispute mechanism (what happens when balances grow one-sided)</td>
+<td>S</td>
+<td><code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+<tr class="even">
+<td>FR-COM-2</td>
+<td>Network governance: who moderates disputed reports across independent deployments; where does the shared registry live</td>
+<td>M</td>
+<td><code><span class="tag openq">OPEN-Q</span></code> — cross-deployment architecture unclear <code><span class="tag inferred">INFERRED</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="323-settings-import-audit-set">3.23 Settings, import, audit (SET)</h3>
+<p>All settings sections per User Guide table ✅; CSV import of past guests/bookings (conflict-checked per row) ✅; audit log of sensitive actions (cancellations, refunds, blacklisting, user &amp; consent changes) ✅. <code><span class="tag rec">REC</span></code> Audit coverage should extend to: payment edits, price overrides, settings changes, community shares, ID views/downloads — GAP-15.</p>
+<h3 id="324-offline--sync-offline">3.24 Offline &amp; sync (OFFLINE)</h3>
+<p>User Guide claims: offline changes saved and synced on reconnect; conflicting offline bookings surfaced. Depth unverified <code><span class="tag openq">OPEN-Q</span></code> — the honest spec (queue? cache-only? which screens?) must come from code audit; treat as 🟡.</p>
+<h3 id="325-localization-l10n">3.25 Localization (L10N)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Pri</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FR-L10N-1</td>
+<td>Operator console i18n framework; Khasi + English UI (Hindi S)</td>
+<td>S→M for inclusion goals</td>
+<td>✖ GAP-16 <code><span class="tag inferred">INFERRED</span></code></td>
+</tr>
+<tr class="even">
+<td>FR-L10N-2</td>
+<td>Guest-facing artefacts (messages, invoices) language selection</td>
+<td>S</td>
+<td>✖</td>
+</tr>
+<tr class="odd">
+<td>FR-L10N-3</td>
+<td>AI assistant Khasi/Hindi/English voice+text</td>
+<td>M</td>
+<td>✅ (sidecar) <code><span class="tag fact">FACT</span></code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-non-functional-requirements">4. Non-Functional Requirements</h2>
+<h3 id="41-security">4.1 Security</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NFR-SEC-01</td>
+<td>Passwords scrypt-hashed; sessions HTTP-only; secrets via env only</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>NFR-SEC-02</td>
+<td>All external seams token-gated, fail-closed</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>NFR-SEC-03</td>
+<td>Cross-client isolation absolute (separate deployments/DBs)</td>
+<td>✅ by architecture</td>
+</tr>
+<tr class="even">
+<td>NFR-SEC-04</td>
+<td>In-client tenant isolation: Prisma auto-scoping + hand-scoped raw SQL</td>
+<td>✅ but fragile — add Postgres RLS as defence-in-depth (GAP-12)</td>
+</tr>
+<tr class="odd">
+<td>NFR-SEC-05</td>
+<td>Rate limiting on shared store (Upstash/Redis) — per-instance memory is weak on serverless</td>
+<td>✖ known debt</td>
+</tr>
+<tr class="even">
+<td>NFR-SEC-06</td>
+<td>Lint/CI guard for raw SQL missing <code>property_id</code> scope</td>
+<td>✖ <code><span class="tag rec">REC</span></code></td>
+</tr>
+<tr class="odd">
+<td>NFR-SEC-07</td>
+<td>Field-level authorization: money fields masked server-side for non-owner roles</td>
+<td>✖ known debt</td>
+</tr>
+<tr class="even">
+<td>NFR-SEC-08</td>
+<td>ID documents: private bucket, signed URLs, access logged, encrypted at rest</td>
+<td>🟡 partial (adapter exists; logging unverified)</td>
+</tr>
+<tr class="odd">
+<td>NFR-SEC-09</td>
+<td>Community hashed-number matching resistant to trivial re-identification (peppered/keyed hash — phone numbers are low-entropy; plain hashing is reversible by enumeration)</td>
+<td><code><span class="tag openq">OPEN-Q</span></code> <code><span class="tag rec">REC</span></code></td>
+</tr>
+<tr class="even">
+<td>NFR-SEC-10</td>
+<td>Dependency and secret scanning in CI; security headers (CSP etc.)</td>
+<td><code><span class="tag openq">OPEN-Q</span></code> unverified</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-privacy--compliance">4.2 Privacy &amp; compliance</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NFR-PRV-01</td>
+<td>DPDP 2023: lawful-purpose notice, recorded consent (exists ✅), data-principal rights (access/correction/erasure ✖), breach notification procedure ✖, retention enforcement (purge cron exists but <strong>inert until <code>idRetentionDays</code> set</strong> — default should be a sane value, not indefinite <code><span class="tag rec">REC</span></code>)</td>
+<td>Partial — GAP-8</td>
+</tr>
+<tr class="even">
+<td>NFR-PRV-02</td>
+<td>Form C: capture ✅; artefact/submission support ✖</td>
+<td>GAP-7</td>
+</tr>
+<tr class="odd">
+<td>NFR-PRV-03</td>
+<td>GST-compliant invoices (numbering, tax lines)</td>
+<td>GAP-11</td>
+</tr>
+<tr class="even">
+<td>NFR-PRV-04</td>
+<td>Cross-border processing disclosure (Gemini/US cloud) in guest-facing notice</td>
+<td>✖ <code><span class="tag rec">REC</span></code></td>
+</tr>
+<tr class="odd">
+<td>NFR-PRV-05</td>
+<td>Data-processing terms between MindBit and each client (who is fiduciary vs processor)</td>
+<td><code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-performance--capacity">4.3 Performance &amp; capacity</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Target <code><span class="tag rec">REC</span></code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NFR-PRF-01</td>
+<td>Interactive screens on mid-range Android over 3G/4G</td>
+<td>P75 &lt; 2.5 s LCP</td>
+</tr>
+<tr class="even">
+<td>NFR-PRF-02</td>
+<td>Booking create round-trip</td>
+<td>&lt; 1.5 s P95</td>
+</tr>
+<tr class="odd">
+<td>NFR-PRF-03</td>
+<td>Calendar month view, 20 rooms</td>
+<td>&lt; 2 s P95</td>
+</tr>
+<tr class="even">
+<td>NFR-PRF-04</td>
+<td>Scale envelope per client</td>
+<td>≤ 5 properties, ≤ 60 rooms, ≤ 30k reservations/yr — small by design; N+1s acceptable only inside this envelope</td>
+</tr>
+<tr class="odd">
+<td>NFR-PRF-05</td>
+<td>Agent seam availability/quote</td>
+<td>&lt; 800 ms P95 (conversation latency budget)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="44-availability--resilience">4.4 Availability &amp; resilience</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NFR-AVL-01</td>
+<td>Target 99.5% monthly availability per client <code><span class="tag rec">REC</span></code></td>
+<td>Undefined today</td>
+</tr>
+<tr class="even">
+<td>NFR-AVL-02</td>
+<td>Documented, <strong>tested</strong> backup &amp; restore: daily automated backup, RPO ≤ 24h, RTO ≤ 4h, quarterly restore drill</td>
+<td>✖ GAP-1 (Supabase backups exist platform-side; procedure undocumented/untested <code><span class="tag inferred">INFERRED</span></code>)</td>
+</tr>
+<tr class="odd">
+<td>NFR-AVL-03</td>
+<td>Graceful degradation when sidecar/AI is down (hub fully usable; escalations queue)</td>
+<td>✅ by architecture <code><span class="tag inferred">INFERRED</span></code></td>
+</tr>
+<tr class="even">
+<td>NFR-AVL-04</td>
+<td>Cron failure (iCal sync, purge) detection &amp; alert</td>
+<td>✖ GAP-5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="45-observability--support">4.5 Observability &amp; support</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NFR-OBS-01</td>
+<td>Error tracking (e.g. Sentry), structured logs, uptime checks per client deployment</td>
+<td>✖ GAP-17</td>
+</tr>
+<tr class="even">
+<td>NFR-OBS-02</td>
+<td>Fleet dashboard: version, health, cron status across all client deployments</td>
+<td>✖ GAP-18 — critical for 25+ clients</td>
+</tr>
+<tr class="odd">
+<td>NFR-OBS-03</td>
+<td>Support model: channel, hours, SLA, in-app "report a problem"</td>
+<td><code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="46-usability--accessibility">4.6 Usability &amp; accessibility</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NFR-UX-01</td>
+<td>Mobile-first ~390 px; thumb-reachable primary actions; dark/light; density options</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>NFR-UX-02</td>
+<td>Usable by non-technical operators; plain-language errors</td>
+<td>✅ intent; validate in pilot UAT</td>
+</tr>
+<tr class="odd">
+<td>NFR-UX-03</td>
+<td>WCAG 2.1 AA for core flows (contrast, touch targets ≥44 px, screen-reader labels)</td>
+<td>✖ unassessed — GAP-21</td>
+</tr>
+<tr class="even">
+<td>NFR-UX-04</td>
+<td>Low-literacy affordances (icons, voice via assistant)</td>
+<td><code><span class="tag rec">REC</span></code> future</td>
+</tr>
+</tbody>
+</table>
+<h3 id="47-maintainability--delivery">4.7 Maintainability &amp; delivery</h3>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Requirement</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>NFR-MNT-01</td>
+<td>CI: lint + typecheck + Vitest + agent pytest on PR</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>NFR-MNT-02</td>
+<td>Route-level test for create-overlap→409; housekeeping derivation test</td>
+<td>✖ repo's own top gap</td>
+</tr>
+<tr class="odd">
+<td>NFR-MNT-03</td>
+<td>Safe-migration discipline documented &amp; enforced (CI check that migrations came from the helper <code><span class="tag rec">REC</span></code>)</td>
+<td>Partial</td>
+</tr>
+<tr class="even">
+<td>NFR-MNT-04</td>
+<td>Fleet upgrade path: migrations run on deploy (<code>prisma migrate deploy</code>) ✅; coordinated multi-client rollout tooling ✖ GAP-18</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-external-interfaces">5. External Interfaces</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Interface</th>
+<th>Direction</th>
+<th>Protocol</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Owner inbox → hub</td>
+<td>In</td>
+<td>Email forwarder → HTTPS webhook (token)</td>
+<td>Gmail Apps Script or Cloudflare Email Worker <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="even">
+<td>OTA iCal</td>
+<td>In/Out</td>
+<td>HTTPS <code>.ics</code> pull/serve</td>
+<td>Binary busy/free, per room, hours-level lag; not offered on all listing types <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="odd">
+<td>WhatsApp Cloud API</td>
+<td>Out (in future?)</td>
+<td>HTTPS</td>
+<td>Template approval required; 24h session window <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="even">
+<td>Razorpay</td>
+<td>In (webhook) / Out</td>
+<td>HTTPS, idempotent webhook</td>
+<td>Awaits merchant keys <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="odd">
+<td>UPI deep link / QR</td>
+<td>Out</td>
+<td><code>upi://</code> URI + SVG QR</td>
+<td>No gateway; verification is manual checklist <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="even">
+<td>Agent sidecar</td>
+<td>In</td>
+<td>HTTPS, <code>AGENT_TOKEN</code></td>
+<td>availability/quote/reserve/message/escalate <code><span class="tag fact">FACT</span></code></td>
+</tr>
+<tr class="odd">
+<td>Peer deployments (community)</td>
+<td>In/Out</td>
+<td>Grant-gated seam</td>
+<td>Exact cross-deployment topology <code><span class="tag openq">OPEN-Q</span></code></td>
+</tr>
+<tr class="even">
+<td>Browser print</td>
+<td>Out</td>
+<td>CSS print</td>
+<td>Invoices; server-side PDF deferred</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-data-model">6. Data model</h2>
+<p>See doc 12 (entity catalogue + Mermaid ERD reflecting the 55-model schema). Correctness core: <code>Reservation.stay DATERANGE</code> + GiST exclusion (<code>WHERE status='confirmed'</code>), <code>Block.period DATERANGE</code>; availability computed, never stored.</p>
+<h2 id="7-error-handling-principles">7. Error handling principles</h2>
+<ul>
+<li>Constraint violations → domain-specific 4xx with friendly copy (409 for overlap) — never raw 500 <code><span class="tag fact">FACT</span></code>.</li>
+<li>Consistent <code>{ data } / { error }</code> envelope <code><span class="tag fact">FACT</span></code>.</li>
+<li>Parser failures stage the raw email rather than dropping it (FR-ING-4).</li>
+<li>Seam auth failures fail closed with no information leak.</li>
+<li><code><span class="tag rec">REC</span></code> Add: global error boundary with user-visible incident ID; retry semantics documented per endpoint; webhook idempotency keys (Razorpay planned; extend to ingest).</li>
+</ul>
+<h2 id="8-open-items-blocking-final-sign-off">8. Open items blocking final sign-off</h2>
+<p>The <code><span class="tag openq">OPEN-Q</span></code> tags above; consolidated with rationale in doc 09. The five that block the most design surface: Q-FIN-01 (commission basis), Q-LEG-02 (Form C artefact), Q-TEC-04 (offline truth), Q-LEG-03 (community topology), Q-BUS-03 (monetisation model).</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>02-SRS.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow Analysis · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 04</p>
+  <h1>Workflow Analysis</h1>
+  <p class="sub">17 workflows with happy, alternate, failure and exception paths</p>
+  <div class="chips"><span class="chip">Flow + sequence diagrams</span><span class="chip">Mermaid, editable</span></div>
+</div>
+<div class="content">
+<h1 id="workflow-analysis">Workflow Analysis</h1>
+<h2 id="discovery-doc-04--v10--2026-07-16">Discovery doc 04 · v1.0 · 2026-07-16</h2>
+<p>Each workflow: happy path, alternate paths, failure paths, exception paths. Mermaid diagrams are the version-controllable source for process/sequence diagrams (deliverables "Process Flow Diagrams" and "Sequence Diagrams").</p>
+<hr />
+<h2 id="wf-01-new-direct-booking">WF-01 New direct booking</h2>
+<pre class="mermaid">flowchart TD
+  A[Guest contacts: walk-in / phone / WhatsApp] --&gt; B[Reception taps New booking]
+  B --&gt; C[Enter phone → existing guest auto-matched]
+  C --&gt; D{Warnings?}
+  D -- blacklist / scam number --&gt; E[Amber warning shown — proceed allowed]
+  D -- none --&gt; F
+  E --&gt; F[Channel, agent?, room, dates, arrival time]
+  F --&gt; G[Pricing suggestion pre-fills amount]
+  G --&gt; H[ID-confirmation tick → Save]
+  H --&gt; I{DB exclusion constraint}
+  I -- ok --&gt; J[Confirmed · calendar updates · confirmation drafted to outbox]
+  I -- overlap --&gt; K[409: dates no longer available — pick another room/dates]
+</pre>
+<ul>
+<li><strong>Happy:</strong> as diagrammed; &lt; 60 s target.</li>
+<li><strong>Alternate:</strong> guest new (record created); agent-attributed; advance required (advance status pending until advance-tagged payment); booking taken by AI via seam (same constraint).</li>
+<li><strong>Failure:</strong> overlap 409 (retry different room); validation errors inline.</li>
+<li><strong>Exception:</strong> offline — queued locally, synced later; if it clashed meanwhile, app surfaces it (mechanics <code>[Q Q-TEC-04]</code>).</li>
+</ul>
+<h2 id="wf-02-ota-booking-import-email">WF-02 OTA booking import (email)</h2>
+<pre class="mermaid">flowchart TD
+  A[OTA sends confirmation email to owner inbox] --&gt; B{Ingestion mode}
+  B -- manual --&gt; C[Operator pastes email → Parse]
+  B -- forwarder --&gt; D[Apps Script / CF Worker → POST /api/ingest/email + token]
+  C --&gt; E[InboundBooking staged: Pending review]
+  D --&gt; E
+  E --&gt; F[Operator verifies guest/dates/amount · picks room]
+  F --&gt; G{Create booking}
+  G -- ok --&gt; H[Confirmed · appears on calendar]
+  G -- overlap --&gt; I[409 → operator resolves: other room / contact OTA guest]
+  E -- not a booking --&gt; J[Dismiss]
+</pre>
+<ul>
+<li><strong>Failure:</strong> parser can't extract → staged raw for manual entry; forwarder silently down → <strong>no signal</strong> (GAP-5: heartbeat needed).</li>
+<li><strong>Exception:</strong> modification/cancellation email → <strong>no linked-update path today</strong> (GAP-2): operator must manually find &amp; edit the booking. Duplicate email → suppress by ota_ref <code>[verify]</code>.</li>
+</ul>
+<h2 id="wf-03-ical-sync-cycle">WF-03 iCal sync cycle</h2>
+<ul>
+<li><strong>Happy:</strong> daily cron (+ manual Sync now) pulls each feed → busy events become blocks → export .ics serves our busy dates to OTA.</li>
+<li><strong>Failure:</strong> fetch error → ? (no alert today, GAP-5); malformed feed → skip? partial apply? <code>[Q Q-TEC-06]</code>.</li>
+<li><strong>Exception:</strong> imported block overlaps existing confirmed stay → <strong>Conflict</strong> flagged red → owner playbook: verify which guest is real, contact OTA, adjust (WF-12).</li>
+<li><strong>Exception:</strong> event removed at source → block should be released (Q-TEC-06); if not, phantom-busy loses revenue.</li>
+</ul>
+<h2 id="wf-04-cancellation--refund">WF-04 Cancellation &amp; refund</h2>
+<pre class="mermaid">flowchart TD
+  A[Cancel reservation] --&gt; B[Status → cancelled · dates freed instantly]
+  B --&gt; C[Ladder computes refund % by days-before]
+  C --&gt; D[Owner approves suggested or different amount]
+  D --&gt; E[Refund recorded with status]
+  E --&gt; F[Payout executed outside system: UPI/cash]
+  B --&gt; G[iCal export updates on next OTA pull — lag window]
+</pre>
+<ul>
+<li><strong>Alternate:</strong> OTA-collect booking — OTA refunds guest per <em>their</em> policy; hub records for books only (Q-FIN-07). No-show: mark no_show — policy effects undefined (Q-OPS-04).</li>
+<li><strong>Failure:</strong> refund &gt; amount paid (guard <code>[R]</code>); cancel after check-in (allowed? <code>[Q]</code>).</li>
+<li><strong>Audit:</strong> cancellation + refund are audited events <code>[F]</code>.</li>
+</ul>
+<h2 id="wf-05-guest-arrival-check-in">WF-05 Guest arrival (check-in)</h2>
+<ul>
+<li><strong>Happy:</strong> Today list → booking → ID gate satisfied (ID number/scan/verified; consent; C-Form for foreigners) → Check in → in-house.</li>
+<li><strong>Alternate:</strong> strictness=warn → proceed past missing ID with warning; strictness=off → no gate. Undo one step on mistake.</li>
+<li><strong>Failure:</strong> ID gate blocks → Record ID link → capture → return.</li>
+<li><strong>Exception:</strong> foreign guest not marked foreign → C-Form silently skipped (validation gap, Q-OPS-10); arrival before room clean → "clean first" flag in housekeeping.</li>
+</ul>
+<h2 id="wf-06-guest-departure-check-out">WF-06 Guest departure (check-out)</h2>
+<ul>
+<li><strong>Happy:</strong> settle balance (WF-07) → Invoice if wanted → Check out → room auto-appears in To-clean → clean → Mark clean → Ready.</li>
+<li><strong>Exception:</strong> departure with balance due — allowed/blocked? (Q-OPS-03); late checkout — no fee construct (Q-OPS-11).</li>
+</ul>
+<h2 id="wf-07-payment-collection-incl-scam-guard">WF-07 Payment collection (incl. scam guard)</h2>
+<pre class="mermaid">sequenceDiagram
+  participant G as Guest
+  participant R as Reception
+  participant App as Hub
+  R-&gt;&gt;App: Add payment (amount, mode)
+  alt mode = UPI / bank
+    App--&gt;&gt;R: Verification checklist (sender name · funds landed · UTR)
+    R-&gt;&gt;G: Show QR / send UPI link (balance pre-filled)
+    G--&gt;&gt;R: Pays via any UPI app
+    R-&gt;&gt;App: Enter UTR + tick all items
+    App--&gt;&gt;R: Save enabled → payment recorded
+  else cash / card / OTA-collect
+    App--&gt;&gt;R: Record directly
+  end
+  App--&gt;&gt;App: Balance due recomputed (derived)
+</pre>
+<ul>
+<li><strong>Failure:</strong> checklist unticked → Save disabled (fake-screenshot scam blocked) <code>[F]</code>.</li>
+<li><strong>Exception:</strong> advance flow (Mark as advance); overpayment (undefined, Q-FIN-06).</li>
+</ul>
+<h2 id="wf-08-invoice-generation">WF-08 Invoice generation</h2>
+<p>Booking → Invoice → print/Save-PDF. <strong>Gaps:</strong> no stored invoice record/number, no GST lines (GAP-11) — statutory workflow incomplete for GST-registered properties.</p>
+<h2 id="wf-09-cleaning-workflow">WF-09 Cleaning workflow</h2>
+<p>Checkout (or manual flag) → To-clean (priority flag if same-day arrival) → assign staff + checklist → Mark clean → Ready. <strong>Missing:</strong> inspection step, block-if-dirty (GAP-20).</p>
+<h2 id="wf-10-inventory-replenishment">WF-10 Inventory replenishment</h2>
+<p>Low-stock banner → PO draft → ordered → received (+ manual stock In) → vendor payment recorded → summary. <strong>Gap:</strong> received PO doesn't auto-move stock <code>[I verify]</code>.</p>
+<h2 id="wf-11-maintenance-request">WF-11 Maintenance request</h2>
+<p>Log request (priority/assignee/cost) → in-progress → done; asset service-due flag → Serviced today resets. <strong>Gap:</strong> no auto room-block for disruptive repairs <code>[R]</code>.</p>
+<h2 id="wf-12-conflict-resolution-cross-channel-double-book">WF-12 Conflict resolution (cross-channel double-book)</h2>
+<pre class="mermaid">flowchart TD
+  A[Conflict flagged: block × booking overlap] --&gt; B[Open Conflicts screen]
+  B --&gt; C{Which is real?}
+  C -- OTA guest real --&gt; D[Move/cancel direct booking · apologise/rehouse via referral]
+  C -- direct guest real --&gt; E[Cancel at OTA extranet manually · absorb any OTA penalty]
+  C -- block stale --&gt; F[Delete imported/manual block]
+  D &amp; E &amp; F --&gt; G[Conflict cleared · postmortem: buffer? sync frequency?]
+</pre>
+<p>This is the costliest failure mode the product manages; needs an owner playbook + (future) referral tie-in <code>[R]</code>.</p>
+<h2 id="wf-13-referral-community-overflow">WF-13 Referral (community overflow)</h2>
+<p>Full property → Referrals → pick connected peer (rooms shared) → send guest details (consent point <code>[Q Q-LEG-05]</code>) → peer accepts → peer books normally (conflict-checked) → revenue attributed → reciprocal credit ledger updates (derived). <strong>Failure:</strong> peer declines/silent → timeout/reassign <code>[Q]</code>. <strong>Exception:</strong> disputes on attribution (Q-BUS-06).</p>
+<h2 id="wf-14-ai-escalation-hitl">WF-14 AI escalation (HITL)</h2>
+<pre class="mermaid">sequenceDiagram
+  participant G as Guest
+  participant AI as Assistant (sidecar)
+  participant App as Hub
+  participant O as Owner/Reception
+  G-&gt;&gt;AI: &quot;Please cancel my booking&quot; (Khasi/Hindi/English)
+  AI-&gt;&gt;App: POST /api/agent/escalations (category, severity, summary, link)
+  App--&gt;&gt;O: Escalations queue + badge (no push — GAP-14)
+  O-&gt;&gt;App: Open escalation → read original + summary
+  O-&gt;&gt;App: Perform cancellation via normal booking screen (RBAC + audit)
+  O-&gt;&gt;App: Mark resolved
+  App--&gt;&gt;AI: (policy) status available
+  AI--&gt;&gt;G: Outcome message via outbox
+</pre>
+<p><strong>Failure:</strong> AI down → guest gets fallback/no reply; hub unaffected. <strong>Exception:</strong> severity high at 2 am → sits unseen until morning (GAP-14 is the fix).</p>
+<h2 id="wf-15-scam--bad-guest-report-community">WF-15 Scam / bad-guest report (community)</h2>
+<p>Incident → local flag (scam number w/ reason) → optional share to network: evidence attached → verification → visible to granting peers (hashed match) → dispute/appeal possible → auto-expiry. <strong>Governance owner for verification/adjudication undefined</strong> (Q-LEG-03).</p>
+<h2 id="wf-16-new-client-onboarding-mindbit-fleet--missing-workflow-gap-18">WF-16 New client onboarding (MindBit fleet — missing workflow, GAP-18)</h2>
+<p>Target <code>[R]</code>: provision deployment+DB → seed → property wizard (profile, rooms, channels, policies) → CSV import → iCal/forwarder setup → staff logins → training (Khasi materials) → go-live checklist. Today: manual, undocumented — critical path for grant milestones.</p>
+<h2 id="wf-17-backup--restore-missing-gap-1">WF-17 Backup &amp; restore (missing, GAP-1)</h2>
+<p>Target <code>[R]</code>: nightly automated backup per client → offsite copy → quarterly restore drill → documented RTO/RPO. Today: platform defaults, unverified.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>04-workflows.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

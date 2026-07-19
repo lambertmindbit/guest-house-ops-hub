@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Testing Readiness · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 16</p>
+  <h1>Testing Readiness</h1>
+  <p class="sub">Functional, UAT, security, performance, offline and accessibility scenario catalogue</p>
+  <div class="chips"><span class="chip">100+ scenarios</span></div>
+</div>
+<div class="content">
+<h1 id="testing-readiness">Testing Readiness</h1>
+<h2 id="discovery-doc-16--v10--2026-07-16">Discovery doc 16 · v1.0 · 2026-07-16</h2>
+<p>Existing automated coverage <code><span class="tag fact">FACT</span></code>: conflict/availability core + pure pricing (Vitest, real test DB required), agent pytest suite + CI. Known holes <code><span class="tag fact">FACT</span></code>: route handlers, quoteRoomType wrapper, housekeeping derivation. Scenario IDs (TS-*) are referenced by the RTM.</p>
+<h2 id="1-functional-test-scenarios--the-correctness-core-regression-critical">1. Functional test scenarios — the correctness core (regression-critical)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Scenario</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TS-BK-01</td>
+<td>Create overlapping confirmed booking same room → 409, friendly message, nothing persisted</td>
+<td>Negative / <strong>route-level (US-903)</strong></td>
+</tr>
+<tr class="even">
+<td>TS-BK-02</td>
+<td>Back-to-back stays (checkout day = next check-in) succeed</td>
+<td>Boundary</td>
+</tr>
+<tr class="odd">
+<td>TS-BK-03</td>
+<td>Overlap allowed when existing is cancelled/no_show</td>
+<td>Functional</td>
+</tr>
+<tr class="even">
+<td>TS-BK-04</td>
+<td>Concurrent create race: exactly one wins (parallel requests)</td>
+<td>Concurrency</td>
+</tr>
+<tr class="odd">
+<td>TS-BK-05</td>
+<td>Edit dates into an overlap → 409; original untouched</td>
+<td>Negative</td>
+</tr>
+<tr class="even">
+<td>TS-BK-06</td>
+<td>checkOut ≤ checkIn rejected; absurd ranges per Q-OPS-01 bounds</td>
+<td>Boundary</td>
+</tr>
+<tr class="odd">
+<td>TS-BK-07</td>
+<td>Guest dedupe: same phone reuses record; new phone creates</td>
+<td>Functional</td>
+</tr>
+<tr class="even">
+<td>TS-AV-01</td>
+<td>Availability = units − confirmed − blocks across span</td>
+<td>Unit (exists)</td>
+</tr>
+<tr class="odd">
+<td>TS-AV-02</td>
+<td>Cancel frees dates instantly</td>
+<td>Functional</td>
+</tr>
+<tr class="even">
+<td>TS-AV-03</td>
+<td>Archived room excluded from availability, history intact</td>
+<td>Functional</td>
+</tr>
+<tr class="odd">
+<td>TS-AV-04</td>
+<td>Block overlapping stay → conflict flagged, not blocked write</td>
+<td>Functional</td>
+</tr>
+<tr class="even">
+<td>TS-AV-05</td>
+<td>Raw-SQL availability respects property scope (leak test)</td>
+<td>Security</td>
+</tr>
+<tr class="odd">
+<td>TS-IC-01..07</td>
+<td>Import creates blocks; export serves busy; stale-feed warning; frequency config; buffer withheld; removed-event releases block; per-feed token rotation</td>
+<td>Sync suite</td>
+</tr>
+<tr class="even">
+<td>TS-IN-01..07</td>
+<td>Paste-parse happy; unparseable staged raw; webhook token reject; modification diff/apply; cancellation flow; wrong-ref mismatch alert; duplicate ref suppressed</td>
+<td>Ingestion suite</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-money--finance">2. Money &amp; finance</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Scenario</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TS-PY-01</td>
+<td>Part-payments accumulate; balance derived correctly</td>
+</tr>
+<tr class="even">
+<td>TS-PY-02</td>
+<td>UPI/bank without full checklist → save disabled (fake-payment guard)</td>
+</tr>
+<tr class="odd">
+<td>TS-PY-03</td>
+<td>Advance pending → received on advance-tagged payment</td>
+</tr>
+<tr class="even">
+<td>TS-PY-04</td>
+<td>UPI link/QR equals current balance after each payment</td>
+</tr>
+<tr class="odd">
+<td>TS-PY-05</td>
+<td>Refund ladder tiers at each boundary (30/20/7-day edges)</td>
+</tr>
+<tr class="even">
+<td>TS-PY-06</td>
+<td>Owner overrides refund amount; audited</td>
+</tr>
+<tr class="odd">
+<td>TS-PY-07</td>
+<td>Paise arithmetic property tests (no float drift) after US-401</td>
+</tr>
+<tr class="even">
+<td>TS-PY-08</td>
+<td>Void+reversal keeps balance &amp; audit consistent</td>
+</tr>
+<tr class="odd">
+<td>TS-PY-09</td>
+<td>Refund &gt; paid rejected (BR-CANC-03)</td>
+</tr>
+<tr class="even">
+<td>TS-PY-10</td>
+<td>Razorpay webhook replay → single posting (idempotency)</td>
+</tr>
+<tr class="odd">
+<td>TS-PY-11</td>
+<td>Hold expiry releases room; constraint intact</td>
+</tr>
+<tr class="even">
+<td>TS-FN-01..07</td>
+<td>Net = gross−commission−expenses; channel vs agent stacking per ratified rule; date-semantics labels; CSV reconciliation totals; invoice numbering gap-free per FY; GST lines per rate; payout variance report</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-check-in--compliance">3. Check-in / compliance</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Scenario</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TS-CI-01</td>
+<td>ID gate blocks check-in until ID recorded (strictness=block); warn and off modes behave</td>
+</tr>
+<tr class="even">
+<td>TS-CI-02</td>
+<td>Undo steps back exactly one stage</td>
+</tr>
+<tr class="odd">
+<td>TS-CI-03</td>
+<td>Checkout → housekeeping task appears (US-904)</td>
+</tr>
+<tr class="even">
+<td>TS-CI-04</td>
+<td>Foreign guest without C-Form blocked; artefact renders complete (US-201)</td>
+</tr>
+<tr class="odd">
+<td>TS-CI-05</td>
+<td>Form C 24h reminder fires; submitted flag audited</td>
+</tr>
+<tr class="even">
+<td>TS-PR-01..04</td>
+<td>Guest export completeness; erasure removes PII yet preserves financial rows; retention purge deletes on schedule; consent required before ID storage</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-security-tests">4. Security tests</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Scenario</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>TS-SC-01</td>
+<td>Login rate-limit lockout (and shared-store behaviour once added)</td>
+</tr>
+<tr class="even">
+<td>TS-SC-02</td>
+<td>Agent seam without/with-wrong token → 401, fail-closed, no info leak</td>
+</tr>
+<tr class="odd">
+<td>TS-SC-03</td>
+<td>Ingest webhook token + oversized payload rejection</td>
+</tr>
+<tr class="even">
+<td>TS-SC-04</td>
+<td>Reception role: money fields absent from every API response (contract test per role)</td>
+</tr>
+<tr class="odd">
+<td>TS-SC-05</td>
+<td>RLS: cross-property query via raw SQL contained</td>
+</tr>
+<tr class="even">
+<td>TS-SC-06</td>
+<td>Hashed-phone enumeration resistance (keyed hash)</td>
+</tr>
+<tr class="odd">
+<td>TS-SC-07</td>
+<td>ID-document access logged; unsigned URL access denied</td>
+</tr>
+<tr class="even">
+<td>TS-SC-08</td>
+<td>Prompt-injection suite vs assistant (Q-AI-05): exfiltration, tool-abuse, policy-override attempts</td>
+</tr>
+<tr class="odd">
+<td>TS-SC-09</td>
+<td>Session revoked on disable/role change (per Q-SEC-03)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-community-suite">5. Community suite</h2>
+<p>TS-CM-01 nothing shared before grant; TS-CM-02 per-type grant honoured exactly; TS-CM-03 referral books via conflict-checked path &amp; credits derive; TS-CM-04 report requires evidence, expires on schedule; TS-CM-05 dispute/appeal transitions; TS-CM-06 PII/occupancy/finance never present in seam payloads (contract test).</p>
+<h2 id="6-offline--pwa-after-us-901-spec">6. Offline / PWA (after US-901 spec)</h2>
+<p>TS-OF-01 airplane-mode write queued and syncs; TS-OF-02 offline booking that conflicts surfaces the documented UX; TS-OF-03 no silent drop on cache eviction; TS-OF-04 2G field script (Today load, booking create timings vs NFR-PRF).</p>
+<h2 id="7-notifications--messaging">7. Notifications &amp; messaging</h2>
+<p>TS-NT-01 high-severity escalation push ≤ 1 min, deep-link; TS-NT-02 toggles respected; TS-MS-01 template send with params per language; TS-MS-02 24h-window rule respected; TS-MS-03 opt-out honoured; TS-MS-04 quiet hours; TS-MS-05 inbound reply appears in thread.</p>
+<h2 id="8-ops-acceptance">8. Ops acceptance</h2>
+<p>TS-OP-01 scripted client provision &lt; 2h to bookable; TS-OP-02 wizard completes unaided; TS-OP-03 staged fleet upgrade halts on canary failure; TS-OP-04 version/health dashboard truthfulness; TS-OP-05 offboarding export completeness; TS-OP-06 backup produced nightly + offsite; TS-OP-07 quarterly restore drill meets RTO; TS-OP-08 synthetic error reaches monitoring in 5 min.</p>
+<h2 id="9-uat-scenarios-pilot-run-with-real-staff">9. UAT scenarios (pilot, run with real staff)</h2>
+<ol>
+<li>Full guest lifecycle: WhatsApp enquiry → AI or manual booking → advance via QR → arrival ID gate → in-stay complaint → checkout with invoice → cleaning → review request.</li>
+<li>OTA morning routine: paste (or auto-receive) 3 real Booking.com emails incl. 1 modification → all correctly on calendar.</li>
+<li>Cross-channel drill: simulate OTA iCal block landing on a direct booking → owner resolves via WF-12 playbook.</li>
+<li>Owner money week: expenses, agent commissions, refund approval, CSV to accountant — accountant confirms usability.</li>
+<li>Housekeeping day on a phone in the field (patchy signal).</li>
+<li>Escalation at night → morning push → resolve.</li>
+<li>Multi-property owner switches properties; verifies no bleed of bookings/finance; shared guest recognised.</li>
+<li>Community: connect two pilots, share vendors + referral, complete a referral end-to-end.</li>
+</ol>
+<h2 id="10-performance--boundary">10. Performance &amp; boundary</h2>
+<p>Load at NFR-PRF-04 envelope (60 rooms, 30k reservations/yr synthetic): calendar month P95 &lt; 2s; booking P95 &lt; 1.5s; agent availability P95 &lt; 800ms. Boundary: 365-night stay, 100-room property (should degrade gracefully with clear stance), 0-room property (empty states), season boundaries, FY rollover for invoice series, DST-irrelevance check (IST).</p>
+<h2 id="11-accessibility">11. Accessibility</h2>
+<p>TS-AC-01 contrast audit core screens (both themes); TS-AC-02 touch targets ≥ 44px on tab bar/FAB/row actions; TS-AC-03 screen-reader labels on booking form &amp; payments.</p>
+<h2 id="12-regression-areas-protect-on-every-release">12. Regression areas (protect on every release)</h2>
+<p>The GiST constraint path + db-errors sniffing; availability derivation; refund ladder math; tenancy scoping; seam auth; iCal round-trip; pricing clamp. These are the modules where a regression costs a client real money or a legal duty.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>16-test-readiness.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

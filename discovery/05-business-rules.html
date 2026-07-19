@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Rules Catalogue · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 05</p>
+  <h1>Business Rules Catalogue</h1>
+  <p class="sub">Trigger · validation · expected result · status for every rule</p>
+  <div class="chips"><span class="chip">~70 rules</span><span class="chip">10 domains</span></div>
+</div>
+<div class="content">
+<h1 id="business-rules-catalogue">Business Rules Catalogue</h1>
+<h2 id="discovery-doc-05--v10--2026-07-16">Discovery doc 05 · v1.0 · 2026-07-16</h2>
+<p>Format: <strong>ID · Description · Trigger · Validation · Expected result</strong>. Status: ✅ implemented (per sources) · 🟡 partial · ✖ proposed/<code>[R]</code> · <code>[Q]</code> undefined, see doc 09. Rules marked ✖/<code>[Q]</code> are <em>candidate</em> rules — per the "do not invent rules" instruction they require stakeholder ratification.</p>
+<h2 id="booking-br-book">Booking (BR-BOOK)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-BOOK-01</td>
+<td>Two confirmed reservations for one room can never overlap</td>
+<td>Any reservation write</td>
+<td>Postgres GiST exclusion (room_id =, stay &amp;&amp;) WHERE status='confirmed'</td>
+<td>Write rejected at DB; friendly 409</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-BOOK-02</td>
+<td>Stay is half-open <code>[in, out)</code> — checkout day is bookable</td>
+<td>Create/edit</td>
+<td>checkOut &gt; checkIn</td>
+<td>Back-to-back turnover legal</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-BOOK-03</td>
+<td>Availability is derived, never stored</td>
+<td>Any read</td>
+<td>units − confirmed overlaps − block overlaps</td>
+<td>No drift possible</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-BOOK-04</td>
+<td>Guest deduped by phone at entry</td>
+<td>Phone entered</td>
+<td>Exact match on normalized phone</td>
+<td>Existing record reused</td>
+<td>✅ (normalization <code>[Q]</code>)</td>
+</tr>
+<tr class="odd">
+<td>BR-BOOK-05</td>
+<td>Blacklist/scam-number hits warn but never block</td>
+<td>Phone/guest matched</td>
+<td>Lookup local + shared lists</td>
+<td>Amber warning; proceed allowed</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-BOOK-06</td>
+<td>Cancelled/no-show stays don't occupy dates</td>
+<td>Status change</td>
+<td>Constraint scoped to confirmed</td>
+<td>Dates instantly rebookable</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-BOOK-07</td>
+<td>ID-confirmation tick required at booking per property setting</td>
+<td>Save</td>
+<td>Setting: require ID number Y/N</td>
+<td>Save blocked if required &amp; missing</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-BOOK-08</td>
+<td>Booking may be attributed to at most one travel agent</td>
+<td>Save</td>
+<td>agentId optional FK</td>
+<td>Commission owed accrues to agent</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-BOOK-09</td>
+<td>Room-type-level (unassigned) booking not supported — room chosen at creation</td>
+<td>Create</td>
+<td>roomId mandatory</td>
+<td>No type-level oversell possible; less flexible peak selling</td>
+<td>✅ by design (<code>[Q Q-OPS-05]</code> ratify)</td>
+</tr>
+<tr class="even">
+<td>BR-BOOK-10</td>
+<td>Max advance-booking horizon &amp; max stay length</td>
+<td>Create</td>
+<td>limits TBD</td>
+<td>Reject absurd ranges</td>
+<td>✖ <code>[Q Q-OPS-01]</code></td>
+</tr>
+<tr class="odd">
+<td>BR-BOOK-11</td>
+<td>Archived room cannot take new bookings; existing future bookings — TBD</td>
+<td>Archive action</td>
+<td>check future stays</td>
+<td>TBD: block archive vs orphan</td>
+<td><code>[Q Q-OPS-02]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="cancellation--refunds-br-canc">Cancellation &amp; refunds (BR-CANC)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-CANC-01</td>
+<td>Refund ladder: ordered tiers days-before → %</td>
+<td>Cancellation</td>
+<td>policy tiers exist</td>
+<td>Suggested refund computed</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-CANC-02</td>
+<td>Owner may approve an amount different from suggestion</td>
+<td>Refund approval</td>
+<td>owner role</td>
+<td>Recorded amount wins; audited</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-CANC-03</td>
+<td>Refund cannot exceed amount actually paid</td>
+<td>Refund entry</td>
+<td>sum(payments)</td>
+<td>Cap at paid</td>
+<td>✖ <code>[R]</code></td>
+</tr>
+<tr class="even">
+<td>BR-CANC-04</td>
+<td>Ladder base = gross amount vs amount paid</td>
+<td>Computation</td>
+<td>TBD</td>
+<td>Deterministic refunds</td>
+<td><code>[Q Q-FIN-07]</code></td>
+</tr>
+<tr class="odd">
+<td>BR-CANC-05</td>
+<td>OTA-collect cancellations: OTA policy governs guest refund; hub records only</td>
+<td>OTA cancellation</td>
+<td>channel = OTA &amp; collects_payment</td>
+<td>No double refund</td>
+<td>✖ <code>[Q Q-FIN-07]</code></td>
+</tr>
+<tr class="even">
+<td>BR-CANC-06</td>
+<td>No-show: definition, deadline, charge, who marks</td>
+<td>Night of arrival</td>
+<td>TBD</td>
+<td>Consistent no-show handling; feeds reliability score</td>
+<td><code>[Q Q-OPS-04]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="pricing-br-prc">Pricing (BR-PRC)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-PRC-01</td>
+<td>Every suggestion clamped to room-type floor/ceiling</td>
+<td>Rate calc</td>
+<td>floor ≤ rate ≤ ceiling</td>
+<td>No absurd price ever suggested</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-PRC-02</td>
+<td>Rules compound (weekend, season, lead-time, occupancy) then clamp</td>
+<td>Rate calc</td>
+<td>order documented?</td>
+<td>Deterministic rate</td>
+<td>✅ (order <code>[Q Q-OPS-08]</code>)</td>
+</tr>
+<tr class="odd">
+<td>BR-PRC-03</td>
+<td>Manual override (pin) beats rules for that type+date</td>
+<td>Owner pins</td>
+<td>—</td>
+<td>Pinned rate shown with dot; used in suggestions</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-PRC-04</td>
+<td>Pricing never pushes to OTAs and never rewrites saved bookings</td>
+<td>Always</td>
+<td>—</td>
+<td>Advisory only</td>
+<td>✅ (hard stance)</td>
+</tr>
+<tr class="odd">
+<td>BR-PRC-05</td>
+<td>Suggested price pre-fills but operator may override freely</td>
+<td>New booking</td>
+<td>—</td>
+<td>Human keeps control</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<h2 id="availability--sync-br-avl">Availability &amp; sync (BR-AVL)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-AVL-01</td>
+<td>Imported iCal busy dates create blocks per room</td>
+<td>Sync</td>
+<td>feed parse</td>
+<td>OTA bookings can't be double-sold internally</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-AVL-02</td>
+<td>Block × booking overlap = conflict flagged, never auto-resolved</td>
+<td>Sync/manual block</td>
+<td>overlap check</td>
+<td>Human decides (WF-12)</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-AVL-03</td>
+<td>iCal export exposes busy/free only — no guest data, no rates</td>
+<td>Export</td>
+<td>—</td>
+<td>Privacy preserved</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-AVL-04</td>
+<td>OTA listing ↔︎ hub room mapping must be 1:1 for iCal to protect</td>
+<td>Onboarding</td>
+<td>mapping check</td>
+<td>Multi-unit mismatch prevented</td>
+<td>✖ <code>[R]</code> onboarding rule</td>
+</tr>
+<tr class="odd">
+<td>BR-AVL-05</td>
+<td>Feed sync failure &gt; N hours alerts owner</td>
+<td>Cron</td>
+<td>last-success age</td>
+<td>No silent staleness</td>
+<td>✖ GAP-5</td>
+</tr>
+<tr class="even">
+<td>BR-AVL-06</td>
+<td>Optional last-room buffer withheld from OTA/agent-facing availability</td>
+<td>Availability read</td>
+<td>buffer setting</td>
+<td>Reduced oversell in lag window</td>
+<td>✖ GAP-24</td>
+</tr>
+</tbody>
+</table>
+<h2 id="guests-br-gst">Guests (BR-GST)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-GST-01</td>
+<td>Guests shared owner-wide across properties; bookings/finance per-property</td>
+<td>Any guest read</td>
+<td>tenancy design</td>
+<td>Repeat recognition everywhere</td>
+<td>✅ (decision 2026-07-15)</td>
+</tr>
+<tr class="even">
+<td>BR-GST-02</td>
+<td>Reliability score derived from no-shows; repeat no-show badge; owner may raise shared alert</td>
+<td>No-show recorded</td>
+<td>score formula <code>[Q]</code></td>
+<td>Risk visible at booking</td>
+<td>✅ (formula undocumented)</td>
+</tr>
+<tr class="odd">
+<td>BR-GST-03</td>
+<td>Blacklist is per-owner; shared bad-guest alerts are opt-in, evidence-backed, expiring</td>
+<td>Toggle / report</td>
+<td>evidence for shared</td>
+<td>Warn at booking</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-GST-04</td>
+<td>Consent recorded before storing personal details</td>
+<td>Guest edit</td>
+<td>consent tick</td>
+<td>DPDP basis</td>
+<td>✅ capture / ✖ enforcement <code>[Q]</code></td>
+</tr>
+<tr class="odd">
+<td>BR-GST-05</td>
+<td>ID scans auto-delete after property retention period</td>
+<td>Nightly cron</td>
+<td>idRetentionDays set</td>
+<td>PII minimization</td>
+<td>🟡 inert until configured — default needed <code>[R]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="check-in-br-chk">Check-in (BR-CHK)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-CHK-01</td>
+<td>Check-in gated on ID (number/scan/verified) per strictness block/warn/off</td>
+<td>Check-in tap</td>
+<td>property setting</td>
+<td>Enforcement matches owner policy</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-CHK-02</td>
+<td>Foreign guest additionally requires C-Form fields before check-in</td>
+<td>Check-in tap</td>
+<td>nationality → foreign</td>
+<td>Legal capture complete</td>
+<td>✅ (foreign detection <code>[Q Q-OPS-10]</code>)</td>
+</tr>
+<tr class="odd">
+<td>BR-CHK-03</td>
+<td>Stay stages move one step at a time; Undo reverses one</td>
+<td>Buttons</td>
+<td>state machine</td>
+<td>No skipped states</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-CHK-04</td>
+<td>C-Form due within 24h of foreign arrival — reminder + artefact</td>
+<td>Check-in</td>
+<td>timer</td>
+<td>Compliance artefact produced</td>
+<td>✖ GAP-7</td>
+</tr>
+<tr class="odd">
+<td>BR-CHK-05</td>
+<td>Check-out with outstanding balance: allowed/warned/blocked</td>
+<td>Check-out tap</td>
+<td>balance&gt;0</td>
+<td>TBD</td>
+<td><code>[Q Q-OPS-03]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="payments-br-pay">Payments (BR-PAY)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-PAY-01</td>
+<td>Multiple part-payments per booking; balance derived</td>
+<td>Add payment</td>
+<td>—</td>
+<td>Balance always truthful</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-PAY-02</td>
+<td>UPI/bank payments require full verification checklist + UTR before save</td>
+<td>Mode selected</td>
+<td>all boxes ticked</td>
+<td>Fake-payment scams blocked</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-PAY-03</td>
+<td>Advance status derived from advance-tagged payments vs required flag</td>
+<td>Payment save</td>
+<td>isAdvance</td>
+<td>Pending → received automatically</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-PAY-04</td>
+<td>UPI link/QR always equals current outstanding balance</td>
+<td>Render</td>
+<td>derived balance</td>
+<td>No stale amounts</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-PAY-05</td>
+<td>Payment records immutable; corrections via void+reversal, audited</td>
+<td>Edit attempt</td>
+<td>—</td>
+<td>Clean audit trail</td>
+<td>✖ <code>[Q Q-FIN-04]</code></td>
+</tr>
+<tr class="even">
+<td>BR-PAY-06</td>
+<td>Overpayment handling (credit/refund)</td>
+<td>amount &gt; balance</td>
+<td>TBD</td>
+<td>Defined behaviour</td>
+<td><code>[Q Q-FIN-06]</code></td>
+</tr>
+<tr class="odd">
+<td>BR-PAY-07</td>
+<td>Money stored as integer paise (or decimal)</td>
+<td>All money ops</td>
+<td>type</td>
+<td>Accounting-grade arithmetic</td>
+<td>✖ GAP-9</td>
+</tr>
+<tr class="even">
+<td>BR-PAY-08</td>
+<td>Gateway webhooks idempotent; hold expires → room released</td>
+<td>Razorpay events</td>
+<td>idempotency key; deadline</td>
+<td>No double-post; no zombie holds</td>
+<td>🟡 designed</td>
+</tr>
+</tbody>
+</table>
+<h2 id="finance-br-fin">Finance (BR-FIN)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-FIN-01</td>
+<td>Net = gross − channel commission − expenses</td>
+<td>Finance view</td>
+<td>—</td>
+<td>True profit visible</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-FIN-02</td>
+<td>Channel commission % configured per channel; agent commission separately per agent; both may apply</td>
+<td>Booking attribution</td>
+<td>—</td>
+<td>Correct owed amounts</td>
+<td>✅ (stacking arithmetic <code>[Q Q-FIN-01]</code>)</td>
+</tr>
+<tr class="odd">
+<td>BR-FIN-03</td>
+<td>Commission basis (gross vs net-of-GST; MMT net-rate model)</td>
+<td>Config</td>
+<td>per-channel model</td>
+<td>Correct net</td>
+<td><code>[Q Q-FIN-01]</code></td>
+</tr>
+<tr class="even">
+<td>BR-FIN-04</td>
+<td>Money views restricted to owner role — including API field level</td>
+<td>Any response</td>
+<td>role</td>
+<td>No leakage to staff</td>
+<td>🟡 page-level only (GAP-12)</td>
+</tr>
+<tr class="odd">
+<td>BR-FIN-05</td>
+<td>Date-range semantics for finance/analytics (stay vs booking vs payment date) documented</td>
+<td>Report render</td>
+<td>—</td>
+<td>No silent misreads</td>
+<td><code>[Q Q-FIN-09]</code></td>
+</tr>
+<tr class="even">
+<td>BR-FIN-06</td>
+<td>Invoices: sequential per-FY numbering, immutable snapshot, GST lines when registered</td>
+<td>Invoice issue</td>
+<td>GSTIN present</td>
+<td>Statutory compliance</td>
+<td>✖ GAP-11</td>
+</tr>
+</tbody>
+</table>
+<h2 id="housekeeping-br-hk">Housekeeping (BR-HK)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-HK-01</td>
+<td>Checkout ⇒ room enters To-clean automatically (derived)</td>
+<td>Check-out</td>
+<td>—</td>
+<td>Nothing forgotten</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-HK-02</td>
+<td>Same-day arrival on a dirty room ⇒ "clean first" priority</td>
+<td>List render</td>
+<td>arrival today</td>
+<td>Priority visible</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-HK-03</td>
+<td>Manual "needs cleaning" any time; Mark clean returns to Ready</td>
+<td>Buttons</td>
+<td>—</td>
+<td>Owner-controlled state</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-HK-04</td>
+<td>Cleaning may be assigned to staff with checklist</td>
+<td>Assignment</td>
+<td>staff active</td>
+<td>Accountability</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ota-sync--ingestion-br-ota">OTA sync &amp; ingestion (BR-OTA)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-OTA-01</td>
+<td>Nothing is ever booked automatically from email — human review mandatory</td>
+<td>Ingest</td>
+<td>pending-review state</td>
+<td>Operator confirms all OTA bookings</td>
+<td>✅ (invariant to preserve)</td>
+</tr>
+<tr class="even">
+<td>BR-OTA-02</td>
+<td>Ingest webhook token-gated, fail-closed</td>
+<td>POST /ingest</td>
+<td>token</td>
+<td>No spoofed bookings</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-OTA-03</td>
+<td>Duplicate confirmations suppressed by ota_ref</td>
+<td>Parse</td>
+<td>ref match</td>
+<td>One booking per OTA ref</td>
+<td><code>[verify]</code></td>
+</tr>
+<tr class="even">
+<td>BR-OTA-04</td>
+<td>Modification/cancellation emails link to existing booking for guided update</td>
+<td>Parse</td>
+<td>ref match</td>
+<td>No ghost availability</td>
+<td>✖ GAP-2</td>
+</tr>
+<tr class="odd">
+<td>BR-OTA-05</td>
+<td>No scraping / no extranet automation, ever</td>
+<td>—</td>
+<td>code review</td>
+<td>Listings never endangered</td>
+<td>✅ hard rule</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ai--approval-br-ai">AI / approval (BR-AI)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-AI-01</td>
+<td>Agent may read availability/quote and create conflict-checked bookings; never money, never cancellations</td>
+<td>Seam call</td>
+<td>endpoint whitelist</td>
+<td>Blast radius contained</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-AI-02</td>
+<td>Sensitive actions file escalations; a human commits via normal RBAC screens</td>
+<td>Agent intent</td>
+<td>category list</td>
+<td>HITL always</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-AI-03</td>
+<td>Security prompt outranks owner policies; personas isolated (owner tools never in guest agent)</td>
+<td>Every turn</td>
+<td>startup assertion</td>
+<td>No privilege leak via prompt</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-AI-04</td>
+<td>Owner policies editable at runtime, applied ≤ ~1 min</td>
+<td>Settings save</td>
+<td>—</td>
+<td>No redeploys</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>BR-AI-05</td>
+<td>High-severity escalation notifies owner's phone within X min</td>
+<td>Escalation filed</td>
+<td>severity</td>
+<td>After-hours coverage real</td>
+<td>✖ GAP-14</td>
+</tr>
+<tr class="even">
+<td>BR-AI-06</td>
+<td>Agent bookings run the same scam/blacklist warning logic; hard-block rules TBD</td>
+<td>Seam create</td>
+<td>lists</td>
+<td>Parity with human path</td>
+<td><code>[Q Q-AI-03]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="community-br-com">Community (BR-COM)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Trigger</th>
+<th>Validation</th>
+<th>Expected result</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-COM-01</td>
+<td>Everything opt-in per peer per share-type; default nothing shared</td>
+<td>Grant toggle</td>
+<td>—</td>
+<td>Owner sovereignty</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-COM-02</td>
+<td>Guest PII, occupancy, finance never cross the community seam</td>
+<td>Any share</td>
+<td>seam contract</td>
+<td>Privacy floor</td>
+<td>✅ (referral PII tension <code>[Q Q-LEG-05]</code>)</td>
+</tr>
+<tr class="odd">
+<td>BR-COM-03</td>
+<td>Shared reports require evidence; disputable; auto-expire</td>
+<td>Report</td>
+<td>evidence attached</td>
+<td>Fair, decaying signals</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-COM-04</td>
+<td>Phone matching via hashed codes, never raw numbers</td>
+<td>Match</td>
+<td>keyed hash <code>[R]</code></td>
+<td>Re-identification resistant</td>
+<td>✅ intent (<code>[Q Q-SEC-05]</code> strength)</td>
+</tr>
+<tr class="odd">
+<td>BR-COM-05</td>
+<td>Referral revenue attributed; reciprocal credit derived, never stored</td>
+<td>Referral completes</td>
+<td>ledger calc</td>
+<td>Auditable balances</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-COM-06</td>
+<td>Credit settlement / dispute / disconnect handling</td>
+<td>Imbalance events</td>
+<td>TBD</td>
+<td>Defined economics</td>
+<td><code>[Q Q-BUS-06]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="permissions-br-prm">Permissions (BR-PRM)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BR-PRM-01</td>
+<td>Owner: all. Reception: ops, no money/setup. Housekeeping: Today + Cleaning only</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-PRM-02</td>
+<td>Reception records payments yet "money is owner-only" — boundary: reception may <em>record</em>, only owner <em>views aggregates/finance</em></td>
+<td><code>[Q Q-FIN-05]</code> ratify</td>
+</tr>
+<tr class="odd">
+<td>BR-PRM-03</td>
+<td>Per-user per-property access grants</td>
+<td>✅</td>
+</tr>
+<tr class="even">
+<td>BR-PRM-04</td>
+<td>Role change / disable revokes active sessions</td>
+<td><code>[Q Q-SEC-03]</code></td>
+</tr>
+<tr class="odd">
+<td>BR-PRM-05</td>
+<td>Audit log records sensitive actions incl. who/when</td>
+<td>✅ (coverage widening GAP-15)</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>05-business-rules.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

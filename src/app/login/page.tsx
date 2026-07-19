@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Icon } from "@/components/ui";
 
 export default function LoginPage() {
@@ -61,6 +62,7 @@ export default function LoginPage() {
           <button type="submit" disabled={busy} className="btn btn--primary btn--block" style={{ marginTop: 4 }}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
+          <Link href="/forgot-password" style={{ textAlign: "center", fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>Forgot password?</Link>
         </form>
       </div>
     </main>

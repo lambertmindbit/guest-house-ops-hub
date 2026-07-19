@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Analysis · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 13</p>
+  <h1>API Analysis</h1>
+  <p class="sub">Existing seams, recommended REST surface, webhooks, events, cross-cutting API rules</p>
+  <div class="chips"></div>
+</div>
+<div class="content">
+<h1 id="api-analysis">API Analysis</h1>
+<h2 id="discovery-doc-13--v10--2026-07-16">Discovery doc 13 · v1.0 · 2026-07-16</h2>
+<p>Known-from-docs endpoints marked <code>[F]</code>; the rest is the <strong>recommended target surface</strong> <code>[R]</code> to be reconciled against <code>docs/API.md</code> in iteration 2. Conventions (existing): REST under <code>/api</code>, Zod-validated inputs, <code>{data}/{error}</code> envelope, domain 4xx (409 overlap), token-gated external seams (fail-closed).</p>
+<h2 id="1-seams-that-exist-f">1. Seams that exist <code>[F]</code></h2>
+<table>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th>Endpoint</th>
+<th>Auth</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Agent</td>
+<td><code>GET /api/agent/availability</code></td>
+<td><code>AGENT_TOKEN</code></td>
+<td>Free units for dates</td>
+</tr>
+<tr class="even">
+<td>Agent</td>
+<td><code>GET /api/agent/quote</code></td>
+<td>token</td>
+<td>Price quote (pricing engine)</td>
+</tr>
+<tr class="odd">
+<td>Agent</td>
+<td><code>POST /api/agent/reservations</code></td>
+<td>token</td>
+<td>Create booking — same GiST transaction; 409 on overlap</td>
+</tr>
+<tr class="even">
+<td>Agent</td>
+<td><code>POST /api/agent/messages</code></td>
+<td>token</td>
+<td>Queue outbound message</td>
+</tr>
+<tr class="odd">
+<td>Agent</td>
+<td><code>POST /api/agent/escalations</code> <code>[I from module A10]</code></td>
+<td>token</td>
+<td>File HITL escalation</td>
+</tr>
+<tr class="even">
+<td>Agent</td>
+<td><code>GET /api/agent/policies</code></td>
+<td>token</td>
+<td>Owner runtime policies for assistant</td>
+</tr>
+<tr class="odd">
+<td>Ingest</td>
+<td><code>POST /api/ingest/email</code></td>
+<td>ingest token</td>
+<td>Staged InboundBooking from forwarders</td>
+</tr>
+<tr class="even">
+<td>Analytics</td>
+<td><code>GET /api/analytics/export</code></td>
+<td>session</td>
+<td>CSV of analytics view</td>
+</tr>
+<tr class="odd">
+<td>iCal</td>
+<td><code>GET /api/ical/…(room).ics</code> <code>[I]</code></td>
+<td>private URL token</td>
+<td>Export busy dates</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-recommended-internal-rest-surface-r--verify-overlap-with-docsapimd">2. Recommended internal REST surface <code>[R — verify overlap with docs/API.md]</code></h2>
+<table>
+<thead>
+<tr class="header">
+<th>Resource</th>
+<th>Verbs</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>/api/reservations</code></td>
+<td>GET list/search, POST</td>
+<td>409 with <code>{error:{code:"OVERLAP"}}</code></td>
+</tr>
+<tr class="even">
+<td><code>/api/reservations/:id</code></td>
+<td>GET, PATCH, DELETE(cancel)</td>
+<td>cancel returns computed ladder refund</td>
+</tr>
+<tr class="odd">
+<td><code>/api/reservations/:id/check-in</code> · <code>/check-out</code> · <code>/undo</code></td>
+<td>POST</td>
+<td>gate errors: <code>ID_REQUIRED</code>, <code>CFORM_REQUIRED</code></td>
+</tr>
+<tr class="even">
+<td><code>/api/reservations/:id/payments</code></td>
+<td>GET, POST</td>
+<td>verification payload for UPI/bank</td>
+</tr>
+<tr class="odd">
+<td><code>/api/reservations/:id/refunds</code></td>
+<td>POST</td>
+<td>owner-only</td>
+</tr>
+<tr class="even">
+<td><code>/api/availability</code></td>
+<td>GET</td>
+<td>derived; room-type × date range</td>
+</tr>
+<tr class="odd">
+<td><code>/api/blocks</code></td>
+<td>GET, POST, DELETE</td>
+<td>manual + iCal-sourced (read-only delete guard for ical source <code>[R]</code>)</td>
+</tr>
+<tr class="even">
+<td><code>/api/guests</code> (+<code>/:id</code>, <code>/merge</code> <code>[R]</code>)</td>
+<td>GET/POST/PATCH</td>
+<td>merge = GAP-19</td>
+</tr>
+<tr class="odd">
+<td><code>/api/inbound</code></td>
+<td>GET, POST(create booking), POST(dismiss)</td>
+<td>Inbox review</td>
+</tr>
+<tr class="even">
+<td><code>/api/feeds</code></td>
+<td>CRUD + <code>POST /:id/sync</code></td>
+<td>expose <code>lastSuccessAt</code> (GAP-5)</td>
+</tr>
+<tr class="odd">
+<td><code>/api/pricing/rates</code></td>
+<td>GET calendar, PUT override</td>
+<td></td>
+</tr>
+<tr class="even">
+<td><code>/api/finance/…</code></td>
+<td>GET summaries, expenses CRUD, CSVs</td>
+<td>owner-only; field masking (GAP-12)</td>
+</tr>
+<tr class="odd">
+<td><code>/api/settings/…</code></td>
+<td>per Settings section</td>
+<td>owner-only</td>
+</tr>
+<tr class="even">
+<td><code>/api/staff</code>, <code>/shifts</code>, <code>/attendance</code>, <code>/housekeeping</code>, <code>/maintenance</code>, <code>/assets</code>, <code>/inventory</code>, <code>/vendors</code>, <code>/purchase-orders</code>, <code>/tours</code>, <code>/trips</code>, <code>/complaints</code>, <code>/reviews</code>, <code>/groups</code></td>
+<td>CRUD per module</td>
+<td>role-guarded</td>
+</tr>
+<tr class="odd">
+<td><code>/api/community/…</code></td>
+<td>connections, grants, directory, referrals, reports</td>
+<td>grant-gated seam semantics</td>
+</tr>
+<tr class="even">
+<td><code>/api/audit</code></td>
+<td>GET</td>
+<td>owner-only</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-webhooks-inbound">3. Webhooks (inbound)</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Hook</th>
+<th>Status</th>
+<th>Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>POST /api/ingest/email</code></td>
+<td>✅</td>
+<td>token; size limits; store-raw-on-parse-fail; <strong>redact card data</strong> (Q-OTA-03)</td>
+</tr>
+<tr class="even">
+<td><code>POST /api/webhooks/razorpay</code></td>
+<td>designed 🟡</td>
+<td>signature verification + <strong>idempotency key</strong>; hold-expiry release job</td>
+</tr>
+<tr class="odd">
+<td><code>POST /api/webhooks/whatsapp</code> (delivery status + inbound)</td>
+<td>✖ needed with GAP-3/4</td>
+<td>Meta signature; 24h-window bookkeeping</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-events-internal-r">4. Events (internal) <code>[R]</code></h2>
+<p>Current architecture is synchronous request/response <code>[I]</code>. Recommend a light domain-event layer (in-process → DB event table if needed): <code>reservation.created/cancelled</code>, <code>payment.recorded</code>, <code>checkin/checkout.completed</code>, <code>escalation.filed</code>, <code>feed.sync.failed</code>, <code>inbound.staged</code> — consumed by outbox drafts (exists), notifications (GAP-14), audit widening (GAP-15), heartbeats (GAP-5). Avoid external brokers — stay within one process/DB <code>[R]</code> (C-06 spirit).</p>
+<h2 id="5-auth--session">5. Auth &amp; session</h2>
+<p>Cookie session (~30d) <code>[F]</code>; add: password reset + invite endpoints (GAP-10), session revocation semantics (Q-SEC-03), owner 2FA optional (FR-AUTH-7).</p>
+<h2 id="6-cross-cutting-api-requirements">6. Cross-cutting API requirements</h2>
+<table>
+<thead>
+<tr class="header">
+<th>Concern</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Error contract</td>
+<td><code>{error:{code, message, details?}}</code>; stable machine codes for OVERLAP, ID_REQUIRED, TOKEN_INVALID, RATE_LIMITED</td>
+</tr>
+<tr class="even">
+<td>Idempotency</td>
+<td>All webhooks; consider <code>Idempotency-Key</code> on booking create from agent (retry-safe) <code>[R]</code></td>
+</tr>
+<tr class="odd">
+<td>Rate limits</td>
+<td>Login ✅; extend to agent seam + ingest per token; shared store when serverless (NFR-SEC-05)</td>
+</tr>
+<tr class="even">
+<td>Pagination</td>
+<td>List endpoints ≥ default 50 with cursors <code>[R]</code></td>
+</tr>
+<tr class="odd">
+<td>Field masking</td>
+<td>Serializer strips money fields for non-owner (GAP-12)</td>
+</tr>
+<tr class="even">
+<td>Versioning</td>
+<td>Seam endpoints: <code>X-Seam-Version</code> header + contract tests with sidecar <code>[R]</code></td>
+</tr>
+<tr class="odd">
+<td>Observability</td>
+<td>Request logging (no PII), error IDs surfaced to UI (doc 02 §7)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-notifications-api-gap-14-target-r">7. Notifications API (GAP-14 target) <code>[R]</code></h2>
+<p><code>POST /api/push/subscribe</code> (PushSubscription model exists <code>[F]</code>); server-side web-push on: escalation(severity≥high), conflict created, feed stale &gt; N h, low stock (optional). Owner-configurable toggles in Settings.</p>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>13-api-analysis.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>

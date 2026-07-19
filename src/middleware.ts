@@ -58,6 +58,6 @@ export const config = {
     // The token-gated seams (ical/cron/ingest/agent) ARE matched so middleware can
     // strip a spoofed x-ota-tenant; they're handled (no auth, header stripped) at
     // the top of middleware().
-    "/((?!login|chat|api/auth|api/public|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons|sw.js|offline.html).*)",
+    "/((?!login|accept-invite|reset-password|forgot-password|chat|api/auth|api/public|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons|sw.js|offline.html).*)",
   ],
 };

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discovery Package — Index · Guest House Ops Hub Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/doc.css">
+</head><body>
+<div class="page">
+<div class="confbar"><span>MindBit Solutions LLP · ROOT Platform</span><span>Confidential — for the build team</span></div>
+<div class="banner">
+  <p class="kicker">Guest House Operations Hub · Discovery Package · Doc 00</p>
+  <h1>Discovery Package — Index</h1>
+  <p class="sub">Full requirements analysis, gap analysis &amp; implementation-ready specification</p>
+  <div class="chips"><span class="chip">18 documents</span><span class="chip">Traceability BO→FR→BR→GAP→US→TS</span><span class="chip">Pass 1 · pre-code-audit</span></div>
+</div>
+<div class="content">
+<h1 id="discovery-package--guest-house-operations-hub-root">Discovery Package — Guest House Operations Hub (ROOT)</h1>
+<h3 id="full-requirements-analysis-gap-analysis--implementation-ready-specification">Full requirements analysis, gap analysis &amp; implementation-ready specification</h3>
+<p>v1.0 · 2026-07-16 · Discovery Pass 1 (pre-codebase-audit)</p>
+<p><strong>Sources analysed:</strong> MindBit Pitch Deck (PRIME grant 2025–26) · USER-GUIDE · repo README.md · docs/ROADMAP.md · prisma/schema.prisma (entity inventory). The full codebase audit is <strong>Iteration 2</strong> and will convert remaining <code><span class="tag inferred">INFERRED</span></code> items to facts.</p>
+<p><strong>Method:</strong> strict separation of <code><span class="tag fact">FACT</span></code> / <code><span class="tag inferred">INFERRED</span></code> / <code><span class="tag rec">REC</span></code> / <code><span class="tag openq">OPEN-Q</span></code> throughout; no business rules invented — undefined behaviour is flagged as a stakeholder question, not assumed. Full traceability BO → FR/NFR → BR → GAP → US → TS via the RTM.</p>
+<h2 id="contents">Contents</h2>
+<table>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>Document</th>
+<th>What it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>01</td>
+<td><a href="01-BRD.html">BRD</a></td>
+<td>Business context, objectives, stakeholders, as-is/to-be, scope, success metrics</td>
+</tr>
+<tr class="even">
+<td>02</td>
+<td><a href="02-SRS.html">SRS</a></td>
+<td>Functional + non-functional requirements with build-status; constraints; interfaces</td>
+</tr>
+<tr class="odd">
+<td>03</td>
+<td><a href="03-module-analysis.html">Module Analysis</a></td>
+<td>Every module dissected — inputs/outputs, validations, edge cases, risks</td>
+</tr>
+<tr class="even">
+<td>04</td>
+<td><a href="04-workflows.html">Workflows</a></td>
+<td>17 workflows with happy/alternate/failure/exception paths + Mermaid flow &amp; sequence diagrams</td>
+</tr>
+<tr class="odd">
+<td>05</td>
+<td><a href="05-business-rules.html">Business Rules Catalogue</a></td>
+<td>~70 rules with trigger/validation/result and status</td>
+</tr>
+<tr class="even">
+<td>06</td>
+<td><a href="06-gap-analysis.html">Gap Analysis</a></td>
+<td>30 prioritized gaps (S1–S4) with recommendations</td>
+</tr>
+<tr class="odd">
+<td>07</td>
+<td><a href="07-risk-register.html">Risk Register</a></td>
+<td>32 risks with probability/impact/mitigation/owner</td>
+</tr>
+<tr class="even">
+<td>08</td>
+<td><a href="08-ambiguities.html">Ambiguities</a></td>
+<td>22 ambiguities with interpretations &amp; decisions required</td>
+</tr>
+<tr class="odd">
+<td>09</td>
+<td><a href="09-stakeholder-questions.html">Stakeholder Question Log</a></td>
+<td>~70 questions, grouped, each with rationale</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td><a href="10-assumptions-register.html">Assumptions Register</a></td>
+<td>18 assumptions with validation paths</td>
+</tr>
+<tr class="odd">
+<td>11</td>
+<td><a href="11-dependencies-register.html">Dependencies Register</a></td>
+<td>Internal/external/OTA/government/infra dependencies</td>
+</tr>
+<tr class="even">
+<td>12</td>
+<td><a href="12-data-model.html">Data Model &amp; ERD</a></td>
+<td>55-model entity catalogue + Mermaid ERDs + retention rules</td>
+</tr>
+<tr class="odd">
+<td>13</td>
+<td><a href="13-api-analysis.html">API Analysis</a></td>
+<td>Existing seams + recommended surface, webhooks, events</td>
+</tr>
+<tr class="even">
+<td>14</td>
+<td><a href="14-backlog.html">Backlog</a></td>
+<td>9 epics, 45+ stories with G/W/T, points, DoR/DoD</td>
+</tr>
+<tr class="odd">
+<td>15</td>
+<td><a href="15-rtm.html">RTM</a></td>
+<td>Full traceability matrix</td>
+</tr>
+<tr class="even">
+<td>16</td>
+<td><a href="16-test-readiness.html">Test Readiness</a></td>
+<td>Functional/UAT/security/perf/offline scenario catalogue</td>
+</tr>
+<tr class="odd">
+<td>17</td>
+<td><a href="17-roadmap.html">Roadmap</a></td>
+<td>Phase 0–3 plan aligned to grant quarters + future scope</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Formats.</strong> Every doc above ships as version-controlled Markdown (source of truth) <strong>and</strong> a styled HTML render (<code>.html</code>, same basename — branded document family, Mermaid diagrams render live). Plus:</p>
+<table>
+<thead>
+<tr class="header">
+<th>Artefact</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>ER Diagram v1.0</strong> — all 55 entities in 12 domain clusters (companion to doc 12)</td>
+<td><a href="12-er-diagram.html">12-er-diagram.html</a> · 12-er-diagram.pdf</td>
+</tr>
+<tr class="even">
+<td><strong>Backlog workbook</strong> — Jira/ADO-import-ready, epic summary formulas, DoR/DoD</td>
+<td>14-backlog.xlsx</td>
+</tr>
+<tr class="odd">
+<td><strong>Question log (interactive)</strong> — filter by group/★, type answers in-browser, print-friendly</td>
+<td><a href="09-stakeholder-questions-interactive.html">09-stakeholder-questions-interactive.html</a></td>
+</tr>
+<tr class="even">
+<td><strong>BRD &amp; SRS, formatted</strong> — cover page, TOC, styled tables, headers/footers</td>
+<td>01-BRD.docx / .pdf · 02-SRS.docx / .pdf</td>
+</tr>
+<tr class="odd">
+<td><strong>Requirements deck</strong> — 16 slides, document-family style, for reviews &amp; grant conversations</td>
+<td>Ops-Hub-Requirements-Deck.pptx</td>
+</tr>
+<tr class="even">
+<td>PDF render (Gap Analysis)</td>
+<td>06-gap-analysis.pdf</td>
+</tr>
+</tbody>
+</table>
+<p>Regenerate HTML/ERD/XLSX any time: <code>python3 assets/build_html.py · build_erd.py · build_backlog_xlsx.py</code>.</p>
+<h2 id="system-actors--use-case-overview">System actors &amp; use-case overview</h2>
+<pre class="mermaid">flowchart LR
+  subgraph Actors
+    O((Owner))
+    R((Reception))
+    H((Housekeeping))
+    G((Guest))
+    AI((AI Assistant))
+    P((Peer property))
+    M((MindBit ops))
+  end
+  subgraph UseCases[Guest House Ops Hub]
+    UC1[Manage bookings &amp; calendar]
+    UC2[Check-in / ID / Form C / check-out]
+    UC3[Collect &amp; verify payments · invoices]
+    UC4[Ingest OTA emails · iCal sync]
+    UC5[Pricing suggestions &amp; overrides]
+    UC6[Finance · analytics · exports]
+    UC7[Housekeeping · maintenance · inventory · staff]
+    UC8[Escalations queue HITL]
+    UC9[Community: referrals · shared alerts]
+    UC10[Settings · users · audit]
+    UC11[Fleet: deploy · monitor · upgrade]
+  end
+  O --&gt; UC1 &amp; UC2 &amp; UC3 &amp; UC5 &amp; UC6 &amp; UC7 &amp; UC8 &amp; UC9 &amp; UC10
+  R --&gt; UC1 &amp; UC2 &amp; UC3 &amp; UC4 &amp; UC7 &amp; UC8
+  H --&gt; UC7
+  G -.chat/pay/receive.-&gt; AI
+  AI --&gt; UC1 &amp; UC8
+  P --&gt; UC9
+  M --&gt; UC11
+</pre>
+<h2 id="the-five-findings-that-matter-most">The five findings that matter most</h2>
+<ol>
+<li><strong>Correctness core is enterprise-grade</strong> (DB-enforced no-double-booking, derived availability, HITL AI) — protect it; everything else can iterate.</li>
+<li><strong>The binding constraint is operations, not features</strong>: backup/restore, monitoring, fleet onboarding, and billing decide whether the 25-client grant plan survives (GAP-1/5/17/18/27).</li>
+<li><strong>Legal posture needs a workstream now</strong>: DPDP rights &amp; retention, Form C artefact, GST invoices, community-network governance (GAP-7/8/11/26, RSK-04/05).</li>
+<li><strong>Two contradictions need resolving on paper</strong>: "self-hosted/locally-owned" vs US-cloud stack (AMB-01), and "money owner-only" vs reception recording payments (AMB-04).</li>
+<li><strong>The costliest quiet failure mode</strong> is OTA drift: modification emails with no linked-update path + silent sync failures (GAP-2/5) — both cheap to fix relative to the damage.</li>
+</ol>
+<h2 id="how-to-use-this-package">How to use this package</h2>
+<ol>
+<li>Run the two workshops in doc 09 (owner-side, MindBit-side) — answer the ★ questions.</li>
+<li>Commission Iteration 2 (codebase audit) against docs 02/03/12's <code><span class="tag inferred">INFERRED</span></code> tags.</li>
+<li>Adopt doc 17 Phase 0–1 as the immediate plan; import doc 14 into your tracker.</li>
+</ol>
+
+</div>
+<div class="docfooter"><span>© 2026 MindBit Solutions LLP · Shillong, Meghalaya</span><span>README.md is the version-controlled source</span></div>
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true, theme:"neutral", themeVariables:{primaryColor:"#e7f5f1",primaryBorderColor:"#0fa68e",lineColor:"#1c4356",fontFamily:"Plus Jakarta Sans, sans-serif"}});
+</script>
+</body></html>
