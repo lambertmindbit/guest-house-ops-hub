@@ -4,6 +4,7 @@ import { icalTokenForRoom } from "@/lib/ical-token";
 import { CopyButton } from "@/components/CopyButton";
 import { ImportFeeds } from "@/components/ImportFeeds";
 import { SubHeader } from "@/components/settings/SubHeader";
+import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +15,13 @@ export default async function FeedsPage() {
   const host = h.get("host") ?? "localhost:3100";
   const origin = `${proto}://${host}`;
 
-  const [rooms, importFeeds] = await Promise.all([
+  const [rooms, importFeeds, settings] = await Promise.all([
     prisma.room.findMany({
       include: { roomType: true },
       orderBy: [{ roomType: { name: "asc" } }, { label: "asc" }],
     }),
     prisma.icalFeed.findMany({ include: { room: true }, orderBy: { createdAt: "desc" } }),
+    currentPropertySettings().catch(() => null),
   ]);
 
   return (
@@ -62,6 +64,7 @@ export default async function FeedsPage() {
         )}
 
         <ImportFeeds
+          syncHours={settings?.icalSyncHours ?? 24}
           rooms={rooms.map((r) => ({ id: r.id, label: r.label, roomTypeName: r.roomType.name }))}
           feeds={importFeeds.map((f) => ({
             id: f.id,

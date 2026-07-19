@@ -31,6 +31,8 @@ const updateSchema = z
     idRetentionDays: z.number().int().min(0).max(3650).nullable().optional(),
     idPolicy: z.enum(["off", "warn", "block"]).optional(),
     idRequiredAtBooking: z.boolean().optional(),
+    // iCal sync frequency in hours (GAP-6): 1 = hourly minimum, 24 = daily default.
+    icalSyncHours: z.number().int().min(1).max(24).optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "no fields to update",
