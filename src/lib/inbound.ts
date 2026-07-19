@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { parseBookingEmail } from "@/lib/email-parse";
 import { parseDateOnly } from "@/lib/dates";
+import { redactCardNumbers } from "@/lib/redact";
 
 // Parse a raw OTA email and stage it for review. Dedupes on otaRef (US-305): the
 // same confirmation arriving twice — re-forwarded, or a webhook retry — must never
@@ -8,12 +9,14 @@ import { parseDateOnly } from "@/lib/dates";
 // (the booking was already made from this ref) and a pending/imported staging item,
 // and is recorded as `duplicate` rather than a new pending review item.
 export async function ingestEmail(raw: string) {
+  // Parse the ORIGINAL (card numbers aren't parsed fields), but persist a redacted
+  // body — a card / virtual-card number must never be stored (US-306).
   const p = parseBookingEmail(raw);
 
   const commonData = {
     source: p.source,
     otaRef: p.otaRef,
-    rawText: raw,
+    rawText: redactCardNumbers(raw),
     guestName: p.guestName,
     guestPhone: p.guestPhone,
     checkIn: p.checkIn ? parseDateOnly(p.checkIn) : null,
