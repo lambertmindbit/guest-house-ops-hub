@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { TourStatus } from "@prisma/client";
+import { pctOfMoneyWholeRupee } from "@/lib/money";
 
 // Lightweight tours/activities module — mirrors Vendors. Advisory only; it never
 // touches reservations or availability.
@@ -72,9 +73,9 @@ export function commissionSummary(bookings: BookingForSummary[]): TourSummary {
   for (const b of bookings) {
     if (b.status === "cancelled") continue;
     count += 1;
-    const amount = b.amount ?? 0;
+    const amount = Number(b.amount ?? 0); // paise
     revenue += amount;
-    commission += Math.round((amount * (b.commissionPct ?? 0)) / 100);
+    commission += pctOfMoneyWholeRupee(amount, b.commissionPct ?? 0);
   }
   return { bookings: count, revenue, commission };
 }

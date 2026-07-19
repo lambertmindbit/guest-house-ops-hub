@@ -24,7 +24,7 @@ beforeAll(async () => {
   const r = await prisma.reservation.create({
     data: {
       roomId: room.id, guestId: guest.id, channelId: channel.id,
-      checkIn: new Date("2031-06-10"), checkOut: new Date("2031-06-12"), grossAmount: 2000,
+      checkIn: new Date("2031-06-10"), checkOut: new Date("2031-06-12"), grossAmount: 200000,
     },
   });
   reservationId = r.id;
@@ -42,20 +42,20 @@ afterAll(async () => {
 
 describe("POST /api/reservations/[id]/payments — overpayment guard", () => {
   it("accepts a partial payment", async () => {
-    const res = await addPayment(post({ amount: 1500, mode: "cash" }), ctx(reservationId));
+    const res = await addPayment(post({ amount: 150000, mode: "cash" }), ctx(reservationId));
     expect(res.status).toBe(201);
   });
 
   it("rejects a second payment that would exceed the total", async () => {
-    // 1500 already collected on a 2000 booking; 1500 more would make 3000.
-    const res = await addPayment(post({ amount: 1500, mode: "upi" }), ctx(reservationId));
+    // ₹1500 already collected on a ₹2000 booking; ₹1500 more would make ₹3000 (paise).
+    const res = await addPayment(post({ amount: 150000, mode: "upi" }), ctx(reservationId));
     expect(res.status).toBe(422);
     const { error } = await res.json();
     expect(error).toContain("500"); // only ₹500 outstanding
   });
 
   it("accepts a payment that exactly settles the balance", async () => {
-    const res = await addPayment(post({ amount: 500, mode: "upi" }), ctx(reservationId));
+    const res = await addPayment(post({ amount: 50000, mode: "upi" }), ctx(reservationId));
     expect(res.status).toBe(201);
   });
 });

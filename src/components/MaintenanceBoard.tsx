@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { SectionLabel } from "@/components/ui";
 import { displayINR } from "@/lib/format";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 type Priority = "low" | "medium" | "high";
 type Status = "open" | "in_progress" | "done";
@@ -38,7 +39,7 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
     if (!req.title.trim()) return;
     if (await call("/api/maintenance", {
       title: req.title, priority: req.priority,
-      assigneeStaffId: req.assigneeStaffId || null, cost: req.cost ? Number(req.cost) : null,
+      assigneeStaffId: req.assigneeStaffId || null, cost: req.cost ? rupeesToPaise(Number(req.cost)) : null,
     })) setReq({ title: "", priority: "medium", assigneeStaffId: "", cost: "" });
   }
   async function addAsset() {
@@ -50,11 +51,11 @@ export function MaintenanceBoard({ requests, assets, staff }: { requests: Reques
   }
   function startEdit(r: Request) {
     setEditId(r.id);
-    setEdit({ title: r.title, priority: r.priority, assigneeStaffId: r.assigneeStaffId ?? "", cost: r.cost != null ? String(r.cost) : "" });
+    setEdit({ title: r.title, priority: r.priority, assigneeStaffId: r.assigneeStaffId ?? "", cost: r.cost != null ? String(paiseToRupees(r.cost)) : "" });
   }
   async function saveEdit(id: string) {
     if (!edit.title.trim()) return;
-    if (await call(`/api/maintenance/${id}`, { title: edit.title.trim(), priority: edit.priority, assigneeStaffId: edit.assigneeStaffId || null, cost: edit.cost ? Number(edit.cost) : null }, "PATCH")) {
+    if (await call(`/api/maintenance/${id}`, { title: edit.title.trim(), priority: edit.priority, assigneeStaffId: edit.assigneeStaffId || null, cost: edit.cost ? rupeesToPaise(Number(edit.cost)) : null }, "PATCH")) {
       setEditId(null);
     }
   }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
 import { displayINR, PAYMENT_MODE_LABELS } from "@/lib/format";
+import { rupeesToPaise } from "@/lib/money";
 import { todayDateOnly } from "@/lib/dates";
 
 export type ExpenseRow = {
@@ -44,7 +45,7 @@ export function ExpensesPanel({ expenses, total }: { expenses: ExpenseRow[]; tot
       body: JSON.stringify({
         date: f.date,
         category: f.category,
-        amount: Number(f.amount),
+        amount: rupeesToPaise(Number(f.amount)), // field is rupees; API is paise (GAP-9)
         note: f.note || undefined,
         paymentMode: f.paymentMode || undefined,
       }),

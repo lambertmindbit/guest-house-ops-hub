@@ -47,16 +47,16 @@ describe("refundPctForDays", () => {
 describe("assessRefund", () => {
   const policy = { enabled: true, tiers: ladder };
 
-  it("refunds the ladder's share of what was collected, whole rupees", () => {
-    expect(assessRefund({ policy, daysUntilCheckIn: 25, collected: 4000 }).suggestedRefund).toBe(3000); // 75%
-    expect(assessRefund({ policy, daysUntilCheckIn: 12, collected: 3333 }).suggestedRefund).toBe(1667); // 50% → round(1666.5)
-    expect(assessRefund({ policy, daysUntilCheckIn: 3, collected: 4000 }).suggestedRefund).toBe(0); // inside a week
+  it("refunds the ladder's share of what was collected, whole rupees; values are paise", () => {
+    expect(assessRefund({ policy, daysUntilCheckIn: 25, collected: 400_000 }).suggestedRefund).toBe(300_000); // 75% of ₹4,000
+    expect(assessRefund({ policy, daysUntilCheckIn: 12, collected: 333_300 }).suggestedRefund).toBe(166_700); // 50% of ₹3,333 → ₹1,666.5 → ₹1,667
+    expect(assessRefund({ policy, daysUntilCheckIn: 3, collected: 400_000 }).suggestedRefund).toBe(0); // inside a week
   });
   it("reports the applied percentage", () => {
-    expect(assessRefund({ policy, daysUntilCheckIn: 25, collected: 4000 }).refundPct).toBe(75);
+    expect(assessRefund({ policy, daysUntilCheckIn: 25, collected: 400_000 }).refundPct).toBe(75);
   });
   it("a disabled policy refunds everything collected (owner isn't enforcing tiers)", () => {
-    expect(assessRefund({ policy: { ...policy, enabled: false }, daysUntilCheckIn: 0, collected: 1200 }).suggestedRefund).toBe(1200);
+    expect(assessRefund({ policy: { ...policy, enabled: false }, daysUntilCheckIn: 0, collected: 120_000 }).suggestedRefund).toBe(120_000);
   });
   it("never refunds more than was collected", () => {
     expect(assessRefund({ policy, daysUntilCheckIn: 40, collected: 0 }).suggestedRefund).toBe(0);

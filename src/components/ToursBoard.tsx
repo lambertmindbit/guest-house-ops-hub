@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { SectionLabel } from "@/components/ui";
 import { displayINR } from "@/lib/format";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 type TourStatus = "planned" | "confirmed" | "completed" | "cancelled";
 type Tour = { id: string; name: string; price: number | null; partnerId: string | null; partnerName: string | null; active: boolean };
@@ -40,15 +41,15 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
 
   function startEditBooking(b: Booking) {
     setEditBookingId(b.id);
-    setEditBooking({ guestId: b.guestId ?? "", date: b.date ?? "", amount: b.amount != null ? String(b.amount) : "" });
+    setEditBooking({ guestId: b.guestId ?? "", date: b.date ?? "", amount: b.amount != null ? String(paiseToRupees(b.amount)) : "" });
   }
   async function saveBooking(id: string) {
-    if (await call(`/api/tour-bookings/${id}`, { guestId: editBooking.guestId || null, date: editBooking.date || null, amount: editBooking.amount ? Number(editBooking.amount) : null }, "PATCH")) setEditBookingId(null);
+    if (await call(`/api/tour-bookings/${id}`, { guestId: editBooking.guestId || null, date: editBooking.date || null, amount: editBooking.amount ? rupeesToPaise(Number(editBooking.amount)) : null }, "PATCH")) setEditBookingId(null);
   }
 
   async function saveTour(id: string) {
     if (!editTour.name.trim()) return;
-    if (await call(`/api/tours/${id}`, { name: editTour.name.trim(), price: editTour.price ? Number(editTour.price) : null, partnerId: editTour.partnerId || null }, "PATCH")) setEditTourId(null);
+    if (await call(`/api/tours/${id}`, { name: editTour.name.trim(), price: editTour.price ? rupeesToPaise(Number(editTour.price)) : null, partnerId: editTour.partnerId || null }, "PATCH")) setEditTourId(null);
   }
   async function savePartner(id: string) {
     if (!editPartner.name.trim()) return;
@@ -90,7 +91,7 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
           <div><label className="field-label">Amount</label><input className="input" inputMode="numeric" value={nb.amount} onChange={(e) => setNb({ ...nb, amount: e.target.value })} placeholder="₹" /></div>
         </div>
         <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} disabled={!nb.tourId}
-          onClick={async () => { if (await call("/api/tour-bookings", { tourId: nb.tourId, guestId: nb.guestId || null, date: nb.date || null, amount: nb.amount ? Number(nb.amount) : null })) setNb({ tourId: "", guestId: "", date: "", amount: "" }); }}>
+          onClick={async () => { if (await call("/api/tour-bookings", { tourId: nb.tourId, guestId: nb.guestId || null, date: nb.date || null, amount: nb.amount ? rupeesToPaise(Number(nb.amount)) : null })) setNb({ tourId: "", guestId: "", date: "", amount: "" }); }}>
           Add booking
         </button>
       </div>
@@ -150,7 +151,7 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
           </div>
         </div>
         <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} disabled={!nt.name.trim()}
-          onClick={async () => { if (await call("/api/tours", { name: nt.name, price: nt.price ? Number(nt.price) : null, partnerId: nt.partnerId || null })) setNt({ name: "", price: "", partnerId: "" }); }}>
+          onClick={async () => { if (await call("/api/tours", { name: nt.name, price: nt.price ? rupeesToPaise(Number(nt.price)) : null, partnerId: nt.partnerId || null })) setNt({ name: "", price: "", partnerId: "" }); }}>
           Add tour
         </button>
       </div>
@@ -176,7 +177,7 @@ export function ToursBoard({ tours, partners, guests, bookings, summary }: { tou
               <span>{t.name}{t.partnerName ? <span className="muted"> · {t.partnerName}</span> : null}</span>
               <span className="row" style={{ gap: 8, alignItems: "center" }}>
                 <span className="muted">{t.price != null ? displayINR(t.price) : "—"}</span>
-                <button className="btn btn--ghost btn--sm" onClick={() => { setEditTourId(t.id); setEditTour({ name: t.name, price: t.price != null ? String(t.price) : "", partnerId: t.partnerId ?? "" }); }}>Edit</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => { setEditTourId(t.id); setEditTour({ name: t.name, price: t.price != null ? String(paiseToRupees(t.price)) : "", partnerId: t.partnerId ?? "" }); }}>Edit</button>
                 <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete tour", message: "Delete this tour?", danger: true, confirmLabel: "Delete" })) call(`/api/tours/${t.id}`, {}, "DELETE"); }} aria-label="Delete tour">✕</button>
               </span>
             </div>

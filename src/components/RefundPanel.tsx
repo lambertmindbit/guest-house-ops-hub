@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { displayINR } from "@/lib/format";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 import { useConfirm } from "@/components/ConfirmProvider";
 
 export type RefundRow = {
@@ -38,7 +39,8 @@ export function RefundPanel({
 }) {
   const router = useRouter();
   const { confirm } = useConfirm();
-  const [amount, setAmount] = useState(String(suggestedRefund));
+  // suggestedRefund is paise; the field holds rupees.
+  const [amount, setAmount] = useState(String(paiseToRupees(suggestedRefund)));
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function RefundPanel({
     const res = await fetch(`/api/reservations/${reservationId}/refunds`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ amount: Number(amount), reason: reason.trim() || null }),
+      body: JSON.stringify({ amount: rupeesToPaise(Number(amount)), reason: reason.trim() || null }),
     });
     setBusy(false);
     if (!res.ok) {

@@ -33,8 +33,8 @@ const createSchema = z
     otaRef: z.string().optional(),
     arrivalTime: z.string().optional(),
     specialRequests: z.string().optional(),
-    grossAmount: z.number().nonnegative().optional(),
-    advanceRequired: z.number().nonnegative().optional(),
+    grossAmount: z.number().int().nonnegative().optional(), // paise (GAP-9)
+    advanceRequired: z.number().int().nonnegative().optional(), // paise
     // The booker confirmed the guest accepts that a valid ID is collected at
     // check-in. Recorded (idAckAt) but not required server-side, so OTA/agent/
     // import paths still work; the manual form enforces the tick client-side.

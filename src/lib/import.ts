@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { createReservation, OverlapError } from "@/lib/reservations";
 import { parseDateOnly } from "@/lib/dates";
+import { rupeesToPaise } from "@/lib/money";
 
 // Guided CSV import for onboarding a property off paper/WhatsApp. Two sheets:
 // guests and bookings. Every booking row is created through createReservation()
@@ -224,8 +225,9 @@ export async function importCsv(
             channelId,
             checkIn: parseDateOnly(checkIn),
             checkOut: parseDateOnly(checkOut),
-            grossAmount: amount ? Number(amount) : undefined,
-            advanceRequired: advance ? Number(advance) : undefined,
+            // CSV amounts are rupees; storage + createReservation are paise (GAP-9).
+            grossAmount: amount ? rupeesToPaise(Number(amount)) : undefined,
+            advanceRequired: advance ? rupeesToPaise(Number(advance)) : undefined,
             status,
           });
           results.push({ row: rowNo, status: "created", message: `${name} · Room ${roomLabel}` });

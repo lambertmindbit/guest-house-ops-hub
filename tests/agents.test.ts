@@ -5,13 +5,13 @@ import { agentCommission, agentStatements } from "@/lib/agents";
 // Pure commission math — whole-rupee rounding, identical to finance.ts so a
 // channel and an agent never disagree by a paisa.
 describe("agentCommission", () => {
-  it("is gross × pct, rounded to whole rupees", () => {
-    expect(agentCommission(3500, 10)).toBe(350);
-    expect(agentCommission(2999, 10)).toBe(300); // 299.9 → 300
-    expect(agentCommission(3333, 10)).toBe(333); // 333.3 → 333
+  it("is gross × pct, rounded to whole rupees; values are paise", () => {
+    expect(agentCommission(350_000, 10)).toBe(35_000); // ₹3,500 → ₹350
+    expect(agentCommission(299_900, 10)).toBe(30_000); // ₹2,999 → ₹299.9 → ₹300
+    expect(agentCommission(333_300, 10)).toBe(33_300); // ₹3,333 → ₹333.3 → ₹333
   });
   it("is zero at 0% (and for a free stay)", () => {
-    expect(agentCommission(3500, 0)).toBe(0);
+    expect(agentCommission(350_000, 0)).toBe(0);
     expect(agentCommission(0, 10)).toBe(0);
   });
 });
@@ -51,20 +51,21 @@ afterAll(async () => {
 describe("agentStatements", () => {
   it("sums an agent's confirmed bookings and derives the commission owed", async () => {
     // Two of this agent's bookings in July (non-overlapping, same room)…
-    await prisma.reservation.create({ data: { roomId, guestId, channelId, agentId, checkIn: new Date("2026-07-05"), checkOut: new Date("2026-07-07"), grossAmount: 3500 } });
-    await prisma.reservation.create({ data: { roomId, guestId, channelId, agentId, checkIn: new Date("2026-07-10"), checkOut: new Date("2026-07-12"), grossAmount: 2500 } });
+    // Money is paise (GAP-9): ₹3,500 and ₹2,500.
+    await prisma.reservation.create({ data: { roomId, guestId, channelId, agentId, checkIn: new Date("2026-07-05"), checkOut: new Date("2026-07-07"), grossAmount: 350_000 } });
+    await prisma.reservation.create({ data: { roomId, guestId, channelId, agentId, checkIn: new Date("2026-07-10"), checkOut: new Date("2026-07-12"), grossAmount: 250_000 } });
     // …one with NO agent (direct) — must be excluded…
-    await prisma.reservation.create({ data: { roomId, guestId, channelId, checkIn: new Date("2026-07-15"), checkOut: new Date("2026-07-17"), grossAmount: 9999 } });
+    await prisma.reservation.create({ data: { roomId, guestId, channelId, checkIn: new Date("2026-07-15"), checkOut: new Date("2026-07-17"), grossAmount: 999_900 } });
     // …and one attributed but CANCELLED — must be excluded.
-    await prisma.reservation.create({ data: { roomId, guestId, channelId, agentId, status: "cancelled", checkIn: new Date("2026-07-20"), checkOut: new Date("2026-07-22"), grossAmount: 4000 } });
+    await prisma.reservation.create({ data: { roomId, guestId, channelId, agentId, status: "cancelled", checkIn: new Date("2026-07-20"), checkOut: new Date("2026-07-22"), grossAmount: 400_000 } });
 
     const rows = await agentStatements("2026-07-01", "2026-08-01");
     const mine = rows.find((r) => r.agentId === agentId);
 
     expect(mine).toBeDefined();
     expect(mine!.bookings).toBe(2);
-    expect(mine!.gross).toBe(6000);
-    expect(mine!.commission).toBe(600); // 10% of 6000
+    expect(mine!.gross).toBe(600_000); // ₹6,000
+    expect(mine!.commission).toBe(60_000); // 10% of ₹6,000 = ₹600
   });
 
   it("omits an agent with no bookings in the window", async () => {

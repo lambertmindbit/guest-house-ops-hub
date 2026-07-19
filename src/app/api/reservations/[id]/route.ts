@@ -33,8 +33,8 @@ const updateSchema = z
     status: z.enum(["confirmed", "cancelled", "no_show"]).optional(),
     arrivalTime: z.string().nullable().optional(),
     specialRequests: z.string().nullable().optional(),
-    grossAmount: z.number().nonnegative().nullable().optional(),
-    advanceRequired: z.number().nonnegative().nullable().optional(),
+    grossAmount: z.number().int().nonnegative().nullable().optional(), // paise (GAP-9)
+    advanceRequired: z.number().int().nonnegative().nullable().optional(), // paise
     otaRef: z.string().nullable().optional(),
     // Optimistic-concurrency token the edit form round-trips (see L-4).
     expectedVersion: z.number().int().optional(),

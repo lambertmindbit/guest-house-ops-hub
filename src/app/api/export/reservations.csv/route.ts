@@ -2,6 +2,7 @@ import { withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { toCsv, csvResponse } from "@/lib/csv";
 import { parseDateOnly, formatDateOnly } from "@/lib/dates";
+import { paiseToRupees } from "@/lib/money";
 
 const isDate = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const nights = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 86_400_000);
@@ -28,12 +29,13 @@ async function handleGET(request: Request) {
     "Checked in", "Checked out", "Created",
   ];
   const rows = reservations.map((r) => {
+    // Stored as paise (GAP-9); the CSV stays in rupees (byte-identical to before).
     const gross = r.grossAmount ? Number(r.grossAmount) : 0;
     const collected = r.payments.reduce((s, p) => s + Number(p.amount), 0);
     return [
       r.id, r.guest.name, r.guest.phone, r.room.label, r.room.roomType.name, r.channel.name,
       formatDateOnly(r.checkIn), formatDateOnly(r.checkOut), nights(r.checkIn, r.checkOut),
-      r.status, gross, collected, gross - collected,
+      r.status, paiseToRupees(gross), paiseToRupees(collected), paiseToRupees(gross - collected),
       r.checkedInAt?.toISOString() ?? "", r.checkedOutAt?.toISOString() ?? "",
       r.createdAt.toISOString(),
     ];

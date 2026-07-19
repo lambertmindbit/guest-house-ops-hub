@@ -105,7 +105,7 @@ async function handlePOST(req: Request) {
           otaRef: input.otaRef,
           arrivalTime: input.arrivalTime,
           specialRequests: input.specialRequests,
-          grossAmount: input.grossAmount,
+          grossAmount: input.grossAmount, // paise (GAP-9), consistent with the internal API
           propertyId: room.propertyId,
         },
       });

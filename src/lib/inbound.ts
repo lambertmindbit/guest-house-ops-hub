@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { parseBookingEmail } from "@/lib/email-parse";
 import { parseDateOnly } from "@/lib/dates";
 import { redactCardNumbers } from "@/lib/redact";
+import { rupeesToPaise } from "@/lib/money";
 
 // Parse a raw OTA email and stage it for review. Dedupes on otaRef (US-305): the
 // same confirmation arriving twice — re-forwarded, or a webhook retry — must never
@@ -22,7 +23,8 @@ export async function ingestEmail(raw: string) {
     checkIn: p.checkIn ? parseDateOnly(p.checkIn) : null,
     checkOut: p.checkOut ? parseDateOnly(p.checkOut) : null,
     roomTypeHint: p.roomTypeHint,
-    amount: p.amount ?? undefined,
+    // Parsed email amount is rupees; InboundBooking.amount is paise (GAP-9).
+    amount: p.amount != null ? rupeesToPaise(p.amount) : undefined,
   };
 
   // GAP-2: a modification/cancellation for an EXISTING booking is not a duplicate.

@@ -60,12 +60,13 @@ export function refundPctForDays(tiers: CancellationTier[], daysUntilCheckIn: nu
 export type RefundAssessment = {
   daysUntilCheckIn: number;
   refundPct: number;
-  suggestedRefund: number; // advisory — the owner may approve a different amount; never more than collected
+  suggestedRefund: number; // paise; advisory — owner may approve a different amount; never more than collected
 };
 
 // Advisory refund for a cancelled booking: the ladder's percentage of what was
-// collected (whole rupees, matching the app's money convention). A disabled
-// policy means the owner isn't enforcing tiers → full refund of what was paid.
+// collected. `collected` is paise (GAP-9); the suggested refund stays whole-rupee
+// (the app's money convention). A disabled policy means the owner isn't enforcing
+// tiers → full refund of what was paid.
 export function assessRefund(opts: {
   policy: CancellationPolicyValues;
   daysUntilCheckIn: number;
@@ -73,7 +74,8 @@ export function assessRefund(opts: {
 }): RefundAssessment {
   const { policy, daysUntilCheckIn, collected } = opts;
   const refundPct = policy.enabled ? refundPctForDays(policy.tiers, daysUntilCheckIn) : 100;
-  const suggestedRefund = Math.round((Math.max(0, collected) * refundPct) / 100);
+  const collectedRupees = Math.max(0, collected) / 100;
+  const suggestedRefund = Math.round((collectedRupees * refundPct) / 100) * 100;
   return { daysUntilCheckIn, refundPct, suggestedRefund };
 }
 

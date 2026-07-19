@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { send, ErrorLine, AddButton, ListItem, RowActions, type Agent } from "./shared";
+import { paiseToRupees } from "@/lib/money";
 
 const BLANK = { name: "", phone: "", commissionPct: "10", notes: "" };
-const rupee = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+// commissionThisMonth is paise (GAP-9); display in whole rupees.
+const rupee = (n: number) => `₹${Math.round(paiseToRupees(n)).toLocaleString("en-IN")}`;
 
 // Travel agents (G3): the owner's inbound B2B agents and what they're owed.
 // Commission is derived from bookings attributed to the agent — shown here per

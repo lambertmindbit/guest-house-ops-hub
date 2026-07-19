@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
+import { rupeesToPaise, paiseToRupees, formatPaise } from "@/lib/money";
 
 type Quote = { total: number; nights: { date: string; rate: number; applied: string[] }[] };
 
@@ -122,7 +123,8 @@ export function ReservationForm({ mode, rooms, channels, agents = [], initial, i
         const json = await res.json();
         if (!res.ok) return setQuote(null);
         setQuote(json.data);
-        setValues((v) => (v.grossAmount.trim() === "" ? { ...v, grossAmount: String(json.data.total) } : v));
+        // quote.total is paise; the amount field holds rupees.
+        setValues((v) => (v.grossAmount.trim() === "" ? { ...v, grossAmount: String(paiseToRupees(json.data.total)) } : v));
       } catch {
         /* aborted */
       }
@@ -196,8 +198,9 @@ export function ReservationForm({ mode, rooms, channels, agents = [], initial, i
         checkOut: values.checkOut,
         arrivalTime: values.arrivalTime || undefined,
         specialRequests: values.specialRequests || undefined,
-        grossAmount: amount ? Number(amount) : undefined,
-        advanceRequired: advance ? Number(advance) : undefined,
+        // Fields are rupees; the API + storage are paise (GAP-9).
+        grossAmount: amount ? rupeesToPaise(Number(amount)) : undefined,
+        advanceRequired: advance ? rupeesToPaise(Number(advance)) : undefined,
       };
 
       const res =
@@ -410,12 +413,12 @@ export function ReservationForm({ mode, rooms, channels, agents = [], initial, i
           <div className="card" style={{ padding: "10px 12px", background: "var(--accent-bg)", borderColor: "transparent", marginBottom: 14 }}>
             <div className="row" style={{ justifyContent: "space-between", gap: 10 }}>
               <div style={{ fontSize: "var(--fs-small)" }}>
-                <span style={{ fontWeight: 700, color: "var(--ink)" }}>Suggested ₹{quote.total.toLocaleString("en-IN")}</span>
+                <span style={{ fontWeight: 700, color: "var(--ink)" }}>Suggested {formatPaise(quote.total)}</span>
                 <span className="muted"> · {quote.nights.length} night{quote.nights.length === 1 ? "" : "s"}</span>
                 {adjustments.length > 0 && <span className="muted"> · {adjustments.join(", ")}</span>}
               </div>
-              {String(quote.total) !== values.grossAmount.trim() && (
-                <button type="button" onClick={() => set("grossAmount", String(quote.total))} className="btn btn--ghost btn--sm" style={{ flex: "none" }}>Use</button>
+              {String(paiseToRupees(quote.total)) !== values.grossAmount.trim() && (
+                <button type="button" onClick={() => set("grossAmount", String(paiseToRupees(quote.total)))} className="btn btn--ghost btn--sm" style={{ flex: "none" }}>Use</button>
               )}
             </div>
           </div>

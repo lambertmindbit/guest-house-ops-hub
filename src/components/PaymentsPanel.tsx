@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { displayINR, PAYMENT_MODE_LABELS } from "@/lib/format";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 import { Icon } from "@/components/ui";
 import { buildUpiLink, upiQrSvg } from "@/lib/upi";
 
@@ -69,7 +70,7 @@ export function PaymentsPanel({
   // Self-contained SVG QR of the UPI link for the outstanding balance. Memoised so
   // typing in the amount field doesn't re-encode it on every keystroke.
   const qrSvg = useMemo(
-    () => (upi && balance > 0 ? upiQrSvg({ vpa: upi.vpa, payeeName: upi.payeeName, amount: balance, note: "Booking payment" }) : ""),
+    () => (upi && balance > 0 ? upiQrSvg({ vpa: upi.vpa, payeeName: upi.payeeName, amount: paiseToRupees(balance), note: "Booking payment" }) : ""),
     [upi, balance],
   );
   const advanceOk = advanceRequired > 0 && advancePaid >= advanceRequired;
@@ -84,7 +85,7 @@ export function PaymentsPanel({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          amount: Number(amount),
+          amount: rupeesToPaise(Number(amount)), // field is rupees; API is paise (GAP-9)
           mode,
           isAdvance,
           note: note.trim() || undefined,
@@ -161,7 +162,7 @@ export function PaymentsPanel({
               <a
                 className="btn btn--ghost"
                 style={{ flex: 1 }}
-                href={buildUpiLink({ vpa: upi.vpa, payeeName: upi.payeeName, amount: balance, note: "Booking payment" })}
+                href={buildUpiLink({ vpa: upi.vpa, payeeName: upi.payeeName, amount: paiseToRupees(balance), note: "Booking payment" })}
               >
                 <Icon name="wallet" size={16} /> Request {displayINR(balance)} via UPI
               </a>

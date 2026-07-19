@@ -44,7 +44,7 @@ async function handleGET(req: Request) {
       roomTypeId: r.roomTypeId,
       roomTypeName: r.roomType.name,
       maxOccupancy: r.roomType.maxOccupancy,
-      baseRate: Number(r.roomType.baseRate),
+      baseRate: Number(r.roomType.baseRate), // paise (GAP-9), consistent with the internal API
       photos: Array.isArray(r.photos) ? (r.photos as string[]) : [],
       facing: r.facing,
       view: r.view,
