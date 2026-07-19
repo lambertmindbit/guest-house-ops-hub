@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon, ChannelBadge, EmptyState } from "@/components/ui";
 
+type Linked = { guestName: string; checkIn: string; checkOut: string; amount: number | null; status: string };
 type Item = {
   id: string;
   source: string;
+  emailKind: "new" | "modification" | "cancellation";
   otaRef: string;
   guestName: string;
   guestPhone: string;
@@ -16,6 +18,7 @@ type Item = {
   roomTypeHint: string;
   amount: number | null;
   rawText: string;
+  linked: Linked | null;
 };
 type Room = { id: string; label: string; roomTypeName: string };
 type Channel = { id: string; name: string };
@@ -68,9 +71,13 @@ export function InboxReview({ data }: { data: { items: Item[]; rooms: Room[]; ch
         <EmptyState>Nothing waiting. Paste a confirmation email above to stage a booking.</EmptyState>
       ) : (
         <div className="col" style={{ gap: 14 }}>
-          {data.items.map((item) => (
-            <ReviewCard key={item.id} item={item} rooms={data.rooms} channels={data.channels} />
-          ))}
+          {data.items.map((item) =>
+            item.emailKind !== "new" && item.linked ? (
+              <ChangeCard key={item.id} item={item} linked={item.linked} />
+            ) : (
+              <ReviewCard key={item.id} item={item} rooms={data.rooms} channels={data.channels} />
+            ),
+          )}
         </div>
       )}
     </>
@@ -206,6 +213,78 @@ function ReviewCard({ item, rooms, channels }: { item: Item; rooms: Room[]; chan
       {showRaw && (
         <pre style={{ marginTop: 12, padding: 12, background: "var(--surface-2)", borderRadius: 8, fontSize: "var(--fs-meta)", whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>{item.rawText}</pre>
       )}
+    </div>
+  );
+}
+
+function DiffRow({ label, from, to }: { label: string; from: string; to: string }) {
+  const changed = from !== to;
+  return (
+    <div className="row" style={{ gap: 8, padding: "4px 0", fontSize: "var(--fs-small)", alignItems: "center" }}>
+      <span style={{ width: 84, color: "var(--text-subtle)", flex: "none" }}>{label}</span>
+      <span style={{ textDecoration: changed ? "line-through" : "none", color: changed ? "var(--text-subtle)" : "var(--ink)" }}>{from || "—"}</span>
+      {changed && <><Icon name="arrowR" size={13} /><b>{to || "—"}</b></>}
+    </div>
+  );
+}
+
+// A matched modification/cancellation: show the diff and Apply it through the
+// normal conflict-checked path (GAP-2).
+function ChangeCard({ item, linked }: { item: Item; linked: Linked }) {
+  const router = useRouter();
+  const { confirm } = useConfirm();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isCancel = item.emailKind === "cancellation";
+  const money = (n: number | null) => (n != null ? `₹${n.toLocaleString("en-IN")}` : "—");
+  // Effective new values mirror the Apply route: an unspecified field keeps the current one.
+  const newCheckIn = item.checkIn || linked.checkIn;
+  const newCheckOut = item.checkOut || linked.checkOut;
+  const newAmount = item.amount != null ? item.amount : linked.amount;
+
+  async function apply() {
+    setError(null);
+    setBusy(true);
+    const res = await fetch(`/api/inbound/${item.id}/apply`, { method: "POST" });
+    const json = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setError(json.error ?? "Could not apply this change."); return; }
+    router.refresh();
+  }
+
+  async function dismiss() {
+    if (!(await confirm({ title: "Dismiss", message: "Dismiss this change? The booking won’t be updated.", danger: true, confirmLabel: "Dismiss" }))) return;
+    await fetch(`/api/inbound/${item.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ status: "dismissed" }) });
+    router.refresh();
+  }
+
+  return (
+    <div className="card" style={{ padding: 16, borderLeft: `4px solid ${isCancel ? "var(--red-text)" : "var(--amber-text, #b45309)"}` }}>
+      <div className="row" style={{ gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <ChannelBadge name={item.source} />
+        <span className={`badge ${isCancel ? "badge--danger" : "badge--warn"}`}>{isCancel ? "Cancellation" : "Modification"}</span>
+        {item.otaRef && <span style={{ fontSize: "var(--fs-small)", color: "var(--text-subtle)" }}>Ref {item.otaRef}</span>}
+      </div>
+      <div style={{ fontWeight: 600, marginBottom: 8 }}>{linked.guestName}</div>
+
+      {isCancel ? (
+        <p className="help-a" style={{ margin: 0 }}>The OTA cancelled this booking ({linked.checkIn} → {linked.checkOut}). Applying cancels it here and frees the dates.</p>
+      ) : (
+        <div style={{ margin: "4px 0" }}>
+          <DiffRow label="Check-in" from={linked.checkIn} to={newCheckIn} />
+          <DiffRow label="Check-out" from={linked.checkOut} to={newCheckOut} />
+          <DiffRow label="Amount" from={money(linked.amount)} to={money(newAmount)} />
+        </div>
+      )}
+
+      {error && <p style={{ color: "var(--red-text)", fontSize: "var(--fs-small)", margin: "8px 0 0" }}>{error}</p>}
+
+      <div className="row" style={{ gap: 10, marginTop: 14 }}>
+        <button onClick={apply} disabled={busy} className={`btn btn--sm ${isCancel ? "btn--danger" : "btn--primary"}`}>
+          <Icon name="check" size={16} /> {busy ? "Applying…" : isCancel ? "Apply cancellation" : "Apply changes"}
+        </button>
+        <button onClick={dismiss} disabled={busy} className="btn btn--ghost btn--sm">Dismiss</button>
+      </div>
     </div>
   );
 }

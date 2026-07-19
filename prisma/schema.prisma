@@ -622,6 +622,12 @@ enum InboundStatus {
   duplicate
 }
 
+enum InboundKind {
+  new
+  modification
+  cancellation
+}
+
 model RoomType {
   id           String            @id @default(cuid())
   name         String
@@ -916,7 +922,9 @@ model InboundBooking {
   roomTypeHint  String?       @map("room_type_hint")
   amount        Decimal?      @db.Decimal(10, 2)
   status        InboundStatus @default(pending)
-  reservationId String?       @map("reservation_id") // set once imported
+  // GAP-2: is this a new confirmation, or a change/cancel of an existing booking?
+  emailKind     InboundKind   @default(new) @map("email_kind")
+  reservationId String?       @map("reservation_id") // matched booking (mod/cancel) or set once imported (new)
   createdAt     DateTime      @default(now()) @map("created_at")
   // Tenant (multi-property). Single-property today; backfilled + scoped by the
   // Prisma tenant extension. See src/lib/tenant.ts.
