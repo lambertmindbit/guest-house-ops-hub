@@ -136,13 +136,11 @@ export async function createEscalation(
     },
   });
 
-  // Ping the owner's phone: a new queue item needs attention. Best-effort —
-  // a push failure must never break filing the escalation.
-  try {
-    const { sendOwnerPush } = await import("@/lib/push");
-    await sendOwnerPush({ title: e.title, body: e.summary, url: "/needs-you", tag: "escalation" });
-  } catch {
-    // ignore
+  // Ping the owner's phone for a HIGH-severity item that can't wait in a queue
+  // (GAP-14). Toggle-aware + best-effort — a push must never break filing.
+  if (e.severity === "high" || e.severity === "critical") {
+    const { notifyOwner } = await import("@/lib/notify");
+    await notifyOwner("escalation", { title: e.title, body: e.summary, url: "/needs-you", tag: "escalation" });
   }
 
   return { escalation: toView(e), deduped: false };
