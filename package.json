@@ -19,7 +19,8 @@
     "shots": "node scripts/screenshots.mjs",
     "docs:html": "node scripts/md-to-html.mjs",
     "docs:check": "node scripts/check-docs.mjs",
-    "check:tenant-sql": "node scripts/check-tenant-sql.mjs"
+    "check:tenant-sql": "node scripts/check-tenant-sql.mjs",
+    "db:seed:demo": "prisma db seed && node scripts/demo-data.mjs --apply"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
