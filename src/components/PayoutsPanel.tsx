@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon } from "@/components/ui";
 import { displayINR } from "@/lib/format";
+import { rupeesToPaise } from "@/lib/money";
 import { todayDateOnly } from "@/lib/dates";
 import type { ChannelRecon } from "@/lib/finance";
 
@@ -29,7 +30,7 @@ export function PayoutsPanel({ recon, channels }: { recon: ChannelRecon[]; chann
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         channelId: f.channelId,
-        amount: Number(f.amount),
+        amount: rupeesToPaise(Number(f.amount)), // field is rupees; API is paise (GAP-9)
         paidAt: f.paidAt,
         reference: f.reference || undefined,
         note: f.note || undefined,

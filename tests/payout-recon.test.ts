@@ -11,9 +11,9 @@ import { DELETE as deletePayout } from "@/app/api/payouts/[id]/route";
 // ─── Pure arithmetic ──────────────────────────────────────────────────────────
 
 describe("commissionOn", () => {
-  it("rounds % of gross (matches the By-channel net)", () => {
-    expect(commissionOn(10000, 15)).toBe(1500);
-    expect(commissionOn(999, 15)).toBe(150); // 149.85 → 150
+  it("rounds % of gross to the whole rupee (matches the By-channel net); values are paise", () => {
+    expect(commissionOn(1_000_000, 15)).toBe(150_000); // ₹10,000 → ₹1,500
+    expect(commissionOn(99_900, 15)).toBe(15_000); // ₹999 → ₹149.85 → ₹150
   });
 });
 

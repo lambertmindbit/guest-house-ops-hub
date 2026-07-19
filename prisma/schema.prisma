@@ -227,7 +227,7 @@ model MaintenanceRequest {
   priority        MaintenancePriority @default(medium)
   assigneeStaffId String?             @map("assignee_staff_id")
   vendorId        String?             @map("vendor_id")
-  cost            Decimal?            @db.Decimal(10, 2)
+  cost            BigInt?
   photoPaths      String[]            @default([]) @map("photo_paths")
   note            String?
   propertyId      String?             @map("property_id")
@@ -356,7 +356,7 @@ model Trip {
   dropoff       String
   scheduledAt   DateTime?  @map("scheduled_at")
   status        TripStatus @default(planned)
-  fare          Decimal?   @db.Decimal(10, 2)
+  fare          BigInt?
   note          String?
   propertyId    String?    @map("property_id")
   createdAt     DateTime   @default(now()) @map("created_at")
@@ -385,7 +385,7 @@ model PurchaseOrder {
   id          String    @id @default(cuid())
   vendorId    String    @map("vendor_id")
   description String
-  amount      Decimal   @db.Decimal(10, 2)
+  amount      BigInt
   status      PoStatus  @default(draft)
   note        String?
   propertyId  String?   @map("property_id")
@@ -400,7 +400,7 @@ model PurchaseOrder {
 model VendorPayment {
   id         String       @id @default(cuid())
   vendorId   String       @map("vendor_id")
-  amount     Decimal      @db.Decimal(10, 2)
+  amount     BigInt
   mode       PaymentMode?
   note       String?
   paidAt     DateTime     @default(now()) @map("paid_at")
@@ -439,7 +439,7 @@ model Tour {
   id          String        @id @default(cuid())
   name        String
   description String?
-  price       Decimal?      @db.Decimal(10, 2)
+  price       BigInt?
   partnerId   String?       @map("partner_id")
   active      Boolean       @default(true)
   propertyId  String?       @map("property_id")
@@ -460,7 +460,7 @@ model TourBooking {
   guestId       String?      @map("guest_id")
   reservationId String?      @map("reservation_id")
   date          DateTime?    @db.Date
-  amount        Decimal?     @db.Decimal(10, 2)
+  amount        BigInt?
   commissionPct Int?         @map("commission_pct")
   status        TourStatus   @default(planned)
   note          String?
@@ -631,10 +631,10 @@ enum InboundKind {
 model RoomType {
   id           String            @id @default(cuid())
   name         String
-  baseRate     Decimal           @map("base_rate") @db.Decimal(10, 2)
+  baseRate     BigInt            @map("base_rate")
   maxOccupancy Int               @map("max_occupancy")
-  rateFloor    Decimal           @map("rate_floor") @db.Decimal(10, 2)
-  rateCeiling  Decimal           @map("rate_ceiling") @db.Decimal(10, 2)
+  rateFloor    BigInt            @map("rate_floor")
+  rateCeiling  BigInt            @map("rate_ceiling")
   rooms        Room[]
   amenities    RoomTypeAmenity[]
 
@@ -793,42 +793,42 @@ model Guest {
 }
 
 model Reservation {
-  id              String                    @id @default(cuid())
-  roomId          String                    @map("room_id")
-  guestId         String                    @map("guest_id")
-  channelId       String                    @map("channel_id")
+  id               String                    @id @default(cuid())
+  roomId           String                    @map("room_id")
+  guestId          String                    @map("guest_id")
+  channelId        String                    @map("channel_id")
   // Optional inbound travel agent who brought this booking (B2B commission).
   // Nullable — most bookings have none. Commission owed is derived, not stored.
-  agentId         String?                   @map("agent_id")
-  otaRef          String?                   @map("ota_ref")
-  checkIn         DateTime                  @map("check_in") @db.Date
-  checkOut        DateTime                  @map("check_out") @db.Date
+  agentId          String?                   @map("agent_id")
+  otaRef           String?                   @map("ota_ref")
+  checkIn          DateTime                  @map("check_in") @db.Date
+  checkOut         DateTime                  @map("check_out") @db.Date
   // Generated in the DB from check_in/check_out as a half-open [) daterange.
-  stay            Unsupported("daterange")? @map("stay")
-  status          ReservationStatus         @default(confirmed)
+  stay             Unsupported("daterange")? @map("stay")
+  status           ReservationStatus         @default(confirmed)
   // Optimistic-concurrency token: bumped on every update. An edit that carries a
   // stale version is rejected (StaleWriteError → 409) so two devices editing the
   // same booking can't silently overwrite each other. Not part of the exclusion
   // constraint or the generated `stay`, so the sacred core is untouched.
-  version         Int                       @default(0)
+  version          Int                       @default(0)
   // Live arrival/departure stamps. Orthogonal to `status` (a confirmed booking
   // may or may not be in-house yet) and to `stay`, so the exclusion constraint
   // is untouched. Drive the Today board's in-house view + housekeeping handoff.
-  checkedInAt     DateTime?                 @map("checked_in_at")
-  checkedOutAt    DateTime?                 @map("checked_out_at")
-  arrivalTime     String?                   @map("arrival_time")
-  specialRequests String?                   @map("special_requests")
+  checkedInAt      DateTime?                 @map("checked_in_at")
+  checkedOutAt     DateTime?                 @map("checked_out_at")
+  arrivalTime      String?                   @map("arrival_time")
+  specialRequests  String?                   @map("special_requests")
   // When the booker confirmed the guest accepts that a valid ID is collected at
   // check-in (booking-time acknowledgement). Null for non-manual paths.
-  idAckAt         DateTime?                 @map("id_ack_at")
+  idAckAt          DateTime?                 @map("id_ack_at")
   // When the foreign-guest Form C was filed with the FRRO for this arrival (GAP-7).
   // Null while the 24h filing duty is outstanding; set once the owner ticks it.
-  formCSubmittedAt DateTime?                @map("form_c_submitted_at")
-  grossAmount     Decimal?                  @map("gross_amount") @db.Decimal(10, 2)
+  formCSubmittedAt DateTime?                 @map("form_c_submitted_at")
+  grossAmount      BigInt?                   @map("gross_amount")
   // Amount expected upfront to hold the room. Separate from grossAmount so the
   // owner can track whether the deposit has arrived before check-in.
-  advanceRequired Decimal?                  @map("advance_required") @db.Decimal(10, 2)
-  createdAt       DateTime                  @default(now()) @map("created_at")
+  advanceRequired  BigInt?                   @map("advance_required")
+  createdAt        DateTime                  @default(now()) @map("created_at")
 
   // Optional link into a booking group (whole-property / long-stay folio). Each
   // grouped reservation is still a normal single-room booking created through the
@@ -875,7 +875,7 @@ model BookingGroup {
 model Payment {
   id            String      @id @default(cuid())
   reservationId String      @map("reservation_id")
-  amount        Decimal     @db.Decimal(10, 2)
+  amount        BigInt
   mode          PaymentMode
   // True when this payment is the advance/deposit (not the final balance).
   isAdvance     Boolean     @default(false) @map("is_advance")
@@ -928,7 +928,7 @@ model InboundBooking {
   checkIn       DateTime?     @map("check_in") @db.Date
   checkOut      DateTime?     @map("check_out") @db.Date
   roomTypeHint  String?       @map("room_type_hint")
-  amount        Decimal?      @db.Decimal(10, 2)
+  amount        BigInt?
   status        InboundStatus @default(pending)
   // GAP-2: is this a new confirmation, or a change/cancel of an existing booking?
   emailKind     InboundKind   @default(new) @map("email_kind")
@@ -948,7 +948,7 @@ model Expense {
   id          String       @id @default(cuid())
   date        DateTime     @db.Date
   category    String
-  amount      Decimal      @db.Decimal(10, 2)
+  amount      BigInt
   note        String?
   paymentMode PaymentMode? @map("payment_mode")
   createdAt   DateTime     @default(now()) @map("created_at")
@@ -968,8 +968,8 @@ model Payout {
   id         String   @id @default(cuid())
   channelId  String   @map("channel_id")
   channel    Channel  @relation(fields: [channelId], references: [id])
-  amount     Decimal  @db.Decimal(10, 2)
-  paidAt     DateTime @db.Date @map("paid_at")
+  amount     BigInt
+  paidAt     DateTime @map("paid_at") @db.Date
   reference  String?
   note       String?
   createdAt  DateTime @default(now()) @map("created_at")
@@ -1032,7 +1032,7 @@ model RateOverride {
   id         String   @id @default(cuid())
   roomTypeId String   @map("room_type_id")
   date       DateTime @db.Date
-  rate       Decimal  @db.Decimal(10, 2)
+  rate       BigInt
   // Tenant (multi-property). Single-property today; backfilled + scoped by the
   // Prisma tenant extension. See src/lib/tenant.ts.
   propertyId String?  @map("property_id")
@@ -1183,7 +1183,7 @@ model Referral {
   note                   String?
   status                 ReferralStatus @default(proposed)
   resultingReservationId String?        @map("resulting_reservation_id")
-  attributedRevenue      Decimal?       @map("attributed_revenue") @db.Decimal(10, 2)
+  attributedRevenue      BigInt?        @map("attributed_revenue")
   createdAt              DateTime       @default(now()) @map("created_at")
   respondedAt            DateTime?      @map("responded_at")
 
@@ -1200,7 +1200,7 @@ model ReferralCreditEntry {
   fromPropertyId String   @map("from_property_id")
   toPropertyId   String   @map("to_property_id")
   referralId     String   @map("referral_id")
-  amount         Decimal  @db.Decimal(10, 2)
+  amount         BigInt
   createdAt      DateTime @default(now()) @map("created_at")
 
   @@index([fromPropertyId])
@@ -1503,17 +1503,17 @@ enum RefundStatus {
 // cancellation windows are in days before check-in; a shorter window applies on
 // peak dates — a check-in that falls inside a Season with a positive adjustment.
 model CancellationPolicy {
-  id        String   @id @default(cuid())
-  enabled   Boolean  @default(true)
+  id         String   @id @default(cuid())
+  enabled    Boolean  @default(true)
   // Ordered refund ladder, e.g. [{minDaysBefore:30,refundPct:100},…,{0,0}]. The
   // refund for a cancellation is the refundPct of the tier with the highest
   // minDaysBefore threshold that is still ≤ days-until-check-in. Stored as JSON:
   // it's one small config edited and saved as a whole (not rows to query), so a
   // table-per-tier would be overkill. Shape is validated by Zod on every write.
-  tiers     Json     @default("[]")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+  tiers      Json     @default("[]")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
   // Forward-compatible tenancy (single-property today; unused).
-  propertyId String? @map("property_id")
+  propertyId String?  @map("property_id")
 
   @@map("cancellation_policy")
 }
@@ -1524,7 +1524,7 @@ model CancellationPolicy {
 model Refund {
   id            String       @id @default(cuid())
   reservationId String       @map("reservation_id")
-  amount        Decimal      @db.Decimal(10, 2)
+  amount        BigInt
   status        RefundStatus @default(requested)
   reason        String?
   approvedAt    DateTime?    @map("approved_at")

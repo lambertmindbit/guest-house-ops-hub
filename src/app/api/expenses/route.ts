@@ -30,7 +30,7 @@ async function handleGET(request: Request) {
 const createSchema = z.object({
   date: dateOnly,
   category: z.enum(EXPENSE_CATEGORIES),
-  amount: z.number().positive(),
+  amount: z.number().int().positive(),
   note: z.string().optional(),
   paymentMode: paymentMode.optional(),
 });

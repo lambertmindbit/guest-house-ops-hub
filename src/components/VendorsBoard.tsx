@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { SectionLabel } from "@/components/ui";
 import { displayINR } from "@/lib/format";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 type PoStatus = "draft" | "ordered" | "received";
 type Vendor = { id: string; name: string; category: string | null; contact: string | null; rating: number | null };
@@ -49,15 +50,15 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
 
   function startEditPo(p: PO) {
     setEditPoId(p.id);
-    setEditPo({ description: p.description, amount: String(p.amount), status: p.status });
+    setEditPo({ description: p.description, amount: String(paiseToRupees(p.amount)), status: p.status });
   }
   async function savePo(id: string) {
     if (!editPo.description.trim() || !editPo.amount) return;
-    if (await call(`/api/purchase-orders/${id}`, { description: editPo.description.trim(), amount: Number(editPo.amount), status: editPo.status }, "PATCH")) setEditPoId(null);
+    if (await call(`/api/purchase-orders/${id}`, { description: editPo.description.trim(), amount: rupeesToPaise(Number(editPo.amount)), status: editPo.status }, "PATCH")) setEditPoId(null);
   }
   async function savePay(id: string) {
     if (!editPay.amount) return;
-    if (await call(`/api/vendor-payments/${id}`, { amount: Number(editPay.amount) }, "PATCH")) setEditPayId(null);
+    if (await call(`/api/vendor-payments/${id}`, { amount: rupeesToPaise(Number(editPay.amount)) }, "PATCH")) setEditPayId(null);
   }
 
   return (
@@ -133,7 +134,7 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
           </select>
         </div>
         <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} disabled={!po.vendorId || !po.description.trim() || !po.amount}
-          onClick={async () => { if (await call("/api/purchase-orders", { vendorId: po.vendorId, description: po.description, amount: Number(po.amount), status: po.status })) setPo({ vendorId: "", description: "", amount: "", status: "ordered" }); }}>
+          onClick={async () => { if (await call("/api/purchase-orders", { vendorId: po.vendorId, description: po.description, amount: rupeesToPaise(Number(po.amount)), status: po.status })) setPo({ vendorId: "", description: "", amount: "", status: "ordered" }); }}>
           Create PO
         </button>
       </div>
@@ -180,7 +181,7 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
           </select>
           <input className="input" inputMode="numeric" placeholder="Amount ₹" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} style={{ flex: 1 }} />
           <button className="btn btn--primary btn--sm" disabled={!pay.vendorId || !pay.amount}
-            onClick={async () => { if (await call("/api/vendor-payments", { vendorId: pay.vendorId, amount: Number(pay.amount) })) setPay({ vendorId: "", amount: "" }); }}>Record</button>
+            onClick={async () => { if (await call("/api/vendor-payments", { vendorId: pay.vendorId, amount: rupeesToPaise(Number(pay.amount)) })) setPay({ vendorId: "", amount: "" }); }}>Record</button>
         </div>
       </div>
       <div className="col" style={{ gap: 6 }}>
@@ -197,7 +198,7 @@ export function VendorsBoard({ vendors, pos, payments, summary }: { vendors: Ven
               <span>{p.vendorName}</span>
               <span className="row" style={{ gap: 8, alignItems: "center" }}>
                 <span className="num">{displayINR(p.amount)} · {p.paidAt}</span>
-                <button className="btn btn--ghost btn--sm" onClick={() => { setEditPayId(p.id); setEditPay({ amount: String(p.amount) }); }}>Edit</button>
+                <button className="btn btn--ghost btn--sm" onClick={() => { setEditPayId(p.id); setEditPay({ amount: String(paiseToRupees(p.amount)) }); }}>Edit</button>
                 <button className="btn btn--quiet btn--icon btn--sm" onClick={async () => { if (await confirm({ title: "Delete payment", message: "Remove this vendor payment?", danger: true, confirmLabel: "Delete" })) call(`/api/vendor-payments/${p.id}`, {}, "DELETE"); }} aria-label="Delete payment">✕</button>
               </span>
             </div>

@@ -41,26 +41,26 @@ const CHANNELS = [
 const ROOM_TYPES = [
   {
     name: "Standard Double",
-    baseRate: 2500,
+    baseRate: 250000,
     maxOccupancy: 2,
-    rateFloor: 1800,
-    rateCeiling: 4000,
+    rateFloor: 180000,
+    rateCeiling: 400000,
     rooms: ["101", "102", "103"],
   },
   {
     name: "Deluxe",
-    baseRate: 3500,
+    baseRate: 350000,
     maxOccupancy: 3,
-    rateFloor: 2500,
-    rateCeiling: 6000,
+    rateFloor: 250000,
+    rateCeiling: 600000,
     rooms: ["201", "202"],
   },
   {
     name: "Family Suite",
-    baseRate: 5000,
+    baseRate: 500000,
     maxOccupancy: 4,
-    rateFloor: 4000,
-    rateCeiling: 9000,
+    rateFloor: 400000,
+    rateCeiling: 900000,
     rooms: ["301"],
   },
 ];
@@ -116,7 +116,7 @@ async function seedPeerProperty(primaryPropertyId) {
   const rt =
     (await prisma.roomType.findFirst({ where: { name: "Peer Standard", propertyId: property.id } })) ??
     (await prisma.roomType.create({
-      data: { name: "Peer Standard", baseRate: 2000, maxOccupancy: 2, rateFloor: 1500, rateCeiling: 3500, propertyId: property.id },
+      data: { name: "Peer Standard", baseRate: 200000, maxOccupancy: 2, rateFloor: 150000, rateCeiling: 350000, propertyId: property.id },
     }));
   for (const label of ["A1", "A2", "A3"]) {
     const room = await prisma.room.findFirst({ where: { label, roomTypeId: rt.id } });
@@ -221,13 +221,13 @@ const TOUR_PARTNERS = [
   { name: "Meghalaya Trails", contact: "9863200002", commissionPct: 10 },
 ];
 const TOURS = [
-  { name: "Living-root bridge trek", price: 1800, partner: "David Kharkongor (guide)" },
-  { name: "Shillong city sightseeing", price: 1200, partner: "Meghalaya Trails" },
-  { name: "Mawlynnong village day trip", price: 2500, partner: null },
+  { name: "Living-root bridge trek", price: 180000, partner: "David Kharkongor (guide)" },
+  { name: "Shillong city sightseeing", price: 120000, partner: "Meghalaya Trails" },
+  { name: "Mawlynnong village day trip", price: 250000, partner: null },
 ];
 // One sample tour booking linked to a guest, so the Tours "Bookings" list isn't
 // empty and shows the guest ↔ tour link. Creates a clearly-sample guest for it.
-const TOUR_BOOKING = { guestName: "Sample Guest (tours)", guestPhone: "9800000001", tour: "Living-root bridge trek", amount: 1800, status: "confirmed", note: "Sample booking", daysAhead: 2 };
+const TOUR_BOOKING = { guestName: "Sample Guest (tours)", guestPhone: "9800000001", tour: "Living-root bridge trek", amount: 180000, status: "confirmed", note: "Sample booking", daysAhead: 2 };
 
 // Transport: drivers + a few trips (mix of done/planned, some with fares) so the
 // Transport screen and its fare roll-up have something to show.
@@ -237,10 +237,10 @@ const DRIVERS = [
   { name: "Airport Cabs Shillong", phone: "9863500003", vehicleNumber: "ML05 C 9012" },
 ];
 const TRIPS = [
-  { driver: "Bah Kyrmen", guest: "Sample Guest (tours)", pickup: "Umroi Airport", dropoff: "Guest House", status: "done", fare: 900, dayOffset: -1, note: "Airport pickup" },
-  { driver: "Deiwan Taxi Service", pickup: "Guest House", dropoff: "Police Bazar", status: "done", fare: 250, dayOffset: -2, note: null },
-  { driver: "Airport Cabs Shillong", pickup: "Guest House", dropoff: "Cherrapunji day trip", status: "planned", fare: 2500, dayOffset: 1, note: "Full-day sightseeing" },
-  { driver: null, pickup: "Guest House", dropoff: "Shillong Bus Stand", status: "planned", fare: 400, dayOffset: 0, note: "Driver TBD" },
+  { driver: "Bah Kyrmen", guest: "Sample Guest (tours)", pickup: "Umroi Airport", dropoff: "Guest House", status: "done", fare: 90000, dayOffset: -1, note: "Airport pickup" },
+  { driver: "Deiwan Taxi Service", pickup: "Guest House", dropoff: "Police Bazar", status: "done", fare: 25000, dayOffset: -2, note: null },
+  { driver: "Airport Cabs Shillong", pickup: "Guest House", dropoff: "Cherrapunji day trip", status: "planned", fare: 250000, dayOffset: 1, note: "Full-day sightseeing" },
+  { driver: null, pickup: "Guest House", dropoff: "Shillong Bus Stand", status: "planned", fare: 40000, dayOffset: 0, note: "Driver TBD" },
 ];
 
 // Owner-managed contact list + a few referrals sent out, so the Partners and

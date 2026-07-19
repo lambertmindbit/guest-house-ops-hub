@@ -1,19 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { parseDateOnly } from "@/lib/dates";
+import { pctOfMoneyWholeRupee, type Money } from "@/lib/money";
 
 // Travel-agent commission (G3). What you owe an inbound B2B agent is derived from
 // the bookings they brought — never stored — exactly like channel commission in
 // finance.ts, and using the same whole-rupee rounding so the two agree to the paisa.
 
-function num(value: { toString(): string } | null): number {
+function num(value: bigint | number | null): number {
   return value === null ? 0 : Number(value);
 }
 
-// Commission owed on one booking: gross × pct, rounded to whole rupees (the app's
-// money convention). Pure, so it can be unit-tested without a DB. Mirrors
-// finance.ts's `Math.round((gross * commissionPct) / 100)`.
-export function agentCommission(gross: number, commissionPct: number): number {
-  return Math.round((gross * commissionPct) / 100);
+// Commission owed on one booking: gross (paise) × pct, rounded to whole rupees
+// (the app's money convention). Pure, so it can be unit-tested without a DB.
+// Mirrors finance.ts's commissionOn.
+export function agentCommission(gross: number, commissionPct: number): Money {
+  return pctOfMoneyWholeRupee(gross, commissionPct);
 }
 
 export type AgentStatement = {
@@ -46,7 +47,7 @@ export async function agentStatements(from: string, to: string): Promise<AgentSt
   for (const r of reservations) {
     if (!r.agent) continue; // agentId set but agent filtered by tenant scope
     const gross = num(r.grossAmount);
-    const pct = num(r.agent.commissionPct);
+    const pct = Number(r.agent.commissionPct);
     const row = byAgent.get(r.agent.id) ?? {
       agentId: r.agent.id,
       name: r.agent.name,

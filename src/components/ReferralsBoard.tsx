@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ReferralView, ReferralAnalytics } from "@/lib/community/referrals";
+import { paiseToRupees } from "@/lib/money";
 
 type Peer = { propertyId: string; name: string };
 type Balance = { peerPropertyId: string; peerName: string; balance: number };
@@ -14,7 +15,8 @@ const STATUS_CLS: Record<string, string> = {
 };
 
 function money(n: number) {
-  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+  // n is paise (GAP-9); referral revenue/balances are stored whole-rupee.
+  return `₹${Math.round(paiseToRupees(n)).toLocaleString("en-IN")}`;
 }
 
 export function ReferralsBoard({

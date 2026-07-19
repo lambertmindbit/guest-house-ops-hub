@@ -5,6 +5,7 @@ import { ReservationForm, type ReservationFormValues } from "@/components/Reserv
 import { CancelReservationButton } from "@/components/CancelReservationButton";
 import { PageHead, Icon } from "@/components/ui";
 import { formatDateOnly } from "@/lib/dates";
+import { paiseToRupees } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +33,9 @@ export default async function EditReservationPage({
     checkOut: formatDateOnly(reservation.checkOut),
     arrivalTime: reservation.arrivalTime ?? "",
     specialRequests: reservation.specialRequests ?? "",
-    grossAmount: reservation.grossAmount ? String(reservation.grossAmount) : "",
-    advanceRequired: reservation.advanceRequired ? String(reservation.advanceRequired) : "",
+    // Stored as paise (GAP-9); the form fields hold rupees.
+    grossAmount: reservation.grossAmount ? String(paiseToRupees(Number(reservation.grossAmount))) : "",
+    advanceRequired: reservation.advanceRequired ? String(paiseToRupees(Number(reservation.advanceRequired))) : "",
     guestName: reservation.guest.name,
     guestPhone: reservation.guest.phone,
   };

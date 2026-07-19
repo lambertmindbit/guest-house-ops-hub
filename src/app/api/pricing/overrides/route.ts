@@ -3,12 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { ok, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { recordAudit } from "@/lib/audit";
+import { formatPaise } from "@/lib/money";
 
 // Pin or clear a manual nightly rate for a room type on one date (rate calendar).
 const upsertSchema = z.object({
   roomTypeId: z.string().min(1),
   date: dateOnly,
-  rate: z.number().positive(),
+  rate: z.number().int().positive(), // paise (GAP-9)
 });
 
 async function handlePOST(request: Request) {
@@ -22,7 +23,7 @@ async function handlePOST(request: Request) {
     create: { roomTypeId, date: parseDateOnly(date), rate },
     update: { rate },
   });
-  await recordAudit("pricing.override.set", "rate_override", override.id, `Pinned ₹${Math.round(rate).toLocaleString("en-IN")} on ${date}`).catch(() => {});
+  await recordAudit("pricing.override.set", "rate_override", override.id, `Pinned ${formatPaise(rate)} on ${date}`).catch(() => {});
   return ok(override, 201);
 }
 

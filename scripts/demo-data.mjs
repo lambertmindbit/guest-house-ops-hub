@@ -90,7 +90,7 @@ async function main() {
   let n = 0;
 
   for (const [ri, room] of rooms.entries()) {
-    const rate = Number(room.roomType.baseRate) || 2500;
+    const rate = Number(room.roomType.baseRate) || 250000;
     // Start ~8 weeks back and walk forward past today, leaving gaps between stays.
     let cursor = addDays(TODAY, -56 + ri * 3);
 
@@ -140,7 +140,8 @@ async function main() {
   log(`    in-house now  ${inHouseNow.length}`);
   log(`    upcoming      ${upcoming.length}`);
   log(`    payments      ${plan.filter((p) => p.paid > 0).length}`);
-  log(`    gross revenue ₹${revenue.toLocaleString("en-IN")}  ·  collected ₹${collected.toLocaleString("en-IN")}`);
+  // revenue/collected are paise (GAP-9); log in whole rupees.
+  log(`    gross revenue ₹${Math.round(revenue / 100).toLocaleString("en-IN")}  ·  collected ₹${Math.round(collected / 100).toLocaleString("en-IN")}`);
   log(`    date range    ${iso(plan[0].checkIn)} → ${iso(plan[plan.length - 1].checkOut)}`);
   log("");
 

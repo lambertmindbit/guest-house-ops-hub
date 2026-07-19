@@ -3,9 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { recordAudit } from "@/lib/audit";
+import { formatPaise, type Money } from "@/lib/money";
 
 const schema = z.object({
-  amount: z.number().positive(),
+  amount: z.number().int().positive(), // paise (GAP-9)
   mode: z.enum(["cash", "upi", "card", "bank", "ota_collect"]),
   isAdvance: z.boolean().optional(),
   paidAt: dateOnly.optional(),
@@ -28,17 +29,17 @@ async function handlePOST(
   // the booking total — catches both a single oversized amount (15000 for 1500)
   // and a second payment on an already-settled booking. Only enforced once a
   // gross is set. `collected` is derived, never stored.
-  const gross = reservation.grossAmount ? Number(reservation.grossAmount) : 0;
+  const gross = reservation.grossAmount ? Number(reservation.grossAmount) : 0; // paise
   if (gross > 0) {
     const priorPayments = await prisma.payment.aggregate({
       where: { reservationId: id },
       _sum: { amount: true },
     });
-    const collected = Number(priorPayments._sum.amount ?? 0);
+    const collected = Number(priorPayments._sum.amount ?? 0); // paise
     if (collected + parsed.data.amount > gross) {
-      const remaining = Math.max(0, gross - collected);
+      const remaining = Math.max(0, gross - collected) as Money;
       return fail(
-        `That's more than the outstanding balance (₹${Math.round(remaining).toLocaleString("en-IN")} of ₹${Math.round(gross).toLocaleString("en-IN")}). Check the amount.`,
+        `That's more than the outstanding balance (${formatPaise(remaining)} of ${formatPaise(gross as Money)}). Check the amount.`,
         422,
       );
     }
@@ -54,7 +55,7 @@ async function handlePOST(
       ...(parsed.data.paidAt ? { paidAt: parseDateOnly(parsed.data.paidAt) } : {}),
     },
   });
-  await recordAudit("payment.create", "payment", payment.id, `Recorded ₹${Math.round(Number(payment.amount)).toLocaleString("en-IN")} (${payment.mode})`).catch(() => {});
+  await recordAudit("payment.create", "payment", payment.id, `Recorded ${formatPaise(payment.amount)} (${payment.mode})`).catch(() => {});
   return ok(payment, 201);
 }
 

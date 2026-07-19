@@ -1,6 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import { tenantFromContext } from "@/lib/tenant";
 
+// Money is stored as BIGINT paise (GAP-9), so Prisma returns `bigint` for money
+// fields. `JSON.stringify` throws on bigint, which would break every API response
+// that returns a row with money. We only use bigint for money (paise, tiny vs
+// 2^53) and the odd raw COUNT, so it's safe to serialise all bigints as numbers.
+// The client receives money as integer-paise numbers and formats with formatPaise.
+(BigInt.prototype as unknown as { toJSON(): number }).toJSON = function () {
+  return Number(this);
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Multi-tenancy: `prisma` is a tenant-scoped client. A Prisma client extension
 // injects the active property into every read/write on tenant-scoped models, so

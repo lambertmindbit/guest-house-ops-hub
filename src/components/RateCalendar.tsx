@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 type Night = { date: string; rate: number; isOverride: boolean; hasAdjust: boolean };
 type Row = { id: string; name: string; nights: Night[] };
@@ -36,13 +37,14 @@ export function RateCalendar({
 
   function open(typeId: string, typeName: string, n: Night) {
     setSel({ typeId, typeName, date: n.date, rate: n.rate, isOverride: n.isOverride });
-    setDraft(String(n.rate));
+    setDraft(String(paiseToRupees(n.rate))); // rate is paise; field holds rupees
   }
 
   async function save() {
     if (!sel) return;
-    const rate = Number(draft);
-    if (!Number.isFinite(rate) || rate <= 0) return;
+    const rupees = Number(draft);
+    if (!Number.isFinite(rupees) || rupees <= 0) return;
+    const rate = rupeesToPaise(rupees); // API stores paise (GAP-9)
     setBusy(true);
     await fetch("/api/pricing/overrides", {
       method: "POST",
@@ -115,7 +117,7 @@ export function RateCalendar({
                     }}
                   >
                     {n.isOverride && <span style={{ position: "absolute", top: 4, right: 5, width: 5, height: 5, borderRadius: 5, background: "var(--accent-text)" }} />}
-                    {n.rate.toLocaleString("en-IN")}
+                    {paiseToRupees(n.rate).toLocaleString("en-IN")}
                   </button>
                 ))}
               </div>

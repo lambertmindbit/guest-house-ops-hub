@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ok, fail, zodFail, withRoute } from "@/lib/api";
 import { dateOnly, parseDateOnly } from "@/lib/dates";
 import { recordAudit } from "@/lib/audit";
+import { formatPaise } from "@/lib/money";
 
 // Owner-only (see OWNER_ONLY_PREFIXES in authz): recording OTA settlements is a
 // money operation. Reconciliation itself is derived in getPayoutReconciliation.
@@ -14,7 +15,7 @@ async function handleGET() {
 
 const createSchema = z.object({
   channelId: z.string().min(1),
-  amount: z.number().positive(),
+  amount: z.number().int().positive(), // paise (GAP-9)
   paidAt: dateOnly,
   reference: z.string().trim().max(200).optional(),
   note: z.string().trim().max(500).optional(),
@@ -34,7 +35,7 @@ async function handlePOST(request: Request) {
   const payout = await prisma.payout.create({
     data: { channelId, amount, paidAt: parseDateOnly(paidAt), reference: reference || null, note: note || null },
   });
-  await recordAudit("payout.record", "payout", payout.id, `₹${amount} on ${paidAt}`).catch(() => {});
+  await recordAudit("payout.record", "payout", payout.id, `${formatPaise(amount)} on ${paidAt}`).catch(() => {});
   return ok(payout, 201);
 }
 

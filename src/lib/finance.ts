@@ -1,16 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { parseDateOnly, todayDateOnly } from "@/lib/dates";
 import { requestPropertyId } from "@/lib/tenant";
+import { pctOfMoneyWholeRupee, type Money } from "@/lib/money";
 
-function num(value: { toString(): string } | null): number {
-  return value === null ? 0 : Number(value);
+// Read a money column (BIGINT paise) as Money; NULL → 0 paise.
+function num(value: bigint | number | null): Money {
+  return (value === null ? 0 : Number(value)) as Money;
 }
 
 // Commission on a gross amount at a channel's percentage (Q-FIN-01: all % on
 // gross). Single definition so the "net to you" in the channel table and the
-// "owed by the OTA" in payout reconciliation can never diverge.
-export function commissionOn(gross: number, commissionPct: number): number {
-  return Math.round((gross * commissionPct) / 100);
+// "owed by the OTA" in payout reconciliation can never diverge. Commission stays
+// whole-rupee (the app's convention) — see pctOfMoneyWholeRupee.
+export function commissionOn(gross: number, commissionPct: number): Money {
+  return pctOfMoneyWholeRupee(gross, commissionPct);
 }
 
 export type ChannelTotals = {
@@ -94,7 +97,7 @@ export async function getFinanceSummary(from: string, to: string): Promise<Finan
 
   for (const r of reservations) {
     const gross = num(r.grossAmount);
-    const commission = commissionOn(gross, num(r.channel.commissionPct));
+    const commission = commissionOn(gross, Number(r.channel.commissionPct));
     const net = gross - commission;
     const collected = r.payments.reduce((s, p) => s + num(p.amount), 0);
     const balance = gross - collected;
@@ -243,7 +246,7 @@ export async function getPayoutReconciliation(): Promise<ChannelRecon[]> {
 
   const bookings = reservations.map((r) => {
     const gross = num(r.grossAmount);
-    return { channelId: r.channelId, owed: gross - commissionOn(gross, num(r.channel.commissionPct)) };
+    return { channelId: r.channelId, owed: gross - commissionOn(gross, Number(r.channel.commissionPct)) };
   });
   const payoutRows = payouts.map((p) => ({
     id: p.id,

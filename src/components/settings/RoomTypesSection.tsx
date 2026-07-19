@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { send, ErrorLine, AddButton, ListItem, RowActions, type RoomType } from "./shared";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 const BLANK_TYPE = { name: "", baseRate: "", maxOccupancy: "2", rateFloor: "", rateCeiling: "" };
 
@@ -18,14 +19,15 @@ export function RoomTypesSection({ types }: { types: RoomType[] }) {
 
   function startEdit(t: RoomType) {
     setError(null); setAdding(false); setEditing(t.id);
-    setDraft({ name: t.name, baseRate: String(t.baseRate), maxOccupancy: String(t.maxOccupancy), rateFloor: String(t.rateFloor), rateCeiling: String(t.rateCeiling) });
+    // Rates arrive as paise; the fields hold rupees (GAP-9).
+    setDraft({ name: t.name, baseRate: String(paiseToRupees(t.baseRate)), maxOccupancy: String(t.maxOccupancy), rateFloor: String(paiseToRupees(t.rateFloor)), rateCeiling: String(paiseToRupees(t.rateCeiling)) });
   }
   function startAdd() { setError(null); setEditing(null); setDraft(BLANK_TYPE); setAdding(true); }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setError(null);
-    const payload = { name: draft.name, baseRate: Number(draft.baseRate), maxOccupancy: Number(draft.maxOccupancy), rateFloor: Number(draft.rateFloor), rateCeiling: Number(draft.rateCeiling) };
+    const payload = { name: draft.name, baseRate: rupeesToPaise(Number(draft.baseRate)), maxOccupancy: Number(draft.maxOccupancy), rateFloor: rupeesToPaise(Number(draft.rateFloor)), rateCeiling: rupeesToPaise(Number(draft.rateCeiling)) };
     const r = editing ? await send("PATCH", `/api/room-types/${editing}`, payload) : await send("POST", "/api/room-types", payload);
     setBusy(false);
     if (!r.ok) return setError(r.error!);
@@ -49,7 +51,7 @@ export function RoomTypesSection({ types }: { types: RoomType[] }) {
           <ListItem
             key={t.id}
             title={t.name}
-            meta={`₹${t.baseRate} base · sleeps ${t.maxOccupancy} · ₹${t.rateFloor}–₹${t.rateCeiling} · ${t.roomCount} room${t.roomCount === 1 ? "" : "s"}`}
+            meta={`₹${paiseToRupees(t.baseRate)} base · sleeps ${t.maxOccupancy} · ₹${paiseToRupees(t.rateFloor)}–₹${paiseToRupees(t.rateCeiling)} · ${t.roomCount} room${t.roomCount === 1 ? "" : "s"}`}
             actions={<RowActions onEdit={() => startEdit(t)} onDelete={() => remove(t)} />}
           />
         ))}

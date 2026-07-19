@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { Icon, ChannelBadge, EmptyState } from "@/components/ui";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 type Linked = { guestName: string; checkIn: string; checkOut: string; amount: number | null; status: string };
 type Item = {
@@ -95,7 +96,7 @@ function ReviewCard({ item, rooms, channels }: { item: Item; rooms: Room[]; chan
     guestPhone: item.guestPhone,
     checkIn: item.checkIn,
     checkOut: item.checkOut,
-    amount: item.amount != null ? String(item.amount) : "",
+    amount: item.amount != null ? String(paiseToRupees(item.amount)) : "", // paise → rupees field
     otaRef: item.otaRef,
   });
   const [busy, setBusy] = useState(false);
@@ -123,7 +124,7 @@ function ReviewCard({ item, rooms, channels }: { item: Item; rooms: Room[]; chan
         checkOut: f.checkOut,
         otaRef: f.otaRef || undefined,
         guest: { name: f.guestName, phone: f.guestPhone },
-        grossAmount: f.amount ? Number(f.amount) : undefined,
+        grossAmount: f.amount ? rupeesToPaise(Number(f.amount)) : undefined,
       }),
     });
     const json = await res.json();
@@ -236,7 +237,7 @@ function ChangeCard({ item, linked }: { item: Item; linked: Linked }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isCancel = item.emailKind === "cancellation";
-  const money = (n: number | null) => (n != null ? `₹${n.toLocaleString("en-IN")}` : "—");
+  const money = (n: number | null) => (n != null ? `₹${paiseToRupees(n).toLocaleString("en-IN")}` : "—");
   // Effective new values mirror the Apply route: an unspecified field keeps the current one.
   const newCheckIn = item.checkIn || linked.checkIn;
   const newCheckOut = item.checkOut || linked.checkOut;

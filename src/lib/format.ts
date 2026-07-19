@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import type { Prisma } from "@prisma/client";
+import { formatPaise, type Money } from "@/lib/money";
 
 // DATE columns come back from Prisma as Date objects at UTC midnight. Build a
 // local Date from the UTC parts so display never shifts across the day boundary.
@@ -23,17 +23,16 @@ export function displayDMY(isoDateOnly: string): string {
   return format(new Date(y, m - 1, d), "dd-MMM-yyyy");
 }
 
-export function displayINR(amount: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
+// Money is integer paise (GAP-9). Both formatters take paise and render "₹1,234"
+// (whole rupees) or "₹1,234.50" (sub-rupee) via the single money formatter. Server
+// components pass a bigint straight from Prisma; client components pass the number
+// paise they received over the wire.
+export function displayINR(paise: Money | number | bigint): string {
+  return formatPaise(paise as Money | bigint);
 }
 
-export function displayMoney(amount: Prisma.Decimal | null): string {
-  if (amount === null) return "—";
-  return displayINR(Number(amount));
+export function displayMoney(paise: Money | number | bigint | null): string {
+  return formatPaise(paise as Money | bigint | null);
 }
 
 export const PAYMENT_MODE_LABELS: Record<string, string> = {

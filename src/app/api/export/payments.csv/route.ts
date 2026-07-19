@@ -2,6 +2,7 @@ import { withRoute } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { toCsv, csvResponse } from "@/lib/csv";
 import { parseDateOnly } from "@/lib/dates";
+import { paiseToRupees } from "@/lib/money";
 
 const isDate = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 
@@ -24,7 +25,7 @@ async function handleGET(request: Request) {
   const headers = ["Payment ID", "Booking ID", "Guest", "Room", "Amount", "Mode", "Paid at", "Note"];
   const rows = payments.map((p) => [
     p.id, p.reservationId, p.reservation.guest.name, p.reservation.room.label,
-    Number(p.amount), p.mode, p.paidAt.toISOString(), p.note ?? "",
+    paiseToRupees(Number(p.amount)), p.mode, p.paidAt.toISOString(), p.note ?? "",
   ]);
 
   const range = isDate(from) && isDate(to) ? `_${from}_${to}` : "";

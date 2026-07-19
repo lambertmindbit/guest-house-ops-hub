@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { SectionLabel } from "@/components/ui";
 import { displayINR } from "@/lib/format";
+import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
 type TripStatus = "planned" | "done" | "cancelled";
 type Driver = { id: string; name: string; phone: string | null; vehicleNumber: string | null };
@@ -42,11 +43,11 @@ export function TransportBoard({ drivers, guests, trips, doneFares }: { drivers:
   }
   function startEditTrip(t: Trip) {
     setEditTripId(t.id);
-    setEditTrip({ driverId: t.driverId ?? "", guestId: t.guestId ?? "", pickup: t.pickup, dropoff: t.dropoff, scheduledAt: t.scheduledAt ?? "", fare: t.fare != null ? String(t.fare) : "" });
+    setEditTrip({ driverId: t.driverId ?? "", guestId: t.guestId ?? "", pickup: t.pickup, dropoff: t.dropoff, scheduledAt: t.scheduledAt ?? "", fare: t.fare != null ? String(paiseToRupees(t.fare)) : "" });
   }
   async function saveTrip(id: string) {
     if (!editTrip.pickup.trim() || !editTrip.dropoff.trim()) return;
-    if (await call(`/api/trips/${id}`, { driverId: editTrip.driverId || null, guestId: editTrip.guestId || null, pickup: editTrip.pickup.trim(), dropoff: editTrip.dropoff.trim(), scheduledAt: editTrip.scheduledAt || null, fare: editTrip.fare ? Number(editTrip.fare) : null }, "PATCH")) setEditTripId(null);
+    if (await call(`/api/trips/${id}`, { driverId: editTrip.driverId || null, guestId: editTrip.guestId || null, pickup: editTrip.pickup.trim(), dropoff: editTrip.dropoff.trim(), scheduledAt: editTrip.scheduledAt || null, fare: editTrip.fare ? rupeesToPaise(Number(editTrip.fare)) : null }, "PATCH")) setEditTripId(null);
   }
 
   return (
@@ -112,7 +113,7 @@ export function TransportBoard({ drivers, guests, trips, doneFares }: { drivers:
           <input className="input" inputMode="numeric" placeholder="Fare ₹" value={nt.fare} onChange={(e) => setNt({ ...nt, fare: e.target.value })} />
         </div>
         <button className="btn btn--primary btn--sm" style={{ marginTop: 10 }} disabled={!nt.pickup.trim() || !nt.dropoff.trim()}
-          onClick={async () => { if (await call("/api/trips", { driverId: nt.driverId || null, guestId: nt.guestId || null, pickup: nt.pickup, dropoff: nt.dropoff, scheduledAt: nt.scheduledAt || null, fare: nt.fare ? Number(nt.fare) : null, status: nt.status })) setNt({ driverId: "", guestId: "", pickup: "", dropoff: "", scheduledAt: "", fare: "", status: "planned" }); }}>
+          onClick={async () => { if (await call("/api/trips", { driverId: nt.driverId || null, guestId: nt.guestId || null, pickup: nt.pickup, dropoff: nt.dropoff, scheduledAt: nt.scheduledAt || null, fare: nt.fare ? rupeesToPaise(Number(nt.fare)) : null, status: nt.status })) setNt({ driverId: "", guestId: "", pickup: "", dropoff: "", scheduledAt: "", fare: "", status: "planned" }); }}>
           Add trip
         </button>
       </div>

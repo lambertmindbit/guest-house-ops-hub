@@ -40,7 +40,9 @@ export const DEFAULT_POLICY: Policy = {
   occupancyAdjustPct: null,
 };
 
-const round = (n: number) => Math.round(n);
+// Rates are paise (GAP-9). Suggested nightly rates stay whole-rupee (clean prices,
+// unchanged from before the migration), so round paise to the nearest whole rupee.
+const round = (n: number) => Math.round(n / 100) * 100;
 const fmtPct = (p: number) => `${p > 0 ? "+" : ""}${p}%`;
 
 // Weekday for a YYYY-MM-DD, anchored to UTC midnight (consistent with how stays
