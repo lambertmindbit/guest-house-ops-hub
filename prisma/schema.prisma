@@ -994,7 +994,10 @@ model PropertySettings {
   upiVpa              String?  @map("upi_vpa")
   // Days to keep a guest's scanned ID document before the retention purge deletes
   // it. Null = keep indefinitely (no auto-purge).
-  idRetentionDays     Int?     @map("id_retention_days")
+  // Default 180 days for NEW properties (BR-GST-05): scanned IDs auto-purge after
+  // this many days. Existing rows keep whatever they had (NULL = indefinite); the
+  // owner can still blank or change it in Settings.
+  idRetentionDays     Int?     @default(180) @map("id_retention_days")
   // How strictly to enforce guest-ID collection at check-in: 'block' (default,
   // refuse check-in without ID), 'warn' (allow but warn), or 'off'. And whether
   // an ID is also required to SAVE a booking (walk-in-only properties).
