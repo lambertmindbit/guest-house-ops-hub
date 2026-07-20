@@ -5,7 +5,11 @@ import { currentPropertySettings } from "@/lib/property-settings";
 // Statutory invoicing (GAP-11/US-205). Issuing snapshots every figure, so a reprint
 // is byte-identical forever — nothing downstream ever recomputes an issued invoice.
 
-const MAX_SEQ_ATTEMPTS = 5;
+// Worst case, N simultaneous issues make the last one retry N times (each round
+// exactly one writer wins the unique index and the rest fall back). The budget must
+// therefore comfortably exceed realistic concurrency — a budget equal to the number
+// of racers fails the very race it exists to survive.
+const MAX_SEQ_ATTEMPTS = 25;
 
 function isUniqueViolation(e: unknown): boolean {
   return typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
