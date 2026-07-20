@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { hashPhone } from "@/lib/community/scam";
 import { ok, fail, zodFail, withRoute } from "@/lib/api";
 
 // GET  /api/flagged-numbers          — list all flagged numbers
@@ -17,7 +18,13 @@ async function handleGET(request: Request) {
   const phone = searchParams.get("check");
 
   if (phone) {
-    const hit = await prisma.flaggedNumber.findUnique({ where: { phone: phone.trim() } });
+    // Check the raw number AND its hash: a block placed on a guest who later
+    // exercised DPDP erasure survives only as a one-way hash (see src/lib/dpdp.ts),
+    // and must still match when that number is entered again.
+    const trimmed = phone.trim();
+    const hit = await prisma.flaggedNumber.findFirst({
+      where: { OR: [{ phone: trimmed }, { phone: hashPhone(trimmed) }] },
+    });
     return ok({ flagged: !!hit, reason: hit?.reason ?? null });
   }
 

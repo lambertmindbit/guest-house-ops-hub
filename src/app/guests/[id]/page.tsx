@@ -10,6 +10,8 @@ import { isStorageConfigured } from "@/lib/storage";
 import { displayMoney, displayINR, displayShortDate } from "@/lib/format";
 import { formatDateOnly } from "@/lib/dates";
 
+import { GuestDataRights } from "@/components/GuestDataRights";
+
 export const dynamic = "force-dynamic";
 
 const STATUS: Record<string, { kind: "good" | "ink" | "danger"; label: string }> = {
@@ -159,6 +161,7 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
             })}
           </div>
         )}
+        <GuestDataRights guestId={guest.id} erasedAt={guest.erasedAt ? guest.erasedAt.toISOString() : null} />
       </div>
     </main>
   );

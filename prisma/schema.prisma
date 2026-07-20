@@ -760,6 +760,10 @@ model Guest {
   // Guest consent to store their details (privacy). Set when captured.
   consentGivenAt          DateTime?         @map("consent_given_at")
   consentChannel          String?           @map("consent_channel")
+  // DPDP erasure (GAP-8/US-202). Set when the data principal's PII has been
+  // anonymised in place. The row itself survives so bookings, invoices and finance
+  // history stay intact — see src/lib/dpdp.ts.
+  erasedAt                DateTime?         @map("erased_at")
   // C-Form (Form C under Registration of Foreigners Rules, 1992).
   // All nullable — only populated for foreign national guests.
   nationality             String?           @map("nationality")

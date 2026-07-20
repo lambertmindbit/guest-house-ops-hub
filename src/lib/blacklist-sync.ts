@@ -9,6 +9,11 @@ export async function syncBlacklistToScamList(guest: {
   blocked: boolean;
   blockReason: string | null;
 }) {
+  // An erased guest's phone is a tombstone, not a real number (GAP-8). Their block
+  // already survives as a one-way hash, so never write the tombstone to the list —
+  // and never delete, which would silently drop that preserved block.
+  if (guest.phone.startsWith("erased-")) return;
+
   if (guest.blocked) {
     const reason = guest.blockReason ?? "Blacklisted guest";
     await prisma.flaggedNumber.upsert({
