@@ -535,6 +535,17 @@ raw query must filter <code>property_id</code> <strong>by hand, forever</strong>
 <a href="../src/lib/availability.ts"><code>src/lib/availability.ts</code></a>. A miss there does not leak
 across clients, but it <em>does</em> leak across one client&#39;s own properties, which is how
 the owner ends up being offered the wrong guest house&#39;s rooms.</p>
+<p><strong>RLS backstop (defence-in-depth, opt-in).</strong> <a href="../src/lib/rls.ts"><code>withRlsTenant()</code></a>
+runs a block of queries with database-enforced isolation: an unscoped
+<code>SELECT * FROM reservations</code> inside it returns only the bound property&#39;s rows
+(proven by <a href="../tests/rls-leak.test.ts"><code>tests/rls-leak.test.ts</code></a>). Two facts force
+its shape. The app connects as <code>postgres</code>, which has <code>BYPASSRLS</code>, so enabling RLS is
+a <strong>no-op for all normal traffic</strong> — enforcement is reached only by switching into
+the non-bypass <code>app_tenant</code> role. And runtime uses Supabase&#39;s <strong>transaction pooler</strong>
+(connections reused across requests), so the tenant can only be bound with
+<code>SET LOCAL ROLE</code> + <code>SET LOCAL</code> <strong>inside a transaction</strong> — a session-level <code>SET</code>
+would leak into the next request. It&#39;s a contained backstop: it hardens raw SQL that
+opts in; the pooled app path is still isolated primarily by the tenant extension.</p>
 <h3>The vendor console (<code>/admin</code>)</h3>
 <p><code>User.isPlatformAdmin</code> marks the vendor (MindBit), not the client. It is
 deliberately <strong>not</strong> a <code>UserRole</code>: <code>role</code> says what you may do <em>inside</em> a property;
