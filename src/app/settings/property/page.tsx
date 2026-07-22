@@ -1,5 +1,6 @@
 import { SubHeader } from "@/components/settings/SubHeader";
 import { PropertySection } from "@/components/settings/sections";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { currentPropertySettings } from "@/lib/property-settings";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,9 @@ export default async function Page() {
       <div className="entrance">
         <SubHeader title="Property details" sub="Name, address, GST, check-in/out times" />
         <PropertySection settings={settings} />
+        <div style={{ marginTop: 14 }}>
+          <LanguageSwitcher />
+        </div>
       </div>
     </main>
   );
