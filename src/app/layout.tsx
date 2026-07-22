@@ -4,8 +4,10 @@ import "./globals.css";
 import { NavShell } from "@/components/NavShell";
 import { disabledModules } from "@/lib/module-gate";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
+import { LocaleProvider } from "@/components/i18n/LocaleProvider";
 import { PwaRuntime } from "@/components/PwaRuntime";
 import { getSession } from "@/lib/session";
+import { getLocale } from "@/lib/i18n/server";
 import { listUserProperties } from "@/lib/properties";
 import { countConflicts } from "@/lib/conflicts";
 import { unscopedPrisma } from "@/lib/prisma";
@@ -88,6 +90,7 @@ export default async function RootLayout({
   // layout with no session → render just the content, no owner nav, no queries.
   const session = await getSession();
   const role = session?.role ?? "owner";
+  const locale = await getLocale();
   let conflictCount = 0;
   let escalationCount = 0;
   let properties: { id: string; name: string }[] = [];
@@ -118,13 +121,15 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" className={`${ui.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang={locale} className={`${ui.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        {session && (
-          <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session.propertyId ?? null} hiddenModules={hiddenModules} />
-        )}
-        <ConfirmProvider>{children}</ConfirmProvider>
+        <LocaleProvider locale={locale}>
+          {session && (
+            <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session.propertyId ?? null} hiddenModules={hiddenModules} />
+          )}
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </LocaleProvider>
         <PwaRuntime />
       </body>
     </html>

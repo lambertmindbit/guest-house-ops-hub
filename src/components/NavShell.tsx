@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useT } from "@/components/i18n/LocaleProvider";
 import { Icon } from "@/components/ui";
 import { canSeeNav, type Role } from "@/lib/authz";
 import { isToggleable } from "@/lib/modules";
@@ -97,11 +98,11 @@ function activeId(pathname: string): NavId {
   return best;
 }
 
-function toolbarTitle(pathname: string): string {
-  if (pathname === "/reservations/new") return "New booking";
-  if (pathname.startsWith("/reservations/")) return "Reservation";
-  if (pathname.startsWith("/more")) return "More";
-  return META[activeId(pathname)].label;
+function toolbarTitle(pathname: string, t: (k: string) => string): string {
+  if (pathname === "/reservations/new") return t("nav.newBooking");
+  if (pathname.startsWith("/reservations/")) return t("nav.reservation");
+  if (pathname.startsWith("/more")) return t("nav.more");
+  return t(`nav.${activeId(pathname)}`);
 }
 
 export function NavShell({
@@ -126,6 +127,7 @@ export function NavShell({
   const hidden = new Set<string>(hiddenModules.filter(isToggleable));
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
   const [panel, setPanel] = useState(false);
   const [prefs, setPrefs] = useState<Prefs>({ appearance: "system", tint: "teal", density: "comfortable" });
   const [effDark, setEffDark] = useState(false);
@@ -212,7 +214,7 @@ export function NavShell({
         {PRIMARY.map((id) => (
           <Link key={id} href={META[id].href} className={`tab${active === id ? " on" : ""}`}>
             <Icon name={META[id].icon} size={22} />
-            {META[id].label}
+            {t(`nav.${id}`)}
           </Link>
         ))}
         <div className="tab__slot">
@@ -240,7 +242,7 @@ export function NavShell({
             {g.items.map((id) => (
               <Link key={id} href={META[id].href} className={`navitem${active === id ? " on" : ""}`}>
                 <span className="navitem__ic"><Icon name={META[id].icon} size={17} /></span>
-                {META[id].label}
+                {t(`nav.${id}`)}
                 {id === "needsyou" && needsYouCount > 0 && <span className="navitem__badge">{needsYouCount}</span>}
                 {id === "escalations" && escalationCount > 0 && <span className="navitem__badge">{escalationCount}</span>}
               </Link>
@@ -264,7 +266,7 @@ export function NavShell({
 
       {/* ---------- desktop: top toolbar ---------- */}
       <div className="dtoolbar rd-d">
-        <span className="dtoolbar__title">{toolbarTitle(pathname)}</span>
+        <span className="dtoolbar__title">{toolbarTitle(pathname, t)}</span>
         <div className="dtoolbar__spacer" />
         <form action="/guests" className="dsearch">
           <Icon name="search" size={15} />

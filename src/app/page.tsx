@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { getTodaySummary, type SummaryReservation } from "@/lib/dashboard";
+import { getT } from "@/lib/i18n/server";
 import { getConflicts } from "@/lib/conflicts";
 import { getHousekeeping } from "@/lib/housekeeping";
 import { getPendingPayments } from "@/lib/finance";
@@ -39,6 +40,7 @@ export default async function DashboardPage() {
   // Stale/failed iCal feeds mean imported OTA busy-dates are silently out of date
   // (GAP-5) — the exact moment a double-book slips in. Surface it, don't hide it.
   const staleFeeds = staleFeedCount(activeFeeds, new Date());
+  const t = await getT();
   const showMoney = canSeeMoney(await currentRole());
   const heading = displayDate(parseDateOnly(s.date));
   const conflictN = conflicts.length;
@@ -58,14 +60,14 @@ export default async function DashboardPage() {
       <main className="app-main">
         <div className="entrance">
           <div className="pagehead">
-            <div className="display">Welcome</div>
+            <div className="display">{t("dashboard.welcome")}</div>
           </div>
           <div className="banner banner--warn" style={{ cursor: "default", margin: "12px 0 16px" }}>
             <span className="banner__icon"><Icon name="alert" size={18} /></span>
-            <span style={{ flex: 1 }}>Your guest house isn’t set up yet. A few quick steps and you can take your first booking.</span>
+            <span style={{ flex: 1 }}>{t("dashboard.notSetUp")}</span>
           </div>
           <Link href="/onboarding" className="btn btn--primary btn--block">
-            <Icon name="check" size={16} /> Start setup
+            <Icon name="check" size={16} /> {t("dashboard.startSetup")}
           </Link>
         </div>
       </main>
@@ -98,17 +100,17 @@ export default async function DashboardPage() {
           {/* Verdict first: occupancy is the day's headline, arrivals/departures its shape. */}
           <div className="dash__kpis kpi-strip kpi-strip--3">
             <div className="kpi-panel kpi-panel--verdict">
-              <div className="kpi-eyebrow">Occupancy</div>
+              <div className="kpi-eyebrow">{t("dashboard.occupancy")}</div>
               <div className="kpi-num">{s.occupancyPct}%</div>
-              <div className="kpi-ctx">{s.occupiedRooms} of {s.totalRooms} rooms</div>
+              <div className="kpi-ctx">{t("dashboard.roomsOf", { occupied: s.occupiedRooms, total: s.totalRooms })}</div>
             </div>
             <div className="kpi-panel">
-              <div className="kpi-eyebrow">Arrivals</div>
+              <div className="kpi-eyebrow">{t("dashboard.arrivals")}</div>
               <div className="kpi-num">{s.checkInsToday.length}</div>
               <div className="kpi-ctx">today</div>
             </div>
             <div className="kpi-panel">
-              <div className="kpi-eyebrow">Departures</div>
+              <div className="kpi-eyebrow">{t("dashboard.departures")}</div>
               <div className="kpi-num">{s.checkOutsToday.length}</div>
               <div className="kpi-ctx">today</div>
             </div>
