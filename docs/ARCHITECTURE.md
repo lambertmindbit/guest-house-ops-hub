@@ -406,6 +406,18 @@ raw query must filter `property_id` **by hand, forever** — see
 across clients, but it *does* leak across one client's own properties, which is how
 the owner ends up being offered the wrong guest house's rooms.
 
+**RLS backstop (defence-in-depth, opt-in).** [`withRlsTenant()`](../src/lib/rls.ts)
+runs a block of queries with database-enforced isolation: an unscoped
+`SELECT * FROM reservations` inside it returns only the bound property's rows
+(proven by [`tests/rls-leak.test.ts`](../tests/rls-leak.test.ts)). Two facts force
+its shape. The app connects as `postgres`, which has `BYPASSRLS`, so enabling RLS is
+a **no-op for all normal traffic** — enforcement is reached only by switching into
+the non-bypass `app_tenant` role. And runtime uses Supabase's **transaction pooler**
+(connections reused across requests), so the tenant can only be bound with
+`SET LOCAL ROLE` + `SET LOCAL` **inside a transaction** — a session-level `SET`
+would leak into the next request. It's a contained backstop: it hardens raw SQL that
+opts in; the pooled app path is still isolated primarily by the tenant extension.
+
 ### The vendor console (`/admin`)
 
 `User.isPlatformAdmin` marks the vendor (MindBit), not the client. It is
