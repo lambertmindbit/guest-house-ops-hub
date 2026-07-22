@@ -409,14 +409,21 @@ the owner ends up being offered the wrong guest house's rooms.
 **RLS backstop (defence-in-depth, opt-in).** [`withRlsTenant()`](../src/lib/rls.ts)
 runs a block of queries with database-enforced isolation: an unscoped
 `SELECT * FROM reservations` inside it returns only the bound property's rows
-(proven by [`tests/rls-leak.test.ts`](../tests/rls-leak.test.ts)). Two facts force
-its shape. The app connects as `postgres`, which has `BYPASSRLS`, so enabling RLS is
-a **no-op for all normal traffic** — enforcement is reached only by switching into
-the non-bypass `app_tenant` role. And runtime uses Supabase's **transaction pooler**
-(connections reused across requests), so the tenant can only be bound with
-`SET LOCAL ROLE` + `SET LOCAL` **inside a transaction** — a session-level `SET`
-would leak into the next request. It's a contained backstop: it hardens raw SQL that
-opts in; the pooled app path is still isolated primarily by the tenant extension.
+(proven by [`tests/rls-leak.test.ts`](../tests/rls-leak.test.ts)). Three platform
+facts force its shape. (1) The app connects as `postgres`, which has `BYPASSRLS`, so
+enabling RLS is a **no-op for all normal traffic** — enforcement is reached only by
+switching into a non-bypass role. (2) On Supabase you **cannot** grant a role to
+`postgres` (it kills the connection), so a custom role can't be switched into; we
+use Supabase's built-in **`authenticated`** role, which `postgres` can already
+`SET ROLE` into. (3) Runtime uses the **transaction pooler** (connections reused
+across requests), so the tenant is bound with `SET LOCAL ROLE` + `SET LOCAL`
+**inside a transaction** — a session `SET` would leak into the next request.
+
+It's a contained backstop: it hardens raw SQL that opts in; the pooled app path is
+still isolated primarily by the tenant extension. It also **closed a real hole** —
+Supabase's default grants left `anon`/`authenticated` with blanket access to every
+public table (open to the auto REST API) with no row security; the fail-closed
+policy now denies those roles unless `app.property_id` is bound.
 
 ### The vendor console (`/admin`)
 
