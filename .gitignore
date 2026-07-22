@@ -49,3 +49,4 @@ ROOT_Lawei_Gap_Analysis*
 # committed — keep them outside the repo (e.g. ~/ota-backups/).
 *.dump
 *.sql.gz
+fleet.json

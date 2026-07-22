@@ -650,6 +650,28 @@ load (see <a href="../src/app/layout.tsx"><code>src/app/layout.tsx</code></a>).<
 </ul>
 <p>Domain queries themselves are already parallelized (<code>Promise.all</code> in
 <code>dashboard.ts</code>, <code>calendar.ts</code>) and the calendar grid math is in-memory.</p>
+<h2>Fleet tooling (provisioning, onboarding, upgrades)</h2>
+<p>One client = one deployment + one DB + one agent (<a href="#deployment-isolation--one-client-one-everything">deployment isolation</a>),
+so growing the fleet is a repeated, scripted operation (GAP-18). The pure decisions
+live in <a href="../src/lib/fleet.ts"><code>src/lib/fleet.ts</code></a> (unit-tested) and are shared by a
+script and the UI so they never disagree.</p>
+<ul>
+<li><strong>Provision a new client (US-701)</strong> — <code>npm run provision:client &quot;&lt;Name&gt;&quot;</code> with
+<code>DATABASE_URL</code>/<code>DIRECT_URL</code> pointed at the new (empty) database. It runs
+<code>migrate deploy</code>, verifies the <code>no_overlapping_confirmed_stays</code> constraint, seeds
+the booking channels (idempotent), and prints an auto-checked readiness report.
+<strong>Boundary:</strong> creating the Vercel project + Supabase instance and wiring their env
+is an infra step needing cloud tokens — it&#39;s the documented checklist <em>around</em>
+this script, not in it. Point the script at the new DB and run it last.</li>
+<li><strong>First-run onboarding (US-702)</strong> — <code>/onboarding</code> is a live checklist that walks a
+new owner from empty to <strong>bookable</strong> (≥1 room + ≥1 channel; guests are inline),
+reusing the existing settings forms. The dashboard shows a &quot;Start setup&quot; screen
+instead of a blank Today while <code>totalRooms === 0</code>.</li>
+<li><strong>Staged fleet upgrade (US-703)</strong> — <code>npm run upgrade:fleet -- --manifest fleet.json</code>
+rolls a migration <strong>canary-first</strong>, takes a verified <code>pg_dump</code> backup before each
+client (the pre-migration gate), and <strong>halts the whole fleet on the first
+failure</strong>. <code>fleet.json</code> holds connection strings and is git-ignored.</li>
+</ul>
 <h2>Offline behaviour (PWA) — the honest spec</h2>
 <p>The service worker (<a href="../public/sw.js"><code>public/sw.js</code></a>) does exactly three things,
 and it&#39;s worth being precise about them because &quot;works offline&quot; is easy to
