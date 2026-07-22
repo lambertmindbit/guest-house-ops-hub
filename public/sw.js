@@ -7,7 +7,7 @@
 //      the server stays authoritative (each replay still hits the 409 guard).
 //      Classification rules mirror src/lib/offline-queue.ts (the tested spec).
 
-const CACHE = "ops-shell-v2";
+const CACHE = "ops-shell-v3";
 const PRECACHE = ["/offline.html", "/manifest.webmanifest", "/icons/icon-192.png"];
 
 const DB_NAME = "ota-offline";
@@ -51,12 +51,17 @@ async function queueDelete(id) {
   });
 }
 
-// Mirrors isQueueableRequest in src/lib/offline-queue.ts.
+// Mirrors isQueueableRequest in src/lib/offline-queue.ts (the tested spec). STRICT
+// allowlist: only check-in/out stamps and housekeeping marks are queued offline, so
+// bookings/payments/refunds fail honestly instead of a fake "saved". Keep in lockstep
+// with offline-queue.ts.
+const QUEUEABLE = [
+  { method: "PATCH", match: (p) => /^\/api\/reservations\/[^/]+\/stay$/.test(p) },
+  { method: "POST", match: (p) => p === "/api/housekeeping/tasks" },
+];
 function isQueueable(method, pathname) {
   const m = method.toUpperCase();
-  if (!["POST", "PATCH", "PUT", "DELETE"].includes(m)) return false;
-  if (!pathname.startsWith("/api/")) return false;
-  return !["/api/auth", "/api/agent", "/api/ingest", "/api/cron"].some((p) => pathname.startsWith(p));
+  return QUEUEABLE.some((q) => q.method === m && q.match(pathname));
 }
 // Mirrors classifyReplay in src/lib/offline-queue.ts.
 function classify(status) {
