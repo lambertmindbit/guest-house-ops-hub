@@ -17,19 +17,33 @@ export type QueuedRequest = {
 
 export type ReplayOutcome = "applied" | "conflict" | "failed" | "retry";
 
-// Which requests we queue when offline: state-changing API calls only. Auth is
-// excluded (a login must happen online), as are the token-gated seams.
+// The ONLY writes queued offline (US-901): check-in/out stamps and housekeeping
+// marks. This is a strict ALLOWLIST, not "everything except a few paths", for one
+// reason — a queued write returns a fake "saved" (202) to the owner and is replayed
+// later. That's acceptable for an idempotent status flip whose worst-case replay is
+// benign, but NOT for:
+//   • a new booking — it can 409 on replay (dates taken), so the owner would be told
+//     "saved" for a booking that never happened;
+//   • a payment or refund — money must never be silently queued and replayed.
+// Anything off this list fails normally while offline, so the owner is never misled
+// about whether a write actually landed. Widen this only for genuinely idempotent,
+// low-consequence marks.
+const QUEUEABLE: { method: string; match: (path: string) => boolean }[] = [
+  // Arrival/departure stamps (StayActions). Idempotent: re-stamping is harmless.
+  { method: "PATCH", match: (p) => /^\/api\/reservations\/[^/]+\/stay$/.test(p) },
+  // Housekeeping task / room-clean mark (HousekeepingTaskCard). An upsert.
+  { method: "POST", match: (p) => p === "/api/housekeeping/tasks" },
+];
+
 export function isQueueableRequest(method: string, url: string): boolean {
   const m = method.toUpperCase();
-  if (m !== "POST" && m !== "PATCH" && m !== "PUT" && m !== "DELETE") return false;
   let path: string;
   try {
     path = new URL(url, "http://x").pathname;
   } catch {
     return false;
   }
-  if (!path.startsWith("/api/")) return false;
-  return !["/api/auth", "/api/agent", "/api/ingest", "/api/cron"].some((p) => path.startsWith(p));
+  return QUEUEABLE.some((q) => q.method === m && q.match(path));
 }
 
 // FIFO: replay oldest first so dependent writes keep their order.

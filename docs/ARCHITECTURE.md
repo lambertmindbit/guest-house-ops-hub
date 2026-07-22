@@ -526,6 +526,43 @@ fast despite the DB being remote:
 Domain queries themselves are already parallelized (`Promise.all` in
 `dashboard.ts`, `calendar.ts`) and the calendar grid math is in-memory.
 
+## Offline behaviour (PWA) — the honest spec
+
+The service worker ([`public/sw.js`](../public/sw.js)) does exactly three things,
+and it's worth being precise about them because "works offline" is easy to
+overstate (US-901).
+
+**Reads — nothing dynamic is cached.**
+- Content-hashed static assets (`/_next/static/`, `/icons/`) are cache-first
+  (immutable). Skipped on `localhost` so dev chunks don't serve stale code.
+- Page navigations are **network-first**, falling back to `/offline.html` only
+  when the network fails. There is **no cached data**: bookings, the calendar and
+  finance are never shown from a stale cache — offline you get the offline page,
+  not yesterday's numbers.
+
+**Writes — a strict allowlist queues, everything else fails honestly.**
+The offline write queue ([`src/lib/offline-queue.ts`](../src/lib/offline-queue.ts)
+is the tested spec; `sw.js` mirrors it) queues **only** two idempotent marks:
+- `PATCH /api/reservations/:id/stay` — check-in / check-out / undo,
+- `POST /api/housekeeping/tasks` — mark a room/task clean.
+
+These are queued to IndexedDB, a synthetic `202 {queued:true}` is returned, and
+they're replayed through the **live network** on reconnect — so the server stays
+authoritative (a replay still hits the `no_overlapping_confirmed_stays` 409 guard
+and every other check). Nothing is applied locally.
+
+Everything else — **new bookings, edits, payments, refunds, blocks** — is
+deliberately **not** queued. It fails normally while offline, because a queued
+booking can 409 on replay (dates taken) and money must never be silently replayed;
+telling the owner "saved" for a write that later fails is worse than failing now.
+Widen the allowlist only for genuinely idempotent, low-consequence marks.
+
+**Conflict UX.** On replay each write is classified by status: `2xx` applied,
+`409` conflict, other `4xx` failed, `0/5xx` retry (kept for the next reconnect).
+Applied/conflict/failed are removed from the queue; conflicts and failures are
+broadcast to open tabs (`{type:"offline-queue", pending, conflicts}`) so the UI can
+surface "a check-in you made offline clashed" rather than losing it silently.
+
 ## UI / design system
 
 - Tailwind v4 (`@import "tailwindcss"`) plus a token-driven design system in

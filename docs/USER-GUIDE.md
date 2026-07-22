@@ -436,7 +436,7 @@ This section explains *why* the sync tools exist — useful for the owner and fr
 - **Pricing is a suggestion** — it never changes prices on the OTAs by itself.
 - **Cancelled bookings free their dates** immediately for re-booking.
 - **ID is required to check a guest in** (unless the owner relaxes it in Settings → Property).
-- **Patchy signal is fine** — changes you make offline are saved and sync automatically when you reconnect; if a booking clashed while you were offline, the app tells you.
+- **Patchy signal — check-ins and housekeeping keep working.** If you lose signal, marking a guest **checked-in/out** or a room **cleaned** is saved on your phone and syncs automatically when you reconnect. **New bookings, payments and edits need a connection** — the app will tell you if one didn't go through rather than pretend it saved. If a check-in you made offline turned out to clash once it synced, the app flags it.
 - **What you can see depends on your role** — reception and housekeeping don't see money or setup.
 
 ---

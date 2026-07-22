@@ -650,6 +650,40 @@ load (see <a href="../src/app/layout.tsx"><code>src/app/layout.tsx</code></a>).<
 </ul>
 <p>Domain queries themselves are already parallelized (<code>Promise.all</code> in
 <code>dashboard.ts</code>, <code>calendar.ts</code>) and the calendar grid math is in-memory.</p>
+<h2>Offline behaviour (PWA) — the honest spec</h2>
+<p>The service worker (<a href="../public/sw.js"><code>public/sw.js</code></a>) does exactly three things,
+and it&#39;s worth being precise about them because &quot;works offline&quot; is easy to
+overstate (US-901).</p>
+<p><strong>Reads — nothing dynamic is cached.</strong></p>
+<ul>
+<li>Content-hashed static assets (<code>/_next/static/</code>, <code>/icons/</code>) are cache-first
+(immutable). Skipped on <code>localhost</code> so dev chunks don&#39;t serve stale code.</li>
+<li>Page navigations are <strong>network-first</strong>, falling back to <code>/offline.html</code> only
+when the network fails. There is <strong>no cached data</strong>: bookings, the calendar and
+finance are never shown from a stale cache — offline you get the offline page,
+not yesterday&#39;s numbers.</li>
+</ul>
+<p><strong>Writes — a strict allowlist queues, everything else fails honestly.</strong>
+The offline write queue (<a href="../src/lib/offline-queue.ts"><code>src/lib/offline-queue.ts</code></a>
+is the tested spec; <code>sw.js</code> mirrors it) queues <strong>only</strong> two idempotent marks:</p>
+<ul>
+<li><code>PATCH /api/reservations/:id/stay</code> — check-in / check-out / undo,</li>
+<li><code>POST /api/housekeeping/tasks</code> — mark a room/task clean.</li>
+</ul>
+<p>These are queued to IndexedDB, a synthetic <code>202 {queued:true}</code> is returned, and
+they&#39;re replayed through the <strong>live network</strong> on reconnect — so the server stays
+authoritative (a replay still hits the <code>no_overlapping_confirmed_stays</code> 409 guard
+and every other check). Nothing is applied locally.</p>
+<p>Everything else — <strong>new bookings, edits, payments, refunds, blocks</strong> — is
+deliberately <strong>not</strong> queued. It fails normally while offline, because a queued
+booking can 409 on replay (dates taken) and money must never be silently replayed;
+telling the owner &quot;saved&quot; for a write that later fails is worse than failing now.
+Widen the allowlist only for genuinely idempotent, low-consequence marks.</p>
+<p><strong>Conflict UX.</strong> On replay each write is classified by status: <code>2xx</code> applied,
+<code>409</code> conflict, other <code>4xx</code> failed, <code>0/5xx</code> retry (kept for the next reconnect).
+Applied/conflict/failed are removed from the queue; conflicts and failures are
+broadcast to open tabs (<code>{type:&quot;offline-queue&quot;, pending, conflicts}</code>) so the UI can
+surface &quot;a check-in you made offline clashed&quot; rather than losing it silently.</p>
 <h2>UI / design system</h2>
 <ul>
 <li>Tailwind v4 (<code>@import &quot;tailwindcss&quot;</code>) plus a token-driven design system in
