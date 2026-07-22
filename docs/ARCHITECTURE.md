@@ -526,6 +526,29 @@ fast despite the DB being remote:
 Domain queries themselves are already parallelized (`Promise.all` in
 `dashboard.ts`, `calendar.ts`) and the calendar grid math is in-memory.
 
+## Fleet tooling (provisioning, onboarding, upgrades)
+
+One client = one deployment + one DB + one agent ([deployment isolation](#deployment-isolation--one-client-one-everything)),
+so growing the fleet is a repeated, scripted operation (GAP-18). The pure decisions
+live in [`src/lib/fleet.ts`](../src/lib/fleet.ts) (unit-tested) and are shared by a
+script and the UI so they never disagree.
+
+- **Provision a new client (US-701)** — `npm run provision:client "<Name>"` with
+  `DATABASE_URL`/`DIRECT_URL` pointed at the new (empty) database. It runs
+  `migrate deploy`, verifies the `no_overlapping_confirmed_stays` constraint, seeds
+  the booking channels (idempotent), and prints an auto-checked readiness report.
+  **Boundary:** creating the Vercel project + Supabase instance and wiring their env
+  is an infra step needing cloud tokens — it's the documented checklist *around*
+  this script, not in it. Point the script at the new DB and run it last.
+- **First-run onboarding (US-702)** — `/onboarding` is a live checklist that walks a
+  new owner from empty to **bookable** (≥1 room + ≥1 channel; guests are inline),
+  reusing the existing settings forms. The dashboard shows a "Start setup" screen
+  instead of a blank Today while `totalRooms === 0`.
+- **Staged fleet upgrade (US-703)** — `npm run upgrade:fleet -- --manifest fleet.json`
+  rolls a migration **canary-first**, takes a verified `pg_dump` backup before each
+  client (the pre-migration gate), and **halts the whole fleet on the first
+  failure**. `fleet.json` holds connection strings and is git-ignored.
+
 ## Offline behaviour (PWA) — the honest spec
 
 The service worker ([`public/sw.js`](../public/sw.js)) does exactly three things,

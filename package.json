@@ -20,7 +20,9 @@
     "docs:html": "node scripts/md-to-html.mjs",
     "docs:check": "node scripts/check-docs.mjs",
     "check:tenant-sql": "node scripts/check-tenant-sql.mjs",
-    "db:seed:demo": "prisma db seed && node scripts/demo-data.mjs --apply"
+    "db:seed:demo": "prisma db seed && node scripts/demo-data.mjs --apply",
+    "provision:client": "node scripts/provision-client.mjs",
+    "upgrade:fleet": "node scripts/upgrade-fleet.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

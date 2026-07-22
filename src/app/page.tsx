@@ -50,6 +50,28 @@ export default async function DashboardPage() {
   ].filter(Boolean).join(", ");
   const toClean = housekeeping.rooms.filter((r) => r.needsCleaning);
 
+  // First-run: no rooms means the property isn't set up yet. Point the owner at the
+  // onboarding wizard instead of a blank Today (GAP-18/US-702). Uses the summary's
+  // existing totalRooms — no extra query.
+  if (s.totalRooms === 0) {
+    return (
+      <main className="app-main">
+        <div className="entrance">
+          <div className="pagehead">
+            <div className="display">Welcome</div>
+          </div>
+          <div className="banner banner--warn" style={{ cursor: "default", margin: "12px 0 16px" }}>
+            <span className="banner__icon"><Icon name="alert" size={18} /></span>
+            <span style={{ flex: 1 }}>Your guest house isn’t set up yet. A few quick steps and you can take your first booking.</span>
+          </div>
+          <Link href="/onboarding" className="btn btn--primary btn--block">
+            <Icon name="check" size={16} /> Start setup
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="app-main">
       <div className="entrance">
