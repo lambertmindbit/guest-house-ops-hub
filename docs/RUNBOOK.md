@@ -37,12 +37,49 @@ backup.
 
 ### One-time setup (required, or the job fails loudly)
 
-In **GitHub → Settings → Secrets and variables → Actions**, add:
+Two GitHub **repository secrets** switch the backups on. Set them once.
 
 | Secret | Value |
 |---|---|
-| `BACKUP_DATABASE_URL` | the **direct** prod connection (`…pooler.supabase.com:5432/postgres?sslmode=require`) — not the `:6543` pooler |
-| `BACKUP_PASSPHRASE` | a long random string. **Store it somewhere safe outside this repo** — without it the backups are unrecoverable |
+| `BACKUP_DATABASE_URL` | the **direct** prod connection — the `DIRECT_URL` from `.env` (`…pooler.supabase.com:**5432**/postgres?sslmode=require`), **not** the `:6543` pooler (`pg_dump` can't run through it) |
+| `BACKUP_PASSPHRASE` | a long random string **you invent** — it encrypts/decrypts the dump. **Store it in a password manager, outside this repo.** Lose it and the backups are permanently unrecoverable |
+
+**⚠️ The one gotcha: no quotes.** In `.env` the value is wrapped in double-quotes
+(`DIRECT_URL="postgresql://…"`). The secret must **not** include them, or `pg_dump`
+fails with `invalid sslmode value: "require`. The commands below strip them for you.
+
+**Fastest — from the CLI** (the password never prints to screen):
+
+```bash
+# BACKUP_DATABASE_URL — copies DIRECT_URL from .env with the quotes stripped
+grep '^DIRECT_URL=' .env | cut -d= -f2- | tr -d '"' | gh secret set BACKUP_DATABASE_URL
+
+# BACKUP_PASSPHRASE — generate one, set it, and SAVE IT to your password manager
+openssl rand -base64 32 | tee /dev/tty | gh secret set BACKUP_PASSPHRASE
+#   ^ prints the passphrase once so you can copy it into your password manager
+```
+
+**Or in the UI:** *GitHub → Settings → Secrets and variables → Actions → New
+repository secret*. For `BACKUP_DATABASE_URL`, paste the URL starting with
+`postgresql://` and ending with `require` — no `"` at either end.
+
+### Run it now + verify (don't wait for 01:00 UTC)
+
+```bash
+gh workflow run backup.yml          # or: Actions → Backup → Run workflow
+gh run watch                        # optional — watch it go green
+```
+
+Then confirm the backup exists: **Actions → Backup → the latest run → Artifacts →**
+`ota-backup-<date>` (a `.dump.gpg`). That's your first verified offsite backup.
+
+**A harmless warning you'll see:** *"Node.js 20 is deprecated … actions/upload-artifact
+forced to run on Node.js 24."* Ignore it — GitHub ran the action on a newer Node,
+it's backward-compatible, and your artifact was still produced. Nothing to fix.
+
+**If a secret is wrong** the run fails loudly (e.g. `BACKUP_DATABASE_URL secret is not
+set`, or the `invalid sslmode` error above) — never silently. Fix the secret and
+re-run `gh workflow run backup.yml`.
 
 ## Restore drill — do this quarterly
 
