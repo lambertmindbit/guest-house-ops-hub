@@ -6,7 +6,7 @@ import { PaymentsPanel } from "@/components/PaymentsPanel";
 import { StayActions } from "@/components/StayActions";
 import { ReservationOverflow } from "@/components/ReservationOverflow";
 import { RefundPanel } from "@/components/RefundPanel";
-import { displayDate, displayMoney } from "@/lib/format";
+import { displayDate, displayMoney, displayDMY } from "@/lib/format";
 import { formatDateOnly, todayDateOnly } from "@/lib/dates";
 import { checkInGate, normalizeIdPolicy } from "@/lib/id-gate";
 import { getCancellationPolicy, daysUntil, assessRefund } from "@/lib/cancellation";
@@ -14,6 +14,7 @@ import { currentPropertySettings } from "@/lib/property-settings";
 import { currentRole } from "@/lib/session";
 import { canSeeMoney } from "@/lib/authz";
 import { formCStatus } from "@/lib/form-c";
+import { parseNightlyRates, nightlyTotal } from "@/lib/nightly-rates";
 import { FormCReminder } from "@/components/FormCReminder";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,8 @@ export default async function ReservationDetailPage({
 
   // Non-owner roles never see money (GAP-12): hide the amount, payments and refund.
   const showMoney = canSeeMoney(await currentRole());
+  // Per-night rate breakdown snapshot (GAP-22), if this booking was quoted.
+  const nightly = parseNightlyRates(r.nightlyRates);
   // Form C (foreign-guest FRRO filing) reminder state for this arrival (GAP-7).
   const formC = formCStatus({ nationality: r.guest.nationality, checkedInAt: r.checkedInAt, formCSubmittedAt: r.formCSubmittedAt }, new Date());
   const status = STATUS[r.status] ?? STATUS.confirmed;
@@ -165,6 +168,30 @@ export default async function ReservationDetailPage({
             )}
           </div>
         </div>
+
+        {/* Per-night rate breakdown (GAP-22) — the real nightly rates snapshotted at
+            booking, so it's not a lump sum divided evenly. Money, so owner-only. */}
+        {showMoney && nightly.length > 0 && (
+          <div className="card card--pad" style={{ marginTop: 12 }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>Nightly rates</div>
+            <div className="col" style={{ gap: 6 }}>
+              {nightly.map((n) => (
+                <div key={n.date} className="spread" style={{ fontSize: "var(--fs-small)" }}>
+                  <span>
+                    {displayDMY(n.date)}
+                    {n.applied.length > 0 && <span className="muted"> · {n.applied.join(", ")}</span>}
+                  </span>
+                  <span className="num" style={{ fontWeight: 600 }}>{displayMoney(n.ratePaise)}</span>
+                </div>
+              ))}
+              <hr className="hairline" style={{ margin: "4px 0" }} />
+              <div className="spread" style={{ fontSize: "var(--fs-small)", fontWeight: 700 }}>
+                <span>{nightly.length} night{nightly.length === 1 ? "" : "s"}</span>
+                <span className="num">{displayMoney(nightlyTotal(nightly))}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* contextual hero action */}
         {r.status === "confirmed" && (() => {

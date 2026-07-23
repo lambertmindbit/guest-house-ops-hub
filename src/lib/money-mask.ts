@@ -5,8 +5,9 @@ import { canSeeMoney, type Role } from "@/lib/authz";
 // an endpoint directly (the SEC-1 leak class). Owners are unaffected. Pure — the
 // database is never touched (no RLS in this pass).
 
-// Money fields that can appear on a reservation payload.
-const RESERVATION_MONEY_FIELDS = ["grossAmount", "advanceRequired"] as const;
+// Money fields that can appear on a reservation payload. nightlyRates (GAP-22) is a
+// per-night rate breakdown — also money, so non-owners must not see it either.
+const RESERVATION_MONEY_FIELDS = ["grossAmount", "advanceRequired", "nightlyRates"] as const;
 
 export function maskReservationMoney<T extends Record<string, unknown>>(role: Role, reservation: T): T {
   if (canSeeMoney(role)) return reservation;

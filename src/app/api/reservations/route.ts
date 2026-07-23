@@ -35,6 +35,9 @@ const createSchema = z
     specialRequests: z.string().optional(),
     grossAmount: z.number().int().nonnegative().optional(), // paise (GAP-9)
     advanceRequired: z.number().int().nonnegative().optional(), // paise
+    // Per-night rate breakdown snapshot from the pricing quote (GAP-22). Optional —
+    // manual/import/agent bookings have no quote.
+    nightlyRates: z.array(z.object({ date: z.string(), ratePaise: z.number().int(), applied: z.array(z.string()).optional() })).optional(),
     // The booker confirmed the guest accepts that a valid ID is collected at
     // check-in. Recorded (idAckAt) but not required server-side, so OTA/agent/
     // import paths still work; the manual form enforces the tick client-side.
@@ -97,6 +100,7 @@ async function handlePOST(request: Request) {
           specialRequests: input.specialRequests,
           grossAmount: input.grossAmount,
           advanceRequired: input.advanceRequired,
+          nightlyRates: input.nightlyRates, // GAP-22 snapshot (undefined = omitted)
           idAckAt: input.idAck ? new Date() : null,
         },
       });

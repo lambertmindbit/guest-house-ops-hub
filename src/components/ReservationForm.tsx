@@ -201,6 +201,9 @@ export function ReservationForm({ mode, rooms, channels, agents = [], initial, i
         // Fields are rupees; the API + storage are paise (GAP-9).
         grossAmount: amount ? rupeesToPaise(Number(amount)) : undefined,
         advanceRequired: advance ? rupeesToPaise(Number(advance)) : undefined,
+        // Snapshot the per-night breakdown from the quote (GAP-22). quote.nights[].rate
+        // is already paise. Only when a quote was computed for these dates.
+        nightlyRates: quote ? quote.nights.map((n) => ({ date: n.date, ratePaise: n.rate, applied: n.applied })) : undefined,
       };
 
       const res =
