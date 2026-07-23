@@ -21,6 +21,7 @@ const FILES = [
   "docs/CONTRIBUTING.md",
   "docs/DEPLOYMENT.md",
   "docs/ROADMAP.md",
+  "docs/RUNBOOK.md",
   "docs/SETUP.md",
   "docs/USER-GUIDE.md",
 ];

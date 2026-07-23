@@ -22,7 +22,8 @@
     "check:tenant-sql": "node scripts/check-tenant-sql.mjs",
     "db:seed:demo": "prisma db seed && node scripts/demo-data.mjs --apply",
     "provision:client": "node scripts/provision-client.mjs",
-    "upgrade:fleet": "node scripts/upgrade-fleet.mjs"
+    "upgrade:fleet": "node scripts/upgrade-fleet.mjs",
+    "restore:drill": "node scripts/restore-drill.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
