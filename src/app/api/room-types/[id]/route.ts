@@ -9,6 +9,7 @@ const updateSchema = z
     maxOccupancy: z.number().int().positive().optional(),
     rateFloor: z.number().nonnegative().optional(),
     rateCeiling: z.number().nonnegative().optional(),
+    oversellBuffer: z.number().int().min(0).optional(), // GAP-24
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: "no fields to update",
