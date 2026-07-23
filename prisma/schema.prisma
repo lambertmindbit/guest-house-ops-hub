@@ -832,6 +832,11 @@ model Reservation {
   // Amount expected upfront to hold the room. Separate from grossAmount so the
   // owner can track whether the deposit has arrived before check-in.
   advanceRequired  BigInt?                   @map("advance_required")
+  // Per-night rate breakdown SNAPSHOTTED at booking time (GAP-22):
+  // [{ date, ratePaise, applied[] }]. Captured from the pricing quote so invoices
+  // and partial-stay math have the real nightly rates, not just a lump-sum gross.
+  // Null for bookings made without a quote (manual amount, import, agent).
+  nightlyRates     Json?                     @map("nightly_rates")
   createdAt        DateTime                  @default(now()) @map("created_at")
 
   // Optional link into a booking group (whole-property / long-stay folio). Each
