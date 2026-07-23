@@ -635,6 +635,11 @@ model RoomType {
   maxOccupancy Int               @map("max_occupancy")
   rateFloor    BigInt            @map("rate_floor")
   rateCeiling  BigInt            @map("rate_ceiling")
+  // Oversell safety buffer (GAP-24): units of this type to hold back from the
+  // ADVERTISED availability (agent + regional network), so OTA sync lag or an
+  // agent can't sell into the margin. The owner's own booking form still sees all
+  // physically-free rooms; the buffer is protection against external oversell.
+  oversellBuffer Int             @default(0) @map("oversell_buffer")
   rooms        Room[]
   amenities    RoomTypeAmenity[]
 

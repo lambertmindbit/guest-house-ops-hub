@@ -39,7 +39,9 @@ export async function peerAvailability(
     // passing the peer's room-type id computes the peer's availability correctly.
     const nights = await getAvailability(rt.id, from, to);
     const total = nights[0]?.total ?? 0;
-    const minAvailable = nights.length ? Math.min(...nights.map((n) => n.available)) : total;
+    // Advertise the BOOKABLE count (net of the oversell buffer, GAP-24): the regional
+    // network is external, so peers shouldn't be able to commit the safety margin.
+    const minAvailable = nights.length ? Math.min(...nights.map((n) => n.bookable)) : total;
     out.push({ roomTypeId: rt.id, roomTypeName: rt.name, maxOccupancy: rt.maxOccupancy, total, minAvailable });
   }
   return out;

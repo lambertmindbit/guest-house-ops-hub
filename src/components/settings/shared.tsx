@@ -16,6 +16,7 @@ export type RoomType = {
   maxOccupancy: number;
   rateFloor: number;
   rateCeiling: number;
+  oversellBuffer: number;
   roomCount: number;
 };
 export type Room = {

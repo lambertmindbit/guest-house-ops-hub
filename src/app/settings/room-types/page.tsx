@@ -20,6 +20,7 @@ export default async function Page() {
             name: t.name,
             baseRate: Number(t.baseRate),
             maxOccupancy: t.maxOccupancy,
+            oversellBuffer: t.oversellBuffer,
             rateFloor: Number(t.rateFloor),
             rateCeiling: Number(t.rateCeiling),
             roomCount: t._count.rooms,

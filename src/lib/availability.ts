@@ -4,9 +4,17 @@ import { requestPropertyId } from "@/lib/tenant";
 
 export type NightAvailability = {
   date: string;
-  total: number;
-  available: number;
+  total: number; // physical rooms of this type
+  available: number; // physically free (total − occupied); drives pricing/occupancy, unchanged
+  buffer: number; // oversell safety buffer for this type (GAP-24)
+  bookable: number; // what's safe to advertise: max(0, available − buffer)
 };
+
+// The units we'll ADVERTISE as sellable — physical availability minus the oversell
+// safety buffer, never below zero (GAP-24). Pure + tiny so the rule is one place.
+export function bookableUnits(available: number, buffer: number): number {
+  return Math.max(0, available - buffer);
+}
 
 // Availability is DERIVED, never stored. For each night in [from, to), a room
 // of this type is unavailable if it has a confirmed reservation OR a block
@@ -20,7 +28,7 @@ export async function getAvailability(
   to: string,
 ): Promise<NightAvailability[]> {
   const rows = await prisma.$queryRaw<
-    { night: Date; total: number; available: number }[]
+    { night: Date; total: number; buffer: number; available: number }[]
   >`
     WITH type_rooms AS (
       -- Defence in depth: pin to the room type's OWN property so a room whose
@@ -37,6 +45,7 @@ export async function getAvailability(
     SELECT
       n.night AS night,
       (SELECT count(*)::int FROM type_rooms) AS total,
+      (SELECT oversell_buffer FROM room_types WHERE id = ${roomTypeId}) AS buffer,
       (SELECT count(*)::int FROM type_rooms) - (
         SELECT count(DISTINCT room_id)::int FROM (
           SELECT r.room_id
@@ -59,6 +68,8 @@ export async function getAvailability(
     date: formatDateOnly(row.night),
     total: row.total,
     available: row.available,
+    buffer: row.buffer ?? 0,
+    bookable: bookableUnits(row.available, row.buffer ?? 0),
   }));
 }
 

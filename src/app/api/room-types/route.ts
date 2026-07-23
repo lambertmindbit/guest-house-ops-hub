@@ -18,6 +18,8 @@ const createSchema = z
     maxOccupancy: z.number().int().positive(),
     rateFloor: z.number().nonnegative(),
     rateCeiling: z.number().nonnegative(),
+    oversellBuffer: z.number().int().min(0).optional(), // GAP-24
+
   })
   .refine((d) => d.rateFloor <= d.rateCeiling, {
     path: ["rateFloor"],

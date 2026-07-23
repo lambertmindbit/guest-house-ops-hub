@@ -6,7 +6,7 @@ import { useConfirm } from "@/components/ConfirmProvider";
 import { send, ErrorLine, AddButton, ListItem, RowActions, type RoomType } from "./shared";
 import { rupeesToPaise, paiseToRupees } from "@/lib/money";
 
-const BLANK_TYPE = { name: "", baseRate: "", maxOccupancy: "2", rateFloor: "", rateCeiling: "" };
+const BLANK_TYPE = { name: "", baseRate: "", maxOccupancy: "2", rateFloor: "", rateCeiling: "", oversellBuffer: "0" };
 
 export function RoomTypesSection({ types }: { types: RoomType[] }) {
   const router = useRouter();
@@ -20,14 +20,14 @@ export function RoomTypesSection({ types }: { types: RoomType[] }) {
   function startEdit(t: RoomType) {
     setError(null); setAdding(false); setEditing(t.id);
     // Rates arrive as paise; the fields hold rupees (GAP-9).
-    setDraft({ name: t.name, baseRate: String(paiseToRupees(t.baseRate)), maxOccupancy: String(t.maxOccupancy), rateFloor: String(paiseToRupees(t.rateFloor)), rateCeiling: String(paiseToRupees(t.rateCeiling)) });
+    setDraft({ name: t.name, baseRate: String(paiseToRupees(t.baseRate)), maxOccupancy: String(t.maxOccupancy), rateFloor: String(paiseToRupees(t.rateFloor)), rateCeiling: String(paiseToRupees(t.rateCeiling)), oversellBuffer: String(t.oversellBuffer) });
   }
   function startAdd() { setError(null); setEditing(null); setDraft(BLANK_TYPE); setAdding(true); }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setError(null);
-    const payload = { name: draft.name, baseRate: rupeesToPaise(Number(draft.baseRate)), maxOccupancy: Number(draft.maxOccupancy), rateFloor: rupeesToPaise(Number(draft.rateFloor)), rateCeiling: rupeesToPaise(Number(draft.rateCeiling)) };
+    const payload = { name: draft.name, baseRate: rupeesToPaise(Number(draft.baseRate)), maxOccupancy: Number(draft.maxOccupancy), rateFloor: rupeesToPaise(Number(draft.rateFloor)), rateCeiling: rupeesToPaise(Number(draft.rateCeiling)), oversellBuffer: Number(draft.oversellBuffer) };
     const r = editing ? await send("PATCH", `/api/room-types/${editing}`, payload) : await send("POST", "/api/room-types", payload);
     setBusy(false);
     if (!r.ok) return setError(r.error!);
@@ -71,6 +71,7 @@ export function RoomTypesSection({ types }: { types: RoomType[] }) {
             <div><label className="field-label">Max occupancy</label><input className="input" required type="number" min="1" value={draft.maxOccupancy} onChange={(e) => setDraft({ ...draft, maxOccupancy: e.target.value })} /></div>
             <div><label className="field-label">Rate floor (₹)</label><input className="input" required type="number" min="0" value={draft.rateFloor} onChange={(e) => setDraft({ ...draft, rateFloor: e.target.value })} /></div>
             <div><label className="field-label">Rate ceiling (₹)</label><input className="input" required type="number" min="0" value={draft.rateCeiling} onChange={(e) => setDraft({ ...draft, rateCeiling: e.target.value })} /></div>
+            <div><label className="field-label">Oversell buffer</label><input className="input" type="number" min="0" value={draft.oversellBuffer} onChange={(e) => setDraft({ ...draft, oversellBuffer: e.target.value })} /><div className="field-hint">Rooms of this type to hold back from agent/network availability.</div></div>
           </div>
           <div className="row" style={{ gap: 10, marginTop: 14 }}>
             <button type="submit" disabled={busy} className="btn btn--primary btn--sm">{busy ? "Saving…" : "Save"}</button>

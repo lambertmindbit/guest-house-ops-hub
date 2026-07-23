@@ -32,6 +32,7 @@ export default async function Page() {
             maxOccupancy: t.maxOccupancy,
             rateFloor: Number(t.rateFloor),
             rateCeiling: Number(t.rateCeiling),
+            oversellBuffer: t.oversellBuffer,
             roomCount: t._count.rooms,
           }))}
         />
