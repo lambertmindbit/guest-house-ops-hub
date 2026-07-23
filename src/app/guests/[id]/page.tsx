@@ -11,6 +11,9 @@ import { displayMoney, displayINR, displayShortDate } from "@/lib/format";
 import { formatDateOnly } from "@/lib/dates";
 
 import { GuestDataRights } from "@/components/GuestDataRights";
+import { GuestMerge } from "@/components/GuestMerge";
+import { currentRole } from "@/lib/session";
+import { normalizePhone } from "@/lib/community/scam";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +36,22 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
   });
   if (!guest) notFound();
   const scamEntry = await prisma.flaggedNumber.findUnique({ where: { phone: guest.phone } });
+
+  // Duplicate detection (GAP-19, owner-only): other non-erased guests whose phone
+  // normalises to the same number. Guest counts are small at one property, so
+  // normalise in-app rather than fight phone-format variance in SQL.
+  const role = await currentRole();
+  let mergeCandidates: { id: string; name: string; phone: string; bookings: number }[] = [];
+  if (role === "owner" && !guest.erasedAt) {
+    const thisNorm = normalizePhone(guest.phone);
+    const others = await prisma.guest.findMany({
+      where: { id: { not: guest.id }, erasedAt: null },
+      select: { id: true, name: true, phone: true, _count: { select: { reservations: true } } },
+    });
+    mergeCandidates = others
+      .filter((g) => normalizePhone(g.phone) === thisNorm)
+      .map((g) => ({ id: g.id, name: g.name, phone: g.phone, bookings: g._count.reservations }));
+  }
 
   const stays = guest.reservations;
   const realised = stays.filter((r) => r.status !== "cancelled");
@@ -161,6 +180,7 @@ export default async function GuestDetailPage({ params }: { params: Promise<{ id
             })}
           </div>
         )}
+        <GuestMerge survivorId={guest.id} candidates={mergeCandidates} />
         <GuestDataRights guestId={guest.id} erasedAt={guest.erasedAt ? guest.erasedAt.toISOString() : null} />
       </div>
     </main>
