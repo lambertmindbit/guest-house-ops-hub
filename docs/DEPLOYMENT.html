@@ -102,6 +102,10 @@ every PR gets a <strong>preview deployment</strong> with its own URL.</li>
 <td><code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>SUPABASE_ID_BUCKET</code></td>
 <td><em>Optional.</em> Enable guest ID-document upload (private Supabase Storage bucket). Service-role key is <strong>server-only</strong>. Leave unset to keep the feature off.</td>
 </tr>
+<tr>
+<td><code>ERROR_WEBHOOK_URL</code></td>
+<td><em>Optional (GAP-17).</em> A Slack or Discord <strong>incoming-webhook</strong> URL. When set, every server error and cron failure is POSTed there so you find out from the channel, not from a guest. Leave unset and errors just stay in the Vercel logs. See <a href="RUNBOOK.html#monitoring--alerts-gap-17">RUNBOOK → Monitoring &amp; alerts</a>.</td>
+</tr>
 </tbody></table>
 <blockquote>
 <p><strong>Why <code>DATABASE_URL</code> and <code>DIRECT_URL</code>?</strong> The serverless runtime queries through

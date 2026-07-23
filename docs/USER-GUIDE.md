@@ -412,6 +412,8 @@ This section explains *why* the sync tools exist — useful for the owner and fr
 
 **What to do:** make this app the single source of truth; check your OTA extranet for the iCal option and set up two-way sync if it's there; keep a safety buffer during busy periods (don't sell the very last room on OTAs); and if volume grows and double-bookings start costing money, pair one affordable channel manager.
 
+**The oversell buffer (automates that safety margin).** Instead of *remembering* not to sell the last room, you can tell the app to hold some back for you. In **Settings → Room types**, edit a type and set **Oversell buffer** to a number. Example: a Deluxe type with 4 rooms and a buffer of **1** means the AI agent and the regional network are only ever told **3** are free — the 4th is always your cushion for the iCal lag window or a walk-in. It defaults to **0** (off). Two things to know: it only trims what's advertised to those **external** surfaces — your own booking screen still shows every free room, so you can always sell into the buffer on purpose — and it doesn't affect your occupancy % or pricing, which keep using the real count.
+
 ## Tips & FAQ
 
 ### Common how-tos

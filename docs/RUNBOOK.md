@@ -1,7 +1,9 @@
-# Backup & Recovery Runbook
+# Backup, Recovery & Monitoring Runbook
 
-The one document to reach for when data is at risk (GAP-1). Read it once now, not
-for the first time during an incident.
+The one document to reach for when data is at risk or the app is misbehaving
+(GAP-1 backups, GAP-17 monitoring). Read it once now, not for the first time during
+an incident. Jump to [Monitoring & alerts](#monitoring--alerts-gap-17) for "how do I
+find out when something breaks".
 
 ## The reality on the free plan
 
@@ -119,3 +121,58 @@ The same discipline, on demand: take a dump and drill it *before* merging a
 schema-changing PR. That's exactly what `npm run restore:drill` automates — the
 manual `pg_dump` + row-count parity done throughout the enterprise-hardening work is
 now one command.
+
+## Monitoring & alerts (GAP-17)
+
+The goal here is simple: **you find out something broke — you don't hear it from a
+guest.** Three independent pieces, all inert until you point them somewhere.
+
+### 1. Error + cron-failure alerts → `ERROR_WEBHOOK_URL`
+
+Every server error, and every failure of the daily cron jobs (iCal sync, messaging,
+ID-purge), is POSTed to a webhook you choose. Works with **Slack or Discord** as-is.
+
+**Get a webhook URL:**
+
+- **Discord:** channel → *Edit Channel → Integrations → Webhooks → New Webhook →
+  Copy Webhook URL* (`https://discord.com/api/webhooks/…`).
+- **Slack:** create an *Incoming Webhook* (`https://hooks.slack.com/services/…`).
+
+**Set it:** Vercel → project → **Settings → Environment Variables** → add
+`ERROR_WEBHOOK_URL` = that URL (Production scope) → **redeploy** so it takes effect.
+
+Leave it unset and nothing breaks — errors just stay in the Vercel logs as before.
+(The cron-failure path also tries an owner push; that only shows if web-push/VAPID is
+configured, but the webhook + logs always catch it.)
+
+### 2. Uptime → point a monitor at `/api/health`
+
+`https://<your-app-domain>/api/health` returns **200** when the app *and* database are
+up, **503** when the DB is unreachable (it runs a real `SELECT 1`). It needs no auth
+and reveals nothing sensitive — just `{ status, db, dbLatencyMs, commit }`.
+
+To be *told* when it goes down, sign up for a free external monitor —
+**UptimeRobot** or **Better Uptime** — *Add monitor → HTTP(s) →* URL =
+`https://<your-app>/api/health`, and it emails/texts you on any non-200. That's the
+one piece a webhook can't do: notice when the whole app is down.
+
+### 3. Cron-failure alerts → already on
+
+No setup. The three scheduled jobs are wrapped so a failure fires a `cron.failed`
+alert (to the webhook above) instead of dying silently. You only need step 1 for it
+to reach you.
+
+### Testing it
+
+Easiest smoke test: open `https://<your-app>/api/health` in a browser — you should see
+`{"status":"ok",…}`. For the webhook, the next real error will post to your channel;
+there's no synthetic "test error" trigger by design (we don't ship a route that
+throws on purpose).
+
+### What's deliberately *not* here
+
+This is the dependency-free tier — a webhook + a health check. If error **volume**
+ever grows enough to need grouping, stack-trace UI, or release tracking, that's a
+**Sentry** add-on (an account + SDK dependency), a clean drop-in when you want it.
+Until then the webhook + UptimeRobot covers the "did something break?" question for
+free.
