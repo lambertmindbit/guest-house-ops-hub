@@ -124,11 +124,15 @@ export default async function RootLayout({
     <html lang={locale} className={`${ui.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* Skip past the nav straight to the page (WCAG 2.4.1). First tab stop. */}
+        <a href="#main-content" className="skip-link">Skip to content</a>
         <LocaleProvider locale={locale}>
           {session && (
             <NavShell conflictCount={conflictCount} escalationCount={escalationCount} role={role} properties={properties} currentPropertyId={session.propertyId ?? null} hiddenModules={hiddenModules} />
           )}
-          <ConfirmProvider>{children}</ConfirmProvider>
+          <div id="main-content" tabIndex={-1}>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </div>
         </LocaleProvider>
         <PwaRuntime />
       </body>
