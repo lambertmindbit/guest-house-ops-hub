@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Backup & Recovery Runbook</title>
+<title>Backup, Recovery & Monitoring Runbook</title>
 <style>
   :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
   *{box-sizing:border-box}
@@ -34,9 +34,11 @@
 <body>
 <div class="wrap">
 <div class="srcnote">Generated from <code>RUNBOOK.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
-<h1>Backup &amp; Recovery Runbook</h1>
-<p>The one document to reach for when data is at risk (GAP-1). Read it once now, not
-for the first time during an incident.</p>
+<h1>Backup, Recovery &amp; Monitoring Runbook</h1>
+<p>The one document to reach for when data is at risk or the app is misbehaving
+(GAP-1 backups, GAP-17 monitoring). Read it once now, not for the first time during
+an incident. Jump to <a href="#monitoring--alerts-gap-17">Monitoring &amp; alerts</a> for &quot;how do I
+find out when something breaks&quot;.</p>
 <h2>The reality on the free plan</h2>
 <p><strong>Supabase&#39;s free plan keeps no automated backups.</strong> So the encrypted daily dump
 this repo runs (<code>.github/workflows/backup.yml</code>) is your <strong>only</strong> backup. If you move
@@ -153,6 +155,46 @@ exclusion constraint is present (<code>no_overlapping_confirmed_stays</code>).</
 schema-changing PR. That&#39;s exactly what <code>npm run restore:drill</code> automates — the
 manual <code>pg_dump</code> + row-count parity done throughout the enterprise-hardening work is
 now one command.</p>
+<h2>Monitoring &amp; alerts (GAP-17)</h2>
+<p>The goal here is simple: <strong>you find out something broke — you don&#39;t hear it from a
+guest.</strong> Three independent pieces, all inert until you point them somewhere.</p>
+<h3>1. Error + cron-failure alerts → <code>ERROR_WEBHOOK_URL</code></h3>
+<p>Every server error, and every failure of the daily cron jobs (iCal sync, messaging,
+ID-purge), is POSTed to a webhook you choose. Works with <strong>Slack or Discord</strong> as-is.</p>
+<p><strong>Get a webhook URL:</strong></p>
+<ul>
+<li><strong>Discord:</strong> channel → <em>Edit Channel → Integrations → Webhooks → New Webhook →
+Copy Webhook URL</em> (<code>https://discord.com/api/webhooks/…</code>).</li>
+<li><strong>Slack:</strong> create an <em>Incoming Webhook</em> (<code>https://hooks.slack.com/services/…</code>).</li>
+</ul>
+<p><strong>Set it:</strong> Vercel → project → <strong>Settings → Environment Variables</strong> → add
+<code>ERROR_WEBHOOK_URL</code> = that URL (Production scope) → <strong>redeploy</strong> so it takes effect.</p>
+<p>Leave it unset and nothing breaks — errors just stay in the Vercel logs as before.
+(The cron-failure path also tries an owner push; that only shows if web-push/VAPID is
+configured, but the webhook + logs always catch it.)</p>
+<h3>2. Uptime → point a monitor at <code>/api/health</code></h3>
+<p><code>https://&lt;your-app-domain&gt;/api/health</code> returns <strong>200</strong> when the app <em>and</em> database are
+up, <strong>503</strong> when the DB is unreachable (it runs a real <code>SELECT 1</code>). It needs no auth
+and reveals nothing sensitive — just <code>{ status, db, dbLatencyMs, commit }</code>.</p>
+<p>To be <em>told</em> when it goes down, sign up for a free external monitor —
+<strong>UptimeRobot</strong> or <strong>Better Uptime</strong> — <em>Add monitor → HTTP(s) →</em> URL =
+<code>https://&lt;your-app&gt;/api/health</code>, and it emails/texts you on any non-200. That&#39;s the
+one piece a webhook can&#39;t do: notice when the whole app is down.</p>
+<h3>3. Cron-failure alerts → already on</h3>
+<p>No setup. The three scheduled jobs are wrapped so a failure fires a <code>cron.failed</code>
+alert (to the webhook above) instead of dying silently. You only need step 1 for it
+to reach you.</p>
+<h3>Testing it</h3>
+<p>Easiest smoke test: open <code>https://&lt;your-app&gt;/api/health</code> in a browser — you should see
+<code>{&quot;status&quot;:&quot;ok&quot;,…}</code>. For the webhook, the next real error will post to your channel;
+there&#39;s no synthetic &quot;test error&quot; trigger by design (we don&#39;t ship a route that
+throws on purpose).</p>
+<h3>What&#39;s deliberately <em>not</em> here</h3>
+<p>This is the dependency-free tier — a webhook + a health check. If error <strong>volume</strong>
+ever grows enough to need grouping, stack-trace UI, or release tracking, that&#39;s a
+<strong>Sentry</strong> add-on (an account + SDK dependency), a clean drop-in when you want it.
+Until then the webhook + UptimeRobot covers the &quot;did something break?&quot; question for
+free.</p>
 
 </div>
 </body>

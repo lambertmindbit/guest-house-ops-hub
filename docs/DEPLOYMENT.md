@@ -41,6 +41,7 @@ GitHub (main)  ──push──►  Vercel build & deploy  ──►  https://gu
 | `AGENT_TOKEN` | *Optional.* Shared secret for the ROOT agent API seam (`/api/agent/*`). All agent routes return 401 if unset (fail closed). Set when wiring up the ROOT agent service. |
 | `INGEST_TOKEN` | *Optional.* Token for the automated email-ingestion webhook (`/api/ingest/email`). Leave unset until you wire up an inbox forwarder. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ID_BUCKET` | *Optional.* Enable guest ID-document upload (private Supabase Storage bucket). Service-role key is **server-only**. Leave unset to keep the feature off. |
+| `ERROR_WEBHOOK_URL` | *Optional (GAP-17).* A Slack or Discord **incoming-webhook** URL. When set, every server error and cron failure is POSTed there so you find out from the channel, not from a guest. Leave unset and errors just stay in the Vercel logs. See [RUNBOOK → Monitoring & alerts](RUNBOOK.md#monitoring--alerts-gap-17). |
 
 > **Why `DATABASE_URL` and `DIRECT_URL`?** The serverless runtime queries through
 > the *transaction* pooler (`:6543?pgbouncer=true`) so short-lived invocations
