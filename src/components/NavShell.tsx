@@ -212,7 +212,7 @@ export function NavShell({
       {/* ---------- mobile: bottom tab bar ---------- */}
       <nav className="tabbar rd-m" aria-label="Primary">
         {PRIMARY.map((id) => (
-          <Link key={id} href={META[id].href} className={`tab${active === id ? " on" : ""}`}>
+          <Link key={id} href={META[id].href} className={`tab${active === id ? " on" : ""}`} aria-current={active === id ? "page" : undefined}>
             <Icon name={META[id].icon} size={22} />
             {t(`nav.${id}`)}
           </Link>
@@ -222,7 +222,7 @@ export function NavShell({
             <Icon name="plus" size={24} />
           </Link>
         </div>
-        <Link href="/more" className={`tab${moreActive ? " on" : ""}`}>
+        <Link href="/more" className={`tab${moreActive ? " on" : ""}`} aria-current={moreActive ? "page" : undefined}>
           <Icon name="more" size={22} />
           More
         </Link>
@@ -240,7 +240,7 @@ export function NavShell({
           <div key={g.label}>
             <div className="sidebar__group">{g.label}</div>
             {g.items.map((id) => (
-              <Link key={id} href={META[id].href} className={`navitem${active === id ? " on" : ""}`}>
+              <Link key={id} href={META[id].href} className={`navitem${active === id ? " on" : ""}`} aria-current={active === id ? "page" : undefined}>
                 <span className="navitem__ic"><Icon name={META[id].icon} size={17} /></span>
                 {t(`nav.${id}`)}
                 {id === "needsyou" && needsYouCount > 0 && <span className="navitem__badge">{needsYouCount}</span>}
