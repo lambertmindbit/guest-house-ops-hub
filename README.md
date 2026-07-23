@@ -53,9 +53,17 @@ separate deployments/databases/agents — see [docs/ARCHITECTURE.md](docs/ARCHIT
 - **Login rate-limiting** — active (10 attempts / IP / 5 min).
 - **Guest ID document upload** — Supabase Storage adapter + UI; activate by setting the storage env vars.
 
-Still deferred by design: messaging **delivery** (a provider behind the outbox),
-multi-role auth, server-side PDFs, pushing rates to OTAs (not possible for a single
-property). See [docs/ROADMAP.md](docs/ROADMAP.md).
+**Enterprise hardening** (a plan-first tranche, one CI-gated PR each):
+- **Money is integer paise** — all amounts migrated to a typed `Money` (BIGINT paise); rupees only at input/display.
+- **Statutory GST invoices** — an immutable invoice entity, sequential per financial year, with a **server-generated PDF** (replaces browser-print).
+- **DPDP privacy** — per-guest **data export** and **erasure** (right-to-be-forgotten), keeping only what tax law requires.
+- **Postgres RLS** — a DB-level tenant backstop under the app-layer scoping, plus **field-level money masking** (money stripped from API responses by role, not just hidden pages).
+- **Fleet tooling** — scripted provisioning, a first-run onboarding wizard, staged upgrades — and **i18n** (dependency-free string externalization; English pack + Khasi wiring).
+- **Offline tolerance**, **encrypted offsite backups** + restore drill ([RUNBOOK](docs/RUNBOOK.md)), **error/uptime monitoring** (`ERROR_WEBHOOK_URL` + `/api/health`), a per-room-type **oversell buffer**, **duplicate-guest merge**, and a **WCAG 2.1 AA** accessibility pass.
+
+Still deferred by design: messaging **delivery** (a provider behind the outbox) and
+pushing rates to OTAs (not possible for a single property). See
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Tech stack
 

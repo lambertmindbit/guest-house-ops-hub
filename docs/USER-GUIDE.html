@@ -205,9 +205,14 @@
 <h3>Verifying UPI / bank payments</h3>
 <p>When you choose <strong>UPI</strong> or <strong>bank transfer</strong>, a short <strong>verification checklist</strong> appears (confirm the sender name, that the money actually landed, and the reference). Enter the <strong>UTR / reference number</strong> and tick each item — the <strong>Add payment</strong> button stays disabled until all are checked. This guards against fake-payment scams.</p>
 <h3>Invoices</h3>
-<p>On a booking, tap <strong>Invoice</strong> for a clean bill with your property&#39;s name/address, the stay, charges, payments and balance. Tap <strong>Print / Save PDF</strong> and choose &quot;Save as PDF&quot; in the print dialog.</p>
+<p>On a booking, tap <strong>Issue invoice</strong> to create a proper <strong>GST tax invoice</strong> — with your property&#39;s name/address/GSTIN, the stay, charges, tax, payments and balance. It gets a <strong>sequential number</strong> (one unbroken series per financial year, as the law requires) and downloads as a <strong>PDF</strong>.</p>
+<p>A few things that matter for tax:</p>
+<ul>
+<li>An issued invoice is <strong>locked</strong> — its number and figures don&#39;t change. If the booking details changed and you need to correct it, tap <strong>Re-issue</strong>: the old invoice is marked <strong>CANCELLED</strong> and a new number is issued, so the numbering never has a gap.</li>
+<li>Invoices are <strong>kept even if a guest asks to be erased</strong> (statutory retention) — only the guest&#39;s personal details are removed, not the tax record.</li>
+</ul>
 <blockquote>
-<p>The property name, address and GST number on the invoice come from Settings → Property — fill those in once.</p>
+<p>The property name, address and GSTIN on the invoice come from Settings → Property — fill those in once.</p>
 </blockquote>
 <h2>Guests</h2>
 <p><img src="img/guests.png" alt="Guests list on a phone"></p>
@@ -222,6 +227,8 @@
 <li><strong>Foreign-national details (C-Form)</strong> — a collapsible section for overseas guests: nationality, passport, visa, and port + date of entry into India plus purpose of visit. Leave it closed/blank for Indian guests.</li>
 <li><strong>Stay history</strong> — every past and upcoming booking; tap to open.</li>
 </ul>
+<p><strong>Merging duplicates.</strong> If the same person ended up as two records (a typo, or a different phone), open the one you want to <strong>keep</strong> and use <strong>Merge</strong> to fold a duplicate into it. Everything — stays, messages, invoices, complaints, preferences — moves onto the surviving guest, any missing details are filled in from the duplicate, and the duplicate is removed. It&#39;s owner-only and can&#39;t be undone, so check you&#39;ve picked the right survivor.</p>
+<p><strong>Privacy requests (DPDP).</strong> On a guest you can <strong>Export</strong> a copy of everything you hold about them (to hand over on request), or <strong>Erase</strong> them — which permanently anonymises their name, phone, email, ID, addresses, notes and messages. What stays behind by law: any <strong>issued tax invoice</strong> and the booking&#39;s dates/amounts (so your accounts stay correct), and, if they were blacklisted, the block survives as a one-way hash.</p>
 <h2>Housekeeping</h2>
 <p><img src="img/housekeeping.png" alt="Housekeeping screen on a phone"></p>
 <p>Two lists:</p>
@@ -372,7 +379,7 @@
 </tr>
 <tr>
 <td>Room types</td>
-<td>Categories (Standard, Deluxe…) with base rate, max occupancy, and the rate floor/ceiling.</td>
+<td>Categories (Standard, Deluxe…) with base rate, max occupancy, the rate floor/ceiling, and an optional <strong>oversell buffer</strong> (rooms of this type to hold back from what the AI agent and network are told is free — see <a href="#channels-otas--double-booking">Channels, OTAs &amp; double-booking</a>).</td>
 </tr>
 <tr>
 <td>Rooms</td>
@@ -421,6 +428,14 @@
 <tr>
 <td>Import data</td>
 <td>Bring past guests &amp; bookings over from a CSV; each row is created like a normal, conflict-checked booking.</td>
+</tr>
+<tr>
+<td>Export data</td>
+<td>Download <strong>everything for this property</strong> — bookings, guests (of this property), finance, settings — as one file, for your own records or if you ever move off the app.</td>
+</tr>
+<tr>
+<td>Language</td>
+<td>The app&#39;s display language. Ships with <strong>English</strong>; other packs (e.g. Khasi) appear here as they&#39;re added.</td>
 </tr>
 <tr>
 <td>Audit log</td>

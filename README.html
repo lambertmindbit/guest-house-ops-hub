@@ -119,9 +119,18 @@ separate deployments/databases/agents — see <a href="docs/ARCHITECTURE.html#de
 <li><strong>Login rate-limiting</strong> — active (10 attempts / IP / 5 min).</li>
 <li><strong>Guest ID document upload</strong> — Supabase Storage adapter + UI; activate by setting the storage env vars.</li>
 </ul>
-<p>Still deferred by design: messaging <strong>delivery</strong> (a provider behind the outbox),
-multi-role auth, server-side PDFs, pushing rates to OTAs (not possible for a single
-property). See <a href="docs/ROADMAP.html">docs/ROADMAP.md</a>.</p>
+<p><strong>Enterprise hardening</strong> (a plan-first tranche, one CI-gated PR each):</p>
+<ul>
+<li><strong>Money is integer paise</strong> — all amounts migrated to a typed <code>Money</code> (BIGINT paise); rupees only at input/display.</li>
+<li><strong>Statutory GST invoices</strong> — an immutable invoice entity, sequential per financial year, with a <strong>server-generated PDF</strong> (replaces browser-print).</li>
+<li><strong>DPDP privacy</strong> — per-guest <strong>data export</strong> and <strong>erasure</strong> (right-to-be-forgotten), keeping only what tax law requires.</li>
+<li><strong>Postgres RLS</strong> — a DB-level tenant backstop under the app-layer scoping, plus <strong>field-level money masking</strong> (money stripped from API responses by role, not just hidden pages).</li>
+<li><strong>Fleet tooling</strong> — scripted provisioning, a first-run onboarding wizard, staged upgrades — and <strong>i18n</strong> (dependency-free string externalization; English pack + Khasi wiring).</li>
+<li><strong>Offline tolerance</strong>, <strong>encrypted offsite backups</strong> + restore drill (<a href="docs/RUNBOOK.html">RUNBOOK</a>), <strong>error/uptime monitoring</strong> (<code>ERROR_WEBHOOK_URL</code> + <code>/api/health</code>), a per-room-type <strong>oversell buffer</strong>, <strong>duplicate-guest merge</strong>, and a <strong>WCAG 2.1 AA</strong> accessibility pass.</li>
+</ul>
+<p>Still deferred by design: messaging <strong>delivery</strong> (a provider behind the outbox) and
+pushing rates to OTAs (not possible for a single property). See
+<a href="docs/ROADMAP.html">docs/ROADMAP.md</a>.</p>
 <h2>Tech stack</h2>
 <ul>
 <li><strong>Next.js 15</strong> (App Router) — frontend + API routes in one codebase</li>
