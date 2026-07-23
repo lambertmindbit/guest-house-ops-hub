@@ -1,6 +1,7 @@
 import { sendOwnerPush, type PushPayload } from "@/lib/push";
 import { unscopedPrisma } from "@/lib/prisma";
 import { countConflicts } from "@/lib/conflicts";
+import { logError } from "@/lib/log";
 import type { SyncResult } from "@/lib/ical-import";
 
 // Owner web-push, per-event and toggle-aware (GAP-14). Best-effort throughout: a
@@ -32,6 +33,24 @@ export async function notifyOwner(event: PushEvent, payload: PushPayload): Promi
     await sendOwnerPush(payload);
   } catch {
     // notifications are best-effort
+  }
+}
+
+// A background cron failed (GAP-17). Nobody is watching it run, so a silent failure
+// means sync/messaging/purge quietly stops working. Always surface it — both to the
+// error webhook (logError) and as an owner push. No toggle: a broken cron is never
+// something to mute. Best-effort, and it never masks the original error.
+export async function notifyCronFailure(job: string, error: unknown): Promise<void> {
+  logError("cron.failed", error, { job });
+  try {
+    await sendOwnerPush({
+      title: "A background job failed",
+      body: `The "${job}" job errored and may not have run. Tap to check.`,
+      url: "/settings/feeds",
+      tag: `cron-${job}`,
+    });
+  } catch {
+    // best-effort
   }
 }
 
