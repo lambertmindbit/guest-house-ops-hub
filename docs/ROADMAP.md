@@ -169,6 +169,46 @@ guests" half the operations core didn't yet cover. All live on `main`.
   scannable QR** (self-contained SVG, no gateway, no account) for the outstanding
   balance — the no-fee half of online payment.
 
+## Delivered — enterprise hardening + gap-analysis follow-ups
+
+A plan-first tranche run against the gap analysis ([discovery/06-gap-analysis.md]),
+one CI-gated PR per slice, every schema change through `db:migrate:new` and
+backup-gated. All live on `main`.
+
+- **Money → integer paise (GAP-9, #221).** All amounts migrated from whole-rupee
+  `number` to a typed **`Money`** (BIGINT paise); rupees↔paise convert only at
+  input/display. Removes rounding drift from finance and invoices.
+- **Statutory GST invoices (GAP-11, #222).** An **immutable** `Invoice` entity,
+  **sequential per financial year** (gap-free series), with a **server-generated
+  PDF** (`GET …/invoice.pdf`). Re-issue cancels the old number and mints a new one so
+  the series stays unbroken. Replaces the old browser-print bill.
+- **DPDP privacy (GAP-8, #223).** Per-guest **data export** and **erasure**
+  (right-to-be-forgotten) — anonymises PII while keeping statutory invoices and the
+  booking's dates/amounts; a blacklist survives as a one-way hash.
+- **Offline tolerance (GAP-25, #224).** The write queue narrowed to genuinely safe
+  marks, with an honest offline spec.
+- **Fleet tooling (GAP-18, #225).** Scripted provisioning, a first-run onboarding
+  wizard, and staged upgrades — for running many single-client deployments.
+- **i18n (GAP-16, #226).** Dependency-free UI string externalization (in-repo `t()`),
+  an English pack, and Khasi wiring.
+- **Postgres RLS (GAP-12, #227→#228).** A DB-level tenant backstop beneath the
+  app-layer scoping, enforced via Supabase's built-in `authenticated` role (a custom
+  role can't be granted to `postgres` on Supabase); shipped with a leak test. Paired
+  with **field-level money masking** ([`src/lib/money-mask.ts`](../src/lib/money-mask.ts))
+  so a staff-role API response is stripped of money, not just pointed at a hidden page.
+- **Encrypted offsite backups (GAP-1, #229).** A daily `pg_dump` → AES-256 → GitHub
+  artifact, a `restore:drill` command, and the [RUNBOOK](RUNBOOK.md). The free plan's
+  only backup.
+- **Observability (GAP-17, #230).** Server errors + cron failures POST to
+  `ERROR_WEBHOOK_URL` (Slack/Discord); an unauthenticated `/api/health` for uptime
+  monitors. See [RUNBOOK → Monitoring](RUNBOOK.md#monitoring--alerts-gap-17).
+- **Smaller closes.** Duplicate-**guest merge** (GAP-19, #231); per-night **rate
+  breakdown** snapshot on a booking (GAP-22, #232); full **property data export** for
+  offboarding (GAP-23, #233); per-room-type **oversell buffer** on external
+  availability (GAP-24, #234); a **WCAG 2.1 AA** pass — skip link, reduced-motion,
+  current-page (GAP-21, #235). Earlier in the same run: **OTA payout reconciliation**
+  (GAP-13, #219) and an optional housekeeping **inspection** step (GAP-20, #220).
+
 ## Deferred — by design
 
 These were intentionally left out (see [CLAUDE.md](../CLAUDE.md) "do NOT" rules and
@@ -182,7 +222,7 @@ phase scoping). They are **not** bugs:
 | **Dynamic pricing → OTAs** | Not possible for a single property — no OTA connectivity API. Pricing stays advisory/internal. | ○ Won't do (external limit) |
 | **Multi-role auth** | Accounts, roles, lockout. | ✅ **Done** (gap Phase 2) — `User` table, scrypt, owner/reception/housekeeping RBAC, login rate-limiting (`src/lib/rate-limit.ts`) |
 | **Guest ID document/photo upload** | Needs object storage. | 🟡 **Groundwork built** — Supabase Storage adapter, upload/view/delete endpoints, and guest-profile UI. Activate by creating a private bucket + setting the storage env vars (see [SETUP.md](SETUP.md#optional-integrations-leave-unset-to-keep-them-off)). |
-| **Server-side PDF invoices** | Would need a PDF library. Today uses the browser's Print → Save as PDF. | ○ Deferred |
+| **Server-side PDF invoices** | Would need a PDF library. | ✅ **Done** (GAP-11, #222) — statutory GST invoices render a server PDF via `@react-pdf/renderer` (`GET …/invoice.pdf`). |
 
 ## Known concerns / tech debt
 
@@ -194,8 +234,6 @@ This is the canonical list — what a new team should know:
 - **Overlap-error detection** sniffs the Postgres error string (`23P01` / constraint
   name) in [`src/lib/db-errors.ts`](../src/lib/db-errors.ts) — keep `tests/conflict.test.ts`
   green if you touch it.
-- **Money is whole-rupee `number` math** — fine today; would need integer-paise or
-  decimal arithmetic for strict accounting.
 - **Test breadth**: the correctness core (conflicts, availability) and pure pricing
   are tested; route handlers and the `quoteRoomType` data wrapper are not. The
   highest-value gap to close is a route-level create-overlap → 409 test.
@@ -212,14 +250,12 @@ This is the canonical list — what a new team should know:
   `$queryRaw`, so any raw query touching tenant tables must filter `property_id`
   itself (e.g. [`freeRooms`](../src/lib/availability.ts)) — a miss leaks across one
   owner's properties (never across clients). The recurring rule for multi-property work.
-- **Authorization hardening (unbuilt — from a retired design doc).** Three items
-  from an earlier "Org layer / RBAC v2" design that multi-property shipped *without*
-  (no Organization grouping was needed); these specific gaps remain worth doing:
-  (a) **field-level money masking** — RBAC is page/route-level, so a staff-visible
-  API response can still carry `grossAmount`; mask money fields server-side per role;
-  (b) **Postgres RLS** — isolation is app-layer only (the tenant extension); DB-level
-  row security would be defence in depth; (c) **user invites + password reset** — the
-  owner creates logins with a password by hand today.
+- **User invites + password reset (unbuilt).** The owner still creates each login
+  with a password by hand — there is no self-serve invite or password-reset flow. The
+  other two items once listed here are now **done**: **field-level money masking**
+  ([`src/lib/money-mask.ts`](../src/lib/money-mask.ts), GAP-12) strips money from
+  API responses by role, and **Postgres RLS** is live as a DB-level tenant backstop
+  (GAP-12, #228 — see *Delivered — enterprise hardening* above).
 
 ## Suggested next steps for a new team
 

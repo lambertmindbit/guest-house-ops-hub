@@ -179,9 +179,14 @@ When you choose **UPI** or **bank transfer**, a short **verification checklist**
 
 ### Invoices
 
-On a booking, tap **Invoice** for a clean bill with your property's name/address, the stay, charges, payments and balance. Tap **Print / Save PDF** and choose "Save as PDF" in the print dialog.
+On a booking, tap **Issue invoice** to create a proper **GST tax invoice** — with your property's name/address/GSTIN, the stay, charges, tax, payments and balance. It gets a **sequential number** (one unbroken series per financial year, as the law requires) and downloads as a **PDF**.
 
-> The property name, address and GST number on the invoice come from Settings → Property — fill those in once.
+A few things that matter for tax:
+
+- An issued invoice is **locked** — its number and figures don't change. If the booking details changed and you need to correct it, tap **Re-issue**: the old invoice is marked **CANCELLED** and a new number is issued, so the numbering never has a gap.
+- Invoices are **kept even if a guest asks to be erased** (statutory retention) — only the guest's personal details are removed, not the tax record.
+
+> The property name, address and GSTIN on the invoice come from Settings → Property — fill those in once.
 
 ## Guests
 
@@ -198,6 +203,10 @@ Open a guest to see:
 - **ID document** — if document storage is set up, upload a scan/photo of their ID (kept private). Uploaded IDs can auto-expire after a retention period (Settings → Property).
 - **Foreign-national details (C-Form)** — a collapsible section for overseas guests: nationality, passport, visa, and port + date of entry into India plus purpose of visit. Leave it closed/blank for Indian guests.
 - **Stay history** — every past and upcoming booking; tap to open.
+
+**Merging duplicates.** If the same person ended up as two records (a typo, or a different phone), open the one you want to **keep** and use **Merge** to fold a duplicate into it. Everything — stays, messages, invoices, complaints, preferences — moves onto the surviving guest, any missing details are filled in from the duplicate, and the duplicate is removed. It's owner-only and can't be undone, so check you've picked the right survivor.
+
+**Privacy requests (DPDP).** On a guest you can **Export** a copy of everything you hold about them (to hand over on request), or **Erase** them — which permanently anonymises their name, phone, email, ID, addresses, notes and messages. What stays behind by law: any **issued tax invoice** and the booking's dates/amounts (so your accounts stay correct), and, if they were blacklisted, the block survives as a one-way hash.
 
 ## Housekeeping
 
@@ -373,7 +382,7 @@ Everything you set up once and rarely change:
 | Properties | Add a property, or switch between the ones you run (owners with several guest houses). |
 | Property | Name, address, GST number, check-in/out times, currency, your **UPI ID** for pay-links/QR, and the **ID rules** (how strictly ID is required at check-in — *block* / *warn* / *off*, whether an ID number is required to take a booking, and how long to keep scanned IDs before they auto-delete). |
 | Users & roles | Add logins for your team and set each one's role — **owner**, **reception** or **housekeeping**. "Money only for owners." Owners with several properties can grant each login access per property. |
-| Room types | Categories (Standard, Deluxe…) with base rate, max occupancy, and the rate floor/ceiling. |
+| Room types | Categories (Standard, Deluxe…) with base rate, max occupancy, the rate floor/ceiling, and an optional **oversell buffer** (rooms of this type to hold back from what the AI agent and network are told is free — see [Channels, OTAs & double-booking](#channels-otas--double-booking)). |
 | Rooms | Add a room, or **Archive** one to retire it (leaves the calendar, keeps history). Delete is only allowed for a room that was never booked. |
 | Amenities | The facilities your property offers, used by the community directory. |
 | Channels | Booking sources and their commission %. |
@@ -386,6 +395,8 @@ Everything you set up once and rarely change:
 | Community scam list / Bad-guest alerts | Report and verify shared scam numbers and evidence-backed bad-guest alerts. |
 | Trusted network | Your **connect code**, invites, and per-peer sharing switches (see [Community network](#community-network)). |
 | Import data | Bring past guests & bookings over from a CSV; each row is created like a normal, conflict-checked booking. |
+| Export data | Download **everything for this property** — bookings, guests (of this property), finance, settings — as one file, for your own records or if you ever move off the app. |
+| Language | The app's display language. Ships with **English**; other packs (e.g. Khasi) appear here as they're added. |
 | Audit log | A record of sensitive actions (cancellations, refunds, blacklisting, user & consent changes) — who did what, and when. |
 
 ## Channels, OTAs & double-booking

@@ -190,6 +190,45 @@ computed refund. Advisory — the owner can still approve a different amount.</l
 scannable QR</strong> (self-contained SVG, no gateway, no account) for the outstanding
 balance — the no-fee half of online payment.</li>
 </ul>
+<h2>Delivered — enterprise hardening + gap-analysis follow-ups</h2>
+<p>A plan-first tranche run against the gap analysis ([discovery/06-gap-analysis.md]),
+one CI-gated PR per slice, every schema change through <code>db:migrate:new</code> and
+backup-gated. All live on <code>main</code>.</p>
+<ul>
+<li><strong>Money → integer paise (GAP-9, #221).</strong> All amounts migrated from whole-rupee
+<code>number</code> to a typed <strong><code>Money</code></strong> (BIGINT paise); rupees↔paise convert only at
+input/display. Removes rounding drift from finance and invoices.</li>
+<li><strong>Statutory GST invoices (GAP-11, #222).</strong> An <strong>immutable</strong> <code>Invoice</code> entity,
+<strong>sequential per financial year</strong> (gap-free series), with a <strong>server-generated
+PDF</strong> (<code>GET …/invoice.pdf</code>). Re-issue cancels the old number and mints a new one so
+the series stays unbroken. Replaces the old browser-print bill.</li>
+<li><strong>DPDP privacy (GAP-8, #223).</strong> Per-guest <strong>data export</strong> and <strong>erasure</strong>
+(right-to-be-forgotten) — anonymises PII while keeping statutory invoices and the
+booking&#39;s dates/amounts; a blacklist survives as a one-way hash.</li>
+<li><strong>Offline tolerance (GAP-25, #224).</strong> The write queue narrowed to genuinely safe
+marks, with an honest offline spec.</li>
+<li><strong>Fleet tooling (GAP-18, #225).</strong> Scripted provisioning, a first-run onboarding
+wizard, and staged upgrades — for running many single-client deployments.</li>
+<li><strong>i18n (GAP-16, #226).</strong> Dependency-free UI string externalization (in-repo <code>t()</code>),
+an English pack, and Khasi wiring.</li>
+<li><strong>Postgres RLS (GAP-12, #227→#228).</strong> A DB-level tenant backstop beneath the
+app-layer scoping, enforced via Supabase&#39;s built-in <code>authenticated</code> role (a custom
+role can&#39;t be granted to <code>postgres</code> on Supabase); shipped with a leak test. Paired
+with <strong>field-level money masking</strong> (<a href="../src/lib/money-mask.ts"><code>src/lib/money-mask.ts</code></a>)
+so a staff-role API response is stripped of money, not just pointed at a hidden page.</li>
+<li><strong>Encrypted offsite backups (GAP-1, #229).</strong> A daily <code>pg_dump</code> → AES-256 → GitHub
+artifact, a <code>restore:drill</code> command, and the <a href="RUNBOOK.html">RUNBOOK</a>. The free plan&#39;s
+only backup.</li>
+<li><strong>Observability (GAP-17, #230).</strong> Server errors + cron failures POST to
+<code>ERROR_WEBHOOK_URL</code> (Slack/Discord); an unauthenticated <code>/api/health</code> for uptime
+monitors. See <a href="RUNBOOK.html#monitoring--alerts-gap-17">RUNBOOK → Monitoring</a>.</li>
+<li><strong>Smaller closes.</strong> Duplicate-<strong>guest merge</strong> (GAP-19, #231); per-night <strong>rate
+breakdown</strong> snapshot on a booking (GAP-22, #232); full <strong>property data export</strong> for
+offboarding (GAP-23, #233); per-room-type <strong>oversell buffer</strong> on external
+availability (GAP-24, #234); a <strong>WCAG 2.1 AA</strong> pass — skip link, reduced-motion,
+current-page (GAP-21, #235). Earlier in the same run: <strong>OTA payout reconciliation</strong>
+(GAP-13, #219) and an optional housekeeping <strong>inspection</strong> step (GAP-20, #220).</li>
+</ul>
 <h2>Deferred — by design</h2>
 <p>These were intentionally left out (see <a href="../CLAUDE.html">CLAUDE.md</a> &quot;do NOT&quot; rules and
 phase scoping). They are <strong>not</strong> bugs:</p>
@@ -233,8 +272,8 @@ phase scoping). They are <strong>not</strong> bugs:</p>
 </tr>
 <tr>
 <td><strong>Server-side PDF invoices</strong></td>
-<td>Would need a PDF library. Today uses the browser&#39;s Print → Save as PDF.</td>
-<td>○ Deferred</td>
+<td>Would need a PDF library.</td>
+<td>✅ <strong>Done</strong> (GAP-11, #222) — statutory GST invoices render a server PDF via <code>@react-pdf/renderer</code> (<code>GET …/invoice.pdf</code>).</td>
 </tr>
 </tbody></table>
 <h2>Known concerns / tech debt</h2>
@@ -246,8 +285,6 @@ the repo. (See <a href="CONTRIBUTING.html#database-migrations-read-this-first">C
 <li><strong>Overlap-error detection</strong> sniffs the Postgres error string (<code>23P01</code> / constraint
 name) in <a href="../src/lib/db-errors.ts"><code>src/lib/db-errors.ts</code></a> — keep <code>tests/conflict.test.ts</code>
 green if you touch it.</li>
-<li><strong>Money is whole-rupee <code>number</code> math</strong> — fine today; would need integer-paise or
-decimal arithmetic for strict accounting.</li>
 <li><strong>Test breadth</strong>: the correctness core (conflicts, availability) and pure pricing
 are tested; route handlers and the <code>quoteRoomType</code> data wrapper are not. The
 highest-value gap to close is a route-level create-overlap → 409 test.</li>
@@ -264,14 +301,12 @@ documents are kept indefinitely until then. By design; call it out to new owners
 <code>$queryRaw</code>, so any raw query touching tenant tables must filter <code>property_id</code>
 itself (e.g. <a href="../src/lib/availability.ts"><code>freeRooms</code></a>) — a miss leaks across one
 owner&#39;s properties (never across clients). The recurring rule for multi-property work.</li>
-<li><strong>Authorization hardening (unbuilt — from a retired design doc).</strong> Three items
-from an earlier &quot;Org layer / RBAC v2&quot; design that multi-property shipped <em>without</em>
-(no Organization grouping was needed); these specific gaps remain worth doing:
-(a) <strong>field-level money masking</strong> — RBAC is page/route-level, so a staff-visible
-API response can still carry <code>grossAmount</code>; mask money fields server-side per role;
-(b) <strong>Postgres RLS</strong> — isolation is app-layer only (the tenant extension); DB-level
-row security would be defence in depth; (c) <strong>user invites + password reset</strong> — the
-owner creates logins with a password by hand today.</li>
+<li><strong>User invites + password reset (unbuilt).</strong> The owner still creates each login
+with a password by hand — there is no self-serve invite or password-reset flow. The
+other two items once listed here are now <strong>done</strong>: <strong>field-level money masking</strong>
+(<a href="../src/lib/money-mask.ts"><code>src/lib/money-mask.ts</code></a>, GAP-12) strips money from
+API responses by role, and <strong>Postgres RLS</strong> is live as a DB-level tenant backstop
+(GAP-12, #228 — see <em>Delivered — enterprise hardening</em> above).</li>
 </ul>
 <h2>Suggested next steps for a new team</h2>
 <ol>
