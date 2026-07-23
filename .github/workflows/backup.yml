@@ -1,0 +1,60 @@
+# GAP-1: the ONLY backup on the Supabase free plan (it keeps no automated backups),
+# so this runs daily and is encrypted at rest (the dump holds guest PII).
+#
+# It dumps prod, verifies the archive is readable, encrypts it (AES-256), and stores
+# it as a GitHub Actions artifact — genuinely offsite (GitHub's infra, separate from
+# Supabase, so it survives losing the Supabase project). Restore drill: scripts/
+# restore-drill.mjs (npm run restore:drill). Recovery steps: docs/RUNBOOK.md.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   BACKUP_DATABASE_URL  the prod DIRECT connection (:5432), NOT the pooler
+#   BACKUP_PASSPHRASE    a long random secret used to encrypt/decrypt the dump
+name: Backup
+
+on:
+  schedule:
+    - cron: "0 1 * * *"    # daily 01:00 UTC, before the app's 02:00 sync crons
+  workflow_dispatch: {}     # allow a manual "run now"
+
+# Never let two backups run at once.
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    # Run inside postgres:17 so pg_dump matches the prod server major version
+    # (an older client refuses a newer server).
+    container: postgres:17
+    steps:
+      - name: Install gpg
+        run: apt-get update -qq && apt-get install -y -qq gnupg
+
+      - name: Dump, verify, encrypt
+        env:
+          DIRECT_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "${DIRECT_URL:-}" || { echo "::error::BACKUP_DATABASE_URL secret is not set"; exit 1; }
+          test -n "${PASSPHRASE:-}" || { echo "::error::BACKUP_PASSPHRASE secret is not set"; exit 1; }
+          STAMP="$(date -u +%F-%H%M)"
+          echo "▸ pg_dump (custom format)"
+          pg_dump "$DIRECT_URL" -Fc --no-owner --no-privileges -f "ota-backup-$STAMP.dump"
+          echo "▸ verify the archive is readable (not truncated)"
+          pg_restore --list "ota-backup-$STAMP.dump" > /dev/null
+          echo "▸ encrypt at rest (AES-256) — the artifact holds guest PII"
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+              --passphrase "$PASSPHRASE" -o "ota-backup-$STAMP.dump.gpg" "ota-backup-$STAMP.dump"
+          rm -f "ota-backup-$STAMP.dump"
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          echo "✓ ota-backup-$STAMP.dump.gpg ready"
+
+      - name: Upload encrypted backup (offsite, retained 30 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ota-backup-${{ env.STAMP }}
+          path: "*.dump.gpg"
+          retention-days: 30
+          if-no-files-found: error

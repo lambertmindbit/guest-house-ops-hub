@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backup & Recovery Runbook</title>
+<style>
+  :root{--ink:#1c2421;--sub:#5b6b64;--line:#e3e8e5;--paper:#fff;--bg:#f6f8f7;--teal:#0fa68e;--teal-bg:#e7f5f1;--ink-bg:#eef1ef}
+  *{box-sizing:border-box}
+  body{margin:0;font:15.5px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);padding:30px 16px}
+  .wrap{max-width:860px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:26px 32px}
+  .srcnote{font-size:12.5px;color:var(--sub);background:var(--teal-bg);border:1px solid #bfe3da;border-radius:8px;padding:8px 12px;margin:0 0 20px}
+  .srcnote a{color:var(--teal)}
+  h1{font-size:27px;letter-spacing:-.02em;margin:.2em 0 .5em;border-bottom:2px solid var(--ink);padding-bottom:10px}
+  h2{font-size:21px;margin:1.6em 0 .5em;border-bottom:1px solid var(--line);padding-bottom:6px}
+  h3{font-size:17px;margin:1.3em 0 .4em}
+  h4{font-size:15px;margin:1.2em 0 .3em}
+  p{margin:.6em 0}
+  a{color:var(--teal)}
+  ul,ol{padding-left:24px}
+  li{margin:.3em 0}
+  code{background:var(--ink-bg);padding:1.5px 6px;border-radius:5px;font-size:13.5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  pre{background:#0f1f1a;color:#e2efe9;padding:14px 16px;border-radius:10px;overflow-x:auto;line-height:1.5;margin:14px 0}
+  pre code{background:none;padding:0;color:inherit;font-size:13px}
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:14px;display:block;overflow-x:auto}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f0}
+  blockquote{margin:14px 0;padding:10px 16px;border-left:4px solid var(--teal);background:var(--teal-bg);border-radius:0 8px 8px 0;color:#26352f}
+  blockquote p{margin:.3em 0}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  img{max-width:100%;border-radius:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="srcnote">Generated from <code>RUNBOOK.md</code> for easy reading — the Markdown file is the source of truth (don't edit this HTML; run <code>npm run docs:html</code>). <a href="../README.html">README</a></div>
+<h1>Backup &amp; Recovery Runbook</h1>
+<p>The one document to reach for when data is at risk (GAP-1). Read it once now, not
+for the first time during an incident.</p>
+<h2>The reality on the free plan</h2>
+<p><strong>Supabase&#39;s free plan keeps no automated backups.</strong> So the encrypted daily dump
+this repo runs (<code>.github/workflows/backup.yml</code>) is your <strong>only</strong> backup. If you move
+to Supabase Pro, also turn on its managed daily backups + <strong>PITR</strong> (point-in-time
+recovery) — that takes worst-case data loss from a day down to minutes — and keep
+this offsite dump as the second copy.</p>
+<h2>Objectives (what we&#39;re promising)</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Target (free plan)</th>
+<th>With Supabase Pro + PITR</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>RPO</strong> — most data we can lose</td>
+<td>up to <strong>24h</strong> (one daily dump)</td>
+<td><strong>~minutes</strong></td>
+</tr>
+<tr>
+<td><strong>RTO</strong> — time to be back up</td>
+<td><strong>&lt; 1 hour</strong> (restore a small dump)</td>
+<td>minutes</td>
+</tr>
+</tbody></table>
+<p>A guest house&#39;s data changes slowly, so a 24h RPO is tolerable — but only because the
+backup is <strong>proven to restore</strong> (see the drill below). An untested backup is not a
+backup.</p>
+<h2>How the backup works</h2>
+<p><code>.github/workflows/backup.yml</code> runs <strong>daily at 01:00 UTC</strong> (and on demand via
+<em>Actions → Backup → Run workflow</em>). Each run:</p>
+<ol>
+<li><code>pg_dump</code> the production database (custom format), inside a <code>postgres:17</code>
+container so the client matches the server version;</li>
+<li>verifies the archive is readable (<code>pg_restore --list</code>);</li>
+<li><strong>encrypts it with AES-256</strong> — the dump contains guest PII and must never sit in
+plaintext;</li>
+<li>uploads it as a GitHub Actions <strong>artifact</strong> — genuinely offsite (GitHub&#39;s infra,
+separate from Supabase), retained <strong>30 days</strong>.</li>
+</ol>
+<h3>One-time setup (required, or the job fails loudly)</h3>
+<p>In <strong>GitHub → Settings → Secrets and variables → Actions</strong>, add:</p>
+<table>
+<thead>
+<tr>
+<th>Secret</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>BACKUP_DATABASE_URL</code></td>
+<td>the <strong>direct</strong> prod connection (<code>…pooler.supabase.com:5432/postgres?sslmode=require</code>) — not the <code>:6543</code> pooler</td>
+</tr>
+<tr>
+<td><code>BACKUP_PASSPHRASE</code></td>
+<td>a long random string. <strong>Store it somewhere safe outside this repo</strong> — without it the backups are unrecoverable</td>
+</tr>
+</tbody></table>
+<h2>Restore drill — do this quarterly</h2>
+<p>Prove the latest backup still restores. Download the newest artifact from <em>Actions →
+Backup</em>, then:</p>
+<pre><code class="language-bash">npm run restore:drill ~/Downloads/ota-backup-&lt;stamp&gt;.dump.gpg
+# reads BACKUP_PASSPHRASE from your env, or pass --passphrase &quot;&lt;value&gt;&quot;
+</code></pre>
+<p>It decrypts, restores into a throwaway local database, verifies the
+<code>no_overlapping_confirmed_stays</code> correctness core and that the core tables came back
+non-empty, then cleans up. It exits non-zero if anything is wrong. To also check the
+row counts against live prod, add <code>--compare &quot;&lt;prod-direct-url&gt;&quot;</code>.</p>
+<h2>Recovering for real</h2>
+<ol>
+<li><strong>Get the backup</strong>: download the newest <code>*.dump.gpg</code> artifact from <em>Actions →
+Backup</em> (or use the last pre-migration dump in <code>~/ota-backups/</code>).</li>
+<li><strong>Decrypt</strong>: <code>gpg --decrypt --passphrase &quot;&lt;BACKUP_PASSPHRASE&gt;&quot; -o restore.dump ota-backup-&lt;stamp&gt;.dump.gpg</code></li>
+<li><strong>Restore into a FRESH Supabase project</strong> (recommended target, not a plain
+Postgres): create a new project, then
+<code>pg_restore --no-owner --no-privileges -d &quot;&lt;new-project-direct-url&gt;&quot; restore.dump</code>.
+A handful of <code>supabase_vault</code> / <code>transaction_timeout</code> errors are <strong>expected and
+harmless</strong> — those are Supabase system objects. Restore into a plain Postgres is
+fine for <em>verifying data</em>, but Supabase-specific extension placement means a real
+recovery should target a Supabase project.</li>
+<li><strong>Repoint the app</strong>: update <code>DATABASE_URL</code> (pooler <code>:6543</code>) and <code>DIRECT_URL</code>
+(<code>:5432</code>) in the Vercel project env to the new database, and redeploy.</li>
+<li><strong>Verify</strong>: run the restore drill&#39;s checks against the new DB, and confirm the
+exclusion constraint is present (<code>no_overlapping_confirmed_stays</code>).</li>
+</ol>
+<h2>Before any risky migration</h2>
+<p>The same discipline, on demand: take a dump and drill it <em>before</em> merging a
+schema-changing PR. That&#39;s exactly what <code>npm run restore:drill</code> automates — the
+manual <code>pg_dump</code> + row-count parity done throughout the enterprise-hardening work is
+now one command.</p>
+
+</div>
+</body>
+</html>
