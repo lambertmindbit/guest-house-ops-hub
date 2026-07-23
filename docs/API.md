@@ -2,9 +2,10 @@
 
 All routes live under `src/app/api/**/route.ts`. Unless noted, every endpoint
 requires the **owner session cookie** (enforced by [`src/middleware.ts`](../src/middleware.ts))
-and returns the standard envelope. Two families are exempt from the cookie gate
-and carry their own shared secret instead: the **token-gated webhook**
-(`/api/ingest/email`, `/api/cron/sync`, `/api/ical/*`) and the **ROOT agent seam**
+and returns the standard envelope. Some routes are exempt from the cookie gate:
+**public** endpoints (`/api/auth/*` — login / logout / password-reset / accept-invite,
+`/api/health`, `/api/public/assistant`), the **token/secret-gated webhook + crons**
+(`/api/ingest/email`, `/api/cron/*`, `/api/ical/*`), and the **ROOT agent seam**
 (`/api/agent/*`, gated by `AGENT_TOKEN` — see [Agent seam](#agent-seam-root-integration)).
 
 ```jsonc
@@ -26,8 +27,18 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/api/auth/login` | Verify `OWNER_EMAIL`/`OWNER_PASSWORD`, set signed session cookie |
+| `POST` | `/api/auth/login` | Verify credentials, set signed session cookie |
 | `POST` | `/api/auth/logout` | Clear the session cookie |
+| `POST` | `/api/auth/reset-request` | Request a password-reset link (rate-limited; **always 200** — no user enumeration). Emails a 1-hour single-use link (or logs it in log-only mode) |
+| `POST` | `/api/auth/reset` | Set a new password from a valid reset token |
+| `POST` | `/api/auth/accept-invite` | Set a password + activate an invited staff account from an invite token |
+
+> **Invites & resets (GAP-10).** Single-use, expiring `AuthToken`s — only the
+> **SHA-256** of the emailed token is stored, so a DB leak yields no usable links.
+> Owner sends invites via `POST /api/users/invite` (owner-gated; `{ email, role,
+> propertyId? }`) which returns the link so the owner can share it themselves when no
+> SMTP is configured. Login is `OWNER_EMAIL`/`OWNER_PASSWORD` for the seeded owner,
+> or the `User` table (scrypt) for invited staff.
 
 ## Reservations
 
@@ -41,6 +52,11 @@ Inputs are validated with **Zod** at the top of each route file. Dates are
 | `POST` | `/api/reservations/[id]/payments` | Record a payment (`isAdvance?` tags it as the advance deposit) |
 | `PATCH` | `/api/reservations/[id]/stay` | `{ action: "checkin" \| "checkout" \| "undo" }` |
 | `DELETE` | `/api/payments/[id]` | Delete a payment |
+| `POST` | `/api/reservations/[id]/invoice` | **Issue** (or **re-issue**) a statutory GST invoice — an immutable record, sequential per financial year. Re-issue marks the prior number `CANCELLED` and mints a new one so the series stays gap-free (GAP-11) |
+| `GET` | `/api/reservations/[id]/invoice.pdf` | Download the current invoice as a **server-rendered PDF** |
+| `POST` | `/api/reservations/[id]/refunds` | Record a refund against a cancelled/amended booking (the policy ladder computes the suggested amount; owner can override) |
+| `PATCH` / `DELETE` | `/api/refunds/[id]` | Edit / delete a refund |
+| `POST` | `/api/reservations/[id]/form-c` | Generate the **Form-C** foreign-national registration record for the stay's guest |
 
 `POST`/`PATCH` accept an optional `advanceRequired` (the deposit the booking
 expects); advance status is **derived** at render time from advance-tagged
@@ -71,6 +87,8 @@ phone, room or channel) and stay-state filtering client-side.
 | `GET` / `POST` | `/api/agents` | List / create travel agents (name, phone, `commissionPct`) — inbound B2B agents you owe commission |
 | `PATCH` / `DELETE` | `/api/agents/[id]` | Edit / verify (`{ verified }`) / deactivate (`{ active }`) / delete (409 if it has bookings — deactivate instead) |
 | `GET` / `PATCH` | `/api/settings` | Property profile (single row, get-or-create) |
+| `GET` / `PATCH` | `/api/settings/cancellation` | The **refund ladder** — ordered `days-before → refund %` tiers |
+| `GET` | `/api/settings/export` | **Full property data export** for offboarding — bookings, this property's guests, finance and settings in one file (GAP-23) |
 
 ## Properties, access & session (multi-property)
 
@@ -112,6 +130,10 @@ These manage that; on a single-property client they're inert.
 | `POST` | `/api/guests/[id]/id-document` | Upload/replace a scanned ID (multipart `file`; JPG/PNG/WEBP/PDF ≤ 5 MB). **503** if storage isn't configured |
 | `GET` | `/api/guests/[id]/id-document` | Short-lived signed URL to view the stored document |
 | `DELETE` | `/api/guests/[id]/id-document` | Remove the stored document |
+| `POST` | `/api/guests/[id]/merge` | Fold a duplicate guest into this survivor — reassigns all their bookings/messages/invoices/etc., fills missing PII, unions preferences, deletes the duplicate (owner-only, GAP-19) |
+| `GET` | `/api/guests/[id]/export` | **DPDP** subject-access export — everything held about this guest, as a file |
+| `POST` | `/api/guests/[id]/erase` | **DPDP** erasure — permanently anonymise name/phone/email/ID/notes/messages; issued tax invoices + booking dates/amounts are retained by law, a blacklist survives as a one-way hash (GAP-8) |
+| `POST` | `/api/guests/[id]/reliability-flag` | Raise/lower a shared no-show reliability flag on the guest |
 
 > Guests carry optional **C-Form** fields for foreign-national registration
 > (Registration of Foreigners Rules, 1992): nationality, passport (number /
@@ -204,6 +226,14 @@ until the agents are ready. All accept an optional forward-compatible `propertyR
 | `GET` | `/api/export/reservations.csv` | Download bookings CSV (optional `from`/`to`) |
 | `GET` | `/api/export/payments.csv` | Download payments CSV (optional `from`/`to`) |
 | `GET` | `/api/analytics/export` | Download the Analytics view as CSV — summary metrics + source mix + occupancy by room type + daily occupancy (optional `from`/`to`) |
+| `GET` / `POST` | `/api/payouts` | **OTA payout reconciliation** (GAP-13) — list / record a payment received from an OTA; the amount *owed* is derived from that OTA's collected bookings, so the screen shows owed-vs-received |
+| `DELETE` | `/api/payouts/[id]` | Delete a recorded payout |
+
+> **Money is integer paise.** Every amount in requests/responses is paise (a
+> `BIGINT`/branded `Money`), converted to rupees only at the UI edge
+> ([`src/lib/money.ts`](../src/lib/money.ts)). Money fields are **masked server-side**
+> for non-owner roles ([`src/lib/money-mask.ts`](../src/lib/money-mask.ts)) — a
+> reception/housekeeping session gets responses with money stripped, not just hidden pages.
 
 ## iCal feeds & sync
 
@@ -215,7 +245,42 @@ until the agents are ready. All accept an optional forward-compatible `propertyR
 | `GET` | `/api/ical/[token]/[room]` | **token** | Public `.ics` export of a room's busy dates (for OTAs). Guarded by `ICAL_FEED_TOKEN` |
 | `GET` | `/api/cron/sync` | **`CRON_SECRET`** | Daily import, invoked by Vercel Cron (02:00 UTC). Bearer-secret gated |
 
-> The token/secret-gated routes (`/api/ical/*`, `/api/cron/sync`,
+> The token/secret-gated routes (`/api/ical/*`, `/api/cron/*`,
 > `/api/ingest/email`, and the whole `/api/agent/*` seam) are excluded from the
 > owner-cookie middleware because they must be reachable without a login — they
 > carry their own shared-secret checks.
+
+## Ops / health & crons
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `GET` | `/api/health` | **public** | Liveness — pings the DB (`SELECT 1`), returns `{ status, db, dbLatencyMs, commit }`; **200** up / **503** DB down. Point an uptime monitor here (GAP-17). See [RUNBOOK → Monitoring](RUNBOOK.md#monitoring--alerts-gap-17) |
+| `GET` | `/api/cron/sync` | `CRON_SECRET` | Daily iCal import (02:00 UTC) |
+| `GET` | `/api/cron/messaging` | `CRON_SECRET` | Scheduled/triggered outbound messages |
+| `GET` | `/api/cron/purge-ids` | `CRON_SECRET` | Delete guest ID documents past their retention window — a **no-op until a property sets `idRetentionDays`** |
+
+> A failure of any cron fires a `cron.failed` alert (to `ERROR_WEBHOOK_URL` + owner
+> push) instead of dying silently (GAP-17).
+
+## PMS & operations modules
+
+The Phase-2 PMS and community modules follow the **same conventions** as everything
+above — owner session (role-gated where money is involved), the `{ data }` / `{ error }`
+envelope, Zod inputs, and the standard collection/item shape (`GET`/`POST` on the root,
+`PATCH`/`DELETE` on `/[id]`). Rather than enumerate every endpoint, the families are:
+
+| Area | Route roots |
+|------|-------------|
+| **Team & rostering** | `/api/staff`, `/api/shifts`, `/api/attendance` |
+| **Housekeeping & maintenance** | `/api/housekeeping/tasks`, `/api/maintenance`, `/api/assets` |
+| **Stock & procurement** | `/api/inventory` (+ `/[id]/movement`), `/api/vendors`, `/api/purchase-orders`, `/api/vendor-payments` |
+| **Tours & transport** | `/api/tours`, `/api/tour-partners`, `/api/tour-bookings`, `/api/drivers`, `/api/trips`, `/api/partners` |
+| **Guest ops** | `/api/complaints`, `/api/reviews`, `/api/booking-groups` (+ `/[id]/attach`) |
+| **Content the AI speaks from** | `/api/faq` (+ `/starter`, `/export.csv`), `/api/policies`, `/api/amenities`, `/api/room-type-amenities` |
+| **Community network** | `/api/community/{connections,sharing,scam,guest-alerts,referrals,availability}` (+ `export.csv` on the shared lists), `/api/referrals` (outbound overflow) |
+| **Infra** | `/api/push/subscribe` (web-push), `/api/admin/modules` (vendor module toggles), `/api/import` (CSV), `/api/id-documents/purge` |
+
+> The community routes are the only owner-facing ones that touch **cross-tenant**
+> data; they go through the single audited, grant-gated seam described in
+> [ARCHITECTURE.md → the community seam](ARCHITECTURE.md#multi-tenancy--the-community-seam)
+> and never expose peer PII, occupancy, or finance.

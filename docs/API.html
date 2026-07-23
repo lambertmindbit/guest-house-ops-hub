@@ -37,9 +37,10 @@
 <h1>API Reference</h1>
 <p>All routes live under <code>src/app/api/**/route.ts</code>. Unless noted, every endpoint
 requires the <strong>owner session cookie</strong> (enforced by <a href="../src/middleware.ts"><code>src/middleware.ts</code></a>)
-and returns the standard envelope. Two families are exempt from the cookie gate
-and carry their own shared secret instead: the <strong>token-gated webhook</strong>
-(<code>/api/ingest/email</code>, <code>/api/cron/sync</code>, <code>/api/ical/*</code>) and the <strong>ROOT agent seam</strong>
+and returns the standard envelope. Some routes are exempt from the cookie gate:
+<strong>public</strong> endpoints (<code>/api/auth/*</code> — login / logout / password-reset / accept-invite,
+<code>/api/health</code>, <code>/api/public/assistant</code>), the <strong>token/secret-gated webhook + crons</strong>
+(<code>/api/ingest/email</code>, <code>/api/cron/*</code>, <code>/api/ical/*</code>), and the <strong>ROOT agent seam</strong>
 (<code>/api/agent/*</code>, gated by <code>AGENT_TOKEN</code> — see <a href="#agent-seam-root-integration">Agent seam</a>).</p>
 <pre><code class="language-jsonc">// success
 { &quot;data&quot;: ... }
@@ -63,14 +64,36 @@ guarded delete), <code>422</code> Zod validation failure.</p>
 <tbody><tr>
 <td><code>POST</code></td>
 <td><code>/api/auth/login</code></td>
-<td>Verify <code>OWNER_EMAIL</code>/<code>OWNER_PASSWORD</code>, set signed session cookie</td>
+<td>Verify credentials, set signed session cookie</td>
 </tr>
 <tr>
 <td><code>POST</code></td>
 <td><code>/api/auth/logout</code></td>
 <td>Clear the session cookie</td>
 </tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/auth/reset-request</code></td>
+<td>Request a password-reset link (rate-limited; <strong>always 200</strong> — no user enumeration). Emails a 1-hour single-use link (or logs it in log-only mode)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/auth/reset</code></td>
+<td>Set a new password from a valid reset token</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/auth/accept-invite</code></td>
+<td>Set a password + activate an invited staff account from an invite token</td>
+</tr>
 </tbody></table>
+<blockquote>
+<p><strong>Invites &amp; resets (GAP-10).</strong> Single-use, expiring <code>AuthToken</code>s — only the
+<strong>SHA-256</strong> of the emailed token is stored, so a DB leak yields no usable links.
+Owner sends invites via <code>POST /api/users/invite</code> (owner-gated; <code>{ email, role, propertyId? }</code>) which returns the link so the owner can share it themselves when no
+SMTP is configured. Login is <code>OWNER_EMAIL</code>/<code>OWNER_PASSWORD</code> for the seeded owner,
+or the <code>User</code> table (scrypt) for invited staff.</p>
+</blockquote>
 <h2>Reservations</h2>
 <table>
 <thead>
@@ -119,6 +142,31 @@ guarded delete), <code>422</code> Zod validation failure.</p>
 <td><code>DELETE</code></td>
 <td><code>/api/payments/[id]</code></td>
 <td>Delete a payment</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/reservations/[id]/invoice</code></td>
+<td><strong>Issue</strong> (or <strong>re-issue</strong>) a statutory GST invoice — an immutable record, sequential per financial year. Re-issue marks the prior number <code>CANCELLED</code> and mints a new one so the series stays gap-free (GAP-11)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/reservations/[id]/invoice.pdf</code></td>
+<td>Download the current invoice as a <strong>server-rendered PDF</strong></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/reservations/[id]/refunds</code></td>
+<td>Record a refund against a cancelled/amended booking (the policy ladder computes the suggested amount; owner can override)</td>
+</tr>
+<tr>
+<td><code>PATCH</code> / <code>DELETE</code></td>
+<td><code>/api/refunds/[id]</code></td>
+<td>Edit / delete a refund</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/reservations/[id]/form-c</code></td>
+<td>Generate the <strong>Form-C</strong> foreign-national registration record for the stay&#39;s guest</td>
 </tr>
 </tbody></table>
 <p><code>POST</code>/<code>PATCH</code> accept an optional <code>advanceRequired</code> (the deposit the booking
@@ -214,6 +262,16 @@ phone, room or channel) and stay-state filtering client-side.</p>
 <td><code>GET</code> / <code>PATCH</code></td>
 <td><code>/api/settings</code></td>
 <td>Property profile (single row, get-or-create)</td>
+</tr>
+<tr>
+<td><code>GET</code> / <code>PATCH</code></td>
+<td><code>/api/settings/cancellation</code></td>
+<td>The <strong>refund ladder</strong> — ordered <code>days-before → refund %</code> tiers</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/settings/export</code></td>
+<td><strong>Full property data export</strong> for offboarding — bookings, this property&#39;s guests, finance and settings in one file (GAP-23)</td>
 </tr>
 </tbody></table>
 <h2>Properties, access &amp; session (multi-property)</h2>
@@ -342,6 +400,26 @@ These manage that; on a single-property client they&#39;re inert.</p>
 <td><code>DELETE</code></td>
 <td><code>/api/guests/[id]/id-document</code></td>
 <td>Remove the stored document</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/guests/[id]/merge</code></td>
+<td>Fold a duplicate guest into this survivor — reassigns all their bookings/messages/invoices/etc., fills missing PII, unions preferences, deletes the duplicate (owner-only, GAP-19)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/guests/[id]/export</code></td>
+<td><strong>DPDP</strong> subject-access export — everything held about this guest, as a file</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/guests/[id]/erase</code></td>
+<td><strong>DPDP</strong> erasure — permanently anonymise name/phone/email/ID/notes/messages; issued tax invoices + booking dates/amounts are retained by law, a blacklist survives as a one-way hash (GAP-8)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/guests/[id]/reliability-flag</code></td>
+<td>Raise/lower a shared no-show reliability flag on the guest</td>
 </tr>
 </tbody></table>
 <blockquote>
@@ -590,7 +668,24 @@ then <code>PATCH</code>es the inbound item to <code>imported</code>.</p>
 <td><code>/api/analytics/export</code></td>
 <td>Download the Analytics view as CSV — summary metrics + source mix + occupancy by room type + daily occupancy (optional <code>from</code>/<code>to</code>)</td>
 </tr>
+<tr>
+<td><code>GET</code> / <code>POST</code></td>
+<td><code>/api/payouts</code></td>
+<td><strong>OTA payout reconciliation</strong> (GAP-13) — list / record a payment received from an OTA; the amount <em>owed</em> is derived from that OTA&#39;s collected bookings, so the screen shows owed-vs-received</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/payouts/[id]</code></td>
+<td>Delete a recorded payout</td>
+</tr>
 </tbody></table>
+<blockquote>
+<p><strong>Money is integer paise.</strong> Every amount in requests/responses is paise (a
+<code>BIGINT</code>/branded <code>Money</code>), converted to rupees only at the UI edge
+(<a href="../src/lib/money.ts"><code>src/lib/money.ts</code></a>). Money fields are <strong>masked server-side</strong>
+for non-owner roles (<a href="../src/lib/money-mask.ts"><code>src/lib/money-mask.ts</code></a>) — a
+reception/housekeeping session gets responses with money stripped, not just hidden pages.</p>
+</blockquote>
 <h2>iCal feeds &amp; sync</h2>
 <table>
 <thead>
@@ -633,10 +728,100 @@ then <code>PATCH</code>es the inbound item to <code>imported</code>.</p>
 </tr>
 </tbody></table>
 <blockquote>
-<p>The token/secret-gated routes (<code>/api/ical/*</code>, <code>/api/cron/sync</code>,
+<p>The token/secret-gated routes (<code>/api/ical/*</code>, <code>/api/cron/*</code>,
 <code>/api/ingest/email</code>, and the whole <code>/api/agent/*</code> seam) are excluded from the
 owner-cookie middleware because they must be reachable without a login — they
 carry their own shared-secret checks.</p>
+</blockquote>
+<h2>Ops / health &amp; crons</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Auth</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/health</code></td>
+<td><strong>public</strong></td>
+<td>Liveness — pings the DB (<code>SELECT 1</code>), returns <code>{ status, db, dbLatencyMs, commit }</code>; <strong>200</strong> up / <strong>503</strong> DB down. Point an uptime monitor here (GAP-17). See <a href="RUNBOOK.html#monitoring--alerts-gap-17">RUNBOOK → Monitoring</a></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/cron/sync</code></td>
+<td><code>CRON_SECRET</code></td>
+<td>Daily iCal import (02:00 UTC)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/cron/messaging</code></td>
+<td><code>CRON_SECRET</code></td>
+<td>Scheduled/triggered outbound messages</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/cron/purge-ids</code></td>
+<td><code>CRON_SECRET</code></td>
+<td>Delete guest ID documents past their retention window — a <strong>no-op until a property sets <code>idRetentionDays</code></strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>A failure of any cron fires a <code>cron.failed</code> alert (to <code>ERROR_WEBHOOK_URL</code> + owner
+push) instead of dying silently (GAP-17).</p>
+</blockquote>
+<h2>PMS &amp; operations modules</h2>
+<p>The Phase-2 PMS and community modules follow the <strong>same conventions</strong> as everything
+above — owner session (role-gated where money is involved), the <code>{ data }</code> / <code>{ error }</code>
+envelope, Zod inputs, and the standard collection/item shape (<code>GET</code>/<code>POST</code> on the root,
+<code>PATCH</code>/<code>DELETE</code> on <code>/[id]</code>). Rather than enumerate every endpoint, the families are:</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Route roots</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Team &amp; rostering</strong></td>
+<td><code>/api/staff</code>, <code>/api/shifts</code>, <code>/api/attendance</code></td>
+</tr>
+<tr>
+<td><strong>Housekeeping &amp; maintenance</strong></td>
+<td><code>/api/housekeeping/tasks</code>, <code>/api/maintenance</code>, <code>/api/assets</code></td>
+</tr>
+<tr>
+<td><strong>Stock &amp; procurement</strong></td>
+<td><code>/api/inventory</code> (+ <code>/[id]/movement</code>), <code>/api/vendors</code>, <code>/api/purchase-orders</code>, <code>/api/vendor-payments</code></td>
+</tr>
+<tr>
+<td><strong>Tours &amp; transport</strong></td>
+<td><code>/api/tours</code>, <code>/api/tour-partners</code>, <code>/api/tour-bookings</code>, <code>/api/drivers</code>, <code>/api/trips</code>, <code>/api/partners</code></td>
+</tr>
+<tr>
+<td><strong>Guest ops</strong></td>
+<td><code>/api/complaints</code>, <code>/api/reviews</code>, <code>/api/booking-groups</code> (+ <code>/[id]/attach</code>)</td>
+</tr>
+<tr>
+<td><strong>Content the AI speaks from</strong></td>
+<td><code>/api/faq</code> (+ <code>/starter</code>, <code>/export.csv</code>), <code>/api/policies</code>, <code>/api/amenities</code>, <code>/api/room-type-amenities</code></td>
+</tr>
+<tr>
+<td><strong>Community network</strong></td>
+<td><code>/api/community/{connections,sharing,scam,guest-alerts,referrals,availability}</code> (+ <code>export.csv</code> on the shared lists), <code>/api/referrals</code> (outbound overflow)</td>
+</tr>
+<tr>
+<td><strong>Infra</strong></td>
+<td><code>/api/push/subscribe</code> (web-push), <code>/api/admin/modules</code> (vendor module toggles), <code>/api/import</code> (CSV), <code>/api/id-documents/purge</code></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>The community routes are the only owner-facing ones that touch <strong>cross-tenant</strong>
+data; they go through the single audited, grant-gated seam described in
+<a href="ARCHITECTURE.html#multi-tenancy--the-community-seam">ARCHITECTURE.md → the community seam</a>
+and never expose peer PII, occupancy, or finance.</p>
 </blockquote>
 
 </div>

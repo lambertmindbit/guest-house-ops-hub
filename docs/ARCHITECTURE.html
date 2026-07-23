@@ -99,7 +99,8 @@ does this in one raw SQL query using the daterange <code>@&gt;</code> containmen
 (archived rooms excluded). This prevents drift and is the source of truth for
 occupancy and pricing-occupancy signals.</p>
 <h2>Data model</h2>
-<p>The schema has grown to <strong>55 models</strong> across three gap-analysis phases (see
+<p>The schema has grown to <strong>60 models</strong> across the gap-analysis phases and the later
+hardening tranche (invoicing, payouts, refunds, auth tokens, …) (see
 <a href="ROADMAP.html">ROADMAP.md</a> and
 <a href="../prisma/schema.prisma"><code>prisma/schema.prisma</code></a>). The <strong>Phase 1 operations
 core</strong> below is the correctness heart; later phases layered on team/ops modules
@@ -196,10 +197,14 @@ amenities, reviews, complaints, refunds, audit) and the <strong>community networ
 round-trips through Postgres <code>DATE</code> columns without timezone drift
 (<a href="../src/lib/dates.ts"><code>src/lib/dates.ts</code></a>). The property&#39;s local calendar date
 is the reference.</li>
-<li><strong>Money</strong> is <code>DECIMAL(10,2)</code> in the DB. Prisma <code>Decimal</code> is converted to a JS
-<code>number</code> at the server boundary before passing to client components. Amounts are
-whole-rupee (INR) in practice. (See the rounding note under
-<a href="ROADMAP.html#known-concerns--tech-debt">Known concerns</a>.)</li>
+<li><strong>Money</strong> is <strong>integer paise</strong> end to end (GAP-9). DB columns are <code>BIGINT</code>; app
+code uses a branded <strong><code>Money</code></strong> type — paise, never rupees —
+(<a href="../src/lib/money.ts"><code>src/lib/money.ts</code></a>). Convert only at the edges:
+<code>rupeesToPaise</code> on input, <code>paiseToRupees</code>/<code>formatPaise</code> on display, and
+<code>moneyFromDb</code>/<code>moneyToDb</code> at the Prisma boundary (a <code>BigInt.prototype.toJSON</code> shim
+lets paise cross the JSON boundary). Integer paise removes the rounding drift the
+old <code>DECIMAL</code>→<code>number</code> path could introduce in finance and invoices. Percentage
+splits (commission, GST) live in the same module so rounding is defined in one place.</li>
 </ul>
 <h2>Domain logic — <code>src/lib/</code></h2>
 <p>All business logic lives here (not in routes or components), so it&#39;s reusable by

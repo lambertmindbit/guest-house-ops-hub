@@ -80,8 +80,10 @@ notes, and a blacklist toggle that warns at booking time.</p>
 <p>An <strong>Analytics dashboard</strong> — occupancy, ADR, RevPAR, average stay, cancellation
 rate — with <strong>interactive charts</strong> (occupancy trend, source-mix donut, a
 <strong>revenue-by-channel</strong> bar chart) via Recharts, plus a <strong>Download CSV</strong> of the whole
-Analytics view (<code>GET /api/analytics/export</code>). Printable guest invoices (browser
-Print → PDF) and dependency-free <strong>Bookings / Payments CSV</strong> exports for the accountant.</p>
+Analytics view (<code>GET /api/analytics/export</code>). Guest invoices (originally browser
+Print → PDF, <strong>since replaced by statutory server-rendered GST invoices</strong> — see
+<em>Delivered — enterprise hardening</em> below) and dependency-free <strong>Bookings / Payments
+CSV</strong> exports for the accountant.</p>
 <h3>ROOT agent integration (phases A–F)</h3>
 <p>The deterministic core&#39;s half of the contract with the ROOT AI agents — built as a
 small, token-gated seam (<code>AGENT_TOKEN</code>, fail-closed) so agents reach the app
@@ -136,7 +138,9 @@ workflow; complaints module; UPI/pay-link + pending-payments card; CSV import;
 booking-confirmation trigger.</li>
 <li><strong>Gap Phase 2 — complete the PMS &amp; team.</strong> <strong>Multi-tenancy</strong> (auto-scoping
 Prisma extension) + <strong>real auth &amp; RBAC</strong> (owner/reception/housekeeping, &quot;money
-only for owners&quot;); staff directory/roster/attendance; housekeeping assignment +
+only for owners&quot;) with <strong>email staff invites + self-serve password reset</strong>
+(single-use, expiring, SHA-256-hashed links; no user-enumeration; log-only mode
+when no SMTP — GAP-10); staff directory/roster/attendance; housekeeping assignment +
 checklist; maintenance + assets; inventory; vendors + procurement; transport
 records (dispatch stays in ROOT); group/long-stay bookings; amenities; reviews
 tracker; audit log + guest consent. Deploys now run <code>prisma migrate deploy</code>.</li>
@@ -301,12 +305,6 @@ documents are kept indefinitely until then. By design; call it out to new owners
 <code>$queryRaw</code>, so any raw query touching tenant tables must filter <code>property_id</code>
 itself (e.g. <a href="../src/lib/availability.ts"><code>freeRooms</code></a>) — a miss leaks across one
 owner&#39;s properties (never across clients). The recurring rule for multi-property work.</li>
-<li><strong>User invites + password reset (unbuilt).</strong> The owner still creates each login
-with a password by hand — there is no self-serve invite or password-reset flow. The
-other two items once listed here are now <strong>done</strong>: <strong>field-level money masking</strong>
-(<a href="../src/lib/money-mask.ts"><code>src/lib/money-mask.ts</code></a>, GAP-12) strips money from
-API responses by role, and <strong>Postgres RLS</strong> is live as a DB-level tenant backstop
-(GAP-12, #228 — see <em>Delivered — enterprise hardening</em> above).</li>
 </ul>
 <h2>Suggested next steps for a new team</h2>
 <ol>

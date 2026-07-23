@@ -76,8 +76,12 @@ that calls `prisma migrate dev` by hand.
 - **Dates** are date-only `YYYY-MM-DD`, UTC-anchored via [`src/lib/dates.ts`](../src/lib/dates.ts).
   Stays are half-open `[)`. Don't introduce `new Date()`-based local-time math for
   calendar dates.
-- **Money**: convert Prisma `Decimal` → `number` at the server boundary before
-  passing to client components (Decimals aren't serializable to client props).
+- **Money is integer paise** — a branded `Money` type ([`src/lib/money.ts`](../src/lib/money.ts)),
+  stored as `BIGINT`. Convert only at the edges (`rupeesToPaise` on input,
+  `paiseToRupees`/`formatPaise` on display, `moneyFromDb`/`moneyToDb` at the Prisma
+  boundary). Never do rupee-float arithmetic; keep percentage splits in `money.ts` so
+  rounding is defined once. Mask money for non-owner roles via
+  [`src/lib/money-mask.ts`](../src/lib/money-mask.ts).
 - **Comment the *why*, not the *what*** — especially around booking-conflict and
   pricing logic.
 - **UI**: reuse the design-system classes (`.btn`, `.card`, `.input`, `.badge`,

@@ -27,7 +27,7 @@ A single small property *cannot* get direct real-time API access to Booking.com,
 > production on `main` — bookings, calendar, guests, housekeeping, **pricing,
 > finance, analytics, check-in/out, guest CRM, staff/attendance, inventory,
 > vendors, transport, tours, complaints, reviews, a regional community network,
-> multi-property tenancy + RBAC, and a token-gated AI agent seam** (55 Prisma
+> multi-property tenancy + RBAC, and a token-gated AI agent seam** (60 Prisma
 > models). For what's actually built vs. deferred, read [README.md](README.md#status)
 > and [docs/ROADMAP.md](docs/ROADMAP.md) — those are the source of truth for
 > current scope. **Do not treat "build only Phase 1" below as a live instruction.**

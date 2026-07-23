@@ -106,6 +106,10 @@ every PR gets a <strong>preview deployment</strong> with its own URL.</li>
 <td><code>ERROR_WEBHOOK_URL</code></td>
 <td><em>Optional (GAP-17).</em> A Slack or Discord <strong>incoming-webhook</strong> URL. When set, every server error and cron failure is POSTed there so you find out from the channel, not from a guest. Leave unset and errors just stay in the Vercel logs. See <a href="RUNBOOK.html#monitoring--alerts-gap-17">RUNBOOK → Monitoring &amp; alerts</a>.</td>
 </tr>
+<tr>
+<td><code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>, <code>MAIL_FROM</code></td>
+<td><em>Optional (GAP-10).</em> Outbound email for <strong>staff invites + password reset</strong>. Unset = <strong>log-only mode</strong> (the link is written to the server log / returned to the owner instead of emailed) — fine for a single owner. Set all of them (a Gmail app-password, SES-SMTP, Mailgun…) to actually deliver the links.</td>
+</tr>
 </tbody></table>
 <blockquote>
 <p><strong>Why <code>DATABASE_URL</code> and <code>DIRECT_URL</code>?</strong> The serverless runtime queries through
