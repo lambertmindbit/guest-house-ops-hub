@@ -98,8 +98,12 @@ shared by Server Components and API routes.</li>
 <li><strong>Dates</strong> are date-only <code>YYYY-MM-DD</code>, UTC-anchored via <a href="../src/lib/dates.ts"><code>src/lib/dates.ts</code></a>.
 Stays are half-open <code>[)</code>. Don&#39;t introduce <code>new Date()</code>-based local-time math for
 calendar dates.</li>
-<li><strong>Money</strong>: convert Prisma <code>Decimal</code> → <code>number</code> at the server boundary before
-passing to client components (Decimals aren&#39;t serializable to client props).</li>
+<li><strong>Money is integer paise</strong> — a branded <code>Money</code> type (<a href="../src/lib/money.ts"><code>src/lib/money.ts</code></a>),
+stored as <code>BIGINT</code>. Convert only at the edges (<code>rupeesToPaise</code> on input,
+<code>paiseToRupees</code>/<code>formatPaise</code> on display, <code>moneyFromDb</code>/<code>moneyToDb</code> at the Prisma
+boundary). Never do rupee-float arithmetic; keep percentage splits in <code>money.ts</code> so
+rounding is defined once. Mask money for non-owner roles via
+<a href="../src/lib/money-mask.ts"><code>src/lib/money-mask.ts</code></a>.</li>
 <li><strong>Comment the <em>why</em>, not the <em>what</em></strong> — especially around booking-conflict and
 pricing logic.</li>
 <li><strong>UI</strong>: reuse the design-system classes (<code>.btn</code>, <code>.card</code>, <code>.input</code>, <code>.badge</code>,

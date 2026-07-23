@@ -53,8 +53,10 @@ Per-channel revenue and commission, plus **expense tracking** so Finance shows t
 An **Analytics dashboard** — occupancy, ADR, RevPAR, average stay, cancellation
 rate — with **interactive charts** (occupancy trend, source-mix donut, a
 **revenue-by-channel** bar chart) via Recharts, plus a **Download CSV** of the whole
-Analytics view (`GET /api/analytics/export`). Printable guest invoices (browser
-Print → PDF) and dependency-free **Bookings / Payments CSV** exports for the accountant.
+Analytics view (`GET /api/analytics/export`). Guest invoices (originally browser
+Print → PDF, **since replaced by statutory server-rendered GST invoices** — see
+*Delivered — enterprise hardening* below) and dependency-free **Bookings / Payments
+CSV** exports for the accountant.
 
 ### ROOT agent integration (phases A–F)
 The deterministic core's half of the contract with the ROOT AI agents — built as a
@@ -112,7 +114,9 @@ Full detail in the status notes; in brief:
   booking-confirmation trigger.
 - **Gap Phase 2 — complete the PMS & team.** **Multi-tenancy** (auto-scoping
   Prisma extension) + **real auth & RBAC** (owner/reception/housekeeping, "money
-  only for owners"); staff directory/roster/attendance; housekeeping assignment +
+  only for owners") with **email staff invites + self-serve password reset**
+  (single-use, expiring, SHA-256-hashed links; no user-enumeration; log-only mode
+  when no SMTP — GAP-10); staff directory/roster/attendance; housekeeping assignment +
   checklist; maintenance + assets; inventory; vendors + procurement; transport
   records (dispatch stays in ROOT); group/long-stay bookings; amenities; reviews
   tracker; audit log + guest consent. Deploys now run `prisma migrate deploy`.
@@ -250,12 +254,6 @@ This is the canonical list — what a new team should know:
   `$queryRaw`, so any raw query touching tenant tables must filter `property_id`
   itself (e.g. [`freeRooms`](../src/lib/availability.ts)) — a miss leaks across one
   owner's properties (never across clients). The recurring rule for multi-property work.
-- **User invites + password reset (unbuilt).** The owner still creates each login
-  with a password by hand — there is no self-serve invite or password-reset flow. The
-  other two items once listed here are now **done**: **field-level money masking**
-  ([`src/lib/money-mask.ts`](../src/lib/money-mask.ts), GAP-12) strips money from
-  API responses by role, and **Postgres RLS** is live as a DB-level tenant backstop
-  (GAP-12, #228 — see *Delivered — enterprise hardening* above).
 
 ## Suggested next steps for a new team
 

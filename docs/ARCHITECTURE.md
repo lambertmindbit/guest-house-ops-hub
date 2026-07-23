@@ -82,7 +82,8 @@ occupancy and pricing-occupancy signals.
 
 ## Data model
 
-The schema has grown to **55 models** across three gap-analysis phases (see
+The schema has grown to **60 models** across the gap-analysis phases and the later
+hardening tranche (invoicing, payouts, refunds, auth tokens, …) (see
 [ROADMAP.md](ROADMAP.md) and
 [`prisma/schema.prisma`](../prisma/schema.prisma)). The **Phase 1 operations
 core** below is the correctness heart; later phases layered on team/ops modules
@@ -126,10 +127,14 @@ Enums: `ReservationStatus` (confirmed/cancelled/no_show), `BlockSource`
   round-trips through Postgres `DATE` columns without timezone drift
   ([`src/lib/dates.ts`](../src/lib/dates.ts)). The property's local calendar date
   is the reference.
-- **Money** is `DECIMAL(10,2)` in the DB. Prisma `Decimal` is converted to a JS
-  `number` at the server boundary before passing to client components. Amounts are
-  whole-rupee (INR) in practice. (See the rounding note under
-  [Known concerns](ROADMAP.md#known-concerns--tech-debt).)
+- **Money** is **integer paise** end to end (GAP-9). DB columns are `BIGINT`; app
+  code uses a branded **`Money`** type — paise, never rupees —
+  ([`src/lib/money.ts`](../src/lib/money.ts)). Convert only at the edges:
+  `rupeesToPaise` on input, `paiseToRupees`/`formatPaise` on display, and
+  `moneyFromDb`/`moneyToDb` at the Prisma boundary (a `BigInt.prototype.toJSON` shim
+  lets paise cross the JSON boundary). Integer paise removes the rounding drift the
+  old `DECIMAL`→`number` path could introduce in finance and invoices. Percentage
+  splits (commission, GST) live in the same module so rounding is defined in one place.
 
 ## Domain logic — `src/lib/`
 
