@@ -79,7 +79,7 @@ plaintext;</li>
 separate from Supabase), retained <strong>30 days</strong>.</li>
 </ol>
 <h3>One-time setup (required, or the job fails loudly)</h3>
-<p>In <strong>GitHub → Settings → Secrets and variables → Actions</strong>, add:</p>
+<p>Two GitHub <strong>repository secrets</strong> switch the backups on. Set them once.</p>
 <table>
 <thead>
 <tr>
@@ -89,13 +89,38 @@ separate from Supabase), retained <strong>30 days</strong>.</li>
 </thead>
 <tbody><tr>
 <td><code>BACKUP_DATABASE_URL</code></td>
-<td>the <strong>direct</strong> prod connection (<code>…pooler.supabase.com:5432/postgres?sslmode=require</code>) — not the <code>:6543</code> pooler</td>
+<td>the <strong>direct</strong> prod connection — the <code>DIRECT_URL</code> from <code>.env</code> (<code>…pooler.supabase.com:**5432**/postgres?sslmode=require</code>), <strong>not</strong> the <code>:6543</code> pooler (<code>pg_dump</code> can&#39;t run through it)</td>
 </tr>
 <tr>
 <td><code>BACKUP_PASSPHRASE</code></td>
-<td>a long random string. <strong>Store it somewhere safe outside this repo</strong> — without it the backups are unrecoverable</td>
+<td>a long random string <strong>you invent</strong> — it encrypts/decrypts the dump. <strong>Store it in a password manager, outside this repo.</strong> Lose it and the backups are permanently unrecoverable</td>
 </tr>
 </tbody></table>
+<p><strong>⚠️ The one gotcha: no quotes.</strong> In <code>.env</code> the value is wrapped in double-quotes
+(<code>DIRECT_URL=&quot;postgresql://…&quot;</code>). The secret must <strong>not</strong> include them, or <code>pg_dump</code>
+fails with <code>invalid sslmode value: &quot;require</code>. The commands below strip them for you.</p>
+<p><strong>Fastest — from the CLI</strong> (the password never prints to screen):</p>
+<pre><code class="language-bash"># BACKUP_DATABASE_URL — copies DIRECT_URL from .env with the quotes stripped
+grep &#39;^DIRECT_URL=&#39; .env | cut -d= -f2- | tr -d &#39;&quot;&#39; | gh secret set BACKUP_DATABASE_URL
+
+# BACKUP_PASSPHRASE — generate one, set it, and SAVE IT to your password manager
+openssl rand -base64 32 | tee /dev/tty | gh secret set BACKUP_PASSPHRASE
+#   ^ prints the passphrase once so you can copy it into your password manager
+</code></pre>
+<p><strong>Or in the UI:</strong> <em>GitHub → Settings → Secrets and variables → Actions → New
+repository secret</em>. For <code>BACKUP_DATABASE_URL</code>, paste the URL starting with
+<code>postgresql://</code> and ending with <code>require</code> — no <code>&quot;</code> at either end.</p>
+<h3>Run it now + verify (don&#39;t wait for 01:00 UTC)</h3>
+<pre><code class="language-bash">gh workflow run backup.yml          # or: Actions → Backup → Run workflow
+gh run watch                        # optional — watch it go green
+</code></pre>
+<p>Then confirm the backup exists: <strong>Actions → Backup → the latest run → Artifacts →</strong>
+<code>ota-backup-&lt;date&gt;</code> (a <code>.dump.gpg</code>). That&#39;s your first verified offsite backup.</p>
+<p><strong>A harmless warning you&#39;ll see:</strong> <em>&quot;Node.js 20 is deprecated … actions/upload-artifact
+forced to run on Node.js 24.&quot;</em> Ignore it — GitHub ran the action on a newer Node,
+it&#39;s backward-compatible, and your artifact was still produced. Nothing to fix.</p>
+<p><strong>If a secret is wrong</strong> the run fails loudly (e.g. <code>BACKUP_DATABASE_URL secret is not set</code>, or the <code>invalid sslmode</code> error above) — never silently. Fix the secret and
+re-run <code>gh workflow run backup.yml</code>.</p>
 <h2>Restore drill — do this quarterly</h2>
 <p>Prove the latest backup still restores. Download the newest artifact from <em>Actions →
 Backup</em>, then:</p>

@@ -129,7 +129,10 @@ then, scanned guest IDs are kept indefinitely.
   is available on Supabase.
 - Keep a **separate** database/schema for tests (`TEST_DATABASE_URL`) — never point
   the test suite at production.
-- Back up via Supabase's built-in backups; the app stores no other persistent state.
+- **Backups (GAP-1): see the [Backup & Recovery Runbook](RUNBOOK.md).** A daily
+  encrypted offsite `pg_dump` runs as a GitHub Action — set up in one step there.
+  Note: the Supabase **free plan keeps no managed backups**, so that Action is your
+  only one until you move to Pro (which adds daily backups + PITR).
 
 ## CI — GitHub Actions
 
